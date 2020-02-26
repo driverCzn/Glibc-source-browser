@@ -1,0 +1,391 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>svml_d_sincos4_core_avx2.S source code [glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_d_sincos4_core_avx2.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_d_sincos4_core_avx2.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.31</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>x86_64</a>/<a href='..'>fpu</a>/<a href='./'>multiarch</a>/<a href='svml_d_sincos4_core_avx2.S.html'>svml_d_sincos4_core_avx2.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Function sincos vectorized with AVX2.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2014-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../svml_d_trig_data.h.html">"svml_d_trig_data.h"</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td>	.text</td></tr>
+<tr><th id="23">23</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVdN4vl8l8_sincos_avx2; .type _ZGVdN4vl8l8_sincos_avx2,@function; .align 1&lt;&lt;4; _ZGVdN4vl8l8_sincos_avx2: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVdN4vl8l8_sincos_avx2" title='_ZGVdN4vl8l8_sincos_avx2' data-ref="_ZGVdN4vl8l8_sincos_avx2" data-ref-filename="_ZGVdN4vl8l8_sincos_avx2">_ZGVdN4vl8l8_sincos_avx2</dfn></span>)</td></tr>
+<tr><th id="24">24</th><td><i>/*</i></td></tr>
+<tr><th id="25">25</th><td><i>   ALGORITHM DESCRIPTION:</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>     ( low accuracy ( &lt; 4ulp ) or enhanced performance</i></td></tr>
+<tr><th id="28">28</th><td><i>      ( half of correct mantissa ) implementation )</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>     Argument representation:</i></td></tr>
+<tr><th id="31">31</th><td><i>     arg = N*Pi + R</i></td></tr>
+<tr><th id="32">32</th><td><i></i></td></tr>
+<tr><th id="33">33</th><td><i>     Result calculation:</i></td></tr>
+<tr><th id="34">34</th><td><i>     sin(arg) = sin(N*Pi + R) = (-1)^N * sin(R)</i></td></tr>
+<tr><th id="35">35</th><td><i>     arg + Pi/2 = (N'*Pi + R')</i></td></tr>
+<tr><th id="36">36</th><td><i>     cos(arg) = sin(arg+Pi/2) = sin(N'*Pi + R') = (-1)^N' * sin(R')</i></td></tr>
+<tr><th id="37">37</th><td><i>     sin(R), sin(R') are approximated by corresponding polynomial.  */</i></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="40">40</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="41">41</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="42">42</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="43">43</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="44">44</th><td>        andq      $-<var>64</var>, %rsp</td></tr>
+<tr><th id="45">45</th><td>        subq      $<var>448</var>, %rsp</td></tr>
+<tr><th id="46">46</th><td>        movq      __svml_d_trig_data@GOTPCREL(%rip), %rax</td></tr>
+<tr><th id="47">47</th><td>        vmovups   %ymm14, <var>288</var>(%rsp)</td></tr>
+<tr><th id="48">48</th><td>        vmovups   %ymm8, <var>352</var>(%rsp)</td></tr>
+<tr><th id="49">49</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#61" title="64*7" data-ref="_M/__dSignMask">__dSignMask</a>(%rax), %ymm6</td></tr>
+<tr><th id="50">50</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#26" title="64*4" data-ref="_M/__dInvPI">__dInvPI</a>(%rax), %ymm2</td></tr>
+<tr><th id="51">51</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#35" title="64*13" data-ref="_M/__dPI1_FMA">__dPI1_FMA</a>(%rax), %ymm5</td></tr>
+<tr><th id="52">52</th><td>        vmovups   %ymm9, <var>224</var>(%rsp)</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><i>/* ARGUMENT RANGE REDUCTION:</i></td></tr>
+<tr><th id="55">55</th><td><i>   Absolute argument: X' = |X| */</i></td></tr>
+<tr><th id="56">56</th><td>        vandnpd   %ymm0, %ymm6, %ymm1</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* SinY = X'*InvPi + RS : right shifter add */</i></td></tr>
+<tr><th id="59">59</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#27" title="64*5" data-ref="_M/__dRShifter">__dRShifter</a>(%rax), %ymm1, %ymm2</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* SinSignRes = Y&lt;&lt;63 : shift LSB to MSB place for result sign */</i></td></tr>
+<tr><th id="62">62</th><td>        vpsllq    $<var>63</var>, %ymm2, %ymm4</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/* SinN = Y - RS : right shifter sub */</i></td></tr>
+<tr><th id="65">65</th><td>        vsubpd <a class="macro" href="../svml_d_trig_data.h.html#27" title="64*5" data-ref="_M/__dRShifter">__dRShifter</a>(%rax), %ymm2, %ymm2</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><i>/* SinR = X' - SinN*Pi1 */</i></td></tr>
+<tr><th id="68">68</th><td>        vmovdqa   %ymm1, %ymm14</td></tr>
+<tr><th id="69">69</th><td>        vfnmadd231pd %ymm2, %ymm5, %ymm14</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* SinR = SinR - SinN*Pi1 */</i></td></tr>
+<tr><th id="72">72</th><td>        vfnmadd231pd <a class="macro" href="../svml_d_trig_data.h.html#36" title="64*14" data-ref="_M/__dPI2_FMA">__dPI2_FMA</a>(%rax), %ymm2, %ymm14</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* Sine result sign: SinRSign = SignMask &amp; SinR */</i></td></tr>
+<tr><th id="75">75</th><td>        vandpd    %ymm14, %ymm6, %ymm7</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><i>/* Set SinRSign to 0.5 */</i></td></tr>
+<tr><th id="78">78</th><td>        vorpd <a class="macro" href="../svml_d_trig_data.h.html#30" title="64*8" data-ref="_M/__dOneHalf">__dOneHalf</a>(%rax), %ymm7, %ymm3</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><i>/* CosN = SinN +(-)0.5 */</i></td></tr>
+<tr><th id="81">81</th><td>        vaddpd    %ymm3, %ymm2, %ymm3</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td><i>/* CosR = SinX - CosN*Pi1 */</i></td></tr>
+<tr><th id="84">84</th><td>        vmovdqa   %ymm1, %ymm8</td></tr>
+<tr><th id="85">85</th><td>        vfnmadd231pd %ymm3, %ymm5, %ymm8</td></tr>
+<tr><th id="86">86</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#37" title="64*15" data-ref="_M/__dPI3_FMA">__dPI3_FMA</a>(%rax), %ymm5</td></tr>
+<tr><th id="87">87</th><td>        vcmpnle_uqpd <a class="macro" href="../svml_d_trig_data.h.html#23" title="64" data-ref="_M/__dRangeVal">__dRangeVal</a>(%rax), %ymm1, %ymm1</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/* CosR = CosR - CosN*Pi2 */</i></td></tr>
+<tr><th id="90">90</th><td>        vfnmadd231pd <a class="macro" href="../svml_d_trig_data.h.html#36" title="64*14" data-ref="_M/__dPI2_FMA">__dPI2_FMA</a>(%rax), %ymm3, %ymm8</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><i>/* SinR = SinR - SinN*Pi3 */</i></td></tr>
+<tr><th id="93">93</th><td>        vfnmadd213pd %ymm14, %ymm5, %ymm2</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><i>/* CosR = CosR - CosN*Pi3 */</i></td></tr>
+<tr><th id="96">96</th><td>        vfnmadd213pd %ymm8, %ymm5, %ymm3</td></tr>
+<tr><th id="97">97</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#47" title="64*25" data-ref="_M/__dC6">__dC6</a>(%rax), %ymm8</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* SinR2 = SinR^2 */</i></td></tr>
+<tr><th id="100">100</th><td>        vmulpd    %ymm2, %ymm2, %ymm14</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><i>/* CosR2 = CosR^2 */</i></td></tr>
+<tr><th id="103">103</th><td>        vmulpd    %ymm3, %ymm3, %ymm5</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i>/* Grab SignX */</i></td></tr>
+<tr><th id="106">106</th><td>        vandpd    %ymm0, %ymm6, %ymm9</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>/* Update CosRSign and CosSignRes signs */</i></td></tr>
+<tr><th id="109">109</th><td>        vxorpd    %ymm6, %ymm7, %ymm6</td></tr>
+<tr><th id="110">110</th><td>        vxorpd    %ymm6, %ymm4, %ymm7</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i>/* Update sign SinSignRes */</i></td></tr>
+<tr><th id="113">113</th><td>        vxorpd    %ymm9, %ymm4, %ymm6</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><i>/* Polynomial approximation */</i></td></tr>
+<tr><th id="116">116</th><td>        vmovupd <a class="macro" href="../svml_d_trig_data.h.html#48" title="64*26" data-ref="_M/__dC7">__dC7</a>(%rax), %ymm4</td></tr>
+<tr><th id="117">117</th><td>        vmovdqa   %ymm8, %ymm9</td></tr>
+<tr><th id="118">118</th><td>        vfmadd231pd <a class="macro" href="../svml_d_trig_data.h.html#48" title="64*26" data-ref="_M/__dC7">__dC7</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="119">119</th><td>        vfmadd213pd %ymm8, %ymm5, %ymm4</td></tr>
+<tr><th id="120">120</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#46" title="64*24" data-ref="_M/__dC5">__dC5</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="121">121</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#46" title="64*24" data-ref="_M/__dC5">__dC5</a>(%rax), %ymm5, %ymm4</td></tr>
+<tr><th id="122">122</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#45" title="64*23" data-ref="_M/__dC4">__dC4</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="123">123</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#45" title="64*23" data-ref="_M/__dC4">__dC4</a>(%rax), %ymm5, %ymm4</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><i>/* SinPoly = C3 + SinR2*(C4 + SinR2*(C5 + SinR2*(C6 + SinR2*C7))) */</i></td></tr>
+<tr><th id="126">126</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#44" title="64*22" data-ref="_M/__dC3">__dC3</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><i>/* CosPoly = C3 + CosR2*(C4 + CosR2*(C5 + CosR2*(C6 + CosR2*C7))) */</i></td></tr>
+<tr><th id="129">129</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#44" title="64*22" data-ref="_M/__dC3">__dC3</a>(%rax), %ymm5, %ymm4</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><i>/* SinPoly = C2 + SinR2*SinPoly */</i></td></tr>
+<tr><th id="132">132</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#43" title="64*21" data-ref="_M/__dC2">__dC2</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><i>/* CosPoly = C2 + CosR2*CosPoly */</i></td></tr>
+<tr><th id="135">135</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#43" title="64*21" data-ref="_M/__dC2">__dC2</a>(%rax), %ymm5, %ymm4</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i>/* SinPoly = C1 + SinR2*SinPoly */</i></td></tr>
+<tr><th id="138">138</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#42" title="64*20" data-ref="_M/__dC1">__dC1</a>(%rax), %ymm14, %ymm9</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><i>/* CosPoly = C1 + CosR2*CosPoly */</i></td></tr>
+<tr><th id="141">141</th><td>        vfmadd213pd <a class="macro" href="../svml_d_trig_data.h.html#42" title="64*20" data-ref="_M/__dC1">__dC1</a>(%rax), %ymm5, %ymm4</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i>/* SinPoly = SinR2*SinPoly */</i></td></tr>
+<tr><th id="144">144</th><td>        vmulpd    %ymm14, %ymm9, %ymm8</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/* CosPoly = CosR2*CosPoly */</i></td></tr>
+<tr><th id="147">147</th><td>        vmulpd    %ymm5, %ymm4, %ymm4</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><i>/* SinPoly = SinR*SinPoly */</i></td></tr>
+<tr><th id="150">150</th><td>        vfmadd213pd %ymm2, %ymm2, %ymm8</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><i>/* CosPoly = CosR*CosPoly */</i></td></tr>
+<tr><th id="153">153</th><td>        vfmadd213pd %ymm3, %ymm3, %ymm4</td></tr>
+<tr><th id="154">154</th><td>        vmovmskpd %ymm1, %ecx</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><i>/* Final reconstruction</i></td></tr>
+<tr><th id="157">157</th><td><i>   Update Sin result's sign */</i></td></tr>
+<tr><th id="158">158</th><td>        vxorpd    %ymm6, %ymm8, %ymm3</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><i>/* Update Cos result's sign */</i></td></tr>
+<tr><th id="161">161</th><td>        vxorpd    %ymm7, %ymm4, %ymm2</td></tr>
+<tr><th id="162">162</th><td>        testl     %ecx, %ecx</td></tr>
+<tr><th id="163">163</th><td>        jne       .LBL_1_3</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td>.LBL_1_2:</td></tr>
+<tr><th id="166">166</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="167">167</th><td>        vmovups   <var>352</var>(%rsp), %ymm8</td></tr>
+<tr><th id="168">168</th><td>        vmovups   <var>224</var>(%rsp), %ymm9</td></tr>
+<tr><th id="169">169</th><td>        vmovups   <var>288</var>(%rsp), %ymm14</td></tr>
+<tr><th id="170">170</th><td>        vmovupd   %ymm2, (%rsi)</td></tr>
+<tr><th id="171">171</th><td>        vmovdqa   %ymm3, (%rdi)</td></tr>
+<tr><th id="172">172</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="173">173</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="174">174</th><td>        popq      %rbp</td></tr>
+<tr><th id="175">175</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="176">176</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="177">177</th><td>        ret</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>.LBL_1_3:</td></tr>
+<tr><th id="180">180</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="181">181</th><td>        vmovupd   %ymm0, <var>256</var>(%rsp)</td></tr>
+<tr><th id="182">182</th><td>        vmovupd   %ymm3, <var>320</var>(%rsp)</td></tr>
+<tr><th id="183">183</th><td>        vmovupd   %ymm2, <var>384</var>(%rsp)</td></tr>
+<tr><th id="184">184</th><td>        je        .LBL_1_2</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>        xorb      %dl, %dl</td></tr>
+<tr><th id="187">187</th><td>        xorl      %eax, %eax</td></tr>
+<tr><th id="188">188</th><td>        vmovups   %ymm10, <var>128</var>(%rsp)</td></tr>
+<tr><th id="189">189</th><td>        vmovups   %ymm11, <var>96</var>(%rsp)</td></tr>
+<tr><th id="190">190</th><td>        vmovups   %ymm12, <var>64</var>(%rsp)</td></tr>
+<tr><th id="191">191</th><td>        vmovups   %ymm13, <var>32</var>(%rsp)</td></tr>
+<tr><th id="192">192</th><td>        vmovups   %ymm15, (%rsp)</td></tr>
+<tr><th id="193">193</th><td>        movq      %rsi, <var>160</var>(%rsp)</td></tr>
+<tr><th id="194">194</th><td>        movq      %r12, <var>200</var>(%rsp)</td></tr>
+<tr><th id="195">195</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 12, 0x4, 0x13, 0x77, 200 &amp; 0x7F | 0x80, 200 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>12</var>, <var>200</var>)</td></tr>
+<tr><th id="196">196</th><td>        movb      %dl, %r12b</td></tr>
+<tr><th id="197">197</th><td>        movq      %r13, <var>192</var>(%rsp)</td></tr>
+<tr><th id="198">198</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 13, 0x4, 0x13, 0x77, 192 &amp; 0x7F | 0x80, 192 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>13</var>, <var>192</var>)</td></tr>
+<tr><th id="199">199</th><td>        movl      %eax, %r13d</td></tr>
+<tr><th id="200">200</th><td>        movq      %r14, <var>184</var>(%rsp)</td></tr>
+<tr><th id="201">201</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 14, 0x4, 0x13, 0x77, 184 &amp; 0x7F | 0x80, 184 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>14</var>, <var>184</var>)</td></tr>
+<tr><th id="202">202</th><td>        movl      %ecx, %r14d</td></tr>
+<tr><th id="203">203</th><td>        movq      %r15, <var>176</var>(%rsp)</td></tr>
+<tr><th id="204">204</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 15, 0x4, 0x13, 0x77, 176 &amp; 0x7F | 0x80, 176 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>15</var>, <var>176</var>)</td></tr>
+<tr><th id="205">205</th><td>        movq      %rbx, <var>168</var>(%rsp)</td></tr>
+<tr><th id="206">206</th><td>        movq      %rdi, %rbx</td></tr>
+<tr><th id="207">207</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>.LBL_1_6:</td></tr>
+<tr><th id="210">210</th><td>        btl       %r13d, %r14d</td></tr>
+<tr><th id="211">211</th><td>        jc        .LBL_1_13</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>.LBL_1_7:</td></tr>
+<tr><th id="214">214</th><td>        lea       <var>1</var>(%r13), %esi</td></tr>
+<tr><th id="215">215</th><td>        btl       %esi, %r14d</td></tr>
+<tr><th id="216">216</th><td>        jc        .LBL_1_10</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>.LBL_1_8:</td></tr>
+<tr><th id="219">219</th><td>        incb      %r12b</td></tr>
+<tr><th id="220">220</th><td>        addl      $<var>2</var>, %r13d</td></tr>
+<tr><th id="221">221</th><td>        cmpb      $<var>16</var>, %r12b</td></tr>
+<tr><th id="222">222</th><td>        jb        .LBL_1_6</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>        vmovups   <var>128</var>(%rsp), %ymm10</td></tr>
+<tr><th id="225">225</th><td>        movq      %rbx, %rdi</td></tr>
+<tr><th id="226">226</th><td>        vmovups   <var>96</var>(%rsp), %ymm11</td></tr>
+<tr><th id="227">227</th><td>        vmovups   <var>64</var>(%rsp), %ymm12</td></tr>
+<tr><th id="228">228</th><td>        vmovups   <var>32</var>(%rsp), %ymm13</td></tr>
+<tr><th id="229">229</th><td>        vmovups   (%rsp), %ymm15</td></tr>
+<tr><th id="230">230</th><td>        vmovupd   <var>320</var>(%rsp), %ymm3</td></tr>
+<tr><th id="231">231</th><td>        vmovupd   <var>384</var>(%rsp), %ymm2</td></tr>
+<tr><th id="232">232</th><td>        movq      <var>160</var>(%rsp), %rsi</td></tr>
+<tr><th id="233">233</th><td>        movq      <var>200</var>(%rsp), %r12</td></tr>
+<tr><th id="234">234</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="235">235</th><td>        movq      <var>192</var>(%rsp), %r13</td></tr>
+<tr><th id="236">236</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="237">237</th><td>        movq      <var>184</var>(%rsp), %r14</td></tr>
+<tr><th id="238">238</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="239">239</th><td>        movq      <var>176</var>(%rsp), %r15</td></tr>
+<tr><th id="240">240</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r15" data-ref="_M/cfi_restore">cfi_restore</a> (%r15)</td></tr>
+<tr><th id="241">241</th><td>        movq      <var>168</var>(%rsp), %rbx</td></tr>
+<tr><th id="242">242</th><td>        jmp       .LBL_1_2</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>.LBL_1_10:</td></tr>
+<tr><th id="245">245</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="246">246</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="247">247</th><td>        shlq      $<var>4</var>, %r15</td></tr>
+<tr><th id="248">248</th><td>        vmovsd    <var>264</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="249">249</th><td>        vzeroupper</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="sin@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sin)</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>        vmovsd    %xmm0, <var>328</var>(%rsp,%r15)</td></tr>
+<tr><th id="254">254</th><td>        vmovsd    <var>264</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="cos@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(cos)</td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td>        vmovsd    %xmm0, <var>392</var>(%rsp,%r15)</td></tr>
+<tr><th id="259">259</th><td>        jmp       .LBL_1_8</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>.LBL_1_13:</td></tr>
+<tr><th id="262">262</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="263">263</th><td>        shlq      $<var>4</var>, %r15</td></tr>
+<tr><th id="264">264</th><td>        vmovsd    <var>256</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="265">265</th><td>        vzeroupper</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="sin@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sin)</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>        vmovsd    %xmm0, <var>320</var>(%rsp,%r15)</td></tr>
+<tr><th id="270">270</th><td>        vmovsd    <var>256</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="cos@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(cos)</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>        vmovsd    %xmm0, <var>384</var>(%rsp,%r15)</td></tr>
+<tr><th id="275">275</th><td>        jmp       .LBL_1_7</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVdN4vl8l8_sincos_avx2,.-_ZGVdN4vl8l8_sincos_avx2;" data-ref="_M/END">END</a> (_ZGVdN4vl8l8_sincos_avx2)</td></tr>
+<tr><th id="278">278</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#691" title=".globl __GI__ZGVdN4vl8l8_sincos_avx2 ; .set __GI__ZGVdN4vl8l8_sincos_avx2,_ZGVdN4vl8l8_sincos_avx2" data-ref="_M/libmvec_hidden_def">libmvec_hidden_def</a>(_ZGVdN4vl8l8_sincos_avx2)</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td><i>/* vvv version implemented with wrapper to vl8l8 variant.  */</i></td></tr>
+<tr><th id="281">281</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVdN4vvv_sincos_avx2; .type _ZGVdN4vvv_sincos_avx2,@function; .align 1&lt;&lt;4; _ZGVdN4vvv_sincos_avx2: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVdN4vvv_sincos_avx2" title='_ZGVdN4vvv_sincos_avx2' data-ref="_ZGVdN4vvv_sincos_avx2" data-ref-filename="_ZGVdN4vvv_sincos_avx2">_ZGVdN4vvv_sincos_avx2</dfn></span>)</td></tr>
+<tr><th id="282">282</th><td><u>#<span data-ppcond="282">ifndef</span> <span class="macro" data-ref="_M/__ILP32__">__ILP32__</span></u></td></tr>
+<tr><th id="283">283</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="284">284</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="285">285</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="286">286</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="287">287</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="288">288</th><td>        andq      $-<var>32</var>, %rsp</td></tr>
+<tr><th id="289">289</th><td>        subq      $<var>128</var>, %rsp</td></tr>
+<tr><th id="290">290</th><td>        vmovdqu   %ymm1, <var>64</var>(%rsp)</td></tr>
+<tr><th id="291">291</th><td>        lea       (%rsp), %rdi</td></tr>
+<tr><th id="292">292</th><td>        vmovdqu   %ymm2, <var>96</var>(%rdi)</td></tr>
+<tr><th id="293">293</th><td>        lea       <var>32</var>(%rsp), %rsi</td></tr>
+<tr><th id="294">294</th><td>        call      <a class="macro" href="../../../../include/libc-symbols.h.html#584" title="__GI__ZGVdN4vl8l8_sincos_avx2" data-ref="_M/HIDDEN_JUMPTARGET">HIDDEN_JUMPTARGET</a>(_ZGVdN4vl8l8_sincos_avx2)</td></tr>
+<tr><th id="295">295</th><td>        movq      <var>64</var>(%rsp), %rdx</td></tr>
+<tr><th id="296">296</th><td>        movq      <var>96</var>(%rsp), %rsi</td></tr>
+<tr><th id="297">297</th><td>        movq      <var>72</var>(%rsp), %r8</td></tr>
+<tr><th id="298">298</th><td>        movq      <var>104</var>(%rsp), %r10</td></tr>
+<tr><th id="299">299</th><td>        movq      (%rsp), %rax</td></tr>
+<tr><th id="300">300</th><td>        movq      <var>32</var>(%rsp), %rcx</td></tr>
+<tr><th id="301">301</th><td>        movq      <var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="302">302</th><td>        movq      <var>40</var>(%rsp), %r9</td></tr>
+<tr><th id="303">303</th><td>        movq      %rax, (%rdx)</td></tr>
+<tr><th id="304">304</th><td>        movq      %rcx, (%rsi)</td></tr>
+<tr><th id="305">305</th><td>        movq      <var>80</var>(%rsp), %rax</td></tr>
+<tr><th id="306">306</th><td>        movq      <var>112</var>(%rsp), %rcx</td></tr>
+<tr><th id="307">307</th><td>        movq      %rdi, (%r8)</td></tr>
+<tr><th id="308">308</th><td>        movq      %r9, (%r10)</td></tr>
+<tr><th id="309">309</th><td>        movq      <var>88</var>(%rsp), %rdi</td></tr>
+<tr><th id="310">310</th><td>        movq      <var>120</var>(%rsp), %r9</td></tr>
+<tr><th id="311">311</th><td>        movq      <var>16</var>(%rsp), %r11</td></tr>
+<tr><th id="312">312</th><td>        movq      <var>48</var>(%rsp), %rdx</td></tr>
+<tr><th id="313">313</th><td>        movq      <var>24</var>(%rsp), %rsi</td></tr>
+<tr><th id="314">314</th><td>        movq      <var>56</var>(%rsp), %r8</td></tr>
+<tr><th id="315">315</th><td>        movq      %r11, (%rax)</td></tr>
+<tr><th id="316">316</th><td>        movq      %rdx, (%rcx)</td></tr>
+<tr><th id="317">317</th><td>        movq      %rsi, (%rdi)</td></tr>
+<tr><th id="318">318</th><td>        movq      %r8, (%r9)</td></tr>
+<tr><th id="319">319</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="320">320</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="321">321</th><td>        popq      %rbp</td></tr>
+<tr><th id="322">322</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="323">323</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="324">324</th><td>        ret</td></tr>
+<tr><th id="325">325</th><td><u>#<span data-ppcond="282">else</span></u></td></tr>
+<tr><th id="326">326</th><td>        leal    <var>8</var>(%rsp), %r10d</td></tr>
+<tr><th id="327">327</th><td>        .cfi_def_cfa <var>10</var>, <var>0</var></td></tr>
+<tr><th id="328">328</th><td>        andl    $-<var>32</var>, %esp</td></tr>
+<tr><th id="329">329</th><td>        pushq   -<var>8</var>(%r10d)</td></tr>
+<tr><th id="330">330</th><td>        pushq   %rbp</td></tr>
+<tr><th id="331">331</th><td>        .cfi_escape <var>0x10</var>,<var>0x6</var>,<var>0x2</var>,<var>0x76</var>,<var>0</var></td></tr>
+<tr><th id="332">332</th><td>        movl    %esp, %ebp</td></tr>
+<tr><th id="333">333</th><td>        pushq   %r10</td></tr>
+<tr><th id="334">334</th><td>        .cfi_escape <var>0xf</var>,<var>0x3</var>,<var>0x76</var>,<var>0x78</var>,<var>0x6</var></td></tr>
+<tr><th id="335">335</th><td>        leal    -<var>48</var>(%rbp), %esi</td></tr>
+<tr><th id="336">336</th><td>        leal    -<var>80</var>(%rbp), %edi</td></tr>
+<tr><th id="337">337</th><td>        subl    $<var>104</var>, %esp</td></tr>
+<tr><th id="338">338</th><td>        vmovaps %xmm1, -<var>96</var>(%ebp)</td></tr>
+<tr><th id="339">339</th><td>        vmovaps %xmm2, -<var>112</var>(%ebp)</td></tr>
+<tr><th id="340">340</th><td>        call    HIDDEN_JUMPTARGET(_ZGVdN4vl8l8_sincos_avx2)</td></tr>
+<tr><th id="341">341</th><td>        movl    -<var>96</var>(%ebp), %eax</td></tr>
+<tr><th id="342">342</th><td>        vmovsd  -<var>80</var>(%ebp), %xmm0</td></tr>
+<tr><th id="343">343</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="344">344</th><td>        movl    -<var>92</var>(%ebp), %eax</td></tr>
+<tr><th id="345">345</th><td>        vmovsd  -<var>72</var>(%ebp), %xmm0</td></tr>
+<tr><th id="346">346</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="347">347</th><td>        movl    -<var>88</var>(%ebp), %eax</td></tr>
+<tr><th id="348">348</th><td>        vmovsd  -<var>64</var>(%ebp), %xmm0</td></tr>
+<tr><th id="349">349</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="350">350</th><td>        movl    -<var>84</var>(%ebp), %eax</td></tr>
+<tr><th id="351">351</th><td>        vmovsd  -<var>56</var>(%ebp), %xmm0</td></tr>
+<tr><th id="352">352</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="353">353</th><td>        movl    -<var>112</var>(%ebp), %eax</td></tr>
+<tr><th id="354">354</th><td>        vmovsd  -<var>48</var>(%ebp), %xmm0</td></tr>
+<tr><th id="355">355</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="356">356</th><td>        movl    -<var>108</var>(%ebp), %eax</td></tr>
+<tr><th id="357">357</th><td>        vmovsd  -<var>40</var>(%ebp), %xmm0</td></tr>
+<tr><th id="358">358</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="359">359</th><td>        movl    -<var>104</var>(%ebp), %eax</td></tr>
+<tr><th id="360">360</th><td>        vmovsd  -<var>32</var>(%ebp), %xmm0</td></tr>
+<tr><th id="361">361</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="362">362</th><td>        movl    -<var>100</var>(%ebp), %eax</td></tr>
+<tr><th id="363">363</th><td>        vmovsd  -<var>24</var>(%ebp), %xmm0</td></tr>
+<tr><th id="364">364</th><td>        vmovsd  %xmm0, (%eax)</td></tr>
+<tr><th id="365">365</th><td>        addl    $<var>104</var>, %esp</td></tr>
+<tr><th id="366">366</th><td>        popq    %r10</td></tr>
+<tr><th id="367">367</th><td>        .cfi_def_cfa <var>10</var>, <var>0</var></td></tr>
+<tr><th id="368">368</th><td>        popq    %rbp</td></tr>
+<tr><th id="369">369</th><td>        leal    -<var>8</var>(%r10), %esp</td></tr>
+<tr><th id="370">370</th><td>        .cfi_def_cfa <var>7</var>, <var>8</var></td></tr>
+<tr><th id="371">371</th><td>        ret</td></tr>
+<tr><th id="372">372</th><td><u>#<span data-ppcond="282">endif</span></u></td></tr>
+<tr><th id="373">373</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVdN4vvv_sincos_avx2,.-_ZGVdN4vvv_sincos_avx2;" data-ref="_M/END">END</a> (_ZGVdN4vvv_sincos_avx2)</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

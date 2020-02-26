@@ -1,0 +1,82 @@
+<dec f='glibc_src_2.31/include/libc-symbols.h' l='1019'/>
+<doc f='glibc_src_2.31/include/libc-symbols.h' l='940'>/* The following macros are used for indirect function symbols in libc.so.
+   First of all, you need to have the function prototyped somewhere,
+   say in foo.h:
+
+   int foo (int __bar);
+
+   If you have an implementation for foo which e.g. uses a special hardware
+   feature which isn&apos;t available on all machines where this libc.so will be
+   used but decideable if available at runtime e.g. via hwcaps, you can provide
+   two or multiple implementations of foo:
+
+   int __foo_default (int __bar)
+   {
+     return __bar;
+   }
+
+   int __foo_special (int __bar)
+   {
+     return __bar;
+   }
+
+   If your function foo has no libc_hidden_proto (foo) defined for PLT
+   bypassing, you can use:
+
+   #define INIT_ARCH() unsigned long int hwcap = __GLRO(dl_hwcap);
+
+   libc_ifunc (foo, (hwcap &amp; HWCAP_SPECIAL) ? __foo_special : __foo_default);
+
+   This will define a resolver function for foo which returns __foo_special or
+   __foo_default depending on your specified expression.  Please note that you
+   have to define a macro function INIT_ARCH before using libc_ifunc macro as
+   it is called by the resolver function before evaluating the specified
+   expression.  In this example it is used to prepare the hwcap variable.
+   The resolver function is assigned to an ifunc&apos;ed symbol foo.  Calls to foo
+   from inside or outside of libc.so will be indirected by a PLT call.
+
+   If your function foo has a libc_hidden_proto (foo) defined for PLT bypassing
+   and calls to foo within libc.so should always go to one specific
+   implementation of foo e.g. __foo_default then you have to add:
+
+   __hidden_ver1 (__foo_default, __GI_foo, __foo_default);
+
+   or a tweaked definition of libc_hidden_def macro after the __foo_default
+   function definition.  Calls to foo within libc.so will always go directly to
+   __foo_default.  Calls to foo from outside libc.so will be indirected by a
+   PLT call to ifunc&apos;ed symbol foo which you have to define in a separate
+   compile unit:
+
+   #define foo __redirect_foo
+   #include &lt;foo.h&gt;
+   #undef foo
+
+   extern __typeof (__redirect_foo) __foo_default attribute_hidden;
+   extern __typeof (__redirect_foo) __foo_special attribute_hidden;
+
+   libc_ifunc_redirected (__redirect_foo, foo,
+			  (hwcap &amp; HWCAP_SPECIAL)
+			  ? __foo_special
+			  : __foo_default);
+
+   This will define the ifunc&apos;ed symbol foo like above.  The redirection of foo
+   in header file is needed to omit an additional defintion of __GI_foo which
+   would end in a linker error while linking libc.so.  You have to specify
+   __redirect_foo as first parameter which is used within libc_ifunc_redirected
+   macro in conjunction with typeof to define the ifunc&apos;ed symbol foo.
+
+   If your function foo has a libc_hidden_proto (foo) defined and calls to foo
+   within or from outside libc.so should go via ifunc&apos;ed symbol, then you have
+   to use:
+
+   libc_ifunc_hidden (foo, foo,
+		      (hwcap &amp; HWCAP_SPECIAL)
+		      ? __foo_special
+		      : __foo_default);
+   libc_hidden_def (foo)
+
+   The first parameter foo of libc_ifunc_hidden macro is used in the same way
+   as for libc_ifunc_redirected macro.  */</doc>
+<use f='glibc_src_2.31/sysdeps/x86_64/multiarch/sched_cpucount.c' l='35' u='c'/>
+<use f='glibc_src_2.31/sysdeps/x86_64/multiarch/strstr.c' l='44' u='c'/>
+<use f='glibc_src_2.31/sysdeps/unix/sysv/linux/gettimeofday.c' l='41' u='c'/>

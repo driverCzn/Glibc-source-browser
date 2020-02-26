@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-iteratephdr.c source code [glibc_src_2.31/elf/dl-iteratephdr.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/elf/dl-iteratephdr.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.31</a>/<a href='./'>elf</a>/<a href='dl-iteratephdr.c.html'>dl-iteratephdr.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Get loaded objects program headers.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2001-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Jakub Jelinek &lt;jakub@redhat.com&gt;, 2001.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public License as</i></td></tr>
+<tr><th id="8">8</th><td><i>   published by the Free Software Foundation; either version 2.1 of the</i></td></tr>
+<tr><th id="9">9</th><td><i>   License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; see the file COPYING.LIB.  If</i></td></tr>
+<tr><th id="18">18</th><td><i>   not, see &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="26">26</th><td><dfn class="tu decl def fn" id="cancel_handler" title='cancel_handler' data-type='void cancel_handler(void * arg)' data-ref="cancel_handler" data-ref-filename="cancel_handler">cancel_handler</dfn> (<em>void</em> *<dfn class="local col1 decl" id="1arg" title='arg' data-type='void *' data-ref="1arg" data-ref-filename="1arg">arg</dfn> <b>__attribute__</b>((unused)))</td></tr>
+<tr><th id="27">27</th><td>{</td></tr>
+<tr><th id="28">28</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#224" title="(__pthread_mutex_unlock != ((void*)0) ? __pthread_mutex_unlock (&amp;(_dl_load_write_lock).mutex) : 0)" data-ref="_M/__rtld_lock_unlock_recursive">__rtld_lock_unlock_recursive</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_load_write_lock" data-ref="_M/GL">GL</a>(dl_load_write_lock));</td></tr>
+<tr><th id="29">29</th><td>}</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><em>int</em></td></tr>
+<tr><th id="32">32</th><td><dfn class="decl def fn" id="__dl_iterate_phdr" title='__dl_iterate_phdr' data-ref="__dl_iterate_phdr" data-ref-filename="__dl_iterate_phdr">__dl_iterate_phdr</dfn> (<em>int</em> (*<dfn class="local col2 decl" id="2callback" title='callback' data-type='int (*)(struct dl_phdr_info *, size_t, void *)' data-ref="2callback" data-ref-filename="2callback">callback</dfn>) (<b>struct</b> <a class="type" href="link.h.html#dl_phdr_info" title='dl_phdr_info' data-ref="dl_phdr_info" data-ref-filename="dl_phdr_info">dl_phdr_info</a> *<dfn class="local col3 decl" id="3info" title='info' data-type='struct dl_phdr_info *' data-ref="3info" data-ref-filename="3info">info</dfn>,</td></tr>
+<tr><th id="33">33</th><td>				    <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="4size" title='size' data-type='size_t' data-ref="4size" data-ref-filename="4size">size</dfn>, <em>void</em> *<dfn class="local col5 decl" id="5data" title='data' data-type='void *' data-ref="5data" data-ref-filename="5data">data</dfn>), <em>void</em> *<dfn class="local col6 decl" id="6data" title='data' data-type='void *' data-ref="6data" data-ref-filename="6data">data</dfn>)</td></tr>
+<tr><th id="34">34</th><td>{</td></tr>
+<tr><th id="35">35</th><td>  <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col7 decl" id="7l" title='l' data-type='struct link_map *' data-ref="7l" data-ref-filename="7l">l</dfn>;</td></tr>
+<tr><th id="36">36</th><td>  <b>struct</b> <a class="type" href="link.h.html#dl_phdr_info" title='dl_phdr_info' data-ref="dl_phdr_info" data-ref-filename="dl_phdr_info">dl_phdr_info</a> <dfn class="local col8 decl" id="8info" title='info' data-type='struct dl_phdr_info' data-ref="8info" data-ref-filename="8info">info</dfn>;</td></tr>
+<tr><th id="37">37</th><td>  <em>int</em> <dfn class="local col9 decl" id="9ret" title='ret' data-type='int' data-ref="9ret" data-ref-filename="9ret">ret</dfn> = <var>0</var>;</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>  <i>/* Make sure nobody modifies the list of loaded objects.  */</i></td></tr>
+<tr><th id="40">40</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#221" title="(__pthread_mutex_lock != ((void*)0) ? __pthread_mutex_lock (&amp;(_dl_load_write_lock).mutex) : 0)" data-ref="_M/__rtld_lock_lock_recursive">__rtld_lock_lock_recursive</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_load_write_lock" data-ref="_M/GL">GL</a>(dl_load_write_lock));</td></tr>
+<tr><th id="41">41</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#283" title="do { struct __pthread_cleanup_frame __clframe __attribute__ ((__cleanup__ (__libc_cleanup_routine))) = { .__cancel_routine = (cancel_handler), .__cancel_arg = (((void*)0)), .__do_it = 1 };" data-ref="_M/__libc_cleanup_push">__libc_cleanup_push</a> (<a class="tu ref fn" href="#cancel_handler" title='cancel_handler' data-use='r' data-ref="cancel_handler" data-ref-filename="cancel_handler">cancel_handler</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td>  <i>/* We have to determine the namespace of the caller since this determines</i></td></tr>
+<tr><th id="44">44</th><td><i>     which namespace is reported.  */</i></td></tr>
+<tr><th id="45">45</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="10nloaded" title='nloaded' data-type='size_t' data-ref="10nloaded" data-ref-filename="10nloaded">nloaded</dfn> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<var>0</var>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_nloaded" title='link_namespaces::_ns_nloaded' data-ref="link_namespaces::_ns_nloaded" data-ref-filename="link_namespaces.._ns_nloaded">_ns_nloaded</a>;</td></tr>
+<tr><th id="46">46</th><td>  <a class="typedef" href="../dlfcn/dlfcn.h.html#Lmid_t" title='Lmid_t' data-type='long' data-ref="Lmid_t" data-ref-filename="Lmid_t">Lmid_t</a> <dfn class="local col1 decl" id="11ns" title='ns' data-type='Lmid_t' data-ref="11ns" data-ref-filename="11ns">ns</dfn> = <var>0</var>;</td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="47">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="48">48</th><td>  <em>const</em> <em>void</em> *caller = RETURN_ADDRESS (<var>0</var>);</td></tr>
+<tr><th id="49">49</th><td>  <b>for</b> (Lmid_t cnt = GL(dl_nns) - <var>1</var>; cnt &gt; <var>0</var>; --cnt)</td></tr>
+<tr><th id="50">50</th><td>    <b>for</b> (<b>struct</b> link_map *l = GL(dl_ns)[cnt]._ns_loaded; l; l = l-&gt;l_next)</td></tr>
+<tr><th id="51">51</th><td>      {</td></tr>
+<tr><th id="52">52</th><td>	<i>/* We have to count the total number of loaded objects.  */</i></td></tr>
+<tr><th id="53">53</th><td>	nloaded += GL(dl_ns)[cnt]._ns_nloaded;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>	<b>if</b> (caller &gt;= (<em>const</em> <em>void</em> *) l-&gt;l_map_start</td></tr>
+<tr><th id="56">56</th><td>	    &amp;&amp; caller &lt; (<em>const</em> <em>void</em> *) l-&gt;l_map_end</td></tr>
+<tr><th id="57">57</th><td>	    &amp;&amp; (l-&gt;l_contiguous</td></tr>
+<tr><th id="58">58</th><td>		|| _dl_addr_inside_object (l, (ElfW(Addr)) caller)))</td></tr>
+<tr><th id="59">59</th><td>	  ns = cnt;</td></tr>
+<tr><th id="60">60</th><td>      }</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="47">endif</span></u></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>  <b>for</b> (<a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col1 ref" href="#11ns" title='ns' data-ref="11ns" data-ref-filename="11ns">ns</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a>; <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>; <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_next" title='link_map::l_next' data-ref="link_map::l_next" data-ref-filename="link_map..l_next">l_next</a>)</td></tr>
+<tr><th id="64">64</th><td>    {</td></tr>
+<tr><th id="65">65</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_addr" title='dl_phdr_info::dlpi_addr' data-ref="dl_phdr_info::dlpi_addr" data-ref-filename="dl_phdr_info..dlpi_addr">dlpi_addr</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_addr" title='link_map::l_addr' data-ref="link_map::l_addr" data-ref-filename="link_map..l_addr">l_addr</a>;</td></tr>
+<tr><th id="66">66</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_name" title='dl_phdr_info::dlpi_name' data-ref="dl_phdr_info::dlpi_name" data-ref-filename="dl_phdr_info..dlpi_name">dlpi_name</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_name" title='link_map::l_name' data-ref="link_map::l_name" data-ref-filename="link_map..l_name">l_name</a>;</td></tr>
+<tr><th id="67">67</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_phdr" title='dl_phdr_info::dlpi_phdr' data-ref="dl_phdr_info::dlpi_phdr" data-ref-filename="dl_phdr_info..dlpi_phdr">dlpi_phdr</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_phdr" title='link_map::l_phdr' data-ref="link_map::l_phdr" data-ref-filename="link_map..l_phdr">l_phdr</a>;</td></tr>
+<tr><th id="68">68</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_phnum" title='dl_phdr_info::dlpi_phnum' data-ref="dl_phdr_info::dlpi_phnum" data-ref-filename="dl_phdr_info..dlpi_phnum">dlpi_phnum</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_phnum" title='link_map::l_phnum' data-ref="link_map::l_phnum" data-ref-filename="link_map..l_phnum">l_phnum</a>;</td></tr>
+<tr><th id="69">69</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_adds" title='dl_phdr_info::dlpi_adds' data-ref="dl_phdr_info::dlpi_adds" data-ref-filename="dl_phdr_info..dlpi_adds">dlpi_adds</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_load_adds" data-ref="_M/GL">GL</a>(dl_load_adds);</td></tr>
+<tr><th id="70">70</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_subs" title='dl_phdr_info::dlpi_subs' data-ref="dl_phdr_info::dlpi_subs" data-ref-filename="dl_phdr_info..dlpi_subs">dlpi_subs</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_load_adds" data-ref="_M/GL">GL</a>(dl_load_adds) - <a class="local col0 ref" href="#10nloaded" title='nloaded' data-ref="10nloaded" data-ref-filename="10nloaded">nloaded</a>;</td></tr>
+<tr><th id="71">71</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_tls_data" title='dl_phdr_info::dlpi_tls_data' data-ref="dl_phdr_info::dlpi_tls_data" data-ref-filename="dl_phdr_info..dlpi_tls_data">dlpi_tls_data</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="72">72</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_tls_modid" title='dl_phdr_info::dlpi_tls_modid' data-ref="dl_phdr_info::dlpi_tls_modid" data-ref-filename="dl_phdr_info..dlpi_tls_modid">dlpi_tls_modid</a> = <a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_tls_modid" title='link_map::l_tls_modid' data-ref="link_map::l_tls_modid" data-ref-filename="link_map..l_tls_modid">l_tls_modid</a>;</td></tr>
+<tr><th id="73">73</th><td>      <b>if</b> (<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_tls_modid" title='dl_phdr_info::dlpi_tls_modid' data-ref="dl_phdr_info::dlpi_tls_modid" data-ref-filename="dl_phdr_info..dlpi_tls_modid">dlpi_tls_modid</a> != <var>0</var>)</td></tr>
+<tr><th id="74">74</th><td>	<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="link.h.html#dl_phdr_info::dlpi_tls_data" title='dl_phdr_info::dlpi_tls_data' data-ref="dl_phdr_info::dlpi_tls_data" data-ref-filename="dl_phdr_info..dlpi_tls_data">dlpi_tls_data</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#488" title="_dl_tls_get_addr_soft" data-ref="_M/GLRO">GLRO</a>(dl_tls_get_addr_soft) (<a class="local col7 ref" href="#7l" title='l' data-ref="7l" data-ref-filename="7l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a>);</td></tr>
+<tr><th id="75">75</th><td>      <a class="local col9 ref" href="#9ret" title='ret' data-ref="9ret" data-ref-filename="9ret">ret</a> = <a class="local col2 ref" href="#2callback" title='callback' data-ref="2callback" data-ref-filename="2callback">callback</a> (&amp;<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>, <b>sizeof</b> (<b>struct</b> <a class="type" href="link.h.html#dl_phdr_info" title='dl_phdr_info' data-ref="dl_phdr_info" data-ref-filename="dl_phdr_info">dl_phdr_info</a>), <a class="local col6 ref" href="#6data" title='data' data-ref="6data" data-ref-filename="6data">data</a>);</td></tr>
+<tr><th id="76">76</th><td>      <b>if</b> (<a class="local col9 ref" href="#9ret" title='ret' data-ref="9ret" data-ref-filename="9ret">ret</a>)</td></tr>
+<tr><th id="77">77</th><td>	<b>break</b>;</td></tr>
+<tr><th id="78">78</th><td>    }</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>  <i>/* Release the lock.  */</i></td></tr>
+<tr><th id="81">81</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#290" title="__clframe.__do_it = (0); } while (0)" data-ref="_M/__libc_cleanup_pop">__libc_cleanup_pop</a> (<var>0</var>);</td></tr>
+<tr><th id="82">82</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#224" title="(__pthread_mutex_unlock != ((void*)0) ? __pthread_mutex_unlock (&amp;(_dl_load_write_lock).mutex) : 0)" data-ref="_M/__rtld_lock_unlock_recursive">__rtld_lock_unlock_recursive</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#300" title="_dl_load_write_lock" data-ref="_M/GL">GL</a>(dl_load_write_lock));</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <b>return</b> <a class="local col9 ref" href="#9ret" title='ret' data-ref="9ret" data-ref-filename="9ret">ret</a>;</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td><a class="macro" href="../include/libc-symbols.h.html#607" title="" data-ref="_M/hidden_def">hidden_def</a> (__dl_iterate_phdr)</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><a class="macro" href="../include/libc-symbols.h.html#150" title="extern __typeof (__dl_iterate_phdr) dl_iterate_phdr __attribute__ ((weak, alias (&quot;__dl_iterate_phdr&quot;))) ;" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__dl_iterate_phdr" title='__dl_iterate_phdr' data-ref="__dl_iterate_phdr" data-ref-filename="__dl_iterate_phdr">__dl_iterate_phdr</a>, <dfn class="decl def fn" id="dl_iterate_phdr" title='dl_iterate_phdr' data-ref="dl_iterate_phdr" data-ref-filename="dl_iterate_phdr">dl_iterate_phdr</dfn>);</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

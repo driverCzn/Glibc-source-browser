@@ -1,0 +1,671 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>svml_s_powf16_core_avx512.S source code [glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_s_powf16_core_avx512.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_s_powf16_core_avx512.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.31</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>x86_64</a>/<a href='..'>fpu</a>/<a href='./'>multiarch</a>/<a href='svml_s_powf16_core_avx512.S.html'>svml_s_powf16_core_avx512.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Function powf vectorized with AVX-512. KNL and SKX versions.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2014-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../svml_s_powf_data.h.html">"svml_s_powf_data.h"</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../svml_s_wrapper_impl.h.html">"svml_s_wrapper_impl.h"</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/*</i></td></tr>
+<tr><th id="24">24</th><td><i>   ALGORITHM DESCRIPTION:</i></td></tr>
+<tr><th id="25">25</th><td><i></i></td></tr>
+<tr><th id="26">26</th><td><i>     We are using the next identity : pow(x,y) = 2^(y * log2(x)).</i></td></tr>
+<tr><th id="27">27</th><td><i></i></td></tr>
+<tr><th id="28">28</th><td><i>     1) log2(x) calculation</i></td></tr>
+<tr><th id="29">29</th><td><i>        Here we use the following formula.</i></td></tr>
+<tr><th id="30">30</th><td><i>        Let |x|=2^k1*X1, where k1 is integer, 1&lt;=X1&lt;2.</i></td></tr>
+<tr><th id="31">31</th><td><i>        Let C ~= 1/ln(2),</i></td></tr>
+<tr><th id="32">32</th><td><i>        Rcp1 ~= 1/X1,   X2=Rcp1*X1,</i></td></tr>
+<tr><th id="33">33</th><td><i>        Rcp2 ~= 1/X2,   X3=Rcp2*X2,</i></td></tr>
+<tr><th id="34">34</th><td><i>        Rcp3 ~= 1/X3,   Rcp3C ~= C/X3.</i></td></tr>
+<tr><th id="35">35</th><td><i>        Then</i></td></tr>
+<tr><th id="36">36</th><td><i>          log2|x| = k1 + log2(1/Rcp1) + log2(1/Rcp2) + log2(C/Rcp3C) +</i></td></tr>
+<tr><th id="37">37</th><td><i>                    log2(X1*Rcp1*Rcp2*Rcp3C/C),</i></td></tr>
+<tr><th id="38">38</th><td><i>        where X1*Rcp1*Rcp2*Rcp3C = C*(1+q), q is very small.</i></td></tr>
+<tr><th id="39">39</th><td><i></i></td></tr>
+<tr><th id="40">40</th><td><i>        The values of Rcp1, log2(1/Rcp1), Rcp2, log2(1/Rcp2),</i></td></tr>
+<tr><th id="41">41</th><td><i>        Rcp3C, log2(C/Rcp3C) are taken from tables.</i></td></tr>
+<tr><th id="42">42</th><td><i>        Values of Rcp1, Rcp2, Rcp3C are such that RcpC=Rcp1*Rcp2*Rcp3C</i></td></tr>
+<tr><th id="43">43</th><td><i>        is exactly represented in target precision.</i></td></tr>
+<tr><th id="44">44</th><td><i></i></td></tr>
+<tr><th id="45">45</th><td><i>        log2(X1*Rcp1*Rcp2*Rcp3C/C) = log2(1+q) = ln(1+q)/ln2 =</i></td></tr>
+<tr><th id="46">46</th><td><i>             = 1/(ln2)*q - 1/(2ln2)*q^2 + 1/(3ln2)*q^3 - ... =</i></td></tr>
+<tr><th id="47">47</th><td><i>             = 1/(C*ln2)*cq - 1/(2*C^2*ln2)*cq^2 + 1/(3*C^3*ln2)*cq^3 - ... =</i></td></tr>
+<tr><th id="48">48</th><td><i>             = (1 + a1)*cq + a2*cq^2 + a3*cq^3 + ...,</i></td></tr>
+<tr><th id="49">49</th><td><i>        where</i></td></tr>
+<tr><th id="50">50</th><td><i>             cq=X1*Rcp1*Rcp2*Rcp3C-C,</i></td></tr>
+<tr><th id="51">51</th><td><i>             a1=1/(C*ln(2))-1 is small,</i></td></tr>
+<tr><th id="52">52</th><td><i>             a2=1/(2*C^2*ln2),</i></td></tr>
+<tr><th id="53">53</th><td><i>             a3=1/(3*C^3*ln2),</i></td></tr>
+<tr><th id="54">54</th><td><i>                  ...</i></td></tr>
+<tr><th id="55">55</th><td><i>        Log2 result is split by three parts: HH+HL+HLL</i></td></tr>
+<tr><th id="56">56</th><td><i></i></td></tr>
+<tr><th id="57">57</th><td><i>     2) Calculation of y*log2(x)</i></td></tr>
+<tr><th id="58">58</th><td><i>        Split y into YHi+YLo.</i></td></tr>
+<tr><th id="59">59</th><td><i>        Get high PH and medium PL parts of y*log2|x|.</i></td></tr>
+<tr><th id="60">60</th><td><i>        Get low PLL part of y*log2|x|.</i></td></tr>
+<tr><th id="61">61</th><td><i>        Now we have PH+PL+PLL ~= y*log2|x|.</i></td></tr>
+<tr><th id="62">62</th><td><i></i></td></tr>
+<tr><th id="63">63</th><td><i>     3) Calculation of 2^(y*log2(x))</i></td></tr>
+<tr><th id="64">64</th><td><i>        Let's represent PH+PL+PLL in the form N + j/2^expK + Z,</i></td></tr>
+<tr><th id="65">65</th><td><i>        where expK=7 in this implementation, N and j are integers,</i></td></tr>
+<tr><th id="66">66</th><td><i>        0&lt;=j&lt;=2^expK-1, |Z|&lt;2^(-expK-1). Hence</i></td></tr>
+<tr><th id="67">67</th><td><i>        2^(PH+PL+PLL) ~= 2^N * 2^(j/2^expK) * 2^Z,</i></td></tr>
+<tr><th id="68">68</th><td><i>        where 2^(j/2^expK) is stored in a table, and</i></td></tr>
+<tr><th id="69">69</th><td><i>        2^Z ~= 1 + B1*Z + B2*Z^2 ... + B5*Z^5.</i></td></tr>
+<tr><th id="70">70</th><td><i>        We compute 2^(PH+PL+PLL) as follows:</i></td></tr>
+<tr><th id="71">71</th><td><i>        Break PH into PHH + PHL, where PHH = N + j/2^expK.</i></td></tr>
+<tr><th id="72">72</th><td><i>        Z = PHL + PL + PLL</i></td></tr>
+<tr><th id="73">73</th><td><i>        Exp2Poly = B1*Z + B2*Z^2 ... + B5*Z^5</i></td></tr>
+<tr><th id="74">74</th><td><i>        Get 2^(j/2^expK) from table in the form THI+TLO.</i></td></tr>
+<tr><th id="75">75</th><td><i>        Now we have 2^(PH+PL+PLL) ~= 2^N * (THI + TLO) * (1 + Exp2Poly).</i></td></tr>
+<tr><th id="76">76</th><td><i>        Get significand of 2^(PH+PL+PLL) in the form ResHi+ResLo:</i></td></tr>
+<tr><th id="77">77</th><td><i>        ResHi := THI</i></td></tr>
+<tr><th id="78">78</th><td><i>        ResLo := THI * Exp2Poly + TLO</i></td></tr>
+<tr><th id="79">79</th><td><i>        Get exponent ERes of the result:</i></td></tr>
+<tr><th id="80">80</th><td><i>        Res := ResHi + ResLo:</i></td></tr>
+<tr><th id="81">81</th><td><i>        Result := ex(Res) + N.  */</i></td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	.text</td></tr>
+<tr><th id="84">84</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVeN16vv_powf_knl; .type _ZGVeN16vv_powf_knl,@function; .align 1&lt;&lt;4; _ZGVeN16vv_powf_knl: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVeN16vv_powf_knl" title='_ZGVeN16vv_powf_knl' data-ref="_ZGVeN16vv_powf_knl" data-ref-filename="_ZGVeN16vv_powf_knl">_ZGVeN16vv_powf_knl</dfn></span>)</td></tr>
+<tr><th id="85">85</th><td><u>#<span data-ppcond="85">ifndef</span> <span class="macro" data-ref="_M/HAVE_AVX512DQ_ASM_SUPPORT">HAVE_AVX512DQ_ASM_SUPPORT</span></u></td></tr>
+<tr><th id="86">86</th><td>WRAPPER_IMPL_AVX512_ff _ZGVdN8vv_powf</td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="85">else</span></u></td></tr>
+<tr><th id="88">88</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="89">89</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="90">90</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="91">91</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="92">92</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="93">93</th><td>        andq      $-<var>64</var>, %rsp</td></tr>
+<tr><th id="94">94</th><td>        subq      $<var>1344</var>, %rsp</td></tr>
+<tr><th id="95">95</th><td>        movq      __svml_spow_data@GOTPCREL(%rip), %rdx</td></tr>
+<tr><th id="96">96</th><td>        vmovaps   %zmm1, %zmm9</td></tr>
+<tr><th id="97">97</th><td>        vshuff32x4 $<var>238</var>, %zmm0, %zmm0, %zmm7</td></tr>
+<tr><th id="98">98</th><td>        kxnorw    %k3, %k3, %k3</td></tr>
+<tr><th id="99">99</th><td>        vcvtps2pd %ymm0, %zmm14</td></tr>
+<tr><th id="100">100</th><td>        vcvtps2pd %ymm7, %zmm10</td></tr>
+<tr><th id="101">101</th><td>        movl      $-<var>1</var>, %eax</td></tr>
+<tr><th id="102">102</th><td>        movq      $-<var>1</var>, %rcx</td></tr>
+<tr><th id="103">103</th><td>        vpandd    <a class="macro" href="../svml_s_powf_data.h.html#26" title="192" data-ref="_M/_ABSMASK">_ABSMASK</a>(%rdx), %zmm9, %zmm4</td></tr>
+<tr><th id="104">104</th><td>        vmovups   <a class="macro" href="../svml_s_powf_data.h.html#34" title="12992" data-ref="_M/_ExpMask">_ExpMask</a>(%rdx), %zmm6</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/* exponent bits selection */</i></td></tr>
+<tr><th id="107">107</th><td>        vpsrlq    $<var>20</var>, %zmm14, %zmm13</td></tr>
+<tr><th id="108">108</th><td>        vshuff32x4 $<var>238</var>, %zmm9, %zmm9, %zmm8</td></tr>
+<tr><th id="109">109</th><td>        vpcmpd    $<var>5</var>, <a class="macro" href="../svml_s_powf_data.h.html#25" title="128" data-ref="_M/_INF">_INF</a>(%rdx), %zmm4, %k2</td></tr>
+<tr><th id="110">110</th><td>        vpsrlq    $<var>32</var>, %zmm13, %zmm15</td></tr>
+<tr><th id="111">111</th><td>        vcvtps2pd %ymm8, %zmm2</td></tr>
+<tr><th id="112">112</th><td>        vmovups   <a class="macro" href="../svml_s_powf_data.h.html#35" title="13056" data-ref="_M/_Two10">_Two10</a>(%rdx), %zmm4</td></tr>
+<tr><th id="113">113</th><td>        vpmovqd   %zmm15, %ymm12</td></tr>
+<tr><th id="114">114</th><td>        vcvtps2pd %ymm9, %zmm1</td></tr>
+<tr><th id="115">115</th><td>        vpsubd    <a class="macro" href="../svml_s_powf_data.h.html#23" title="0" data-ref="_M/_NMINNORM">_NMINNORM</a>(%rdx), %zmm0, %zmm3</td></tr>
+<tr><th id="116">116</th><td>        vpbroadcastd %eax, %zmm8{%k2}{z}</td></tr>
+<tr><th id="117">117</th><td>        <span class='error' title="unknown type name &apos;vpcmpd&apos;">vpcmpd</span>    <span class='error' title="expected identifier or &apos;(&apos;">$</span><var>5</var>, <a class="macro" href="../svml_s_powf_data.h.html#24" title="64" data-ref="_M/_NMAXVAL">_NMAXVAL</a>(%rdx), %zmm3, %k1</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><i>/* preserve mantissa, set input exponent to 2^(-10) */</i></td></tr>
+<tr><th id="120">120</th><td>        vmovaps   %zmm6, %zmm3</td></tr>
+<tr><th id="121">121</th><td>        vpternlogq $<var>248</var>, %zmm6, %zmm10, %zmm4</td></tr>
+<tr><th id="122">122</th><td>        vpsrlq    $<var>20</var>, %zmm10, %zmm10</td></tr>
+<tr><th id="123">123</th><td>        vpternlogq $<var>234</var>, <a class="macro" href="../svml_s_powf_data.h.html#35" title="13056" data-ref="_M/_Two10">_Two10</a>(%rdx), %zmm14, %zmm3</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><i>/* reciprocal approximation good to at least 11 bits */</i></td></tr>
+<tr><th id="126">126</th><td>        vrcp28pd  %zmm4, %zmm11</td></tr>
+<tr><th id="127">127</th><td>        vpsrlq    $<var>32</var>, %zmm10, %zmm14</td></tr>
+<tr><th id="128">128</th><td>        vpbroadcastd %eax, %zmm7{%k1}{z}</td></tr>
+<tr><th id="129">129</th><td>        <span class='error' title="unknown type name &apos;kxnorw&apos;">kxnorw</span>    <span class='error' title="expected identifier or &apos;(&apos;">%</span>k1, %k1, %k1</td></tr>
+<tr><th id="130">130</th><td>        vrcp28pd  %zmm3, %zmm5</td></tr>
+<tr><th id="131">131</th><td>        vpmovqd   %zmm14, %ymm6</td></tr>
+<tr><th id="132">132</th><td>        vshufi32x4 $<var>68</var>, %zmm6, %zmm12, %zmm13</td></tr>
+<tr><th id="133">133</th><td>        vmovups   <a class="macro" href="../svml_s_powf_data.h.html#39" title="13312" data-ref="_M/_One">_One</a>(%rdx), %zmm6</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><i>/* round reciprocal to nearest integer, will have 1+9 mantissa bits */</i></td></tr>
+<tr><th id="136">136</th><td>        vrndscalepd $<var>8</var>, %zmm5, %zmm14</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><i>/* biased exponent in DP format */</i></td></tr>
+<tr><th id="139">139</th><td>        vshuff32x4 $<var>238</var>, %zmm13, %zmm13, %zmm5</td></tr>
+<tr><th id="140">140</th><td>        vrndscalepd $<var>8</var>, %zmm11, %zmm11</td></tr>
+<tr><th id="141">141</th><td>        vcmppd    $<var>30</var>, <a class="macro" href="../svml_s_powf_data.h.html#42" title="13504" data-ref="_M/_Threshold">_Threshold</a>(%rdx), %zmm14, %k2</td></tr>
+<tr><th id="142">142</th><td>        vcvtdq2pd %ymm13, %zmm10</td></tr>
+<tr><th id="143">143</th><td>        vcvtdq2pd %ymm5, %zmm15</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><i>/* table lookup */</i></td></tr>
+<tr><th id="146">146</th><td>        vpsrlq    $<var>40</var>, %zmm14, %zmm13</td></tr>
+<tr><th id="147">147</th><td>        vpxord    %zmm5, %zmm5, %zmm5</td></tr>
+<tr><th id="148">148</th><td>        vgatherqpd <a class="macro" href="../svml_s_powf_data.h.html#22" title="-4218496" data-ref="_M/_Log2Rcp_lookup">_Log2Rcp_lookup</a>(%rdx,%zmm13), %zmm5{%k3}</td></tr>
+<tr><th id="149">149</th><td>        <span class='error' title="unknown type name &apos;vfmsub213pd&apos;">vfmsub213pd</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm6, %zmm14, %zmm3</td></tr>
+<tr><th id="150">150</th><td>        vfmsub213pd %zmm6, %zmm11, %zmm4</td></tr>
+<tr><th id="151">151</th><td>        vcmppd    $<var>30</var>, <a class="macro" href="../svml_s_powf_data.h.html#42" title="13504" data-ref="_M/_Threshold">_Threshold</a>(%rdx), %zmm11, %k3</td></tr>
+<tr><th id="152">152</th><td>        vpbroadcastq %rcx, %zmm14{%k2}{z}</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><i>/* dpP= _dbT+lJ*T_ITEM_GRAN */</i></td></tr>
+<tr><th id="155">155</th><td>        <span class='error' title="unknown type name &apos;kxnorw&apos;">kxnorw</span>    <span class='error' title="expected identifier or &apos;(&apos;">%</span>k2, %k2, %k2</td></tr>
+<tr><th id="156">156</th><td>        vpsrlq    $<var>40</var>, %zmm11, %zmm12</td></tr>
+<tr><th id="157">157</th><td>        vpxord    %zmm6, %zmm6, %zmm6</td></tr>
+<tr><th id="158">158</th><td>        vpbroadcastq %rcx, %zmm11{%k3}{z}</td></tr>
+<tr><th id="159">159</th><td>        <span class='error' title="unknown type name &apos;kxnorw&apos;">kxnorw</span>    <span class='error' title="expected identifier or &apos;(&apos;">%</span>k3, %k3, %k3</td></tr>
+<tr><th id="160">160</th><td>        vgatherqpd <a class="macro" href="../svml_s_powf_data.h.html#22" title="-4218496" data-ref="_M/_Log2Rcp_lookup">_Log2Rcp_lookup</a>(%rdx,%zmm12), %zmm6{%k1}</td></tr>
+<tr><th id="161">161</th><td>        <span class='error' title="unknown type name &apos;vmovups&apos;">vmovups</span>   <a class="macro" href="../svml_s_powf_data.h.html#44" title="13632" data-ref="_M/_Bias1">_Bias1</a>(%rdx), %zmm12</td></tr>
+<tr><th id="162">162</th><td>        vpternlogq $<var>236</var>, <a class="macro" href="../svml_s_powf_data.h.html#43" title="13568" data-ref="_M/_Bias">_Bias</a>(%rdx), %zmm12, %zmm14</td></tr>
+<tr><th id="163">163</th><td>        vpternlogq $<var>248</var>, <a class="macro" href="../svml_s_powf_data.h.html#43" title="13568" data-ref="_M/_Bias">_Bias</a>(%rdx), %zmm11, %zmm12</td></tr>
+<tr><th id="164">164</th><td>        vsubpd    %zmm14, %zmm10, %zmm13</td></tr>
+<tr><th id="165">165</th><td>        vsubpd    %zmm12, %zmm15, %zmm10</td></tr>
+<tr><th id="166">166</th><td>        vmovups   <a class="macro" href="../svml_s_powf_data.h.html#32" title="12864" data-ref="_M/_poly_coeff_3">_poly_coeff_3</a>(%rdx), %zmm11</td></tr>
+<tr><th id="167">167</th><td>        vmovups   <a class="macro" href="../svml_s_powf_data.h.html#33" title="12928" data-ref="_M/_poly_coeff_4">_poly_coeff_4</a>(%rdx), %zmm15</td></tr>
+<tr><th id="168">168</th><td>        vfmadd213pd %zmm15, %zmm4, %zmm11</td></tr>
+<tr><th id="169">169</th><td>        vmulpd    %zmm4, %zmm4, %zmm12</td></tr>
+<tr><th id="170">170</th><td>        vmovaps   %zmm15, %zmm14</td></tr>
+<tr><th id="171">171</th><td>        vmulpd    %zmm3, %zmm3, %zmm15</td></tr>
+<tr><th id="172">172</th><td>        vfmadd231pd <a class="macro" href="../svml_s_powf_data.h.html#32" title="12864" data-ref="_M/_poly_coeff_3">_poly_coeff_3</a>(%rdx), %zmm3, %zmm14</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><i>/* reconstruction */</i></td></tr>
+<tr><th id="175">175</th><td>        vfmadd213pd %zmm4, %zmm12, %zmm11</td></tr>
+<tr><th id="176">176</th><td>        vfmadd213pd %zmm3, %zmm15, %zmm14</td></tr>
+<tr><th id="177">177</th><td>        vaddpd    %zmm6, %zmm11, %zmm11</td></tr>
+<tr><th id="178">178</th><td>        vaddpd    %zmm5, %zmm14, %zmm3</td></tr>
+<tr><th id="179">179</th><td>        vfmadd231pd <a class="macro" href="../svml_s_powf_data.h.html#45" title="13696" data-ref="_M/_L2">_L2</a>(%rdx), %zmm10, %zmm11</td></tr>
+<tr><th id="180">180</th><td>        vfmadd132pd <a class="macro" href="../svml_s_powf_data.h.html#45" title="13696" data-ref="_M/_L2">_L2</a>(%rdx), %zmm3, %zmm13</td></tr>
+<tr><th id="181">181</th><td>        vmulpd    %zmm2, %zmm11, %zmm12</td></tr>
+<tr><th id="182">182</th><td>        vmulpd    %zmm1, %zmm13, %zmm10</td></tr>
+<tr><th id="183">183</th><td>        vmulpd    <a class="macro" href="../svml_s_powf_data.h.html#50" title="30400" data-ref="_M/__dbInvLn2">__dbInvLn2</a>(%rdx), %zmm12, %zmm6</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><i>/* hi bits */</i></td></tr>
+<tr><th id="186">186</th><td>        vpsrlq    $<var>32</var>, %zmm12, %zmm12</td></tr>
+<tr><th id="187">187</th><td>        vmulpd    <a class="macro" href="../svml_s_powf_data.h.html#50" title="30400" data-ref="_M/__dbInvLn2">__dbInvLn2</a>(%rdx), %zmm10, %zmm1</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><i>/* to round down; if dR is an integer we will get R = 1, which is ok */</i></td></tr>
+<tr><th id="190">190</th><td>        vsubpd    <a class="macro" href="../svml_s_powf_data.h.html#52" title="30528" data-ref="_M/__dbHALF">__dbHALF</a>(%rdx), %zmm6, %zmm4</td></tr>
+<tr><th id="191">191</th><td>        vpsrlq    $<var>32</var>, %zmm10, %zmm11</td></tr>
+<tr><th id="192">192</th><td>        vpmovqd   %zmm11, %ymm3</td></tr>
+<tr><th id="193">193</th><td>        vsubpd    <a class="macro" href="../svml_s_powf_data.h.html#52" title="30528" data-ref="_M/__dbHALF">__dbHALF</a>(%rdx), %zmm1, %zmm2</td></tr>
+<tr><th id="194">194</th><td>        vaddpd    <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rdx), %zmm4, %zmm14</td></tr>
+<tr><th id="195">195</th><td>        vpmovqd   %zmm12, %ymm4</td></tr>
+<tr><th id="196">196</th><td>        vshufi32x4 $<var>68</var>, %zmm4, %zmm3, %zmm5</td></tr>
+<tr><th id="197">197</th><td>        vpxord    %zmm4, %zmm4, %zmm4</td></tr>
+<tr><th id="198">198</th><td>        vaddpd    <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rdx), %zmm2, %zmm2</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td><i>/* iAbsX = iAbsX&amp;iAbsMask; */</i></td></tr>
+<tr><th id="201">201</th><td>        vpandd    <a class="macro" href="../svml_s_powf_data.h.html#55" title="30720" data-ref="_M/__iAbsMask">__iAbsMask</a>(%rdx), %zmm5, %zmm11</td></tr>
+<tr><th id="202">202</th><td>        vpxord    %zmm5, %zmm5, %zmm5</td></tr>
+<tr><th id="203">203</th><td>        vsubpd    <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rdx), %zmm14, %zmm13</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td><i>/* iRangeMask = (iAbsX&gt;iDomainRange) */</i></td></tr>
+<tr><th id="206">206</th><td>        vpcmpgtd     <a class="macro" href="../svml_s_powf_data.h.html#56" title="30784" data-ref="_M/__iDomainRange">__iDomainRange</a>(%rdx), %zmm11, %k1</td></tr>
+<tr><th id="207">207</th><td>        vsubpd       <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rdx), %zmm2, %zmm15</td></tr>
+<tr><th id="208">208</th><td>        vpbroadcastd %eax, %zmm10{%k1}{z}</td></tr>
+<tr><th id="209">209</th><td>        <span class='error' title="unknown type name &apos;vpternlogd&apos;">vpternlogd</span>   <span class='error' title="expected identifier or &apos;(&apos;">$</span><var>254</var>, %zmm8, %zmm7, %zmm10</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><i>/* [0..1) */</i></td></tr>
+<tr><th id="212">212</th><td>        vsubpd    %zmm15, %zmm1, %zmm1</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td><i>/* low K bits */</i></td></tr>
+<tr><th id="215">215</th><td>        vpandq    <a class="macro" href="../svml_s_powf_data.h.html#54" title="30656" data-ref="_M/__lbLOWKBITS">__lbLOWKBITS</a>(%rdx), %zmm14, %zmm11</td></tr>
+<tr><th id="216">216</th><td>        vgatherqpd <var>13952</var>(%rdx,%zmm11,<var>8</var>), %zmm5{%k3}</td></tr>
+<tr><th id="217">217</th><td>        <span class='error' title="unknown type name &apos;vsubpd&apos;">vsubpd</span>    <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm13, %zmm6, %zmm7</td></tr>
+<tr><th id="218">218</th><td>        vptestmd  %zmm10, %zmm10, %k0</td></tr>
+<tr><th id="219">219</th><td>        vpandq    <a class="macro" href="../svml_s_powf_data.h.html#54" title="30656" data-ref="_M/__lbLOWKBITS">__lbLOWKBITS</a>(%rdx), %zmm2, %zmm10</td></tr>
+<tr><th id="220">220</th><td>        vmulpd    <a class="macro" href="../svml_s_powf_data.h.html#53" title="30592" data-ref="_M/__dbC1">__dbC1</a>(%rdx), %zmm1, %zmm1</td></tr>
+<tr><th id="221">221</th><td>        vmulpd    <a class="macro" href="../svml_s_powf_data.h.html#53" title="30592" data-ref="_M/__dbC1">__dbC1</a>(%rdx), %zmm7, %zmm3</td></tr>
+<tr><th id="222">222</th><td>        vpsrlq    $<var>11</var>, %zmm2, %zmm8</td></tr>
+<tr><th id="223">223</th><td>        vpsrlq    $<var>11</var>, %zmm14, %zmm2</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><i>/* NB : including +/- sign for the exponent!! */</i></td></tr>
+<tr><th id="226">226</th><td>        vpsllq    $<var>52</var>, %zmm8, %zmm8</td></tr>
+<tr><th id="227">227</th><td>        kmovw     %k0, %ecx</td></tr>
+<tr><th id="228">228</th><td>        vpsllq    $<var>52</var>, %zmm2, %zmm6</td></tr>
+<tr><th id="229">229</th><td>        vfmadd213pd %zmm5, %zmm3, %zmm5</td></tr>
+<tr><th id="230">230</th><td>        vgatherqpd <var>13952</var>(%rdx,%zmm10,<var>8</var>), %zmm4{%k2}</td></tr>
+<tr><th id="231">231</th><td>        <span class='error' title="unknown type name &apos;vfmadd213pd&apos;">vfmadd213pd</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm4, %zmm1, %zmm4</td></tr>
+<tr><th id="232">232</th><td>        vpaddq    %zmm6, %zmm5, %zmm10</td></tr>
+<tr><th id="233">233</th><td>        vcvtpd2ps %zmm10, %ymm12</td></tr>
+<tr><th id="234">234</th><td>        vpaddq    %zmm8, %zmm4, %zmm7</td></tr>
+<tr><th id="235">235</th><td>        vcvtpd2ps %zmm7, %ymm11</td></tr>
+<tr><th id="236">236</th><td>        vshuff32x4 $<var>68</var>, %zmm12, %zmm11, %zmm1</td></tr>
+<tr><th id="237">237</th><td>        testl     %ecx, %ecx</td></tr>
+<tr><th id="238">238</th><td>        jne       .LBL_1_3</td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>.LBL_1_2:</td></tr>
+<tr><th id="241">241</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="242">242</th><td>        vmovaps   %zmm1, %zmm0</td></tr>
+<tr><th id="243">243</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="244">244</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="245">245</th><td>        popq      %rbp</td></tr>
+<tr><th id="246">246</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="247">247</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="248">248</th><td>        ret</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>.LBL_1_3:</td></tr>
+<tr><th id="251">251</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="252">252</th><td>        vmovups   %zmm0, <var>1152</var>(%rsp)</td></tr>
+<tr><th id="253">253</th><td>        vmovups   %zmm9, <var>1216</var>(%rsp)</td></tr>
+<tr><th id="254">254</th><td>        vmovups   %zmm1, <var>1280</var>(%rsp)</td></tr>
+<tr><th id="255">255</th><td>        je        .LBL_1_2</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td>        xorb      %dl, %dl</td></tr>
+<tr><th id="258">258</th><td>        kmovw     %k4, <var>1048</var>(%rsp)</td></tr>
+<tr><th id="259">259</th><td>        xorl      %eax, %eax</td></tr>
+<tr><th id="260">260</th><td>        kmovw     %k5, <var>1040</var>(%rsp)</td></tr>
+<tr><th id="261">261</th><td>        kmovw     %k6, <var>1032</var>(%rsp)</td></tr>
+<tr><th id="262">262</th><td>        kmovw     %k7, <var>1024</var>(%rsp)</td></tr>
+<tr><th id="263">263</th><td>        vmovups   %zmm16, <var>960</var>(%rsp)</td></tr>
+<tr><th id="264">264</th><td>        vmovups   %zmm17, <var>896</var>(%rsp)</td></tr>
+<tr><th id="265">265</th><td>        vmovups   %zmm18, <var>832</var>(%rsp)</td></tr>
+<tr><th id="266">266</th><td>        vmovups   %zmm19, <var>768</var>(%rsp)</td></tr>
+<tr><th id="267">267</th><td>        vmovups   %zmm20, <var>704</var>(%rsp)</td></tr>
+<tr><th id="268">268</th><td>        vmovups   %zmm21, <var>640</var>(%rsp)</td></tr>
+<tr><th id="269">269</th><td>        vmovups   %zmm22, <var>576</var>(%rsp)</td></tr>
+<tr><th id="270">270</th><td>        vmovups   %zmm23, <var>512</var>(%rsp)</td></tr>
+<tr><th id="271">271</th><td>        vmovups   %zmm24, <var>448</var>(%rsp)</td></tr>
+<tr><th id="272">272</th><td>        vmovups   %zmm25, <var>384</var>(%rsp)</td></tr>
+<tr><th id="273">273</th><td>        vmovups   %zmm26, <var>320</var>(%rsp)</td></tr>
+<tr><th id="274">274</th><td>        vmovups   %zmm27, <var>256</var>(%rsp)</td></tr>
+<tr><th id="275">275</th><td>        vmovups   %zmm28, <var>192</var>(%rsp)</td></tr>
+<tr><th id="276">276</th><td>        vmovups   %zmm29, <var>128</var>(%rsp)</td></tr>
+<tr><th id="277">277</th><td>        vmovups   %zmm30, <var>64</var>(%rsp)</td></tr>
+<tr><th id="278">278</th><td>        vmovups   %zmm31, (%rsp)</td></tr>
+<tr><th id="279">279</th><td>        movq      %rsi, <var>1064</var>(%rsp)</td></tr>
+<tr><th id="280">280</th><td>        movq      %rdi, <var>1056</var>(%rsp)</td></tr>
+<tr><th id="281">281</th><td>        movq      %r12, <var>1096</var>(%rsp)</td></tr>
+<tr><th id="282">282</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 12, 0x4, 0x13, 0x77, 1096 &amp; 0x7F | 0x80, 1096 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>12</var>, <var>1096</var>)</td></tr>
+<tr><th id="283">283</th><td>        movb      %dl, %r12b</td></tr>
+<tr><th id="284">284</th><td>        movq      %r13, <var>1088</var>(%rsp)</td></tr>
+<tr><th id="285">285</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 13, 0x4, 0x13, 0x77, 1088 &amp; 0x7F | 0x80, 1088 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>13</var>, <var>1088</var>)</td></tr>
+<tr><th id="286">286</th><td>        movl      %ecx, %r13d</td></tr>
+<tr><th id="287">287</th><td>        movq      %r14, <var>1080</var>(%rsp)</td></tr>
+<tr><th id="288">288</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 14, 0x4, 0x13, 0x77, 1080 &amp; 0x7F | 0x80, 1080 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>14</var>, <var>1080</var>)</td></tr>
+<tr><th id="289">289</th><td>        movl      %eax, %r14d</td></tr>
+<tr><th id="290">290</th><td>        movq      %r15, <var>1072</var>(%rsp)</td></tr>
+<tr><th id="291">291</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 15, 0x4, 0x13, 0x77, 1072 &amp; 0x7F | 0x80, 1072 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>15</var>, <var>1072</var>)</td></tr>
+<tr><th id="292">292</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td>.LBL_1_6:</td></tr>
+<tr><th id="295">295</th><td>        btl       %r14d, %r13d</td></tr>
+<tr><th id="296">296</th><td>        jc        .LBL_1_12</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td>.LBL_1_7:</td></tr>
+<tr><th id="299">299</th><td>        lea       <var>1</var>(%r14), %esi</td></tr>
+<tr><th id="300">300</th><td>        btl       %esi, %r13d</td></tr>
+<tr><th id="301">301</th><td>        jc        .LBL_1_10</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td>.LBL_1_8:</td></tr>
+<tr><th id="304">304</th><td>        addb      $<var>1</var>, %r12b</td></tr>
+<tr><th id="305">305</th><td>        addl      $<var>2</var>, %r14d</td></tr>
+<tr><th id="306">306</th><td>        cmpb      $<var>16</var>, %r12b</td></tr>
+<tr><th id="307">307</th><td>        jb        .LBL_1_6</td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td>        kmovw     <var>1048</var>(%rsp), %k4</td></tr>
+<tr><th id="310">310</th><td>        movq      <var>1064</var>(%rsp), %rsi</td></tr>
+<tr><th id="311">311</th><td>        kmovw     <var>1040</var>(%rsp), %k5</td></tr>
+<tr><th id="312">312</th><td>        movq      <var>1056</var>(%rsp), %rdi</td></tr>
+<tr><th id="313">313</th><td>        kmovw     <var>1032</var>(%rsp), %k6</td></tr>
+<tr><th id="314">314</th><td>        movq      <var>1096</var>(%rsp), %r12</td></tr>
+<tr><th id="315">315</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="316">316</th><td>        movq      <var>1088</var>(%rsp), %r13</td></tr>
+<tr><th id="317">317</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="318">318</th><td>        kmovw     <var>1024</var>(%rsp), %k7</td></tr>
+<tr><th id="319">319</th><td>        vmovups   <var>960</var>(%rsp), %zmm16</td></tr>
+<tr><th id="320">320</th><td>        vmovups   <var>896</var>(%rsp), %zmm17</td></tr>
+<tr><th id="321">321</th><td>        vmovups   <var>832</var>(%rsp), %zmm18</td></tr>
+<tr><th id="322">322</th><td>        vmovups   <var>768</var>(%rsp), %zmm19</td></tr>
+<tr><th id="323">323</th><td>        vmovups   <var>704</var>(%rsp), %zmm20</td></tr>
+<tr><th id="324">324</th><td>        vmovups   <var>640</var>(%rsp), %zmm21</td></tr>
+<tr><th id="325">325</th><td>        vmovups   <var>576</var>(%rsp), %zmm22</td></tr>
+<tr><th id="326">326</th><td>        vmovups   <var>512</var>(%rsp), %zmm23</td></tr>
+<tr><th id="327">327</th><td>        vmovups   <var>448</var>(%rsp), %zmm24</td></tr>
+<tr><th id="328">328</th><td>        vmovups   <var>384</var>(%rsp), %zmm25</td></tr>
+<tr><th id="329">329</th><td>        vmovups   <var>320</var>(%rsp), %zmm26</td></tr>
+<tr><th id="330">330</th><td>        vmovups   <var>256</var>(%rsp), %zmm27</td></tr>
+<tr><th id="331">331</th><td>        vmovups   <var>192</var>(%rsp), %zmm28</td></tr>
+<tr><th id="332">332</th><td>        vmovups   <var>128</var>(%rsp), %zmm29</td></tr>
+<tr><th id="333">333</th><td>        vmovups   <var>64</var>(%rsp), %zmm30</td></tr>
+<tr><th id="334">334</th><td>        vmovups   (%rsp), %zmm31</td></tr>
+<tr><th id="335">335</th><td>        movq      <var>1080</var>(%rsp), %r14</td></tr>
+<tr><th id="336">336</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="337">337</th><td>        movq      <var>1072</var>(%rsp), %r15</td></tr>
+<tr><th id="338">338</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r15" data-ref="_M/cfi_restore">cfi_restore</a> (%r15)</td></tr>
+<tr><th id="339">339</th><td>        vmovups   <var>1280</var>(%rsp), %zmm1</td></tr>
+<tr><th id="340">340</th><td>        jmp       .LBL_1_2</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td>.LBL_1_10:</td></tr>
+<tr><th id="343">343</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="344">344</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="345">345</th><td>        vmovss    <var>1156</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="346">346</th><td>        vmovss    <var>1220</var>(%rsp,%r15,<var>8</var>), %xmm1</td></tr>
+<tr><th id="347">347</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="powf" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(powf)</td></tr>
+<tr><th id="348">348</th><td>        vmovss    %xmm0, <var>1284</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="349">349</th><td>        jmp       .LBL_1_8</td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td>.LBL_1_12:</td></tr>
+<tr><th id="352">352</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="353">353</th><td>        vmovss    <var>1152</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="354">354</th><td>        vmovss    <var>1216</var>(%rsp,%r15,<var>8</var>), %xmm1</td></tr>
+<tr><th id="355">355</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="powf" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(powf)</td></tr>
+<tr><th id="356">356</th><td>        vmovss    %xmm0, <var>1280</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="357">357</th><td>        jmp       .LBL_1_7</td></tr>
+<tr><th id="358">358</th><td><u>#<span data-ppcond="85">endif</span></u></td></tr>
+<tr><th id="359">359</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVeN16vv_powf_knl,.-_ZGVeN16vv_powf_knl;" data-ref="_M/END">END</a> (_ZGVeN16vv_powf_knl)</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVeN16vv_powf_skx; .type _ZGVeN16vv_powf_skx,@function; .align 1&lt;&lt;4; _ZGVeN16vv_powf_skx: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVeN16vv_powf_skx" title='_ZGVeN16vv_powf_skx' data-ref="_ZGVeN16vv_powf_skx" data-ref-filename="_ZGVeN16vv_powf_skx">_ZGVeN16vv_powf_skx</dfn></span>)</td></tr>
+<tr><th id="362">362</th><td><u>#<span data-ppcond="362">ifndef</span> <span class="macro" data-ref="_M/HAVE_AVX512DQ_ASM_SUPPORT">HAVE_AVX512DQ_ASM_SUPPORT</span></u></td></tr>
+<tr><th id="363">363</th><td>WRAPPER_IMPL_AVX512_ff _ZGVdN8vv_powf</td></tr>
+<tr><th id="364">364</th><td><u>#<span data-ppcond="362">else</span></u></td></tr>
+<tr><th id="365">365</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="366">366</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="367">367</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="368">368</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="369">369</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="370">370</th><td>        andq      $-<var>64</var>, %rsp</td></tr>
+<tr><th id="371">371</th><td>        subq      $<var>1344</var>, %rsp</td></tr>
+<tr><th id="372">372</th><td>        movq      __svml_spow_data@GOTPCREL(%rip), %rax</td></tr>
+<tr><th id="373">373</th><td>        vextractf32x8 $<var>1</var>, %zmm1, %ymm14</td></tr>
+<tr><th id="374">374</th><td>        vextractf32x8 $<var>1</var>, %zmm0, %ymm15</td></tr>
+<tr><th id="375">375</th><td>        vpsubd <a class="macro" href="../svml_s_powf_data.h.html#23" title="0" data-ref="_M/_NMINNORM">_NMINNORM</a>(%rax), %zmm0, %zmm9</td></tr>
+<tr><th id="376">376</th><td>        vmovups   %zmm26, <var>1280</var>(%rsp)</td></tr>
+<tr><th id="377">377</th><td>        vmovups <a class="macro" href="../svml_s_powf_data.h.html#34" title="12992" data-ref="_M/_ExpMask">_ExpMask</a>(%rax), %zmm6</td></tr>
+<tr><th id="378">378</th><td>        vpcmpd    $<var>1</var>, <a class="macro" href="../svml_s_powf_data.h.html#24" title="64" data-ref="_M/_NMAXVAL">_NMAXVAL</a>(%rax), %zmm9, %k1</td></tr>
+<tr><th id="379">379</th><td>        vcvtps2pd %ymm0, %zmm5</td></tr>
+<tr><th id="380">380</th><td>        vcvtps2pd %ymm1, %zmm12</td></tr>
+<tr><th id="381">381</th><td>        kxnorw    %k3, %k3, %k3</td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td><i>/* exponent bits selection */</i></td></tr>
+<tr><th id="384">384</th><td>        vpsrlq    $<var>20</var>, %zmm5, %zmm3</td></tr>
+<tr><th id="385">385</th><td>        vpsrlq    $<var>32</var>, %zmm3, %zmm2</td></tr>
+<tr><th id="386">386</th><td>        vpmovqd   %zmm2, %ymm11</td></tr>
+<tr><th id="387">387</th><td>        vcvtps2pd %ymm14, %zmm13</td></tr>
+<tr><th id="388">388</th><td>        vmovups   .L_2il0floatpacket<var>.23</var>(%rip), %zmm14</td></tr>
+<tr><th id="389">389</th><td>        vmovaps   %zmm14, %zmm26</td></tr>
+<tr><th id="390">390</th><td>        vpandd <a class="macro" href="../svml_s_powf_data.h.html#26" title="192" data-ref="_M/_ABSMASK">_ABSMASK</a>(%rax), %zmm1, %zmm8</td></tr>
+<tr><th id="391">391</th><td>        vpcmpd    $<var>1</var>, <a class="macro" href="../svml_s_powf_data.h.html#25" title="128" data-ref="_M/_INF">_INF</a>(%rax), %zmm8, %k2</td></tr>
+<tr><th id="392">392</th><td>        vpandnd   %zmm9, %zmm9, %zmm26{%k1}</td></tr>
+<tr><th id="393">393</th><td>        <span class='error' title="unknown type name &apos;vmovups&apos;">vmovups</span> <a class="macro" href="../svml_s_powf_data.h.html#35" title="13056" data-ref="_M/_Two10">_Two10</a>(%rax), %zmm9</td></tr>
+<tr><th id="394">394</th><td>        kxnorw    %k1, %k1, %k1</td></tr>
+<tr><th id="395">395</th><td>        vcvtps2pd %ymm15, %zmm4</td></tr>
+<tr><th id="396">396</th><td>        vmovaps   %zmm14, %zmm15</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td><i>/* preserve mantissa, set input exponent to 2^(-10) */</i></td></tr>
+<tr><th id="399">399</th><td>        vpternlogq $<var>248</var>, %zmm6, %zmm4, %zmm9</td></tr>
+<tr><th id="400">400</th><td>        vpsrlq    $<var>20</var>, %zmm4, %zmm4</td></tr>
+<tr><th id="401">401</th><td></td></tr>
+<tr><th id="402">402</th><td><i>/* reciprocal approximation good to at least 11 bits */</i></td></tr>
+<tr><th id="403">403</th><td>        vrcp14pd  %zmm9, %zmm10</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td><i>/* round reciprocal to nearest integer, will have 1+9 mantissa bits */</i></td></tr>
+<tr><th id="406">406</th><td>        vrndscalepd $<var>8</var>, %zmm10, %zmm3</td></tr>
+<tr><th id="407">407</th><td>        vmovups <a class="macro" href="../svml_s_powf_data.h.html#39" title="13312" data-ref="_M/_One">_One</a>(%rax), %zmm10</td></tr>
+<tr><th id="408">408</th><td>        vfmsub213pd %zmm10, %zmm3, %zmm9</td></tr>
+<tr><th id="409">409</th><td>        vpandnd   %zmm8, %zmm8, %zmm15{%k2}</td></tr>
+<tr><th id="410">410</th><td>        <span class='error' title="unknown type name &apos;vmovaps&apos;">vmovaps</span>   <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm6, %zmm8</td></tr>
+<tr><th id="411">411</th><td>        vpternlogq $<var>234</var>, <a class="macro" href="../svml_s_powf_data.h.html#35" title="13056" data-ref="_M/_Two10">_Two10</a>(%rax), %zmm5, %zmm8</td></tr>
+<tr><th id="412">412</th><td>        vpsrlq    $<var>32</var>, %zmm4, %zmm5</td></tr>
+<tr><th id="413">413</th><td>        vrcp14pd  %zmm8, %zmm7</td></tr>
+<tr><th id="414">414</th><td>        vpmovqd   %zmm5, %ymm6</td></tr>
+<tr><th id="415">415</th><td>        vrndscalepd $<var>8</var>, %zmm7, %zmm2</td></tr>
+<tr><th id="416">416</th><td>        vfmsub213pd %zmm10, %zmm2, %zmm8</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td><i>/* table lookup */</i></td></tr>
+<tr><th id="419">419</th><td>        vpsrlq    $<var>40</var>, %zmm2, %zmm10</td></tr>
+<tr><th id="420">420</th><td>        vinserti32x8 $<var>1</var>, %ymm6, %zmm11, %zmm4</td></tr>
+<tr><th id="421">421</th><td>        vpsrlq    $<var>40</var>, %zmm3, %zmm11</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td><i>/* biased exponent in DP format */</i></td></tr>
+<tr><th id="424">424</th><td>        vextracti32x8 $<var>1</var>, %zmm4, %ymm7</td></tr>
+<tr><th id="425">425</th><td>        vcvtdq2pd %ymm4, %zmm6</td></tr>
+<tr><th id="426">426</th><td>        vpmovqd   %zmm10, %ymm4</td></tr>
+<tr><th id="427">427</th><td>        vpmovqd   %zmm11, %ymm5</td></tr>
+<tr><th id="428">428</th><td>        vpxord    %zmm10, %zmm10, %zmm10</td></tr>
+<tr><th id="429">429</th><td>        vgatherdpd <a class="macro" href="../svml_s_powf_data.h.html#22" title="-4218496" data-ref="_M/_Log2Rcp_lookup">_Log2Rcp_lookup</a>(%rax,%ymm4), %zmm10{%k3}</td></tr>
+<tr><th id="430">430</th><td>        <span class='error' title="unknown type name &apos;vpbroadcastq&apos;">vpbroadcastq</span> <span class='error' title="expected identifier or &apos;(&apos;">.</span>L_2il0floatpacket<var>.24</var>(%rip), %zmm4</td></tr>
+<tr><th id="431">431</th><td>        vpxord    %zmm11, %zmm11, %zmm11</td></tr>
+<tr><th id="432">432</th><td>        vcvtdq2pd %ymm7, %zmm7</td></tr>
+<tr><th id="433">433</th><td>        vgatherdpd <a class="macro" href="../svml_s_powf_data.h.html#22" title="-4218496" data-ref="_M/_Log2Rcp_lookup">_Log2Rcp_lookup</a>(%rax,%ymm5), %zmm11{%k1}</td></tr>
+<tr><th id="434">434</th><td>        <span class='error' title="unknown type name &apos;vmovups&apos;">vmovups</span> <a class="macro" href="../svml_s_powf_data.h.html#42" title="13504" data-ref="_M/_Threshold">_Threshold</a>(%rax), %zmm5</td></tr>
+<tr><th id="435">435</th><td>        vcmppd    $<var>21</var>, %zmm2, %zmm5, %k2</td></tr>
+<tr><th id="436">436</th><td>        vcmppd    $<var>21</var>, %zmm3, %zmm5, %k3</td></tr>
+<tr><th id="437">437</th><td>        vmovups <a class="macro" href="../svml_s_powf_data.h.html#44" title="13632" data-ref="_M/_Bias1">_Bias1</a>(%rax), %zmm3</td></tr>
+<tr><th id="438">438</th><td>        vmovaps   %zmm4, %zmm2</td></tr>
+<tr><th id="439">439</th><td>        vpandnq   %zmm5, %zmm5, %zmm2{%k2}</td></tr>
+<tr><th id="440">440</th><td>        <span class='error' title="unknown type name &apos;vpternlogq&apos;">vpternlogq</span> <span class='error' title="expected identifier or &apos;(&apos;">$</span><var>236</var>, <a class="macro" href="../svml_s_powf_data.h.html#43" title="13568" data-ref="_M/_Bias">_Bias</a>(%rax), %zmm3, %zmm2</td></tr>
+<tr><th id="441">441</th><td></td></tr>
+<tr><th id="442">442</th><td><i>/* dpP= _dbT+lJ*T_ITEM_GRAN */</i></td></tr>
+<tr><th id="443">443</th><td>        kxnorw    %k2, %k2, %k2</td></tr>
+<tr><th id="444">444</th><td>        vpandnq   %zmm5, %zmm5, %zmm4{%k3}</td></tr>
+<tr><th id="445">445</th><td>        <span class='error' title="unknown type name &apos;vpternlogq&apos;">vpternlogq</span> <span class='error' title="expected identifier or &apos;(&apos;">$</span><var>248</var>, <a class="macro" href="../svml_s_powf_data.h.html#43" title="13568" data-ref="_M/_Bias">_Bias</a>(%rax), %zmm4, %zmm3</td></tr>
+<tr><th id="446">446</th><td>        vsubpd    %zmm2, %zmm6, %zmm4</td></tr>
+<tr><th id="447">447</th><td>        vmovups <a class="macro" href="../svml_s_powf_data.h.html#32" title="12864" data-ref="_M/_poly_coeff_3">_poly_coeff_3</a>(%rax), %zmm6</td></tr>
+<tr><th id="448">448</th><td>        vmovups <a class="macro" href="../svml_s_powf_data.h.html#33" title="12928" data-ref="_M/_poly_coeff_4">_poly_coeff_4</a>(%rax), %zmm2</td></tr>
+<tr><th id="449">449</th><td>        vsubpd    %zmm3, %zmm7, %zmm5</td></tr>
+<tr><th id="450">450</th><td>        vmulpd    %zmm8, %zmm8, %zmm7</td></tr>
+<tr><th id="451">451</th><td>        vfmadd213pd %zmm2, %zmm9, %zmm6</td></tr>
+<tr><th id="452">452</th><td>        kxnorw    %k3, %k3, %k3</td></tr>
+<tr><th id="453">453</th><td>        vmovaps   %zmm2, %zmm3</td></tr>
+<tr><th id="454">454</th><td>        vmulpd    %zmm9, %zmm9, %zmm2</td></tr>
+<tr><th id="455">455</th><td>        vfmadd231pd <a class="macro" href="../svml_s_powf_data.h.html#32" title="12864" data-ref="_M/_poly_coeff_3">_poly_coeff_3</a>(%rax), %zmm8, %zmm3</td></tr>
+<tr><th id="456">456</th><td></td></tr>
+<tr><th id="457">457</th><td><i>/* reconstruction */</i></td></tr>
+<tr><th id="458">458</th><td>        vfmadd213pd %zmm9, %zmm2, %zmm6</td></tr>
+<tr><th id="459">459</th><td>        vfmadd213pd %zmm8, %zmm7, %zmm3</td></tr>
+<tr><th id="460">460</th><td>        vaddpd    %zmm11, %zmm6, %zmm8</td></tr>
+<tr><th id="461">461</th><td>        vaddpd    %zmm10, %zmm3, %zmm9</td></tr>
+<tr><th id="462">462</th><td>        vfmadd231pd <a class="macro" href="../svml_s_powf_data.h.html#45" title="13696" data-ref="_M/_L2">_L2</a>(%rax), %zmm5, %zmm8</td></tr>
+<tr><th id="463">463</th><td>        vfmadd132pd <a class="macro" href="../svml_s_powf_data.h.html#45" title="13696" data-ref="_M/_L2">_L2</a>(%rax), %zmm9, %zmm4</td></tr>
+<tr><th id="464">464</th><td>        vmulpd    %zmm13, %zmm8, %zmm13</td></tr>
+<tr><th id="465">465</th><td>        vmulpd    %zmm12, %zmm4, %zmm3</td></tr>
+<tr><th id="466">466</th><td>        vmulpd <a class="macro" href="../svml_s_powf_data.h.html#50" title="30400" data-ref="_M/__dbInvLn2">__dbInvLn2</a>(%rax), %zmm13, %zmm10</td></tr>
+<tr><th id="467">467</th><td>        vmulpd <a class="macro" href="../svml_s_powf_data.h.html#50" title="30400" data-ref="_M/__dbInvLn2">__dbInvLn2</a>(%rax), %zmm3, %zmm8</td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td><i>/* hi bits */</i></td></tr>
+<tr><th id="470">470</th><td>        vpsrlq    $<var>32</var>, %zmm3, %zmm4</td></tr>
+<tr><th id="471">471</th><td>        vpsrlq    $<var>32</var>, %zmm13, %zmm13</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td><i>/* to round down; if dR is an integer we will get R = 1, which is ok */</i></td></tr>
+<tr><th id="474">474</th><td>        vsubpd <a class="macro" href="../svml_s_powf_data.h.html#52" title="30528" data-ref="_M/__dbHALF">__dbHALF</a>(%rax), %zmm8, %zmm12</td></tr>
+<tr><th id="475">475</th><td>        vpmovqd   %zmm4, %ymm5</td></tr>
+<tr><th id="476">476</th><td>        vpmovqd   %zmm13, %ymm2</td></tr>
+<tr><th id="477">477</th><td>        vsubpd <a class="macro" href="../svml_s_powf_data.h.html#52" title="30528" data-ref="_M/__dbHALF">__dbHALF</a>(%rax), %zmm10, %zmm9</td></tr>
+<tr><th id="478">478</th><td>        vaddpd <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rax), %zmm12, %zmm7</td></tr>
+<tr><th id="479">479</th><td>        vaddpd <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rax), %zmm9, %zmm9</td></tr>
+<tr><th id="480">480</th><td>        vsubpd <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rax), %zmm7, %zmm11</td></tr>
+<tr><th id="481">481</th><td>        vsubpd <a class="macro" href="../svml_s_powf_data.h.html#51" title="30464" data-ref="_M/__dbShifter">__dbShifter</a>(%rax), %zmm9, %zmm12</td></tr>
+<tr><th id="482">482</th><td>        vinserti32x8 $<var>1</var>, %ymm2, %zmm5, %zmm3</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td><i>/* iAbsX = iAbsX&amp;iAbsMask */</i></td></tr>
+<tr><th id="485">485</th><td>        vpandd <a class="macro" href="../svml_s_powf_data.h.html#55" title="30720" data-ref="_M/__iAbsMask">__iAbsMask</a>(%rax), %zmm3, %zmm4</td></tr>
+<tr><th id="486">486</th><td></td></tr>
+<tr><th id="487">487</th><td><i>/* iRangeMask = (iAbsX&gt;iDomainRange) */</i></td></tr>
+<tr><th id="488">488</th><td>        vpcmpd    $<var>2</var>, <a class="macro" href="../svml_s_powf_data.h.html#56" title="30784" data-ref="_M/__iDomainRange">__iDomainRange</a>(%rax), %zmm4, %k1</td></tr>
+<tr><th id="489">489</th><td>        vpandnd   %zmm4, %zmm4, %zmm14{%k1}</td></tr>
+<tr><th id="490">490</th><td>        <span class='error' title="unknown type name &apos;vpternlogd&apos;">vpternlogd</span> <span class='error' title="expected identifier or &apos;(&apos;">$</span><var>254</var>, %zmm15, %zmm26, %zmm14</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td><i>/* [0..1) */</i></td></tr>
+<tr><th id="493">493</th><td>        vsubpd    %zmm11, %zmm8, %zmm15</td></tr>
+<tr><th id="494">494</th><td>        vsubpd    %zmm12, %zmm10, %zmm26</td></tr>
+<tr><th id="495">495</th><td>        vptestmd  %zmm14, %zmm14, %k0</td></tr>
+<tr><th id="496">496</th><td>        vpsrlq    $<var>11</var>, %zmm7, %zmm8</td></tr>
+<tr><th id="497">497</th><td>        vpsrlq    $<var>11</var>, %zmm9, %zmm10</td></tr>
+<tr><th id="498">498</th><td>        vmulpd <a class="macro" href="../svml_s_powf_data.h.html#53" title="30592" data-ref="_M/__dbC1">__dbC1</a>(%rax), %zmm26, %zmm26</td></tr>
+<tr><th id="499">499</th><td>        vmulpd <a class="macro" href="../svml_s_powf_data.h.html#53" title="30592" data-ref="_M/__dbC1">__dbC1</a>(%rax), %zmm15, %zmm15</td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td><i>/* NB : including +/- sign for the exponent!! */</i></td></tr>
+<tr><th id="502">502</th><td>        vpsllq    $<var>52</var>, %zmm10, %zmm13</td></tr>
+<tr><th id="503">503</th><td>        vpsllq    $<var>52</var>, %zmm8, %zmm12</td></tr>
+<tr><th id="504">504</th><td>        kmovw     %k0, %ecx</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td><i>/* low K bits */</i></td></tr>
+<tr><th id="507">507</th><td>        vpandq <a class="macro" href="../svml_s_powf_data.h.html#54" title="30656" data-ref="_M/__lbLOWKBITS">__lbLOWKBITS</a>(%rax), %zmm9, %zmm14</td></tr>
+<tr><th id="508">508</th><td>        vpandq <a class="macro" href="../svml_s_powf_data.h.html#54" title="30656" data-ref="_M/__lbLOWKBITS">__lbLOWKBITS</a>(%rax), %zmm7, %zmm6</td></tr>
+<tr><th id="509">509</th><td>        vpmovqd   %zmm14, %ymm7</td></tr>
+<tr><th id="510">510</th><td>        vpmovqd   %zmm6, %ymm9</td></tr>
+<tr><th id="511">511</th><td>        vpxord    %zmm2, %zmm2, %zmm2</td></tr>
+<tr><th id="512">512</th><td>        vgatherdpd <var>13952</var>(%rax,%ymm7,<var>8</var>), %zmm2{%k3}</td></tr>
+<tr><th id="513">513</th><td>        <span class='error' title="unknown type name &apos;vfmadd213pd&apos;">vfmadd213pd</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm2, %zmm26, %zmm2</td></tr>
+<tr><th id="514">514</th><td>        vpaddq    %zmm13, %zmm2, %zmm2</td></tr>
+<tr><th id="515">515</th><td>        vcvtpd2ps %zmm2, %ymm4</td></tr>
+<tr><th id="516">516</th><td>        vpxord    %zmm11, %zmm11, %zmm11</td></tr>
+<tr><th id="517">517</th><td>        vgatherdpd <var>13952</var>(%rax,%ymm9,<var>8</var>), %zmm11{%k2}</td></tr>
+<tr><th id="518">518</th><td>        <span class='error' title="unknown type name &apos;vfmadd213pd&apos;">vfmadd213pd</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>zmm11, %zmm15, %zmm11</td></tr>
+<tr><th id="519">519</th><td>        vpaddq    %zmm12, %zmm11, %zmm3</td></tr>
+<tr><th id="520">520</th><td>        vcvtpd2ps %zmm3, %ymm5</td></tr>
+<tr><th id="521">521</th><td>        vinsertf32x8 $<var>1</var>, %ymm4, %zmm5, %zmm2</td></tr>
+<tr><th id="522">522</th><td>        testl     %ecx, %ecx</td></tr>
+<tr><th id="523">523</th><td>        jne       .LBL_2_3</td></tr>
+<tr><th id="524">524</th><td></td></tr>
+<tr><th id="525">525</th><td>.LBL_2_2:</td></tr>
+<tr><th id="526">526</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="527">527</th><td>        vmovups   <var>1280</var>(%rsp), %zmm26</td></tr>
+<tr><th id="528">528</th><td>        vmovaps   %zmm2, %zmm0</td></tr>
+<tr><th id="529">529</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="530">530</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="531">531</th><td>        popq      %rbp</td></tr>
+<tr><th id="532">532</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="533">533</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="534">534</th><td>        ret</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>.LBL_2_3:</td></tr>
+<tr><th id="537">537</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="538">538</th><td>        vmovups   %zmm0, <var>1088</var>(%rsp)</td></tr>
+<tr><th id="539">539</th><td>        vmovups   %zmm1, <var>1152</var>(%rsp)</td></tr>
+<tr><th id="540">540</th><td>        vmovups   %zmm2, <var>1216</var>(%rsp)</td></tr>
+<tr><th id="541">541</th><td>        je        .LBL_2_2</td></tr>
+<tr><th id="542">542</th><td></td></tr>
+<tr><th id="543">543</th><td>        xorb      %dl, %dl</td></tr>
+<tr><th id="544">544</th><td>        xorl      %eax, %eax</td></tr>
+<tr><th id="545">545</th><td>        kmovw     %k4, <var>984</var>(%rsp)</td></tr>
+<tr><th id="546">546</th><td>        kmovw     %k5, <var>976</var>(%rsp)</td></tr>
+<tr><th id="547">547</th><td>        kmovw     %k6, <var>968</var>(%rsp)</td></tr>
+<tr><th id="548">548</th><td>        kmovw     %k7, <var>960</var>(%rsp)</td></tr>
+<tr><th id="549">549</th><td>        vmovups   %zmm16, <var>896</var>(%rsp)</td></tr>
+<tr><th id="550">550</th><td>        vmovups   %zmm17, <var>832</var>(%rsp)</td></tr>
+<tr><th id="551">551</th><td>        vmovups   %zmm18, <var>768</var>(%rsp)</td></tr>
+<tr><th id="552">552</th><td>        vmovups   %zmm19, <var>704</var>(%rsp)</td></tr>
+<tr><th id="553">553</th><td>        vmovups   %zmm20, <var>640</var>(%rsp)</td></tr>
+<tr><th id="554">554</th><td>        vmovups   %zmm21, <var>576</var>(%rsp)</td></tr>
+<tr><th id="555">555</th><td>        vmovups   %zmm22, <var>512</var>(%rsp)</td></tr>
+<tr><th id="556">556</th><td>        vmovups   %zmm23, <var>448</var>(%rsp)</td></tr>
+<tr><th id="557">557</th><td>        vmovups   %zmm24, <var>384</var>(%rsp)</td></tr>
+<tr><th id="558">558</th><td>        vmovups   %zmm25, <var>320</var>(%rsp)</td></tr>
+<tr><th id="559">559</th><td>        vmovups   %zmm27, <var>256</var>(%rsp)</td></tr>
+<tr><th id="560">560</th><td>        vmovups   %zmm28, <var>192</var>(%rsp)</td></tr>
+<tr><th id="561">561</th><td>        vmovups   %zmm29, <var>128</var>(%rsp)</td></tr>
+<tr><th id="562">562</th><td>        vmovups   %zmm30, <var>64</var>(%rsp)</td></tr>
+<tr><th id="563">563</th><td>        vmovups   %zmm31, (%rsp)</td></tr>
+<tr><th id="564">564</th><td>        movq      %rsi, <var>1000</var>(%rsp)</td></tr>
+<tr><th id="565">565</th><td>        movq      %rdi, <var>992</var>(%rsp)</td></tr>
+<tr><th id="566">566</th><td>        movq      %r12, <var>1032</var>(%rsp)</td></tr>
+<tr><th id="567">567</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 12, 0x4, 0x13, 0x77, 1032 &amp; 0x7F | 0x80, 1032 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>12</var>, <var>1032</var>)</td></tr>
+<tr><th id="568">568</th><td>        movb      %dl, %r12b</td></tr>
+<tr><th id="569">569</th><td>        movq      %r13, <var>1024</var>(%rsp)</td></tr>
+<tr><th id="570">570</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 13, 0x4, 0x13, 0x77, 1024 &amp; 0x7F | 0x80, 1024 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>13</var>, <var>1024</var>)</td></tr>
+<tr><th id="571">571</th><td>        movl      %ecx, %r13d</td></tr>
+<tr><th id="572">572</th><td>        movq      %r14, <var>1016</var>(%rsp)</td></tr>
+<tr><th id="573">573</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 14, 0x4, 0x13, 0x77, 1016 &amp; 0x7F | 0x80, 1016 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>14</var>, <var>1016</var>)</td></tr>
+<tr><th id="574">574</th><td>        movl      %eax, %r14d</td></tr>
+<tr><th id="575">575</th><td>        movq      %r15, <var>1008</var>(%rsp)</td></tr>
+<tr><th id="576">576</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 15, 0x4, 0x13, 0x77, 1008 &amp; 0x7F | 0x80, 1008 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>15</var>, <var>1008</var>)</td></tr>
+<tr><th id="577">577</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="578">578</th><td></td></tr>
+<tr><th id="579">579</th><td>.LBL_2_6:</td></tr>
+<tr><th id="580">580</th><td>        btl       %r14d, %r13d</td></tr>
+<tr><th id="581">581</th><td>        jc        .LBL_2_12</td></tr>
+<tr><th id="582">582</th><td></td></tr>
+<tr><th id="583">583</th><td>.LBL_2_7:</td></tr>
+<tr><th id="584">584</th><td>        lea       <var>1</var>(%r14), %esi</td></tr>
+<tr><th id="585">585</th><td>        btl       %esi, %r13d</td></tr>
+<tr><th id="586">586</th><td>        jc        .LBL_2_10</td></tr>
+<tr><th id="587">587</th><td></td></tr>
+<tr><th id="588">588</th><td>.LBL_2_8:</td></tr>
+<tr><th id="589">589</th><td>        incb      %r12b</td></tr>
+<tr><th id="590">590</th><td>        addl      $<var>2</var>, %r14d</td></tr>
+<tr><th id="591">591</th><td>        cmpb      $<var>16</var>, %r12b</td></tr>
+<tr><th id="592">592</th><td>        jb        .LBL_2_6</td></tr>
+<tr><th id="593">593</th><td></td></tr>
+<tr><th id="594">594</th><td>        kmovw     <var>984</var>(%rsp), %k4</td></tr>
+<tr><th id="595">595</th><td>        kmovw     <var>976</var>(%rsp), %k5</td></tr>
+<tr><th id="596">596</th><td>        kmovw     <var>968</var>(%rsp), %k6</td></tr>
+<tr><th id="597">597</th><td>        kmovw     <var>960</var>(%rsp), %k7</td></tr>
+<tr><th id="598">598</th><td>        vmovups   <var>896</var>(%rsp), %zmm16</td></tr>
+<tr><th id="599">599</th><td>        vmovups   <var>832</var>(%rsp), %zmm17</td></tr>
+<tr><th id="600">600</th><td>        vmovups   <var>768</var>(%rsp), %zmm18</td></tr>
+<tr><th id="601">601</th><td>        vmovups   <var>704</var>(%rsp), %zmm19</td></tr>
+<tr><th id="602">602</th><td>        vmovups   <var>640</var>(%rsp), %zmm20</td></tr>
+<tr><th id="603">603</th><td>        vmovups   <var>576</var>(%rsp), %zmm21</td></tr>
+<tr><th id="604">604</th><td>        vmovups   <var>512</var>(%rsp), %zmm22</td></tr>
+<tr><th id="605">605</th><td>        vmovups   <var>448</var>(%rsp), %zmm23</td></tr>
+<tr><th id="606">606</th><td>        vmovups   <var>384</var>(%rsp), %zmm24</td></tr>
+<tr><th id="607">607</th><td>        vmovups   <var>320</var>(%rsp), %zmm25</td></tr>
+<tr><th id="608">608</th><td>        vmovups   <var>256</var>(%rsp), %zmm27</td></tr>
+<tr><th id="609">609</th><td>        vmovups   <var>192</var>(%rsp), %zmm28</td></tr>
+<tr><th id="610">610</th><td>        vmovups   <var>128</var>(%rsp), %zmm29</td></tr>
+<tr><th id="611">611</th><td>        vmovups   <var>64</var>(%rsp), %zmm30</td></tr>
+<tr><th id="612">612</th><td>        vmovups   (%rsp), %zmm31</td></tr>
+<tr><th id="613">613</th><td>        vmovups   <var>1216</var>(%rsp), %zmm2</td></tr>
+<tr><th id="614">614</th><td>        movq      <var>1000</var>(%rsp), %rsi</td></tr>
+<tr><th id="615">615</th><td>        movq      <var>992</var>(%rsp), %rdi</td></tr>
+<tr><th id="616">616</th><td>        movq      <var>1032</var>(%rsp), %r12</td></tr>
+<tr><th id="617">617</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="618">618</th><td>        movq      <var>1024</var>(%rsp), %r13</td></tr>
+<tr><th id="619">619</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="620">620</th><td>        movq      <var>1016</var>(%rsp), %r14</td></tr>
+<tr><th id="621">621</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="622">622</th><td>        movq      <var>1008</var>(%rsp), %r15</td></tr>
+<tr><th id="623">623</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r15" data-ref="_M/cfi_restore">cfi_restore</a> (%r15)</td></tr>
+<tr><th id="624">624</th><td>        jmp       .LBL_2_2</td></tr>
+<tr><th id="625">625</th><td></td></tr>
+<tr><th id="626">626</th><td>.LBL_2_10:</td></tr>
+<tr><th id="627">627</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="628">628</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="629">629</th><td>        vmovss    <var>1156</var>(%rsp,%r15,<var>8</var>), %xmm1</td></tr>
+<tr><th id="630">630</th><td>        vzeroupper</td></tr>
+<tr><th id="631">631</th><td>        vmovss    <var>1092</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="632">632</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="powf" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(powf)</td></tr>
+<tr><th id="633">633</th><td>        vmovss    %xmm0, <var>1220</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="634">634</th><td>        jmp       .LBL_2_8</td></tr>
+<tr><th id="635">635</th><td></td></tr>
+<tr><th id="636">636</th><td>.LBL_2_12:</td></tr>
+<tr><th id="637">637</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="638">638</th><td>        vmovss    <var>1152</var>(%rsp,%r15,<var>8</var>), %xmm1</td></tr>
+<tr><th id="639">639</th><td>        vzeroupper</td></tr>
+<tr><th id="640">640</th><td>        vmovss    <var>1088</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="641">641</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="powf" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(powf)</td></tr>
+<tr><th id="642">642</th><td>        vmovss    %xmm0, <var>1216</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="643">643</th><td>        jmp       .LBL_2_7</td></tr>
+<tr><th id="644">644</th><td><u>#<span data-ppcond="362">endif</span></u></td></tr>
+<tr><th id="645">645</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVeN16vv_powf_skx,.-_ZGVeN16vv_powf_skx;" data-ref="_M/END">END</a> (_ZGVeN16vv_powf_skx)</td></tr>
+<tr><th id="646">646</th><td></td></tr>
+<tr><th id="647">647</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>section .rodata, <q>"a"</q></td></tr>
+<tr><th id="648">648</th><td>.L_2il0floatpacket<var>.23</var>:</td></tr>
+<tr><th id="649">649</th><td>	.<em>long</em>	<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var>,<var>0xffffffff</var></td></tr>
+<tr><th id="650">650</th><td>	.type	.L_2il0floatpacket<var>.23</var>,@object</td></tr>
+<tr><th id="651">651</th><td>.L_2il0floatpacket<var>.24</var>:</td></tr>
+<tr><th id="652">652</th><td>	.<em>long</em>	<var>0xffffffff</var>,<var>0xffffffff</var></td></tr>
+<tr><th id="653">653</th><td>	.type	.L_2il0floatpacket<var>.24</var>,@object</td></tr>
+<tr><th id="654">654</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

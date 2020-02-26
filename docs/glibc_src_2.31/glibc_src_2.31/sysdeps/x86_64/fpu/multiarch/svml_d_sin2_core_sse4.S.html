@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>svml_d_sin2_core_sse4.S source code [glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_d_sin2_core_sse4.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/sysdeps/x86_64/fpu/multiarch/svml_d_sin2_core_sse4.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.31</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>x86_64</a>/<a href='..'>fpu</a>/<a href='./'>multiarch</a>/<a href='svml_d_sin2_core_sse4.S.html'>svml_d_sin2_core_sse4.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Function sin vectorized with SSE4.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2014-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../svml_d_trig_data.h.html">"svml_d_trig_data.h"</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td>	.text</td></tr>
+<tr><th id="23">23</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVbN2v_sin_sse4; .type _ZGVbN2v_sin_sse4,@function; .align 1&lt;&lt;4; _ZGVbN2v_sin_sse4: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVbN2v_sin_sse4" title='_ZGVbN2v_sin_sse4' data-ref="_ZGVbN2v_sin_sse4" data-ref-filename="_ZGVbN2v_sin_sse4">_ZGVbN2v_sin_sse4</dfn></span>)</td></tr>
+<tr><th id="24">24</th><td><i>/* ALGORITHM DESCRIPTION:</i></td></tr>
+<tr><th id="25">25</th><td><i></i></td></tr>
+<tr><th id="26">26</th><td><i>      ( low accuracy ( &lt; 4ulp ) or enhanced performance</i></td></tr>
+<tr><th id="27">27</th><td><i>       ( half of correct mantissa ) implementation )</i></td></tr>
+<tr><th id="28">28</th><td><i></i></td></tr>
+<tr><th id="29">29</th><td><i>      Argument representation:</i></td></tr>
+<tr><th id="30">30</th><td><i>      arg = N*Pi + R</i></td></tr>
+<tr><th id="31">31</th><td><i></i></td></tr>
+<tr><th id="32">32</th><td><i>      Result calculation:</i></td></tr>
+<tr><th id="33">33</th><td><i>      sin(arg) = sin(N*Pi + R) = (-1)^N * sin(R)</i></td></tr>
+<tr><th id="34">34</th><td><i>      sin(R) is approximated by corresponding polynomial</i></td></tr>
+<tr><th id="35">35</th><td><i> */</i></td></tr>
+<tr><th id="36">36</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="37">37</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="38">38</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="39">39</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="40">40</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="41">41</th><td>        andq      $-<var>64</var>, %rsp</td></tr>
+<tr><th id="42">42</th><td>        subq      $<var>320</var>, %rsp</td></tr>
+<tr><th id="43">43</th><td>        movaps    %xmm0, %xmm5</td></tr>
+<tr><th id="44">44</th><td>        movq      __svml_d_trig_data@GOTPCREL(%rip), %rax</td></tr>
+<tr><th id="45">45</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#22" title="0" data-ref="_M/__dAbsMask">__dAbsMask</a>(%rax), %xmm3</td></tr>
+<tr><th id="46">46</th><td><i>/*</i></td></tr>
+<tr><th id="47">47</th><td><i>   ARGUMENT RANGE REDUCTION:</i></td></tr>
+<tr><th id="48">48</th><td><i>   X' = |X|</i></td></tr>
+<tr><th id="49">49</th><td><i> */</i></td></tr>
+<tr><th id="50">50</th><td>        movaps    %xmm3, %xmm4</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><i>/* SignX - sign bit of X */</i></td></tr>
+<tr><th id="53">53</th><td>        andnps    %xmm5, %xmm3</td></tr>
+<tr><th id="54">54</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#26" title="64*4" data-ref="_M/__dInvPI">__dInvPI</a>(%rax), %xmm2</td></tr>
+<tr><th id="55">55</th><td>        andps     %xmm5, %xmm4</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><i>/* Y = X'*InvPi + RS : right shifter add */</i></td></tr>
+<tr><th id="58">58</th><td>        mulpd     %xmm4, %xmm2</td></tr>
+<tr><th id="59">59</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#27" title="64*5" data-ref="_M/__dRShifter">__dRShifter</a>(%rax), %xmm6</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* R = X' - N*Pi1 */</i></td></tr>
+<tr><th id="62">62</th><td>        movaps    %xmm4, %xmm0</td></tr>
+<tr><th id="63">63</th><td>        addpd     %xmm6, %xmm2</td></tr>
+<tr><th id="64">64</th><td>        cmpnlepd <a class="macro" href="../svml_d_trig_data.h.html#23" title="64" data-ref="_M/__dRangeVal">__dRangeVal</a>(%rax), %xmm4</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i>/* N = Y - RS : right shifter sub */</i></td></tr>
+<tr><th id="67">67</th><td>        movaps    %xmm2, %xmm1</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><i>/* SignRes = Y&lt;&lt;63 : shift LSB to MSB place for result sign */</i></td></tr>
+<tr><th id="70">70</th><td>        psllq     $<var>63</var>, %xmm2</td></tr>
+<tr><th id="71">71</th><td>        subpd     %xmm6, %xmm1</td></tr>
+<tr><th id="72">72</th><td>        movmskpd  %xmm4, %ecx</td></tr>
+<tr><th id="73">73</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#31" title="64*9" data-ref="_M/__dPI1">__dPI1</a>(%rax), %xmm7</td></tr>
+<tr><th id="74">74</th><td>        mulpd     %xmm1, %xmm7</td></tr>
+<tr><th id="75">75</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#32" title="64*10" data-ref="_M/__dPI2">__dPI2</a>(%rax), %xmm6</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><i>/* R = R - N*Pi2 */</i></td></tr>
+<tr><th id="78">78</th><td>        mulpd     %xmm1, %xmm6</td></tr>
+<tr><th id="79">79</th><td>        subpd     %xmm7, %xmm0</td></tr>
+<tr><th id="80">80</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#33" title="64*11" data-ref="_M/__dPI3">__dPI3</a>(%rax), %xmm7</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* R = R - N*Pi3 */</i></td></tr>
+<tr><th id="83">83</th><td>        mulpd     %xmm1, %xmm7</td></tr>
+<tr><th id="84">84</th><td>        subpd     %xmm6, %xmm0</td></tr>
+<tr><th id="85">85</th><td>        movups <a class="macro" href="../svml_d_trig_data.h.html#34" title="64*12" data-ref="_M/__dPI4">__dPI4</a>(%rax), %xmm6</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><i>/* R = R - N*Pi4 */</i></td></tr>
+<tr><th id="88">88</th><td>        mulpd     %xmm6, %xmm1</td></tr>
+<tr><th id="89">89</th><td>        subpd     %xmm7, %xmm0</td></tr>
+<tr><th id="90">90</th><td>        subpd     %xmm1, %xmm0</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><i>/*</i></td></tr>
+<tr><th id="93">93</th><td><i>   POLYNOMIAL APPROXIMATION:</i></td></tr>
+<tr><th id="94">94</th><td><i>   R2 = R*R</i></td></tr>
+<tr><th id="95">95</th><td><i> */</i></td></tr>
+<tr><th id="96">96</th><td>        movaps    %xmm0, %xmm1</td></tr>
+<tr><th id="97">97</th><td>        mulpd     %xmm0, %xmm1</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* R = R^SignRes : update sign of reduced argument */</i></td></tr>
+<tr><th id="100">100</th><td>        xorps     %xmm2, %xmm0</td></tr>
+<tr><th id="101">101</th><td>        movups    <a class="macro" href="../svml_d_trig_data.h.html#55" title="64*33" data-ref="_M/__dC7_sin">__dC7_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="102">102</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="103">103</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#54" title="64*32" data-ref="_M/__dC6_sin">__dC6_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="104">104</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="105">105</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#53" title="64*31" data-ref="_M/__dC5_sin">__dC5_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="106">106</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="107">107</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#52" title="64*30" data-ref="_M/__dC4_sin">__dC4_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* Poly = C3+R2*(C4+R2*(C5+R2*(C6+R2*C7))) */</i></td></tr>
+<tr><th id="110">110</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="111">111</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#51" title="64*29" data-ref="_M/__dC3_sin">__dC3_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i>/* Poly = R2*(C1+R2*(C2+R2*Poly)) */</i></td></tr>
+<tr><th id="114">114</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="115">115</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#50" title="64*28" data-ref="_M/__dC2_sin">__dC2_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="116">116</th><td>        mulpd     %xmm1, %xmm2</td></tr>
+<tr><th id="117">117</th><td>        addpd     <a class="macro" href="../svml_d_trig_data.h.html#49" title="64*27" data-ref="_M/__dC1_sin">__dC1_sin</a>(%rax), %xmm2</td></tr>
+<tr><th id="118">118</th><td>        mulpd     %xmm2, %xmm1</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i>/* Poly = Poly*R + R */</i></td></tr>
+<tr><th id="121">121</th><td>        mulpd     %xmm0, %xmm1</td></tr>
+<tr><th id="122">122</th><td>        addpd     %xmm1, %xmm0</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>/*</i></td></tr>
+<tr><th id="125">125</th><td><i>   RECONSTRUCTION:</i></td></tr>
+<tr><th id="126">126</th><td><i>   Final sign setting: Res = Poly^SignX</i></td></tr>
+<tr><th id="127">127</th><td><i> */</i></td></tr>
+<tr><th id="128">128</th><td>        xorps     %xmm3, %xmm0</td></tr>
+<tr><th id="129">129</th><td>        testl     %ecx, %ecx</td></tr>
+<tr><th id="130">130</th><td>        jne       .LBL_1_3</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>.LBL_1_2:</td></tr>
+<tr><th id="133">133</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="134">134</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="135">135</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="136">136</th><td>        popq      %rbp</td></tr>
+<tr><th id="137">137</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="138">138</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="139">139</th><td>        ret</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>.LBL_1_3:</td></tr>
+<tr><th id="142">142</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="143">143</th><td>        movups    %xmm5, <var>192</var>(%rsp)</td></tr>
+<tr><th id="144">144</th><td>        movups    %xmm0, <var>256</var>(%rsp)</td></tr>
+<tr><th id="145">145</th><td>        je        .LBL_1_2</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>        xorb      %dl, %dl</td></tr>
+<tr><th id="148">148</th><td>        xorl      %eax, %eax</td></tr>
+<tr><th id="149">149</th><td>        movups    %xmm8, <var>112</var>(%rsp)</td></tr>
+<tr><th id="150">150</th><td>        movups    %xmm9, <var>96</var>(%rsp)</td></tr>
+<tr><th id="151">151</th><td>        movups    %xmm10, <var>80</var>(%rsp)</td></tr>
+<tr><th id="152">152</th><td>        movups    %xmm11, <var>64</var>(%rsp)</td></tr>
+<tr><th id="153">153</th><td>        movups    %xmm12, <var>48</var>(%rsp)</td></tr>
+<tr><th id="154">154</th><td>        movups    %xmm13, <var>32</var>(%rsp)</td></tr>
+<tr><th id="155">155</th><td>        movups    %xmm14, <var>16</var>(%rsp)</td></tr>
+<tr><th id="156">156</th><td>        movups    %xmm15, (%rsp)</td></tr>
+<tr><th id="157">157</th><td>        movq      %rsi, <var>136</var>(%rsp)</td></tr>
+<tr><th id="158">158</th><td>        movq      %rdi, <var>128</var>(%rsp)</td></tr>
+<tr><th id="159">159</th><td>        movq      %r12, <var>168</var>(%rsp)</td></tr>
+<tr><th id="160">160</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 12, 0x4, 0x13, 0x77, 168 &amp; 0x7F | 0x80, 168 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>12</var>, <var>168</var>)</td></tr>
+<tr><th id="161">161</th><td>        movb      %dl, %r12b</td></tr>
+<tr><th id="162">162</th><td>        movq      %r13, <var>160</var>(%rsp)</td></tr>
+<tr><th id="163">163</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 13, 0x4, 0x13, 0x77, 160 &amp; 0x7F | 0x80, 160 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>13</var>, <var>160</var>)</td></tr>
+<tr><th id="164">164</th><td>        movl      %ecx, %r13d</td></tr>
+<tr><th id="165">165</th><td>        movq      %r14, <var>152</var>(%rsp)</td></tr>
+<tr><th id="166">166</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 14, 0x4, 0x13, 0x77, 152 &amp; 0x7F | 0x80, 152 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>14</var>, <var>152</var>)</td></tr>
+<tr><th id="167">167</th><td>        movl      %eax, %r14d</td></tr>
+<tr><th id="168">168</th><td>        movq      %r15, <var>144</var>(%rsp)</td></tr>
+<tr><th id="169">169</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 15, 0x4, 0x13, 0x77, 144 &amp; 0x7F | 0x80, 144 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>15</var>, <var>144</var>)</td></tr>
+<tr><th id="170">170</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>.LBL_1_6:</td></tr>
+<tr><th id="173">173</th><td>        btl       %r14d, %r13d</td></tr>
+<tr><th id="174">174</th><td>        jc        .LBL_1_12</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td>.LBL_1_7:</td></tr>
+<tr><th id="177">177</th><td>        lea       <var>1</var>(%r14), %esi</td></tr>
+<tr><th id="178">178</th><td>        btl       %esi, %r13d</td></tr>
+<tr><th id="179">179</th><td>        jc        .LBL_1_10</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>.LBL_1_8:</td></tr>
+<tr><th id="182">182</th><td>        incb      %r12b</td></tr>
+<tr><th id="183">183</th><td>        addl      $<var>2</var>, %r14d</td></tr>
+<tr><th id="184">184</th><td>        cmpb      $<var>16</var>, %r12b</td></tr>
+<tr><th id="185">185</th><td>        jb        .LBL_1_6</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>        movups    <var>112</var>(%rsp), %xmm8</td></tr>
+<tr><th id="188">188</th><td>        movups    <var>96</var>(%rsp), %xmm9</td></tr>
+<tr><th id="189">189</th><td>        movups    <var>80</var>(%rsp), %xmm10</td></tr>
+<tr><th id="190">190</th><td>        movups    <var>64</var>(%rsp), %xmm11</td></tr>
+<tr><th id="191">191</th><td>        movups    <var>48</var>(%rsp), %xmm12</td></tr>
+<tr><th id="192">192</th><td>        movups    <var>32</var>(%rsp), %xmm13</td></tr>
+<tr><th id="193">193</th><td>        movups    <var>16</var>(%rsp), %xmm14</td></tr>
+<tr><th id="194">194</th><td>        movups    (%rsp), %xmm15</td></tr>
+<tr><th id="195">195</th><td>        movq      <var>136</var>(%rsp), %rsi</td></tr>
+<tr><th id="196">196</th><td>        movq      <var>128</var>(%rsp), %rdi</td></tr>
+<tr><th id="197">197</th><td>        movq      <var>168</var>(%rsp), %r12</td></tr>
+<tr><th id="198">198</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="199">199</th><td>        movq      <var>160</var>(%rsp), %r13</td></tr>
+<tr><th id="200">200</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="201">201</th><td>        movq      <var>152</var>(%rsp), %r14</td></tr>
+<tr><th id="202">202</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="203">203</th><td>        movq      <var>144</var>(%rsp), %r15</td></tr>
+<tr><th id="204">204</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r15" data-ref="_M/cfi_restore">cfi_restore</a> (%r15)</td></tr>
+<tr><th id="205">205</th><td>        movups    <var>256</var>(%rsp), %xmm0</td></tr>
+<tr><th id="206">206</th><td>        jmp       .LBL_1_2</td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td>.LBL_1_10:</td></tr>
+<tr><th id="209">209</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="210">210</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="211">211</th><td>        shlq      $<var>4</var>, %r15</td></tr>
+<tr><th id="212">212</th><td>        movsd     <var>200</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="sin" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sin)</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>        movsd     %xmm0, <var>264</var>(%rsp,%r15)</td></tr>
+<tr><th id="217">217</th><td>        jmp       .LBL_1_8</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>.LBL_1_12:</td></tr>
+<tr><th id="220">220</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="221">221</th><td>        shlq      $<var>4</var>, %r15</td></tr>
+<tr><th id="222">222</th><td>        movsd     <var>192</var>(%rsp,%r15), %xmm0</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>        call      <a class="macro" href="../../sysdep.h.html#68" title="sin" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sin)</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>        movsd     %xmm0, <var>256</var>(%rsp,%r15)</td></tr>
+<tr><th id="227">227</th><td>        jmp       .LBL_1_7</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVbN2v_sin_sse4,.-_ZGVbN2v_sin_sse4;" data-ref="_M/END">END</a> (_ZGVbN2v_sin_sse4)</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

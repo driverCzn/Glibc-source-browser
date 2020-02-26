@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_once.c source code [glibc_src_2.31/nptl/pthread_once.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/nptl/pthread_once.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.31</a>/<a href='./'>nptl</a>/<a href='pthread_once.c.html'>pthread_once.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2003-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Jakub Jelinek &lt;jakub@redhat.com&gt;, 2003.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="pthreadP.h.html">"pthreadP.h"</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/nptl/futex-internal.h.html">&lt;futex-internal.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><em>unsigned</em> <em>long</em> <em>int</em> <dfn class="decl def" id="__fork_generation" title='__fork_generation' data-ref="__fork_generation" data-ref-filename="__fork_generation">__fork_generation</dfn> <a class="macro" href="../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="28">28</th><td><dfn class="tu decl def fn" id="clear_once_control" title='clear_once_control' data-type='void clear_once_control(void * arg)' data-ref="clear_once_control" data-ref-filename="clear_once_control">clear_once_control</dfn> (<em>void</em> *<dfn class="local col1 decl" id="1arg" title='arg' data-type='void *' data-ref="1arg" data-ref-filename="1arg">arg</dfn>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>  <a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_once_t" title='pthread_once_t' data-type='int' data-ref="pthread_once_t" data-ref-filename="pthread_once_t">pthread_once_t</a> *<dfn class="local col2 decl" id="2once_control" title='once_control' data-type='pthread_once_t *' data-ref="2once_control" data-ref-filename="2once_control">once_control</dfn> = (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_once_t" title='pthread_once_t' data-type='int' data-ref="pthread_once_t" data-ref-filename="pthread_once_t">pthread_once_t</a> *) <a class="local col1 ref" href="#1arg" title='arg' data-ref="1arg" data-ref-filename="1arg">arg</a>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>  <i>/* Reset to the uninitialized state here.  We don't need a stronger memory</i></td></tr>
+<tr><th id="33">33</th><td><i>     order because we do not need to make any other of our writes visible to</i></td></tr>
+<tr><th id="34">34</th><td><i>     other threads that see this value: This function will be called if we</i></td></tr>
+<tr><th id="35">35</th><td><i>     get interrupted (see __pthread_once), so all we need to relay to other</i></td></tr>
+<tr><th id="36">36</th><td><i>     threads is the state being reset again.  */</i></td></tr>
+<tr><th id="37">37</th><td>  <a class="macro" href="../include/atomic.h.html#582" title="do { if ((sizeof (*(once_control)) != 1) &amp;&amp; (sizeof (*(once_control)) != 2) &amp;&amp; (sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_store_n ((once_control), (0), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (<a class="local col2 ref" href="#2once_control" title='once_control' data-ref="2once_control" data-ref-filename="2once_control">once_control</a>, <var>0</var>);</td></tr>
+<tr><th id="38">38</th><td>  <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wake" title='futex_wake' data-ref="futex_wake" data-ref-filename="futex_wake">futex_wake</a> ((<em>unsigned</em> <em>int</em> *) <a class="local col2 ref" href="#2once_control" title='once_control' data-ref="2once_control" data-ref-filename="2once_control">once_control</a>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span>, <a class="macro" href="../sysdeps/nptl/futex-internal.h.html#71" title="0" data-ref="_M/FUTEX_PRIVATE">FUTEX_PRIVATE</a>);</td></tr>
+<tr><th id="39">39</th><td>}</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><i  data-doc="__pthread_once_slow">/* This is similar to a lock implementation, but we distinguish between three</i></td></tr>
+<tr><th id="43">43</th><td><i  data-doc="__pthread_once_slow">   states: not yet initialized (0), initialization in progress</i></td></tr>
+<tr><th id="44">44</th><td><i  data-doc="__pthread_once_slow">   (__fork_generation | __PTHREAD_ONCE_INPROGRESS), and initialization</i></td></tr>
+<tr><th id="45">45</th><td><i  data-doc="__pthread_once_slow">   finished (__PTHREAD_ONCE_DONE); __fork_generation does not use the bits</i></td></tr>
+<tr><th id="46">46</th><td><i  data-doc="__pthread_once_slow">   that are used for __PTHREAD_ONCE_INPROGRESS and __PTHREAD_ONCE_DONE (which</i></td></tr>
+<tr><th id="47">47</th><td><i  data-doc="__pthread_once_slow">   is what __PTHREAD_ONCE_FORK_GEN_INCR is used for).  If in the first state,</i></td></tr>
+<tr><th id="48">48</th><td><i  data-doc="__pthread_once_slow">   threads will try to run the initialization by moving to the second state;</i></td></tr>
+<tr><th id="49">49</th><td><i  data-doc="__pthread_once_slow">   the first thread to do so via a CAS on once_control runs init_routine,</i></td></tr>
+<tr><th id="50">50</th><td><i  data-doc="__pthread_once_slow">   other threads block.</i></td></tr>
+<tr><th id="51">51</th><td><i  data-doc="__pthread_once_slow">   When forking the process, some threads can be interrupted during the second</i></td></tr>
+<tr><th id="52">52</th><td><i  data-doc="__pthread_once_slow">   state; they won't be present in the forked child, so we need to restart</i></td></tr>
+<tr><th id="53">53</th><td><i  data-doc="__pthread_once_slow">   initialization in the child.  To distinguish an in-progress initialization</i></td></tr>
+<tr><th id="54">54</th><td><i  data-doc="__pthread_once_slow">   from an interrupted initialization (in which case we need to reclaim the</i></td></tr>
+<tr><th id="55">55</th><td><i  data-doc="__pthread_once_slow">   lock), we look at the fork generation that's part of the second state: We</i></td></tr>
+<tr><th id="56">56</th><td><i  data-doc="__pthread_once_slow">   can reclaim iff it differs from the current fork generation.</i></td></tr>
+<tr><th id="57">57</th><td><i  data-doc="__pthread_once_slow">   XXX: This algorithm has an ABA issue on the fork generation: If an</i></td></tr>
+<tr><th id="58">58</th><td><i  data-doc="__pthread_once_slow">   initialization is interrupted, we then fork 2^30 times (30 bits of</i></td></tr>
+<tr><th id="59">59</th><td><i  data-doc="__pthread_once_slow">   once_control are used for the fork generation), and try to initialize</i></td></tr>
+<tr><th id="60">60</th><td><i  data-doc="__pthread_once_slow">   again, we can deadlock because we can't distinguish the in-progress and</i></td></tr>
+<tr><th id="61">61</th><td><i  data-doc="__pthread_once_slow">   interrupted cases anymore.</i></td></tr>
+<tr><th id="62">62</th><td><i  data-doc="__pthread_once_slow">   XXX: We split out this slow path because current compilers do not generate</i></td></tr>
+<tr><th id="63">63</th><td><i  data-doc="__pthread_once_slow">   as efficient code when the fast path in __pthread_once below is not in a</i></td></tr>
+<tr><th id="64">64</th><td><i  data-doc="__pthread_once_slow">   separate function.  */</i></td></tr>
+<tr><th id="65">65</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="66">66</th><td><b>__attribute__</b> ((noinline))</td></tr>
+<tr><th id="67">67</th><td><dfn class="tu decl def fn" id="__pthread_once_slow" title='__pthread_once_slow' data-type='int __pthread_once_slow(pthread_once_t * once_control, void (*)(void) init_routine)' data-ref="__pthread_once_slow" data-ref-filename="__pthread_once_slow">__pthread_once_slow</dfn> (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_once_t" title='pthread_once_t' data-type='int' data-ref="pthread_once_t" data-ref-filename="pthread_once_t">pthread_once_t</a> *<dfn class="local col3 decl" id="3once_control" title='once_control' data-type='pthread_once_t *' data-ref="3once_control" data-ref-filename="3once_control">once_control</dfn>, <em>void</em> (*<dfn class="local col4 decl" id="4init_routine" title='init_routine' data-type='void (*)(void)' data-ref="4init_routine" data-ref-filename="4init_routine">init_routine</dfn>) (<em>void</em>))</td></tr>
+<tr><th id="68">68</th><td>{</td></tr>
+<tr><th id="69">69</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="70">70</th><td>    {</td></tr>
+<tr><th id="71">71</th><td>      <em>int</em> <dfn class="local col5 decl" id="5val" title='val' data-type='int' data-ref="5val" data-ref-filename="5val">val</dfn>, <dfn class="local col6 decl" id="6newval" title='newval' data-type='int' data-ref="6newval" data-ref-filename="6newval">newval</dfn>;</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>      <i>/* We need acquire memory order for this load because if the value</i></td></tr>
+<tr><th id="74">74</th><td><i>         signals that initialization has finished, we need to see any</i></td></tr>
+<tr><th id="75">75</th><td><i>         data modifications done during initialization.  */</i></td></tr>
+<tr><th id="76">76</th><td>      <a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a> = <a class="macro" href="../include/atomic.h.html#578" title="({ if ((sizeof (*(once_control)) != 1) &amp;&amp; (sizeof (*(once_control)) != 2) &amp;&amp; (sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_load_n ((once_control), 2); })" data-ref="_M/atomic_load_acquire">atomic_load_acquire</a> (<a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>);</td></tr>
+<tr><th id="77">77</th><td>      <b>do</b></td></tr>
+<tr><th id="78">78</th><td>	{</td></tr>
+<tr><th id="79">79</th><td>	  <i>/* Check if the initialization has already been done.  */</i></td></tr>
+<tr><th id="80">80</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect (((val &amp; 2) != 0), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> ((<a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a> &amp; <a class="macro" href="pthreadP.h.html#182" title="2" data-ref="_M/__PTHREAD_ONCE_DONE">__PTHREAD_ONCE_DONE</a>) != <var>0</var>))</td></tr>
+<tr><th id="81">81</th><td>	    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	  <i>/* We try to set the state to in-progress and having the current</i></td></tr>
+<tr><th id="84">84</th><td><i>	     fork generation.  We don't need atomic accesses for the fork</i></td></tr>
+<tr><th id="85">85</th><td><i>	     generation because it's immutable in a particular process, and</i></td></tr>
+<tr><th id="86">86</th><td><i>	     forked child processes start with a single thread that modified</i></td></tr>
+<tr><th id="87">87</th><td><i>	     the generation.  */</i></td></tr>
+<tr><th id="88">88</th><td>	  <a class="local col6 ref" href="#6newval" title='newval' data-ref="6newval" data-ref-filename="6newval">newval</a> = <a class="ref" href="#__fork_generation" title='__fork_generation' data-ref="__fork_generation" data-ref-filename="__fork_generation">__fork_generation</a> | <a class="macro" href="pthreadP.h.html#181" title="1" data-ref="_M/__PTHREAD_ONCE_INPROGRESS">__PTHREAD_ONCE_INPROGRESS</a>;</td></tr>
+<tr><th id="89">89</th><td>	  <i>/* We need acquire memory order here for the same reason as for the</i></td></tr>
+<tr><th id="90">90</th><td><i>	     load from once_control above.  */</i></td></tr>
+<tr><th id="91">91</th><td>	}</td></tr>
+<tr><th id="92">92</th><td>      <b>while</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((!({ if ((sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_compare_exchange_n ((once_control), (&amp;val), (newval), 1, 2, 0); })), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (!<a class="macro" href="../include/atomic.h.html#598" title="({ if ((sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_compare_exchange_n ((once_control), (&amp;val), (newval), 1, 2, 0); })" data-ref="_M/atomic_compare_exchange_weak_acquire">atomic_compare_exchange_weak_acquire</a> (</td></tr>
+<tr><th id="93">93</th><td>	  <a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>, &amp;<a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a>, <a class="local col6 ref" href="#6newval" title='newval' data-ref="6newval" data-ref-filename="6newval">newval</a>)));</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>      <i>/* Check if another thread already runs the initializer.	*/</i></td></tr>
+<tr><th id="96">96</th><td>      <b>if</b> ((<a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a> &amp; <a class="macro" href="pthreadP.h.html#181" title="1" data-ref="_M/__PTHREAD_ONCE_INPROGRESS">__PTHREAD_ONCE_INPROGRESS</a>) != <var>0</var>)</td></tr>
+<tr><th id="97">97</th><td>	{</td></tr>
+<tr><th id="98">98</th><td>	  <i>/* Check whether the initializer execution was interrupted by a</i></td></tr>
+<tr><th id="99">99</th><td><i>	     fork.  We know that for both values, __PTHREAD_ONCE_INPROGRESS</i></td></tr>
+<tr><th id="100">100</th><td><i>	     is set and __PTHREAD_ONCE_DONE is not.  */</i></td></tr>
+<tr><th id="101">101</th><td>	  <b>if</b> (<a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a> == <a class="local col6 ref" href="#6newval" title='newval' data-ref="6newval" data-ref-filename="6newval">newval</a>)</td></tr>
+<tr><th id="102">102</th><td>	    {</td></tr>
+<tr><th id="103">103</th><td>	      <i>/* Same generation, some other thread was faster.  Wait and</i></td></tr>
+<tr><th id="104">104</th><td><i>		 retry.  */</i></td></tr>
+<tr><th id="105">105</th><td>	      <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wait_simple" title='futex_wait_simple' data-ref="futex_wait_simple" data-ref-filename="futex_wait_simple">futex_wait_simple</a> ((<em>unsigned</em> <em>int</em> *) <a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>,</td></tr>
+<tr><th id="106">106</th><td>				 (<em>unsigned</em> <em>int</em>) <a class="local col6 ref" href="#6newval" title='newval' data-ref="6newval" data-ref-filename="6newval">newval</a>, <a class="macro" href="../sysdeps/nptl/futex-internal.h.html#71" title="0" data-ref="_M/FUTEX_PRIVATE">FUTEX_PRIVATE</a>);</td></tr>
+<tr><th id="107">107</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="108">108</th><td>	    }</td></tr>
+<tr><th id="109">109</th><td>	}</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>      <i>/* This thread is the first here.  Do the initialization.</i></td></tr>
+<tr><th id="112">112</th><td><i>	 Register a cleanup handler so that in case the thread gets</i></td></tr>
+<tr><th id="113">113</th><td><i>	 interrupted the initialization can be restarted.  */</i></td></tr>
+<tr><th id="114">114</th><td>      <a class="macro" href="pthreadP.h.html#526" title="{ struct _pthread_cleanup_buffer _buffer; __pthread_cleanup_push (&amp;_buffer, (clear_once_control), (once_control));" data-ref="_M/pthread_cleanup_push">pthread_cleanup_push</a> (<a class="tu ref fn" href="#clear_once_control" title='clear_once_control' data-use='r' data-ref="clear_once_control" data-ref-filename="clear_once_control">clear_once_control</a>, <a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>      <a class="local col4 ref" href="#4init_routine" title='init_routine' data-ref="4init_routine" data-ref-filename="4init_routine">init_routine</a> ();</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>      <a class="macro" href="pthreadP.h.html#533" title="__pthread_cleanup_pop (&amp;_buffer, (0)); }" data-ref="_M/pthread_cleanup_pop">pthread_cleanup_pop</a> (<var>0</var>);</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>      <i>/* Mark *once_control as having finished the initialization.  We need</i></td></tr>
+<tr><th id="122">122</th><td><i>         release memory order here because we need to synchronize with other</i></td></tr>
+<tr><th id="123">123</th><td><i>         threads that want to use the initialized data.  */</i></td></tr>
+<tr><th id="124">124</th><td>      <a class="macro" href="../include/atomic.h.html#587" title="do { if ((sizeof (*(once_control)) != 1) &amp;&amp; (sizeof (*(once_control)) != 2) &amp;&amp; (sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_store_n ((once_control), (2), 3); } while (0)" data-ref="_M/atomic_store_release">atomic_store_release</a> (<a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>, <a class="macro" href="pthreadP.h.html#182" title="2" data-ref="_M/__PTHREAD_ONCE_DONE">__PTHREAD_ONCE_DONE</a>);</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>      <i>/* Wake up all other threads.  */</i></td></tr>
+<tr><th id="127">127</th><td>      <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wake" title='futex_wake' data-ref="futex_wake" data-ref-filename="futex_wake">futex_wake</a> ((<em>unsigned</em> <em>int</em> *) <a class="local col3 ref" href="#3once_control" title='once_control' data-ref="3once_control" data-ref-filename="3once_control">once_control</a>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span>, <a class="macro" href="../sysdeps/nptl/futex-internal.h.html#71" title="0" data-ref="_M/FUTEX_PRIVATE">FUTEX_PRIVATE</a>);</td></tr>
+<tr><th id="128">128</th><td>      <b>break</b>;</td></tr>
+<tr><th id="129">129</th><td>    }</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="132">132</th><td>}</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><em>int</em></td></tr>
+<tr><th id="135">135</th><td><dfn class="decl def fn" id="__pthread_once" title='__pthread_once' data-ref="__pthread_once" data-ref-filename="__pthread_once">__pthread_once</dfn> (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_once_t" title='pthread_once_t' data-type='int' data-ref="pthread_once_t" data-ref-filename="pthread_once_t">pthread_once_t</a> *<dfn class="local col7 decl" id="7once_control" title='once_control' data-type='pthread_once_t *' data-ref="7once_control" data-ref-filename="7once_control">once_control</dfn>, <em>void</em> (*<dfn class="local col8 decl" id="8init_routine" title='init_routine' data-type='void (*)(void)' data-ref="8init_routine" data-ref-filename="8init_routine">init_routine</dfn>) (<em>void</em>))</td></tr>
+<tr><th id="136">136</th><td>{</td></tr>
+<tr><th id="137">137</th><td>  <i>/* Fast path.  See __pthread_once_slow.  */</i></td></tr>
+<tr><th id="138">138</th><td>  <em>int</em> <dfn class="local col9 decl" id="9val" title='val' data-type='int' data-ref="9val" data-ref-filename="9val">val</dfn>;</td></tr>
+<tr><th id="139">139</th><td>  <a class="local col9 ref" href="#9val" title='val' data-ref="9val" data-ref-filename="9val">val</a> = <a class="macro" href="../include/atomic.h.html#578" title="({ if ((sizeof (*(once_control)) != 1) &amp;&amp; (sizeof (*(once_control)) != 2) &amp;&amp; (sizeof (*(once_control)) != 4) &amp;&amp; (sizeof (*(once_control)) != 8)) __atomic_link_error ();; __atomic_load_n ((once_control), 2); })" data-ref="_M/atomic_load_acquire">atomic_load_acquire</a> (<a class="local col7 ref" href="#7once_control" title='once_control' data-ref="7once_control" data-ref-filename="7once_control">once_control</a>);</td></tr>
+<tr><th id="140">140</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect (((val &amp; 2) != 0), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> ((<a class="local col9 ref" href="#9val" title='val' data-ref="9val" data-ref-filename="9val">val</a> &amp; <a class="macro" href="pthreadP.h.html#182" title="2" data-ref="_M/__PTHREAD_ONCE_DONE">__PTHREAD_ONCE_DONE</a>) != <var>0</var>))</td></tr>
+<tr><th id="141">141</th><td>    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="142">142</th><td>  <b>else</b></td></tr>
+<tr><th id="143">143</th><td>    <b>return</b> <a class="tu ref fn" href="#__pthread_once_slow" title='__pthread_once_slow' data-use='c' data-ref="__pthread_once_slow" data-ref-filename="__pthread_once_slow">__pthread_once_slow</a> (<a class="local col7 ref" href="#7once_control" title='once_control' data-ref="7once_control" data-ref-filename="7once_control">once_control</a>, <a class="local col8 ref" href="#8init_routine" title='init_routine' data-ref="8init_routine" data-ref-filename="8init_routine">init_routine</a>);</td></tr>
+<tr><th id="144">144</th><td>}</td></tr>
+<tr><th id="145">145</th><td><a class="macro" href="../include/libc-symbols.h.html#150" title="extern __typeof (__pthread_once) pthread_once __attribute__ ((weak, alias (&quot;__pthread_once&quot;))) ;" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__pthread_once" title='__pthread_once' data-ref="__pthread_once" data-ref-filename="__pthread_once">__pthread_once</a>, <dfn class="decl def fn" id="pthread_once" title='pthread_once' data-ref="pthread_once" data-ref-filename="pthread_once">pthread_once</dfn>)</td></tr>
+<tr><th id="146">146</th><td><a class="macro" href="../include/libc-symbols.h.html#550" title="extern __typeof (__pthread_once) __EI___pthread_once __asm__(&quot;&quot; &quot;__pthread_once&quot;); extern __typeof (__pthread_once) __EI___pthread_once __attribute__((alias (&quot;&quot; &quot;__GI___pthread_once&quot;))) ;" data-ref="_M/hidden_def">hidden_def</a> (<a class="ref fn" href="#__pthread_once" title='__pthread_once' data-ref="__pthread_once" data-ref-filename="__pthread_once">__pthread_once</a>)</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

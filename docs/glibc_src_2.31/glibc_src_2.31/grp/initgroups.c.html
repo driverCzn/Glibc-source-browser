@@ -1,0 +1,249 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>initgroups.c source code [glibc_src_2.31/grp/initgroups.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/grp/initgroups.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.31</a>/<a href='./'>grp</a>/<a href='initgroups.c.html'>initgroups.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1989, 1991-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/grp.h.html">&lt;grp.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/nsswitch.h.html">&lt;nsswitch.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/scratch_buffer.h.html">&lt;scratch_buffer.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include &lt;config.h&gt;</u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../nscd/nscd-client.h.html">"../nscd/nscd-client.h"</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../nscd/nscd_proto.h.html">"../nscd/nscd_proto.h"</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="34">ifdef</span> <span class="macro" data-ref="_M/LINK_OBSOLETE_NSL">LINK_OBSOLETE_NSL</span></u></td></tr>
+<tr><th id="35">35</th><td><u># define DEFAULT_CONFIG "compat [NOTFOUND=return] files"</u></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="34">else</span></u></td></tr>
+<tr><th id="37">37</th><td><u># define <dfn class="macro" id="_M/DEFAULT_CONFIG" data-ref="_M/DEFAULT_CONFIG">DEFAULT_CONFIG</dfn> "files"</u></td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><i>/* Type of the lookup function.  */</i></td></tr>
+<tr><th id="41">41</th><td><b>typedef</b> <b>enum</b> <a class="type" href="../include/grp.h.html#56" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a> (*<dfn class="typedef" id="initgroups_dyn_function" title='initgroups_dyn_function' data-type='enum nss_status (*)(const char *, gid_t, long *, long *, gid_t **, long, int *)' data-ref="initgroups_dyn_function" data-ref-filename="initgroups_dyn_function">initgroups_dyn_function</dfn>) (<em>const</em> <em>char</em> *, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>,</td></tr>
+<tr><th id="42">42</th><td>						    <em>long</em> <em>int</em> *, <em>long</em> <em>int</em> *,</td></tr>
+<tr><th id="43">43</th><td>						    <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> **, <em>long</em> <em>int</em>, <em>int</em> *);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><em>static</em> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="tu decl def" id="use_initgroups_entry" title='use_initgroups_entry' data-type='_Bool' data-ref="use_initgroups_entry" data-ref-filename="use_initgroups_entry">use_initgroups_entry</dfn>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#include <a href="compat-initgroups.c.html">"compat-initgroups.c"</a></u></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="52">52</th><td><dfn class="tu decl def fn" id="internal_getgrouplist" title='internal_getgrouplist' data-type='int internal_getgrouplist(const char * user, gid_t group, long * size, gid_t ** groupsp, long limit)' data-ref="internal_getgrouplist" data-ref-filename="internal_getgrouplist">internal_getgrouplist</dfn> (<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="69user" title='user' data-type='const char *' data-ref="69user" data-ref-filename="69user">user</dfn>, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> <dfn class="local col0 decl" id="70group" title='group' data-type='gid_t' data-ref="70group" data-ref-filename="70group">group</dfn>, <em>long</em> <em>int</em> *<dfn class="local col1 decl" id="71size" title='size' data-type='long *' data-ref="71size" data-ref-filename="71size">size</dfn>,</td></tr>
+<tr><th id="53">53</th><td>		       <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> **<dfn class="local col2 decl" id="72groupsp" title='groupsp' data-type='gid_t **' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</dfn>, <em>long</em> <em>int</em> <dfn class="local col3 decl" id="73limit" title='limit' data-type='long' data-ref="73limit" data-ref-filename="73limit">limit</dfn>)</td></tr>
+<tr><th id="54">54</th><td>{</td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="55">ifdef</span> <span class="macro" data-ref="_M/USE_NSCD">USE_NSCD</span></u></td></tr>
+<tr><th id="56">56</th><td>  <b>if</b> (<a class="ref" href="../nscd/nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> &gt; <var>0</var></td></tr>
+<tr><th id="57">57</th><td>      &amp;&amp; ++<a class="ref" href="../nscd/nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> &gt; <a class="macro" href="../nscd/nscd_proto.h.html#27" title="100" data-ref="_M/NSS_NSCD_RETRY">NSS_NSCD_RETRY</a>)</td></tr>
+<tr><th id="58">58</th><td>    <a class="ref" href="../nscd/nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> = <var>0</var>;</td></tr>
+<tr><th id="59">59</th><td>  <b>if</b> (!<a class="ref" href="../nscd/nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a></td></tr>
+<tr><th id="60">60</th><td>      &amp;&amp; !<a class="ref" href="../nss/nsswitch.h.html#__nss_database_custom" title='__nss_database_custom' data-ref="__nss_database_custom" data-ref-filename="__nss_database_custom">__nss_database_custom</a>[<a class="enum" href="../nss/databases.def.html#25" title='NSS_DBSIDX_group' data-ref="NSS_DBSIDX_group" data-ref-filename="NSS_DBSIDX_group">NSS_DBSIDX_group</a>])</td></tr>
+<tr><th id="61">61</th><td>    {</td></tr>
+<tr><th id="62">62</th><td>      <em>int</em> <dfn class="local col4 decl" id="74n" title='n' data-type='int' data-ref="74n" data-ref-filename="74n">n</dfn> = <a class="ref fn" href="../nscd/nscd_proto.h.html#__nscd_getgrouplist" title='__nscd_getgrouplist' data-ref="__nscd_getgrouplist" data-ref-filename="__nscd_getgrouplist">__nscd_getgrouplist</a> (<a class="local col9 ref" href="#69user" title='user' data-ref="69user" data-ref-filename="69user">user</a>, <a class="local col0 ref" href="#70group" title='group' data-ref="70group" data-ref-filename="70group">group</a>, <a class="local col1 ref" href="#71size" title='size' data-ref="71size" data-ref-filename="71size">size</a>, <a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>, <a class="local col3 ref" href="#73limit" title='limit' data-ref="73limit" data-ref-filename="73limit">limit</a>);</td></tr>
+<tr><th id="63">63</th><td>      <b>if</b> (<a class="local col4 ref" href="#74n" title='n' data-ref="74n" data-ref-filename="74n">n</a> &gt;= <var>0</var>)</td></tr>
+<tr><th id="64">64</th><td>	<b>return</b> <a class="local col4 ref" href="#74n" title='n' data-ref="74n" data-ref-filename="74n">n</a>;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>      <i>/* nscd is not usable.  */</i></td></tr>
+<tr><th id="67">67</th><td>      <a class="ref" href="../nscd/nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> = <var>1</var>;</td></tr>
+<tr><th id="68">68</th><td>    }</td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="55">endif</span></u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>  <b>enum</b> <a class="type" href="../include/grp.h.html#56" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a> <dfn class="local col5 decl" id="75status" title='status' data-type='enum nss_status' data-ref="75status" data-ref-filename="75status">status</dfn> = <a class="enum" href="../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="72">72</th><td>  <em>int</em> <dfn class="local col6 decl" id="76no_more" title='no_more' data-type='int' data-ref="76no_more" data-ref-filename="76no_more">no_more</dfn> = <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>  <i>/* Never store more than the starting *SIZE number of elements.  */</i></td></tr>
+<tr><th id="75">75</th><td>  <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((*size &gt; 0) ? 1 : 0), __extension__ ({ if (*size &gt; 0) ; else __assert_fail (&quot;*size &gt; 0&quot;, &quot;/home/fp/glibc/glibc_src/grp/initgroups.c&quot;, 75, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (*<a class="local col1 ref" href="#71size" title='size' data-ref="71size" data-ref-filename="71size">size</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="76">76</th><td>  (*<a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>)[<var>0</var>] = <a class="local col0 ref" href="#70group" title='group' data-ref="70group" data-ref-filename="70group">group</a>;</td></tr>
+<tr><th id="77">77</th><td>  <i>/* Start is one, because we have the first group as parameter.  */</i></td></tr>
+<tr><th id="78">78</th><td>  <em>long</em> <em>int</em> <dfn class="local col7 decl" id="77start" title='start' data-type='long' data-ref="77start" data-ref-filename="77start">start</dfn> = <var>1</var>;</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>  <b>if</b> (<a class="ref" href="../nss/databases.def.html#28" title='__nss_initgroups_database' data-ref="__nss_initgroups_database" data-ref-filename="__nss_initgroups_database">__nss_initgroups_database</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="81">81</th><td>    {</td></tr>
+<tr><th id="82">82</th><td>      <b>if</b> (<a class="ref fn" href="../nss/nsswitch.h.html#__nss_database_lookup2" title='__nss_database_lookup2' data-ref="__nss_database_lookup2" data-ref-filename="__nss_database_lookup2">__nss_database_lookup2</a> (<q>"initgroups"</q>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <q>""</q>,</td></tr>
+<tr><th id="83">83</th><td>				  &amp;<a class="ref" href="../nss/databases.def.html#28" title='__nss_initgroups_database' data-ref="__nss_initgroups_database" data-ref-filename="__nss_initgroups_database">__nss_initgroups_database</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="84">84</th><td>	{</td></tr>
+<tr><th id="85">85</th><td>	  <b>if</b> (<a class="ref" href="../nss/databases.def.html#25" title='__nss_group_database' data-ref="__nss_group_database" data-ref-filename="__nss_group_database">__nss_group_database</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="86">86</th><td>	    <a class="local col6 ref" href="#76no_more" title='no_more' data-ref="76no_more" data-ref-filename="76no_more">no_more</a> = <a class="ref fn" href="../nss/nsswitch.h.html#__nss_database_lookup2" title='__nss_database_lookup2' data-ref="__nss_database_lookup2" data-ref-filename="__nss_database_lookup2">__nss_database_lookup2</a> (<q>"group"</q>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <a class="macro" href="#37" title="&quot;files&quot;" data-ref="_M/DEFAULT_CONFIG">DEFAULT_CONFIG</a>,</td></tr>
+<tr><th id="87">87</th><td>					      &amp;<a class="ref" href="../nss/databases.def.html#25" title='__nss_group_database' data-ref="__nss_group_database" data-ref-filename="__nss_group_database">__nss_group_database</a>);</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	  <a class="ref" href="../nss/databases.def.html#28" title='__nss_initgroups_database' data-ref="__nss_initgroups_database" data-ref-filename="__nss_initgroups_database">__nss_initgroups_database</a> = <a class="ref" href="../nss/databases.def.html#25" title='__nss_group_database' data-ref="__nss_group_database" data-ref-filename="__nss_group_database">__nss_group_database</a>;</td></tr>
+<tr><th id="90">90</th><td>	}</td></tr>
+<tr><th id="91">91</th><td>      <b>else</b></td></tr>
+<tr><th id="92">92</th><td>	<a class="tu ref" href="#use_initgroups_entry" title='use_initgroups_entry' data-use='w' data-ref="use_initgroups_entry" data-ref-filename="use_initgroups_entry">use_initgroups_entry</a> = <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="93">93</th><td>    }</td></tr>
+<tr><th id="94">94</th><td>  <b>else</b></td></tr>
+<tr><th id="95">95</th><td>    <i>/* __nss_initgroups_database might have been set through</i></td></tr>
+<tr><th id="96">96</th><td><i>       __nss_configure_lookup in which case use_initgroups_entry was</i></td></tr>
+<tr><th id="97">97</th><td><i>       not set here.  */</i></td></tr>
+<tr><th id="98">98</th><td>    <a class="tu ref" href="#use_initgroups_entry" title='use_initgroups_entry' data-use='w' data-ref="use_initgroups_entry" data-ref-filename="use_initgroups_entry">use_initgroups_entry</a> = <a class="ref" href="../nss/databases.def.html#28" title='__nss_initgroups_database' data-ref="__nss_initgroups_database" data-ref-filename="__nss_initgroups_database">__nss_initgroups_database</a> != <a class="ref" href="../nss/databases.def.html#25" title='__nss_group_database' data-ref="__nss_group_database" data-ref-filename="__nss_group_database">__nss_group_database</a>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <a class="typedef" href="../nss/nsswitch.h.html#service_user" title='service_user' data-type='struct service_user' data-ref="service_user" data-ref-filename="service_user">service_user</a> *<dfn class="local col8 decl" id="78nip" title='nip' data-type='service_user *' data-ref="78nip" data-ref-filename="78nip">nip</dfn> = <a class="ref" href="../nss/databases.def.html#28" title='__nss_initgroups_database' data-ref="__nss_initgroups_database" data-ref-filename="__nss_initgroups_database">__nss_initgroups_database</a>;</td></tr>
+<tr><th id="101">101</th><td>  <b>while</b> (! <a class="local col6 ref" href="#76no_more" title='no_more' data-ref="76no_more" data-ref-filename="76no_more">no_more</a>)</td></tr>
+<tr><th id="102">102</th><td>    {</td></tr>
+<tr><th id="103">103</th><td>      <em>long</em> <em>int</em> <dfn class="local col9 decl" id="79prev_start" title='prev_start' data-type='long' data-ref="79prev_start" data-ref-filename="79prev_start">prev_start</dfn> = <a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>      <a class="typedef" href="#initgroups_dyn_function" title='initgroups_dyn_function' data-type='enum nss_status (*)(const char *, gid_t, long *, long *, gid_t **, long, int *)' data-ref="initgroups_dyn_function" data-ref-filename="initgroups_dyn_function">initgroups_dyn_function</a> <dfn class="local col0 decl" id="80fct" title='fct' data-type='initgroups_dyn_function' data-ref="80fct" data-ref-filename="80fct">fct</dfn> = <a class="ref fn" href="../nss/nsswitch.h.html#__nss_lookup_function" title='__nss_lookup_function' data-ref="__nss_lookup_function" data-ref-filename="__nss_lookup_function">__nss_lookup_function</a> (<a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a>,</td></tr>
+<tr><th id="106">106</th><td>							   <q>"initgroups_dyn"</q>);</td></tr>
+<tr><th id="107">107</th><td>      <b>if</b> (<a class="local col0 ref" href="#80fct" title='fct' data-ref="80fct" data-ref-filename="80fct">fct</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="108">108</th><td>	<a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a> = <a class="ref fn" href="compat-initgroups.c.html#compat_call" title='compat_call' data-ref="compat_call" data-ref-filename="compat_call">compat_call</a> (<a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a>, <a class="local col9 ref" href="#69user" title='user' data-ref="69user" data-ref-filename="69user">user</a>, <a class="local col0 ref" href="#70group" title='group' data-ref="70group" data-ref-filename="70group">group</a>, &amp;<a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>, <a class="local col1 ref" href="#71size" title='size' data-ref="71size" data-ref-filename="71size">size</a>, <a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>,</td></tr>
+<tr><th id="109">109</th><td>			      <a class="local col3 ref" href="#73limit" title='limit' data-ref="73limit" data-ref-filename="73limit">limit</a>, &amp;<a class="macro" href="../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a>);</td></tr>
+<tr><th id="110">110</th><td>      <b>else</b></td></tr>
+<tr><th id="111">111</th><td>	<a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a> = <a class="macro" href="../bits/dlfcn.h.html#54" title="(_dl_mcount_wrapper_check ((void *) (fct)), (*(fct)) (user, group, &amp;start, size, groupsp, limit, &amp;__libc_errno))" data-ref="_M/DL_CALL_FCT">DL_CALL_FCT</a> (<a class="local col0 ref" href="#80fct" title='fct' data-ref="80fct" data-ref-filename="80fct">fct</a>, (<a class="local col9 ref" href="#69user" title='user' data-ref="69user" data-ref-filename="69user">user</a>, <a class="local col0 ref" href="#70group" title='group' data-ref="70group" data-ref-filename="70group">group</a>, &amp;<a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>, <a class="local col1 ref" href="#71size" title='size' data-ref="71size" data-ref-filename="71size">size</a>, <a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>,</td></tr>
+<tr><th id="112">112</th><td>				    <a class="local col3 ref" href="#73limit" title='limit' data-ref="73limit" data-ref-filename="73limit">limit</a>, &amp;<a class="macro" href="../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>      <i>/* Remove duplicates.  */</i></td></tr>
+<tr><th id="115">115</th><td>      <em>long</em> <em>int</em> <dfn class="local col1 decl" id="81cnt" title='cnt' data-type='long' data-ref="81cnt" data-ref-filename="81cnt">cnt</dfn> = <a class="local col9 ref" href="#79prev_start" title='prev_start' data-ref="79prev_start" data-ref-filename="79prev_start">prev_start</a>;</td></tr>
+<tr><th id="116">116</th><td>      <b>while</b> (<a class="local col1 ref" href="#81cnt" title='cnt' data-ref="81cnt" data-ref-filename="81cnt">cnt</a> &lt; <a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>)</td></tr>
+<tr><th id="117">117</th><td>	{</td></tr>
+<tr><th id="118">118</th><td>	  <em>long</em> <em>int</em> <dfn class="local col2 decl" id="82inner" title='inner' data-type='long' data-ref="82inner" data-ref-filename="82inner">inner</dfn>;</td></tr>
+<tr><th id="119">119</th><td>	  <b>for</b> (<a class="local col2 ref" href="#82inner" title='inner' data-ref="82inner" data-ref-filename="82inner">inner</a> = <var>0</var>; <a class="local col2 ref" href="#82inner" title='inner' data-ref="82inner" data-ref-filename="82inner">inner</a> &lt; <a class="local col9 ref" href="#79prev_start" title='prev_start' data-ref="79prev_start" data-ref-filename="79prev_start">prev_start</a>; ++<a class="local col2 ref" href="#82inner" title='inner' data-ref="82inner" data-ref-filename="82inner">inner</a>)</td></tr>
+<tr><th id="120">120</th><td>	    <b>if</b> ((*<a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>)[<a class="local col2 ref" href="#82inner" title='inner' data-ref="82inner" data-ref-filename="82inner">inner</a>] == (*<a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>)[<a class="local col1 ref" href="#81cnt" title='cnt' data-ref="81cnt" data-ref-filename="81cnt">cnt</a>])</td></tr>
+<tr><th id="121">121</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	  <b>if</b> (<a class="local col2 ref" href="#82inner" title='inner' data-ref="82inner" data-ref-filename="82inner">inner</a> &lt; <a class="local col9 ref" href="#79prev_start" title='prev_start' data-ref="79prev_start" data-ref-filename="79prev_start">prev_start</a>)</td></tr>
+<tr><th id="124">124</th><td>	    (*<a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>)[<a class="local col1 ref" href="#81cnt" title='cnt' data-ref="81cnt" data-ref-filename="81cnt">cnt</a>] = (*<a class="local col2 ref" href="#72groupsp" title='groupsp' data-ref="72groupsp" data-ref-filename="72groupsp">groupsp</a>)[--<a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>];</td></tr>
+<tr><th id="125">125</th><td>	  <b>else</b></td></tr>
+<tr><th id="126">126</th><td>	    ++<a class="local col1 ref" href="#81cnt" title='cnt' data-ref="81cnt" data-ref-filename="81cnt">cnt</a>;</td></tr>
+<tr><th id="127">127</th><td>	}</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>      <i>/* This is really only for debugging.  */</i></td></tr>
+<tr><th id="130">130</th><td>      <b>if</b> (<a class="enum" href="../nss/nss.h.html#NSS_STATUS_TRYAGAIN" title='NSS_STATUS_TRYAGAIN' data-ref="NSS_STATUS_TRYAGAIN" data-ref-filename="NSS_STATUS_TRYAGAIN">NSS_STATUS_TRYAGAIN</a> &gt; <a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a> || <a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a> &gt; <a class="enum" href="../nss/nss.h.html#NSS_STATUS_RETURN" title='NSS_STATUS_RETURN' data-ref="NSS_STATUS_RETURN" data-ref-filename="NSS_STATUS_RETURN">NSS_STATUS_RETURN</a>)</td></tr>
+<tr><th id="131">131</th><td>	<a class="ref fn" href="../include/stdio.h.html#__libc_fatal" title='__libc_fatal' data-ref="__libc_fatal" data-ref-filename="__libc_fatal">__libc_fatal</a> (<q>"Illegal status in internal_getgrouplist.\n"</q>);</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>      <i>/* For compatibility reason we will continue to look for more</i></td></tr>
+<tr><th id="134">134</th><td><i>	 entries using the next service even though data has already</i></td></tr>
+<tr><th id="135">135</th><td><i>	 been found if the nsswitch.conf file contained only a 'groups'</i></td></tr>
+<tr><th id="136">136</th><td><i>	 line and no 'initgroups' line.  If the latter is available</i></td></tr>
+<tr><th id="137">137</th><td><i>	 we always respect the status.  This means that the default</i></td></tr>
+<tr><th id="138">138</th><td><i>	 for successful lookups is to return.  */</i></td></tr>
+<tr><th id="139">139</th><td>      <b>if</b> ((<a class="tu ref" href="#use_initgroups_entry" title='use_initgroups_entry' data-use='r' data-ref="use_initgroups_entry" data-ref-filename="use_initgroups_entry">use_initgroups_entry</a> || <a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a> != <a class="enum" href="../nss/nss.h.html#NSS_STATUS_SUCCESS" title='NSS_STATUS_SUCCESS' data-ref="NSS_STATUS_SUCCESS" data-ref-filename="NSS_STATUS_SUCCESS">NSS_STATUS_SUCCESS</a>)</td></tr>
+<tr><th id="140">140</th><td>	  &amp;&amp; <a class="macro" href="../nss/nsswitch.h.html#76" title="((nip)-&gt;actions[2 + status])" data-ref="_M/nss_next_action">nss_next_action</a> (<a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a>, <a class="local col5 ref" href="#75status" title='status' data-ref="75status" data-ref-filename="75status">status</a>) == <a class="enum" href="../nss/nsswitch.h.html#NSS_ACTION_RETURN" title='NSS_ACTION_RETURN' data-ref="NSS_ACTION_RETURN" data-ref-filename="NSS_ACTION_RETURN">NSS_ACTION_RETURN</a>)</td></tr>
+<tr><th id="141">141</th><td>	 <b>break</b>;</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>      <b>if</b> (<a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a>-&gt;<a class="ref field" href="../nss/nsswitch.h.html#service_user::next" title='service_user::next' data-ref="service_user::next" data-ref-filename="service_user..next">next</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="144">144</th><td>	<a class="local col6 ref" href="#76no_more" title='no_more' data-ref="76no_more" data-ref-filename="76no_more">no_more</a> = -<var>1</var>;</td></tr>
+<tr><th id="145">145</th><td>      <b>else</b></td></tr>
+<tr><th id="146">146</th><td>	<a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a> = <a class="local col8 ref" href="#78nip" title='nip' data-ref="78nip" data-ref-filename="78nip">nip</a>-&gt;<a class="ref field" href="../nss/nsswitch.h.html#service_user::next" title='service_user::next' data-ref="service_user::next" data-ref-filename="service_user..next">next</a>;</td></tr>
+<tr><th id="147">147</th><td>    }</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>  <b>return</b> <a class="local col7 ref" href="#77start" title='start' data-ref="77start" data-ref-filename="77start">start</a>;</td></tr>
+<tr><th id="150">150</th><td>}</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><i>/* Store at most *NGROUPS members of the group set for USER into</i></td></tr>
+<tr><th id="153">153</th><td><i>   *GROUPS.  Also include GROUP.  The actual number of groups found is</i></td></tr>
+<tr><th id="154">154</th><td><i>   returned in *NGROUPS.  Return -1 if the if *NGROUPS is too small.  */</i></td></tr>
+<tr><th id="155">155</th><td><em>int</em></td></tr>
+<tr><th id="156">156</th><td><dfn class="decl def fn" id="getgrouplist" title='getgrouplist' data-ref="getgrouplist" data-ref-filename="getgrouplist">getgrouplist</dfn> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="83user" title='user' data-type='const char *' data-ref="83user" data-ref-filename="83user">user</dfn>, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> <dfn class="local col4 decl" id="84group" title='group' data-type='gid_t' data-ref="84group" data-ref-filename="84group">group</dfn>, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col5 decl" id="85groups" title='groups' data-type='gid_t *' data-ref="85groups" data-ref-filename="85groups">groups</dfn>, <em>int</em> *<dfn class="local col6 decl" id="86ngroups" title='ngroups' data-type='int *' data-ref="86ngroups" data-ref-filename="86ngroups">ngroups</dfn>)</td></tr>
+<tr><th id="157">157</th><td>{</td></tr>
+<tr><th id="158">158</th><td>  <em>long</em> <em>int</em> <dfn class="local col7 decl" id="87size" title='size' data-type='long' data-ref="87size" data-ref-filename="87size">size</dfn> = <a class="macro" href="../misc/sys/param.h.html#103" title="(((1)&gt;(*ngroups))?(1):(*ngroups))" data-ref="_M/MAX">MAX</a> (<var>1</var>, *<a class="local col6 ref" href="#86ngroups" title='ngroups' data-ref="86ngroups" data-ref-filename="86ngroups">ngroups</a>);</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>  <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col8 decl" id="88newgroups" title='newgroups' data-type='gid_t *' data-ref="88newgroups" data-ref-filename="88newgroups">newgroups</dfn> = (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col7 ref" href="#87size" title='size' data-ref="87size" data-ref-filename="87size">size</a> * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="161">161</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((newgroups == ((void*)0)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col8 ref" href="#88newgroups" title='newgroups' data-ref="88newgroups" data-ref-filename="88newgroups">newgroups</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>))</td></tr>
+<tr><th id="162">162</th><td>    <i>/* No more memory.  */</i></td></tr>
+<tr><th id="163">163</th><td><i>    // XXX This is wrong.  The user provided memory, we have to use</i></td></tr>
+<tr><th id="164">164</th><td><i>    // XXX it.  The internal functions must be called with the user</i></td></tr>
+<tr><th id="165">165</th><td><i>    // XXX provided buffer and not try to increase the size if it is</i></td></tr>
+<tr><th id="166">166</th><td><i>    // XXX too small.  For initgroups a flag could say: increase size.</i></td></tr>
+<tr><th id="167">167</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>  <em>int</em> <dfn class="local col9 decl" id="89total" title='total' data-type='int' data-ref="89total" data-ref-filename="89total">total</dfn> = <a class="tu ref fn" href="#internal_getgrouplist" title='internal_getgrouplist' data-use='c' data-ref="internal_getgrouplist" data-ref-filename="internal_getgrouplist">internal_getgrouplist</a> (<a class="local col3 ref" href="#83user" title='user' data-ref="83user" data-ref-filename="83user">user</a>, <a class="local col4 ref" href="#84group" title='group' data-ref="84group" data-ref-filename="84group">group</a>, &amp;<a class="local col7 ref" href="#87size" title='size' data-ref="87size" data-ref-filename="87size">size</a>, &amp;<a class="local col8 ref" href="#88newgroups" title='newgroups' data-ref="88newgroups" data-ref-filename="88newgroups">newgroups</a>, -<var>1</var>);</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td>  <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col5 ref" href="#85groups" title='groups' data-ref="85groups" data-ref-filename="85groups">groups</a>, <a class="local col8 ref" href="#88newgroups" title='newgroups' data-ref="88newgroups" data-ref-filename="88newgroups">newgroups</a>, <a class="macro" href="../misc/sys/param.h.html#102" title="(((*ngroups)&lt;(total))?(*ngroups):(total))" data-ref="_M/MIN">MIN</a> (*<a class="local col6 ref" href="#86ngroups" title='ngroups' data-ref="86ngroups" data-ref-filename="86ngroups">ngroups</a>, <a class="local col9 ref" href="#89total" title='total' data-ref="89total" data-ref-filename="89total">total</a>) * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col8 ref" href="#88newgroups" title='newgroups' data-ref="88newgroups" data-ref-filename="88newgroups">newgroups</a>);</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>  <em>int</em> <dfn class="local col0 decl" id="90retval" title='retval' data-type='int' data-ref="90retval" data-ref-filename="90retval">retval</dfn> = <a class="local col9 ref" href="#89total" title='total' data-ref="89total" data-ref-filename="89total">total</a> &gt; *<a class="local col6 ref" href="#86ngroups" title='ngroups' data-ref="86ngroups" data-ref-filename="86ngroups">ngroups</a> ? -<var>1</var> : <a class="local col9 ref" href="#89total" title='total' data-ref="89total" data-ref-filename="89total">total</a>;</td></tr>
+<tr><th id="176">176</th><td>  *<a class="local col6 ref" href="#86ngroups" title='ngroups' data-ref="86ngroups" data-ref-filename="86ngroups">ngroups</a> = <a class="local col9 ref" href="#89total" title='total' data-ref="89total" data-ref-filename="89total">total</a>;</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>  <b>return</b> <a class="local col0 ref" href="#90retval" title='retval' data-ref="90retval" data-ref-filename="90retval">retval</a>;</td></tr>
+<tr><th id="179">179</th><td>}</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td><a class="macro" href="../nss/nsswitch.h.html#118" title="" data-ref="_M/nss_interface_function">nss_interface_function</a> (getgrouplist)</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><i>/* Initialize the group set for the current user</i></td></tr>
+<tr><th id="184">184</th><td><i>   by reading the group database and using all groups</i></td></tr>
+<tr><th id="185">185</th><td><i>   of which USER is a member.  Also include GROUP.  */</i></td></tr>
+<tr><th id="186">186</th><td><em>int</em></td></tr>
+<tr><th id="187">187</th><td><dfn class="decl def fn" id="initgroups" title='initgroups' data-ref="initgroups" data-ref-filename="initgroups">initgroups</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="91user" title='user' data-type='const char *' data-ref="91user" data-ref-filename="91user">user</dfn>, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> <dfn class="local col2 decl" id="92group" title='group' data-type='gid_t' data-ref="92group" data-ref-filename="92group">group</dfn>)</td></tr>
+<tr><th id="188">188</th><td>{</td></tr>
+<tr><th id="189">189</th><td><u>#<span data-ppcond="189">if</span> defined <a class="macro" href="../../include/linux/limits.h.html#7" data-ref="_M/NGROUPS_MAX">NGROUPS_MAX</a> &amp;&amp; <a class="macro" href="../../include/linux/limits.h.html#7" title="65536" data-ref="_M/NGROUPS_MAX">NGROUPS_MAX</a> == 0</u></td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>  <i>/* No extra groups allowed.  */</i></td></tr>
+<tr><th id="192">192</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><u>#<span data-ppcond="189">else</span></u></td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>  <em>long</em> <em>int</em> <dfn class="local col3 decl" id="93size" title='size' data-type='long' data-ref="93size" data-ref-filename="93size">size</dfn>;</td></tr>
+<tr><th id="197">197</th><td>  <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col4 decl" id="94groups" title='groups' data-type='gid_t *' data-ref="94groups" data-ref-filename="94groups">groups</dfn>;</td></tr>
+<tr><th id="198">198</th><td>  <em>int</em> <dfn class="local col5 decl" id="95ngroups" title='ngroups' data-type='int' data-ref="95ngroups" data-ref-filename="95ngroups">ngroups</dfn>;</td></tr>
+<tr><th id="199">199</th><td>  <em>int</em> <dfn class="local col6 decl" id="96result" title='result' data-type='int' data-ref="96result" data-ref-filename="96result">result</dfn>;</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td> <i>/* We always use sysconf even if NGROUPS_MAX is defined.  That way, the</i></td></tr>
+<tr><th id="202">202</th><td><i>     limit can be raised in the kernel configuration without having to</i></td></tr>
+<tr><th id="203">203</th><td><i>     recompile libc.  */</i></td></tr>
+<tr><th id="204">204</th><td>  <em>long</em> <em>int</em> <dfn class="local col7 decl" id="97limit" title='limit' data-type='long' data-ref="97limit" data-ref-filename="97limit">limit</dfn> = <a class="ref fn" href="../include/unistd.h.html#__sysconf" title='__sysconf' data-ref="__sysconf" data-ref-filename="__sysconf">__sysconf</a> (<a class="macro" href="../bits/confname.h.html#80" title="_SC_NGROUPS_MAX" data-ref="_M/_SC_NGROUPS_MAX">_SC_NGROUPS_MAX</a>);</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>  <b>if</b> (<a class="local col7 ref" href="#97limit" title='limit' data-ref="97limit" data-ref-filename="97limit">limit</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="207">207</th><td>    <i>/* We limit the size of the intially allocated array.  */</i></td></tr>
+<tr><th id="208">208</th><td>    <a class="local col3 ref" href="#93size" title='size' data-ref="93size" data-ref-filename="93size">size</a> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((limit)&lt;(64))?(limit):(64))" data-ref="_M/MIN">MIN</a> (<a class="local col7 ref" href="#97limit" title='limit' data-ref="97limit" data-ref-filename="97limit">limit</a>, <var>64</var>);</td></tr>
+<tr><th id="209">209</th><td>  <b>else</b></td></tr>
+<tr><th id="210">210</th><td>    <i>/* No fixed limit on groups.  Pick a starting buffer size.  */</i></td></tr>
+<tr><th id="211">211</th><td>    <a class="local col3 ref" href="#93size" title='size' data-ref="93size" data-ref-filename="93size">size</a> = <var>16</var>;</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>  <a class="local col4 ref" href="#94groups" title='groups' data-ref="94groups" data-ref-filename="94groups">groups</a> = (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col3 ref" href="#93size" title='size' data-ref="93size" data-ref-filename="93size">size</a> * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="214">214</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((groups == ((void*)0)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#94groups" title='groups' data-ref="94groups" data-ref-filename="94groups">groups</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>))</td></tr>
+<tr><th id="215">215</th><td>    <i>/* No more memory.  */</i></td></tr>
+<tr><th id="216">216</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>  <a class="local col5 ref" href="#95ngroups" title='ngroups' data-ref="95ngroups" data-ref-filename="95ngroups">ngroups</a> = <a class="tu ref fn" href="#internal_getgrouplist" title='internal_getgrouplist' data-use='c' data-ref="internal_getgrouplist" data-ref-filename="internal_getgrouplist">internal_getgrouplist</a> (<a class="local col1 ref" href="#91user" title='user' data-ref="91user" data-ref-filename="91user">user</a>, <a class="local col2 ref" href="#92group" title='group' data-ref="92group" data-ref-filename="92group">group</a>, &amp;<a class="local col3 ref" href="#93size" title='size' data-ref="93size" data-ref-filename="93size">size</a>, &amp;<a class="local col4 ref" href="#94groups" title='groups' data-ref="94groups" data-ref-filename="94groups">groups</a>, <a class="local col7 ref" href="#97limit" title='limit' data-ref="97limit" data-ref-filename="97limit">limit</a>);</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>  <i>/* Try to set the maximum number of groups the kernel can handle.  */</i></td></tr>
+<tr><th id="221">221</th><td>  <b>do</b></td></tr>
+<tr><th id="222">222</th><td>    <a class="local col6 ref" href="#96result" title='result' data-ref="96result" data-ref-filename="96result">result</a> = <a class="ref fn" href="grp.h.html#__GI_setgroups" title='setgroups' data-ref="__GI_setgroups" data-ref-filename="__GI_setgroups">setgroups</a> (<a class="local col5 ref" href="#95ngroups" title='ngroups' data-ref="95ngroups" data-ref-filename="95ngroups">ngroups</a>, <a class="local col4 ref" href="#94groups" title='groups' data-ref="94groups" data-ref-filename="94groups">groups</a>);</td></tr>
+<tr><th id="223">223</th><td>  <b>while</b> (<a class="local col6 ref" href="#96result" title='result' data-ref="96result" data-ref-filename="96result">result</a> == -<var>1</var> &amp;&amp; <a class="macro" href="../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a> &amp;&amp; --<a class="local col5 ref" href="#95ngroups" title='ngroups' data-ref="95ngroups" data-ref-filename="95ngroups">ngroups</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col4 ref" href="#94groups" title='groups' data-ref="94groups" data-ref-filename="94groups">groups</a>);</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>  <b>return</b> <a class="local col6 ref" href="#96result" title='result' data-ref="96result" data-ref-filename="96result">result</a>;</td></tr>
+<tr><th id="228">228</th><td><u>#<span data-ppcond="189">endif</span></u></td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td><a class="macro" href="../nss/nsswitch.h.html#118" title="" data-ref="_M/nss_interface_function">nss_interface_function</a> (initgroups)</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

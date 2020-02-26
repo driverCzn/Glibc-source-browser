@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>clock_gettime.c source code [glibc_src_2.31/sysdeps/unix/sysv/linux/clock_gettime.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/sysdeps/unix/sysv/linux/clock_gettime.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.31</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='clock_gettime.c.html'>clock_gettime.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* clock_gettime -- Get current time from a POSIX clockid_t.  Linux version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2003-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../include/time.h.html">&lt;time.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="kernel-posix-cpu-timers.h.html">"kernel-posix-cpu-timers.h"</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="sysdep-vdso.h.html">&lt;sysdep-vdso.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* Get current value of CLOCK and store it in TP.  */</i></td></tr>
+<tr><th id="29">29</th><td><em>int</em></td></tr>
+<tr><th id="30">30</th><td><a class="macro" href="../../../../include/time.h.html#241" title="__clock_gettime" data-ref="_M/__clock_gettime64">__clock_gettime64</a> (<a class="typedef" href="../../../../time/bits/types/clockid_t.h.html#clockid_t" title='clockid_t' data-type='__clockid_t' data-ref="clockid_t" data-ref-filename="clockid_t">clockid_t</a> <dfn class="local col1 decl" id="1clock_id" title='clock_id' data-type='clockid_t' data-ref="1clock_id" data-ref-filename="1clock_id">clock_id</dfn>, <b>struct</b> <a class="macro" href="../../../../include/time.h.html#63" title="timespec" data-ref="_M/__timespec64">__timespec64</a> *<dfn class="local col2 decl" id="2tp" title='tp' data-type='struct timespec *' data-ref="2tp" data-ref-filename="2tp">tp</dfn>)</td></tr>
+<tr><th id="31">31</th><td>{</td></tr>
+<tr><th id="32">32</th><td><u>#<span data-ppcond="32">ifdef</span> <a class="macro" href="kernel-features.h.html#208" data-ref="_M/__ASSUME_TIME64_SYSCALLS">__ASSUME_TIME64_SYSCALLS</a></u></td></tr>
+<tr><th id="33">33</th><td>  <i>/* 64 bit ABIs or newer 32-bit ABIs that only support 64-bit time_t.  */</i></td></tr>
+<tr><th id="34">34</th><td><u># <span data-ppcond="34">ifndef</span> <span class="macro" data-ref="_M/__NR_clock_gettime64">__NR_clock_gettime64</span></u></td></tr>
+<tr><th id="35">35</th><td><u>#  define <dfn class="macro" id="_M/__NR_clock_gettime64" data-ref="_M/__NR_clock_gettime64">__NR_clock_gettime64</dfn> __NR_clock_gettime</u></td></tr>
+<tr><th id="36">36</th><td><u># <span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="37">37</th><td><u># <span data-ppcond="37">ifdef</span> <a class="macro" href="x86_64/sysdep.h.html#367" data-ref="_M/HAVE_CLOCK_GETTIME64_VSYSCALL">HAVE_CLOCK_GETTIME64_VSYSCALL</a></u></td></tr>
+<tr><th id="38">38</th><td>  <b>return</b> <a class="macro" href="sysdep-vdso.h.html#29" title="({ __label__ out; __label__ iserr; do { } while (0); long int sc_ret; __typeof (_dl_vdso_clock_gettime64) vdsop = _dl_vdso_clock_gettime64; if (vdsop != ((void*)0)) { sc_ret = vdsop (clock_id, tp); if (!((unsigned long int) (long int) (sc_ret) &gt;= -4095L)) goto out; if ((-(sc_ret)) != 38) goto iserr; } sc_ret = ({ unsigned long int resultvar; __typeof__ ((tp) - (tp)) __arg2 = ((__typeof__ ((tp) - (tp))) (tp)); __typeof__ ((clock_id) - (clock_id)) __arg1 = ((__typeof__ ((clock_id) - (clock_id))) (clock_id)); register __typeof__ ((tp) - (tp)) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((clock_id) - (clock_id)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (228), &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (((unsigned long int) (long int) (sc_ret) &gt;= -4095L)) { iserr: (__libc_errno = ((-(sc_ret)))); sc_ret = -1L; } out: sc_ret; })" data-ref="_M/INLINE_VSYSCALL">INLINE_VSYSCALL</a> (clock_gettime64, <var>2</var>, <a class="local col1 ref" href="#1clock_id" title='clock_id' data-ref="1clock_id" data-ref-filename="1clock_id">clock_id</a>, <a class="local col2 ref" href="#2tp" title='tp' data-ref="2tp" data-ref-filename="2tp">tp</a>);</td></tr>
+<tr><th id="39">39</th><td><u># <span data-ppcond="37">else</span></u></td></tr>
+<tr><th id="40">40</th><td>  <b>return</b> INLINE_SYSCALL_CALL (clock_gettime64, clock_id, tp);</td></tr>
+<tr><th id="41">41</th><td><u># <span data-ppcond="37">endif</span></u></td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="32">else</span></u></td></tr>
+<tr><th id="43">43</th><td>  <em>int</em> r;</td></tr>
+<tr><th id="44">44</th><td>  <i>/* Old 32-bit ABI with possible 64-bit time_t support.  */</i></td></tr>
+<tr><th id="45">45</th><td><u># ifdef __NR_clock_gettime64</u></td></tr>
+<tr><th id="46">46</th><td>  <i>/* Avoid issue a __NR_clock_gettime64 syscall on kernels that do not</i></td></tr>
+<tr><th id="47">47</th><td><i>     support 64-bit time_t.  */</i></td></tr>
+<tr><th id="48">48</th><td>  <em>static</em> <em>int</em> time64_support = <var>1</var>;</td></tr>
+<tr><th id="49">49</th><td>  <b>if</b> (atomic_load_relaxed (&amp;time64_support) != <var>0</var>)</td></tr>
+<tr><th id="50">50</th><td>    {</td></tr>
+<tr><th id="51">51</th><td><u>#  ifdef HAVE_CLOCK_GETTIME64_VSYSCALL</u></td></tr>
+<tr><th id="52">52</th><td>      r = INLINE_VSYSCALL (clock_gettime64, <var>2</var>, clock_id, tp);</td></tr>
+<tr><th id="53">53</th><td><u>#  else</u></td></tr>
+<tr><th id="54">54</th><td>      r = INLINE_SYSCALL_CALL (clock_gettime64, clock_id, tp);</td></tr>
+<tr><th id="55">55</th><td><u>#  endif</u></td></tr>
+<tr><th id="56">56</th><td>      <b>if</b> (r == <var>0</var> || errno != ENOSYS)</td></tr>
+<tr><th id="57">57</th><td>	<b>return</b> r;</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>      atomic_store_relaxed (&amp;time64_support, <var>0</var>);</td></tr>
+<tr><th id="60">60</th><td>    }</td></tr>
+<tr><th id="61">61</th><td><u># endif</u></td></tr>
+<tr><th id="62">62</th><td>  <i>/* Fallback code that uses 32-bit support.  */</i></td></tr>
+<tr><th id="63">63</th><td>  <b>struct</b> timespec tp32;</td></tr>
+<tr><th id="64">64</th><td><u># ifdef HAVE_CLOCK_GETTIME_VSYSCALL</u></td></tr>
+<tr><th id="65">65</th><td>  r = INLINE_VSYSCALL (clock_gettime, <var>2</var>, clock_id, &amp;tp32);</td></tr>
+<tr><th id="66">66</th><td><u># else</u></td></tr>
+<tr><th id="67">67</th><td>  r = INLINE_SYSCALL_CALL (clock_gettime, clock_id, &amp;tp32);</td></tr>
+<tr><th id="68">68</th><td><u># endif</u></td></tr>
+<tr><th id="69">69</th><td>  <b>if</b> (r == <var>0</var>)</td></tr>
+<tr><th id="70">70</th><td>    *tp = valid_timespec_to_timespec64 (tp32);</td></tr>
+<tr><th id="71">71</th><td>  <b>return</b> r;</td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="32">endif</span></u></td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="75">if</span> <a class="macro" href="x86/bits/timesize.h.html#24" title="64" data-ref="_M/__TIMESIZE">__TIMESIZE</a> != 64</u></td></tr>
+<tr><th id="76">76</th><td><em>int</em></td></tr>
+<tr><th id="77">77</th><td>__clock_gettime (clockid_t clock_id, <b>struct</b> timespec *tp)</td></tr>
+<tr><th id="78">78</th><td>{</td></tr>
+<tr><th id="79">79</th><td>  <em>int</em> ret;</td></tr>
+<tr><th id="80">80</th><td>  <b>struct</b> __timespec64 tp64;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>  ret = __clock_gettime64 (clock_id, &amp;tp64);</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <b>if</b> (ret == <var>0</var>)</td></tr>
+<tr><th id="85">85</th><td>    {</td></tr>
+<tr><th id="86">86</th><td>      <b>if</b> (! in_time_t_range (tp64.tv_sec))</td></tr>
+<tr><th id="87">87</th><td>        {</td></tr>
+<tr><th id="88">88</th><td>          __set_errno (EOVERFLOW);</td></tr>
+<tr><th id="89">89</th><td>          <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="90">90</th><td>        }</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>      *tp = valid_timespec64_to_timespec (tp64);</td></tr>
+<tr><th id="93">93</th><td>    }</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>  <b>return</b> ret;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="75">endif</span></u></td></tr>
+<tr><th id="98">98</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#619" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (__clock_gettime)</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td><a class="macro" href="../../../../include/shlib-compat.h.html#108" title="extern __typeof (__clock_gettime) clock_gettime __attribute__ ((weak, alias (&quot;__clock_gettime&quot;))) ;" data-ref="_M/versioned_symbol">versioned_symbol</a> (libc, <a class="ref fn" href="#30" title='__clock_gettime' data-ref="__clock_gettime" data-ref-filename="__clock_gettime">__clock_gettime</a>, <dfn class="decl def fn" id="clock_gettime" title='clock_gettime' data-ref="clock_gettime" data-ref-filename="clock_gettime">clock_gettime</dfn>, GLIBC_2_17);</td></tr>
+<tr><th id="101">101</th><td><i>/* clock_gettime moved to libc in version 2.17;</i></td></tr>
+<tr><th id="102">102</th><td><i>   old binaries may expect the symbol version it had in librt.  */</i></td></tr>
+<tr><th id="103">103</th><td><u>#<span data-ppcond="103">if</span> <a class="macro" href="../../../../include/shlib-compat.h.html#105" title="0" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a> (libc, GLIBC_2_2, GLIBC_2_17)</u></td></tr>
+<tr><th id="104">104</th><td>strong_alias (__clock_gettime, __clock_gettime_2);</td></tr>
+<tr><th id="105">105</th><td>compat_symbol (libc, __clock_gettime_2, clock_gettime, GLIBC_2_2);</td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="103">endif</span></u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

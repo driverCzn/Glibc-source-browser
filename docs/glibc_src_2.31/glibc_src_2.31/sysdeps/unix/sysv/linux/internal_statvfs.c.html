@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>internal_statvfs.c source code [glibc_src_2.31/sysdeps/unix/sysv/linux/internal_statvfs.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/sysdeps/unix/sysv/linux/internal_statvfs.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.31</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='internal_statvfs.c.html'>internal_statvfs.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1998-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1998.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/mntent.h.html">&lt;mntent.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="paths.h.html">&lt;paths.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../../include/stdio_ext.h.html">&lt;stdio_ext.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="sys/mount.h.html">&lt;sys/mount.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../../../include/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../../../include/sys/statfs.h.html">&lt;sys/statfs.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="internal_statvfs.h.html">"internal_statvfs.h"</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="linux_fsinfo.h.html">"linux_fsinfo.h"</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* Special internal-only bit value.  */</i></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/ST_VALID" data-ref="_M/ST_VALID">ST_VALID</dfn> 0x0020</u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="38">ifndef</span> <span class="macro" data-ref="_M/STATFS">STATFS</span></u></td></tr>
+<tr><th id="39">39</th><td><u># define <dfn class="macro" id="_M/STATFS" data-ref="_M/STATFS">STATFS</dfn> <a class="type" href="bits/statfs.h.html#statfs" title='statfs' data-ref="statfs" data-ref-filename="statfs">statfs</a></u></td></tr>
+<tr><th id="40">40</th><td><u># define <dfn class="macro" id="_M/STATVFS" data-ref="_M/STATVFS">STATVFS</dfn> <a class="type" href="bits/statvfs.h.html#statvfs" title='statvfs' data-ref="statvfs" data-ref-filename="statvfs">statvfs</a></u></td></tr>
+<tr><th id="41">41</th><td><u># define <dfn class="macro" id="_M/INTERNAL_STATVFS" data-ref="_M/INTERNAL_STATVFS">INTERNAL_STATVFS</dfn> <dfn class="decl def fn" id="__internal_statvfs" title='__internal_statvfs' data-ref="__internal_statvfs" data-ref-filename="__internal_statvfs">__internal_statvfs</dfn></u></td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="38">else</span></u></td></tr>
+<tr><th id="43">43</th><td><b>extern</b> <em>int</em> __statvfs_getflags (<em>const</em> <em>char</em> *name, <em>int</em> fstype, <em>int</em> fd);</td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="38">endif</span></u></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><em>void</em></td></tr>
+<tr><th id="48">48</th><td><a class="macro" href="#41" title="__internal_statvfs" data-ref="_M/INTERNAL_STATVFS">INTERNAL_STATVFS</a> (<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="68name" title='name' data-type='const char *' data-ref="68name" data-ref-filename="68name">name</dfn>, <b>struct</b> <a class="macro" href="#40" title="statvfs" data-ref="_M/STATVFS">STATVFS</a> *<dfn class="local col9 decl" id="69buf" title='buf' data-type='struct statvfs *' data-ref="69buf" data-ref-filename="69buf">buf</dfn>,</td></tr>
+<tr><th id="49">49</th><td>		  <b>struct</b> <a class="macro" href="#39" title="statfs" data-ref="_M/STATFS">STATFS</a> *<dfn class="local col0 decl" id="70fsbuf" title='fsbuf' data-type='struct statfs *' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</dfn>, <em>int</em> <dfn class="local col1 decl" id="71fd" title='fd' data-type='int' data-ref="71fd" data-ref-filename="71fd">fd</dfn>)</td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td>  <i>/* Now fill in the fields we have information for.  */</i></td></tr>
+<tr><th id="52">52</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_bsize" title='statvfs::f_bsize' data-ref="statvfs::f_bsize" data-ref-filename="statvfs..f_bsize">f_bsize</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_bsize" title='statfs::f_bsize' data-ref="statfs::f_bsize" data-ref-filename="statfs..f_bsize">f_bsize</a>;</td></tr>
+<tr><th id="53">53</th><td>  <i>/* Linux has the f_frsize size only in later version of the kernel.</i></td></tr>
+<tr><th id="54">54</th><td><i>     If the value is not filled in use f_bsize.  */</i></td></tr>
+<tr><th id="55">55</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_frsize" title='statvfs::f_frsize' data-ref="statvfs::f_frsize" data-ref-filename="statvfs..f_frsize">f_frsize</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_frsize" title='statfs::f_frsize' data-ref="statfs::f_frsize" data-ref-filename="statfs..f_frsize">f_frsize</a> ?: <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_bsize" title='statfs::f_bsize' data-ref="statfs::f_bsize" data-ref-filename="statfs..f_bsize">f_bsize</a>;</td></tr>
+<tr><th id="56">56</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_blocks" title='statvfs::f_blocks' data-ref="statvfs::f_blocks" data-ref-filename="statvfs..f_blocks">f_blocks</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_blocks" title='statfs::f_blocks' data-ref="statfs::f_blocks" data-ref-filename="statfs..f_blocks">f_blocks</a>;</td></tr>
+<tr><th id="57">57</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_bfree" title='statvfs::f_bfree' data-ref="statvfs::f_bfree" data-ref-filename="statvfs..f_bfree">f_bfree</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_bfree" title='statfs::f_bfree' data-ref="statfs::f_bfree" data-ref-filename="statfs..f_bfree">f_bfree</a>;</td></tr>
+<tr><th id="58">58</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_bavail" title='statvfs::f_bavail' data-ref="statvfs::f_bavail" data-ref-filename="statvfs..f_bavail">f_bavail</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_bavail" title='statfs::f_bavail' data-ref="statfs::f_bavail" data-ref-filename="statfs..f_bavail">f_bavail</a>;</td></tr>
+<tr><th id="59">59</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_files" title='statvfs::f_files' data-ref="statvfs::f_files" data-ref-filename="statvfs..f_files">f_files</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_files" title='statfs::f_files' data-ref="statfs::f_files" data-ref-filename="statfs..f_files">f_files</a>;</td></tr>
+<tr><th id="60">60</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_ffree" title='statvfs::f_ffree' data-ref="statvfs::f_ffree" data-ref-filename="statvfs..f_ffree">f_ffree</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_ffree" title='statfs::f_ffree' data-ref="statfs::f_ffree" data-ref-filename="statfs..f_ffree">f_ffree</a>;</td></tr>
+<tr><th id="61">61</th><td>  <b>if</b> (<b>sizeof</b> (<a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_fsid" title='statvfs::f_fsid' data-ref="statvfs::f_fsid" data-ref-filename="statvfs..f_fsid">f_fsid</a>) == <b>sizeof</b> (<a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>))</td></tr>
+<tr><th id="62">62</th><td>    <i>/* The shifting uses 'unsigned long long int' even though the target</i></td></tr>
+<tr><th id="63">63</th><td><i>       field might only have 32 bits.  This is OK since the 'if' branch</i></td></tr>
+<tr><th id="64">64</th><td><i>       is not used in this case but the compiler would still generate</i></td></tr>
+<tr><th id="65">65</th><td><i>       warnings.  */</i></td></tr>
+<tr><th id="66">66</th><td>    <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_fsid" title='statvfs::f_fsid' data-ref="statvfs::f_fsid" data-ref-filename="statvfs..f_fsid">f_fsid</a> = ((<a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>.<a class="ref field" href="../../../../posix/bits/types.h.html#155" title='(anonymous struct)::__val' data-ref="(anonymous)::__val" data-ref-filename="(anonymous)..__val">__val</a>[<var>0</var>]</td></tr>
+<tr><th id="67">67</th><td>		    &amp; ((<var>1ULL</var> &lt;&lt; (<var>8</var> * <b>sizeof</b> (<a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>.<a class="ref field" href="../../../../posix/bits/types.h.html#155" title='(anonymous struct)::__val' data-ref="(anonymous)::__val" data-ref-filename="(anonymous)..__val">__val</a>[<var>0</var>]))) - <var>1</var>))</td></tr>
+<tr><th id="68">68</th><td>		   | ((<em>unsigned</em> <em>long</em> <em>long</em> <em>int</em>) <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>.<a class="ref field" href="../../../../posix/bits/types.h.html#155" title='(anonymous struct)::__val' data-ref="(anonymous)::__val" data-ref-filename="(anonymous)..__val">__val</a>[<var>1</var>]</td></tr>
+<tr><th id="69">69</th><td>		      &lt;&lt; (<var>8</var> * (<b>sizeof</b> (<a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_fsid" title='statvfs::f_fsid' data-ref="statvfs::f_fsid" data-ref-filename="statvfs..f_fsid">f_fsid</a>)</td></tr>
+<tr><th id="70">70</th><td>			       - <b>sizeof</b> (<a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>.<a class="ref field" href="../../../../posix/bits/types.h.html#155" title='(anonymous struct)::__val' data-ref="(anonymous)::__val" data-ref-filename="(anonymous)..__val">__val</a>[<var>0</var>])))));</td></tr>
+<tr><th id="71">71</th><td>  <b>else</b></td></tr>
+<tr><th id="72">72</th><td>    <i>/* We cannot help here.  The statvfs element is not large enough to</i></td></tr>
+<tr><th id="73">73</th><td><i>       contain both words of the statfs f_fsid field.  */</i></td></tr>
+<tr><th id="74">74</th><td>    <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_fsid" title='statvfs::f_fsid' data-ref="statvfs::f_fsid" data-ref-filename="statvfs..f_fsid">f_fsid</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_fsid" title='statfs::f_fsid' data-ref="statfs::f_fsid" data-ref-filename="statfs..f_fsid">f_fsid</a>.<a class="ref field" href="../../../../posix/bits/types.h.html#155" title='(anonymous struct)::__val' data-ref="(anonymous)::__val" data-ref-filename="(anonymous)..__val">__val</a>[<var>0</var>];</td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="75">ifdef</span> <span class="macro" data-ref="_M/_STATVFSBUF_F_UNUSED">_STATVFSBUF_F_UNUSED</span></u></td></tr>
+<tr><th id="76">76</th><td>  buf-&gt;__f_unused = <var>0</var>;</td></tr>
+<tr><th id="77">77</th><td><u>#<span data-ppcond="75">endif</span></u></td></tr>
+<tr><th id="78">78</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_namemax" title='statvfs::f_namemax' data-ref="statvfs::f_namemax" data-ref-filename="statvfs..f_namemax">f_namemax</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_namelen" title='statfs::f_namelen' data-ref="statfs::f_namelen" data-ref-filename="statfs..f_namelen">f_namelen</a>;</td></tr>
+<tr><th id="79">79</th><td>  <a class="ref fn" href="../../../../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (<a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::__f_spare" title='statvfs::__f_spare' data-ref="statvfs::__f_spare" data-ref-filename="statvfs..__f_spare">__f_spare</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::__f_spare" title='statvfs::__f_spare' data-ref="statvfs::__f_spare" data-ref-filename="statvfs..__f_spare">__f_spare</a>));</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>  <i>/* What remains to do is to fill the fields f_favail and f_flag.  */</i></td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>  <i>/* XXX I have no idea how to compute f_favail.  Any idea???  */</i></td></tr>
+<tr><th id="84">84</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_favail" title='statvfs::f_favail' data-ref="statvfs::f_favail" data-ref-filename="statvfs..f_favail">f_favail</a> = <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_ffree" title='statvfs::f_ffree' data-ref="statvfs::f_ffree" data-ref-filename="statvfs..f_ffree">f_ffree</a>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <a class="local col9 ref" href="#69buf" title='buf' data-ref="69buf" data-ref-filename="69buf">buf</a>-&gt;<a class="ref field" href="bits/statvfs.h.html#statvfs::f_flag" title='statvfs::f_flag' data-ref="statvfs::f_flag" data-ref-filename="statvfs..f_flag">f_flag</a> = <a class="local col0 ref" href="#70fsbuf" title='fsbuf' data-ref="70fsbuf" data-ref-filename="70fsbuf">fsbuf</a>-&gt;<a class="ref field" href="bits/statfs.h.html#statfs::f_flags" title='statfs::f_flags' data-ref="statfs::f_flags" data-ref-filename="statfs..f_flags">f_flags</a> ^ <a class="macro" href="#35" title="0x0020" data-ref="_M/ST_VALID">ST_VALID</a>;</td></tr>
+<tr><th id="87">87</th><td>}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

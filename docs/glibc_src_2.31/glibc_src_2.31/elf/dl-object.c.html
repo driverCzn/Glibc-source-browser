@@ -1,0 +1,278 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-object.c source code [glibc_src_2.31/elf/dl-object.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.31/elf/dl-object.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.31</a>/<a href='./'>elf</a>/<a href='dl-object.c.html'>dl-object.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Storage management for the chain of loaded shared objects.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2020 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* Add the new link_map NEW to the end of the namespace list.  */</i></td></tr>
+<tr><th id="29">29</th><td><em>void</em></td></tr>
+<tr><th id="30">30</th><td><dfn class="decl def fn" id="_dl_add_to_namespace_list" title='_dl_add_to_namespace_list' data-ref="_dl_add_to_namespace_list" data-ref-filename="_dl_add_to_namespace_list">_dl_add_to_namespace_list</dfn> (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col1 decl" id="1new" title='new' data-type='struct link_map *' data-ref="1new" data-ref-filename="1new">new</dfn>, <a class="typedef" href="../dlfcn/dlfcn.h.html#Lmid_t" title='Lmid_t' data-type='long' data-ref="Lmid_t" data-ref-filename="Lmid_t">Lmid_t</a> <dfn class="local col2 decl" id="2nsid" title='nsid' data-type='Lmid_t' data-ref="2nsid" data-ref-filename="2nsid">nsid</dfn>)</td></tr>
+<tr><th id="31">31</th><td>{</td></tr>
+<tr><th id="32">32</th><td>  <i>/* We modify the list of loaded objects.  */</i></td></tr>
+<tr><th id="33">33</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#215" title="_rtld_local._dl_rtld_lock_recursive (&amp;(_rtld_local._dl_load_write_lock).mutex)" data-ref="_M/__rtld_lock_lock_recursive">__rtld_lock_lock_recursive</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_load_write_lock" data-ref="_M/GL">GL</a>(dl_load_write_lock));</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col2 ref" href="#2nsid" title='nsid' data-ref="2nsid" data-ref-filename="2nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="36">36</th><td>    {</td></tr>
+<tr><th id="37">37</th><td>      <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col3 decl" id="3l" title='l' data-type='struct link_map *' data-ref="3l" data-ref-filename="3l">l</dfn> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col2 ref" href="#2nsid" title='nsid' data-ref="2nsid" data-ref-filename="2nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a>;</td></tr>
+<tr><th id="38">38</th><td>      <b>while</b> (<a class="local col3 ref" href="#3l" title='l' data-ref="3l" data-ref-filename="3l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_next" title='link_map::l_next' data-ref="link_map::l_next" data-ref-filename="link_map..l_next">l_next</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="39">39</th><td>	<a class="local col3 ref" href="#3l" title='l' data-ref="3l" data-ref-filename="3l">l</a> = <a class="local col3 ref" href="#3l" title='l' data-ref="3l" data-ref-filename="3l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_next" title='link_map::l_next' data-ref="link_map::l_next" data-ref-filename="link_map..l_next">l_next</a>;</td></tr>
+<tr><th id="40">40</th><td>      <a class="local col1 ref" href="#1new" title='new' data-ref="1new" data-ref-filename="1new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_prev" title='link_map::l_prev' data-ref="link_map::l_prev" data-ref-filename="link_map..l_prev">l_prev</a> = <a class="local col3 ref" href="#3l" title='l' data-ref="3l" data-ref-filename="3l">l</a>;</td></tr>
+<tr><th id="41">41</th><td>      <i>/* new-&gt;l_next = NULL;   Would be necessary but we use calloc.  */</i></td></tr>
+<tr><th id="42">42</th><td>      <a class="local col3 ref" href="#3l" title='l' data-ref="3l" data-ref-filename="3l">l</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_next" title='link_map::l_next' data-ref="link_map::l_next" data-ref-filename="link_map..l_next">l_next</a> = <a class="local col1 ref" href="#1new" title='new' data-ref="1new" data-ref-filename="1new">new</a>;</td></tr>
+<tr><th id="43">43</th><td>    }</td></tr>
+<tr><th id="44">44</th><td>  <b>else</b></td></tr>
+<tr><th id="45">45</th><td>    <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col2 ref" href="#2nsid" title='nsid' data-ref="2nsid" data-ref-filename="2nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a> = <a class="local col1 ref" href="#1new" title='new' data-ref="1new" data-ref-filename="1new">new</a>;</td></tr>
+<tr><th id="46">46</th><td>  ++<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col2 ref" href="#2nsid" title='nsid' data-ref="2nsid" data-ref-filename="2nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_nloaded" title='link_namespaces::_ns_nloaded' data-ref="link_namespaces::_ns_nloaded" data-ref-filename="link_namespaces.._ns_nloaded">_ns_nloaded</a>;</td></tr>
+<tr><th id="47">47</th><td>  <a class="local col1 ref" href="#1new" title='new' data-ref="1new" data-ref-filename="1new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_serial" title='link_map::l_serial' data-ref="link_map::l_serial" data-ref-filename="link_map..l_serial">l_serial</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_load_adds" data-ref="_M/GL">GL</a>(dl_load_adds);</td></tr>
+<tr><th id="48">48</th><td>  ++<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_load_adds" data-ref="_M/GL">GL</a>(dl_load_adds);</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#218" title="_rtld_local._dl_rtld_unlock_recursive (&amp;(_rtld_local._dl_load_write_lock).mutex)" data-ref="_M/__rtld_lock_unlock_recursive">__rtld_lock_unlock_recursive</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_load_write_lock" data-ref="_M/GL">GL</a>(dl_load_write_lock));</td></tr>
+<tr><th id="51">51</th><td>}</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><i>/* Allocate a `struct link_map' for a new object being loaded,</i></td></tr>
+<tr><th id="55">55</th><td><i>   and enter it into the _dl_loaded list.  */</i></td></tr>
+<tr><th id="56">56</th><td><b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *</td></tr>
+<tr><th id="57">57</th><td><dfn class="decl def fn" id="_dl_new_object" title='_dl_new_object' data-ref="_dl_new_object" data-ref-filename="_dl_new_object">_dl_new_object</dfn> (<em>char</em> *<dfn class="local col4 decl" id="4realname" title='realname' data-type='char *' data-ref="4realname" data-ref-filename="4realname">realname</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5libname" title='libname' data-type='const char *' data-ref="5libname" data-ref-filename="5libname">libname</dfn>, <em>int</em> <dfn class="local col6 decl" id="6type" title='type' data-type='int' data-ref="6type" data-ref-filename="6type">type</dfn>,</td></tr>
+<tr><th id="58">58</th><td>		<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col7 decl" id="7loader" title='loader' data-type='struct link_map *' data-ref="7loader" data-ref-filename="7loader">loader</dfn>, <em>int</em> <dfn class="local col8 decl" id="8mode" title='mode' data-type='int' data-ref="8mode" data-ref-filename="8mode">mode</dfn>, <a class="typedef" href="../dlfcn/dlfcn.h.html#Lmid_t" title='Lmid_t' data-type='long' data-ref="Lmid_t" data-ref-filename="Lmid_t">Lmid_t</a> <dfn class="local col9 decl" id="9nsid" title='nsid' data-type='Lmid_t' data-ref="9nsid" data-ref-filename="9nsid">nsid</dfn>)</td></tr>
+<tr><th id="59">59</th><td>{</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="60">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="61">61</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="10naudit" title='naudit' data-type='unsigned int' data-ref="10naudit" data-ref-filename="10naudit">naudit</dfn>;</td></tr>
+<tr><th id="62">62</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect (((mode &amp; 0x20000000) != 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> ((<a class="local col8 ref" href="#8mode" title='mode' data-ref="8mode" data-ref-filename="8mode">mode</a> &amp; <a class="macro" href="../include/dlfcn.h.html#10" title="0x20000000" data-ref="_M/__RTLD_OPENEXEC">__RTLD_OPENEXEC</a>) != <var>0</var>))</td></tr>
+<tr><th id="63">63</th><td>    {</td></tr>
+<tr><th id="64">64</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((type == lt_executable) ? 1 : 0), __extension__ ({ if (type == lt_executable) ; else __assert_fail (&quot;type == lt_executable&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-object.c&quot;, 64, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col6 ref" href="#6type" title='type' data-ref="6type" data-ref-filename="6type">type</a> == <a class="enum" href="../include/link.h.html#link_map::lt_executable" title='link_map::lt_executable' data-ref="link_map::lt_executable" data-ref-filename="link_map..lt_executable">lt_executable</a>);</td></tr>
+<tr><th id="65">65</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((nsid == 0) ? 1 : 0), __extension__ ({ if (nsid == 0) ; else __assert_fail (&quot;nsid == LM_ID_BASE&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-object.c&quot;, 65, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col9 ref" href="#9nsid" title='nsid' data-ref="9nsid" data-ref-filename="9nsid">nsid</a> == <a class="macro" href="../dlfcn/dlfcn.h.html#47" title="0" data-ref="_M/LM_ID_BASE">LM_ID_BASE</a>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>      <i>/* Ignore the specified libname for the main executable.  It is</i></td></tr>
+<tr><th id="68">68</th><td><i>	 only known with an explicit loader invocation.  */</i></td></tr>
+<tr><th id="69">69</th><td>      <a class="local col5 ref" href="#5libname" title='libname' data-ref="5libname" data-ref-filename="5libname">libname</a> = <q>""</q>;</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>      <i>/* We create the map for the executable before we know whether</i></td></tr>
+<tr><th id="72">72</th><td><i>	 we have auditing libraries and if yes, how many.  Assume the</i></td></tr>
+<tr><th id="73">73</th><td><i>	 worst.  */</i></td></tr>
+<tr><th id="74">74</th><td>      <a class="local col0 ref" href="#10naudit" title='naudit' data-ref="10naudit" data-ref-filename="10naudit">naudit</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#316" title="16" data-ref="_M/DL_NNS">DL_NNS</a>;</td></tr>
+<tr><th id="75">75</th><td>    }</td></tr>
+<tr><th id="76">76</th><td>  <b>else</b></td></tr>
+<tr><th id="77">77</th><td>    <a class="local col0 ref" href="#10naudit" title='naudit' data-ref="10naudit" data-ref-filename="10naudit">naudit</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#491" title="_rtld_local_ro._dl_naudit" data-ref="_M/GLRO">GLRO</a> (dl_naudit);</td></tr>
+<tr><th id="78">78</th><td><u>#<span data-ppcond="60">endif</span></u></td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="11libname_len" title='libname_len' data-type='size_t' data-ref="11libname_len" data-ref-filename="11libname_len">libname_len</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col5 ref" href="#5libname" title='libname' data-ref="5libname" data-ref-filename="5libname">libname</a>) + <var>1</var>;</td></tr>
+<tr><th id="81">81</th><td>  <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col2 decl" id="12new" title='new' data-type='struct link_map *' data-ref="12new" data-ref-filename="12new">new</dfn>;</td></tr>
+<tr><th id="82">82</th><td>  <b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#libname_list" title='libname_list' data-ref="libname_list" data-ref-filename="libname_list">libname_list</a> *<dfn class="local col3 decl" id="13newname" title='newname' data-type='struct libname_list *' data-ref="13newname" data-ref-filename="13newname">newname</dfn>;</td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="83">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="84">84</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14audit_space" title='audit_space' data-type='size_t' data-ref="14audit_space" data-ref-filename="14audit_space">audit_space</dfn> = <a class="local col0 ref" href="#10naudit" title='naudit' data-ref="10naudit" data-ref-filename="10naudit">naudit</a> * <b>sizeof</b> (<b>struct</b> <a class="type" href="../include/link.h.html#auditstate" title='auditstate' data-ref="auditstate" data-ref-filename="auditstate">auditstate</a>);</td></tr>
+<tr><th id="85">85</th><td><u>#<span data-ppcond="83">else</span></u></td></tr>
+<tr><th id="86">86</th><td><u># define audit_space 0</u></td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="83">endif</span></u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a> = (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *) <a class="ref fn" href="../stdlib/stdlib.h.html#calloc" title='calloc' data-ref="calloc" data-ref-filename="calloc">calloc</a> (<b>sizeof</b> (*<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>) + <a class="local col4 ref" href="#14audit_space" title='audit_space' data-ref="14audit_space" data-ref-filename="14audit_space">audit_space</a></td></tr>
+<tr><th id="90">90</th><td>				    + <b>sizeof</b> (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *)</td></tr>
+<tr><th id="91">91</th><td>				    + <b>sizeof</b> (*<a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a>) + <a class="local col1 ref" href="#11libname_len" title='libname_len' data-ref="11libname_len" data-ref-filename="11libname_len">libname_len</a>, <var>1</var>);</td></tr>
+<tr><th id="92">92</th><td>  <b>if</b> (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="93">93</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a> = <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>;</td></tr>
+<tr><th id="96">96</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_symbolic_searchlist" title='link_map::l_symbolic_searchlist' data-ref="link_map::l_symbolic_searchlist" data-ref-filename="link_map..l_symbolic_searchlist">l_symbolic_searchlist</a>.<a class="ref field" href="../include/link.h.html#r_scope_elem::r_list" title='r_scope_elem::r_list' data-ref="r_scope_elem::r_list" data-ref-filename="r_scope_elem..r_list">r_list</a> = (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> **) ((<em>char</em> *) (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a> + <var>1</var>)</td></tr>
+<tr><th id="97">97</th><td>							    + <a class="local col4 ref" href="#14audit_space" title='audit_space' data-ref="14audit_space" data-ref-filename="14audit_space">audit_space</a>);</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_libname" title='link_map::l_libname' data-ref="link_map::l_libname" data-ref-filename="link_map..l_libname">l_libname</a> = <a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a></td></tr>
+<tr><th id="100">100</th><td>    = (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#libname_list" title='libname_list' data-ref="libname_list" data-ref-filename="libname_list">libname_list</a> *) (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_symbolic_searchlist" title='link_map::l_symbolic_searchlist' data-ref="link_map::l_symbolic_searchlist" data-ref-filename="link_map..l_symbolic_searchlist">l_symbolic_searchlist</a>.<a class="ref field" href="../include/link.h.html#r_scope_elem::r_list" title='r_scope_elem::r_list' data-ref="r_scope_elem::r_list" data-ref-filename="r_scope_elem..r_list">r_list</a> + <var>1</var>);</td></tr>
+<tr><th id="101">101</th><td>  <a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::name" title='libname_list::name' data-ref="libname_list::name" data-ref-filename="libname_list..name">name</a> = (<em>char</em> *) <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a> + <var>1</var>, <a class="local col5 ref" href="#5libname" title='libname' data-ref="5libname" data-ref-filename="5libname">libname</a>, <a class="local col1 ref" href="#11libname_len" title='libname_len' data-ref="11libname_len" data-ref-filename="11libname_len">libname_len</a>);</td></tr>
+<tr><th id="102">102</th><td>  <i>/* newname-&gt;next = NULL;	We use calloc therefore not necessary.  */</i></td></tr>
+<tr><th id="103">103</th><td>  <a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::dont_free" title='libname_list::dont_free' data-ref="libname_list::dont_free" data-ref-filename="libname_list..dont_free">dont_free</a> = <var>1</var>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>  <i>/* When we create the executable link map, or a VDSO link map, we start</i></td></tr>
+<tr><th id="106">106</th><td><i>     with "" for the l_name. In these cases "" points to ld.so rodata</i></td></tr>
+<tr><th id="107">107</th><td><i>     and won't get dumped during core file generation. Therefore to assist</i></td></tr>
+<tr><th id="108">108</th><td><i>     gdb and to create more self-contained core files we adjust l_name to</i></td></tr>
+<tr><th id="109">109</th><td><i>     point at the newly allocated copy (which will get dumped) instead of</i></td></tr>
+<tr><th id="110">110</th><td><i>     the ld.so rodata copy.</i></td></tr>
+<tr><th id="111">111</th><td><i></i></td></tr>
+<tr><th id="112">112</th><td><i>     Furthermore, in case of explicit loader invocation, discard the</i></td></tr>
+<tr><th id="113">113</th><td><i>     name of the main executable, to match the regular behavior, where</i></td></tr>
+<tr><th id="114">114</th><td><i>     name of the executable is not known.  */</i></td></tr>
+<tr><th id="115">115</th><td><u>#<span data-ppcond="115">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="116">116</th><td>  <b>if</b> (*<a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a> != <kbd>'\0'</kbd> &amp;&amp; (<a class="local col8 ref" href="#8mode" title='mode' data-ref="8mode" data-ref-filename="8mode">mode</a> &amp; <a class="macro" href="../include/dlfcn.h.html#10" title="0x20000000" data-ref="_M/__RTLD_OPENEXEC">__RTLD_OPENEXEC</a>) == <var>0</var>)</td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="115">else</span></u></td></tr>
+<tr><th id="118">118</th><td>  <b>if</b> (*realname != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="119">119</th><td><u>#<span data-ppcond="115">endif</span></u></td></tr>
+<tr><th id="120">120</th><td>    <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_name" title='link_map::l_name' data-ref="link_map::l_name" data-ref-filename="link_map..l_name">l_name</a> = <a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a>;</td></tr>
+<tr><th id="121">121</th><td>  <b>else</b></td></tr>
+<tr><th id="122">122</th><td>    <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_name" title='link_map::l_name' data-ref="link_map::l_name" data-ref-filename="link_map..l_name">l_name</a> = (<em>char</em> *) <a class="local col3 ref" href="#13newname" title='newname' data-ref="13newname" data-ref-filename="13newname">newname</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::name" title='libname_list::name' data-ref="libname_list::name" data-ref-filename="libname_list..name">name</a> + <a class="local col1 ref" href="#11libname_len" title='libname_len' data-ref="11libname_len" data-ref-filename="11libname_len">libname_len</a> - <var>1</var>;</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_type" title='link_map::l_type' data-ref="link_map::l_type" data-ref-filename="link_map..l_type">l_type</a> = <a class="local col6 ref" href="#6type" title='type' data-ref="6type" data-ref-filename="6type">type</a>;</td></tr>
+<tr><th id="125">125</th><td>  <i>/* If we set the bit now since we know it is never used we avoid</i></td></tr>
+<tr><th id="126">126</th><td><i>     dirtying the cache line later.  */</i></td></tr>
+<tr><th id="127">127</th><td>  <b>if</b> ((<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#491" title="_rtld_local_ro._dl_debug_mask" data-ref="_M/GLRO">GLRO</a>(dl_debug_mask) &amp; <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#509" title="(1 &lt;&lt; 8)" data-ref="_M/DL_DEBUG_UNUSED">DL_DEBUG_UNUSED</a>) == <var>0</var>)</td></tr>
+<tr><th id="128">128</th><td>    <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_used" title='link_map::l_used' data-ref="link_map::l_used" data-ref-filename="link_map..l_used">l_used</a> = <var>1</var>;</td></tr>
+<tr><th id="129">129</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_loader" title='link_map::l_loader' data-ref="link_map::l_loader" data-ref-filename="link_map..l_loader">l_loader</a> = <a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a>;</td></tr>
+<tr><th id="130">130</th><td><u>#<span data-ppcond="130">if</span> <a class="macro" href="../include/link.h.html#312" title="0" data-ref="_M/NO_TLS_OFFSET">NO_TLS_OFFSET</a> != 0</u></td></tr>
+<tr><th id="131">131</th><td>  new-&gt;l_tls_offset = NO_TLS_OFFSET;</td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="130">endif</span></u></td></tr>
+<tr><th id="133">133</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_ns" title='link_map::l_ns' data-ref="link_map::l_ns" data-ref-filename="link_map..l_ns">l_ns</a> = <a class="local col9 ref" href="#9nsid" title='nsid' data-ref="9nsid" data-ref-filename="9nsid">nsid</a>;</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="135">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="136">136</th><td>  <b>for</b> (<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="15cnt" title='cnt' data-type='unsigned int' data-ref="15cnt" data-ref-filename="15cnt">cnt</dfn> = <var>0</var>; <a class="local col5 ref" href="#15cnt" title='cnt' data-ref="15cnt" data-ref-filename="15cnt">cnt</a> &lt; <a class="local col0 ref" href="#10naudit" title='naudit' data-ref="10naudit" data-ref-filename="10naudit">naudit</a>; ++<a class="local col5 ref" href="#15cnt" title='cnt' data-ref="15cnt" data-ref-filename="15cnt">cnt</a>)</td></tr>
+<tr><th id="137">137</th><td>    <i>/* No need to initialize bindflags due to calloc.  */</i></td></tr>
+<tr><th id="138">138</th><td>    <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#link_map_audit_state" title='link_map_audit_state' data-ref="link_map_audit_state" data-ref-filename="link_map_audit_state">link_map_audit_state</a> (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>, <a class="local col5 ref" href="#15cnt" title='cnt' data-ref="15cnt" data-ref-filename="15cnt">cnt</a>)-&gt;<a class="ref field" href="../include/link.h.html#auditstate::cookie" title='auditstate::cookie' data-ref="auditstate::cookie" data-ref-filename="auditstate..cookie">cookie</a> = (<a class="typedef" href="../stdlib/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>;</td></tr>
+<tr><th id="139">139</th><td><u>#<span data-ppcond="135">endif</span></u></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>  <i>/* new-&gt;l_global = 0;	We use calloc therefore not necessary.  */</i></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>  <i>/* Use the 'l_scope_mem' array by default for the 'l_scope'</i></td></tr>
+<tr><th id="144">144</th><td><i>     information.  If we need more entries we will allocate a large</i></td></tr>
+<tr><th id="145">145</th><td><i>     array dynamically.  */</i></td></tr>
+<tr><th id="146">146</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a> = <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>;</td></tr>
+<tr><th id="147">147</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope_max" title='link_map::l_scope_max' data-ref="link_map::l_scope_max" data-ref-filename="link_map..l_scope_max">l_scope_max</a> = <b>sizeof</b> (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>) / <b>sizeof</b> (<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>[<var>0</var>]);</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>  <i>/* Counter for the scopes we have to handle.  */</i></td></tr>
+<tr><th id="150">150</th><td>  <em>int</em> <dfn class="local col6 decl" id="16idx" title='idx' data-type='int' data-ref="16idx" data-ref-filename="16idx">idx</dfn> = <var>0</var>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col9 ref" href="#9nsid" title='nsid' data-ref="9nsid" data-ref-filename="9nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="153">153</th><td>    <i>/* Add the global scope.  */</i></td></tr>
+<tr><th id="154">154</th><td>    <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a>[<a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a>++] = &amp;<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#304" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="local col9 ref" href="#9nsid" title='nsid' data-ref="9nsid" data-ref-filename="9nsid">nsid</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a>;</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>  <i>/* If we have no loader the new object acts as it.  */</i></td></tr>
+<tr><th id="157">157</th><td>  <b>if</b> (<a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="158">158</th><td>    <a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a> = <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>;</td></tr>
+<tr><th id="159">159</th><td>  <b>else</b></td></tr>
+<tr><th id="160">160</th><td>    <i>/* Determine the local scope.  */</i></td></tr>
+<tr><th id="161">161</th><td>    <b>while</b> (<a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_loader" title='link_map::l_loader' data-ref="link_map::l_loader" data-ref-filename="link_map..l_loader">l_loader</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="162">162</th><td>      <a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a> = <a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_loader" title='link_map::l_loader' data-ref="link_map::l_loader" data-ref-filename="link_map..l_loader">l_loader</a>;</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>  <i>/* Insert the scope if it isn't the global scope we already added.  */</i></td></tr>
+<tr><th id="165">165</th><td>  <b>if</b> (<a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a> == <var>0</var> || &amp;<a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a> != <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a>[<var>0</var>])</td></tr>
+<tr><th id="166">166</th><td>    {</td></tr>
+<tr><th id="167">167</th><td>      <b>if</b> ((<a class="local col8 ref" href="#8mode" title='mode' data-ref="8mode" data-ref-filename="8mode">mode</a> &amp; <a class="macro" href="../bits/dlfcn.h.html#28" title="0x00008" data-ref="_M/RTLD_DEEPBIND">RTLD_DEEPBIND</a>) != <var>0</var> &amp;&amp; <a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a> != <var>0</var>)</td></tr>
+<tr><th id="168">168</th><td>	{</td></tr>
+<tr><th id="169">169</th><td>	  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a>[<var>1</var>] = <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a>[<var>0</var>];</td></tr>
+<tr><th id="170">170</th><td>	  <a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a> = <var>0</var>;</td></tr>
+<tr><th id="171">171</th><td>	}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>      <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a>[<a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a>] = &amp;<a class="local col7 ref" href="#7loader" title='loader' data-ref="7loader" data-ref-filename="7loader">loader</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a>;</td></tr>
+<tr><th id="174">174</th><td>    }</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td>  <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_local_scope" title='link_map::l_local_scope' data-ref="link_map::l_local_scope" data-ref-filename="link_map..l_local_scope">l_local_scope</a>[<var>0</var>] = &amp;<a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a>;</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>  <i>/* Determine the origin.  If allocating the link map for the main</i></td></tr>
+<tr><th id="179">179</th><td><i>     executable, the realname is not known and "".  In this case, the</i></td></tr>
+<tr><th id="180">180</th><td><i>     origin needs to be determined by other means.  However, in case</i></td></tr>
+<tr><th id="181">181</th><td><i>     of an explicit loader invocation, the pathname of the main</i></td></tr>
+<tr><th id="182">182</th><td><i>     executable is known and needs to be processed here: From the</i></td></tr>
+<tr><th id="183">183</th><td><i>     point of view of the kernel, the main executable is the</i></td></tr>
+<tr><th id="184">184</th><td><i>     dynamic loader, and this would lead to a computation of the wrong</i></td></tr>
+<tr><th id="185">185</th><td><i>     origin.  */</i></td></tr>
+<tr><th id="186">186</th><td>  <b>if</b> (<a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a>[<var>0</var>] != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="187">187</th><td>    {</td></tr>
+<tr><th id="188">188</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="17realname_len" title='realname_len' data-type='size_t' data-ref="17realname_len" data-ref-filename="17realname_len">realname_len</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a>) + <var>1</var>;</td></tr>
+<tr><th id="189">189</th><td>      <em>char</em> *<dfn class="local col8 decl" id="18origin" title='origin' data-type='char *' data-ref="18origin" data-ref-filename="18origin">origin</dfn>;</td></tr>
+<tr><th id="190">190</th><td>      <em>char</em> *<dfn class="local col9 decl" id="19cp" title='cp' data-type='char *' data-ref="19cp" data-ref-filename="19cp">cp</dfn>;</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>      <b>if</b> (<a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a>[<var>0</var>] == <kbd>'/'</kbd>)</td></tr>
+<tr><th id="193">193</th><td>	{</td></tr>
+<tr><th id="194">194</th><td>	  <i>/* It is an absolute path.  Use it.  But we have to make a</i></td></tr>
+<tr><th id="195">195</th><td><i>	     copy since we strip out the trailing slash.  */</i></td></tr>
+<tr><th id="196">196</th><td>	  <a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> = (<em>char</em> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col7 ref" href="#17realname_len" title='realname_len' data-ref="17realname_len" data-ref-filename="17realname_len">realname_len</a>);</td></tr>
+<tr><th id="197">197</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="198">198</th><td>	    {</td></tr>
+<tr><th id="199">199</th><td>	      <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> = (<em>char</em> *) -<var>1</var>;</td></tr>
+<tr><th id="200">200</th><td>	      <b>goto</b> <a class="lbl" href="#20out" data-ref="20out" data-ref-filename="20out">out</a>;</td></tr>
+<tr><th id="201">201</th><td>	    }</td></tr>
+<tr><th id="202">202</th><td>	}</td></tr>
+<tr><th id="203">203</th><td>      <b>else</b></td></tr>
+<tr><th id="204">204</th><td>	{</td></tr>
+<tr><th id="205">205</th><td>	  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="21len" title='len' data-type='size_t' data-ref="21len" data-ref-filename="21len">len</dfn> = <a class="local col7 ref" href="#17realname_len" title='realname_len' data-ref="17realname_len" data-ref-filename="17realname_len">realname_len</a>;</td></tr>
+<tr><th id="206">206</th><td>	  <em>char</em> *<dfn class="local col2 decl" id="22result" title='result' data-type='char *' data-ref="22result" data-ref-filename="22result">result</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td>	  <i>/* Get the current directory name.  */</i></td></tr>
+<tr><th id="209">209</th><td>	  <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="210">210</th><td>	  <b>do</b></td></tr>
+<tr><th id="211">211</th><td>	    {</td></tr>
+<tr><th id="212">212</th><td>	      <em>char</em> *<dfn class="local col3 decl" id="23new_origin" title='new_origin' data-type='char *' data-ref="23new_origin" data-ref-filename="23new_origin">new_origin</dfn>;</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	      <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a> += <var>128</var>;</td></tr>
+<tr><th id="215">215</th><td>	      <a class="local col3 ref" href="#23new_origin" title='new_origin' data-ref="23new_origin" data-ref-filename="23new_origin">new_origin</a> = (<em>char</em> *) <a class="ref fn" href="../stdlib/stdlib.h.html#realloc" title='realloc' data-ref="realloc" data-ref-filename="realloc">realloc</a> (<a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>, <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a>);</td></tr>
+<tr><th id="216">216</th><td>	      <b>if</b> (<a class="local col3 ref" href="#23new_origin" title='new_origin' data-ref="23new_origin" data-ref-filename="23new_origin">new_origin</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="217">217</th><td>		<i>/* We exit the loop.  Note that result == NULL.  */</i></td></tr>
+<tr><th id="218">218</th><td>		<b>break</b>;</td></tr>
+<tr><th id="219">219</th><td>	      <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> = <a class="local col3 ref" href="#23new_origin" title='new_origin' data-ref="23new_origin" data-ref-filename="23new_origin">new_origin</a>;</td></tr>
+<tr><th id="220">220</th><td>	    }</td></tr>
+<tr><th id="221">221</th><td>	  <b>while</b> ((<a class="local col2 ref" href="#22result" title='result' data-ref="22result" data-ref-filename="22result">result</a> = <a class="ref fn" href="../include/unistd.h.html#__getcwd" title='__getcwd' data-ref="__getcwd" data-ref-filename="__getcwd">__getcwd</a> (<a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>, <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a> - <a class="local col7 ref" href="#17realname_len" title='realname_len' data-ref="17realname_len" data-ref-filename="17realname_len">realname_len</a>)) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="222">222</th><td>		 &amp;&amp; <a class="macro" href="../include/errno.h.html#20" title="rtld_errno" data-ref="_M/errno">errno</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	  <b>if</b> (<a class="local col2 ref" href="#22result" title='result' data-ref="22result" data-ref-filename="22result">result</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="225">225</th><td>	    {</td></tr>
+<tr><th id="226">226</th><td>	      <i>/* We were not able to determine the current directory.</i></td></tr>
+<tr><th id="227">227</th><td><i>		 Note that free(origin) is OK if origin == NULL.  */</i></td></tr>
+<tr><th id="228">228</th><td>	      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>);</td></tr>
+<tr><th id="229">229</th><td>	      <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a> = (<em>char</em> *) -<var>1</var>;</td></tr>
+<tr><th id="230">230</th><td>	      <b>goto</b> <a class="lbl" href="#20out" data-ref="20out" data-ref-filename="20out">out</a>;</td></tr>
+<tr><th id="231">231</th><td>	    }</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td>	  <i>/* Find the end of the path and see whether we have to add a</i></td></tr>
+<tr><th id="234">234</th><td><i>	     slash.  We could use rawmemchr but this need not be</i></td></tr>
+<tr><th id="235">235</th><td><i>	     fast.  */</i></td></tr>
+<tr><th id="236">236</th><td>	  <a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = (<a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a>) (<a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>, <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="237">237</th><td>	  <b>if</b> (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a>[-<var>1</var>] != <kbd>'/'</kbd>)</td></tr>
+<tr><th id="238">238</th><td>	    *<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a>++ = <kbd>'/'</kbd>;</td></tr>
+<tr><th id="239">239</th><td>	}</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>      <i>/* Add the real file name.  */</i></td></tr>
+<tr><th id="242">242</th><td>      <a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <a class="macro" href="../include/string.h.html#84" title="__builtin_mempcpy (cp, realname, realname_len)" data-ref="_M/__mempcpy">__mempcpy</a> (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a>, <a class="local col4 ref" href="#4realname" title='realname' data-ref="4realname" data-ref-filename="4realname">realname</a>, <a class="local col7 ref" href="#17realname_len" title='realname_len' data-ref="17realname_len" data-ref-filename="17realname_len">realname_len</a>);</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>      <i>/* Now remove the filename and the slash.  Leave the slash if</i></td></tr>
+<tr><th id="245">245</th><td><i>	 the name is something like "/foo".  */</i></td></tr>
+<tr><th id="246">246</th><td>      <b>do</b></td></tr>
+<tr><th id="247">247</th><td>	--<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a>;</td></tr>
+<tr><th id="248">248</th><td>      <b>while</b> (*<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> != <kbd>'/'</kbd>);</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>      <b>if</b> (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> == <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>)</td></tr>
+<tr><th id="251">251</th><td>	<i>/* Keep the only slash which is the first character.  */</i></td></tr>
+<tr><th id="252">252</th><td>	++<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a>;</td></tr>
+<tr><th id="253">253</th><td>      *<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>    <dfn class="lbl" id="20out" data-ref="20out" data-ref-filename="20out">out</dfn>:</td></tr>
+<tr><th id="256">256</th><td>      <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_origin" title='link_map::l_origin' data-ref="link_map::l_origin" data-ref-filename="link_map..l_origin">l_origin</a> = <a class="local col8 ref" href="#18origin" title='origin' data-ref="18origin" data-ref-filename="18origin">origin</a>;</td></tr>
+<tr><th id="257">257</th><td>    }</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>  <b>return</b> <a class="local col2 ref" href="#12new" title='new' data-ref="12new" data-ref-filename="12new">new</a>;</td></tr>
+<tr><th id="260">260</th><td>}</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.31 revision <em>2.31</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
