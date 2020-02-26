@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>tls_get_addr.S source code [glibc_src_2.29/sysdeps/x86_64/tls_get_addr.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/x86_64/tls_get_addr.S'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.29</a>/<a href='..'>sysdeps</a>/<a href='./'>x86_64</a>/<a href='tls_get_addr.S.html'>tls_get_addr.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Stack-aligning implementation of __tls_get_addr.  x86-64 version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2017-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u># include &lt;sysdep.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u># include "tlsdesc.h"</u></td></tr>
+<tr><th id="23">23</th><td><u># include "rtld-offsets.h"</u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* See __tls_get_addr and __tls_get_addr_slow in dl-tls.c.  This function</i></td></tr>
+<tr><th id="26">26</th><td><i>   call __tls_get_addr_slow on both slow paths.  It realigns the stack</i></td></tr>
+<tr><th id="27">27</th><td><i>   before the call to work around GCC PR58066.  */</i></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td>ENTRY (__tls_get_addr)</td></tr>
+<tr><th id="30">30</th><td>	mov 	%fs:DTV_OFFSET, %RDX_LP</td></tr>
+<tr><th id="31">31</th><td>	mov	GL_TLS_GENERATION_OFFSET+_rtld_local(%rip), %RAX_LP</td></tr>
+<tr><th id="32">32</th><td>	<i>/* GL(dl_tls_generation) == dtv[0].counter */</i></td></tr>
+<tr><th id="33">33</th><td>	cmp	%RAX_LP, (%rdx)</td></tr>
+<tr><th id="34">34</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="35">35</th><td>	mov	TI_MODULE_OFFSET(%rdi), %RAX_LP</td></tr>
+<tr><th id="36">36</th><td>	<i>/* dtv[ti-&gt;ti_module] */</i></td></tr>
+<tr><th id="37">37</th><td><u># ifdef __LP64__</u></td></tr>
+<tr><th id="38">38</th><td>	salq	$<var>4</var>, %rax</td></tr>
+<tr><th id="39">39</th><td>	movq	(%rdx,%rax), %rax</td></tr>
+<tr><th id="40">40</th><td><u># else</u></td></tr>
+<tr><th id="41">41</th><td>	movl	(%rdx,%rax, <var>8</var>), %eax</td></tr>
+<tr><th id="42">42</th><td><u># endif</u></td></tr>
+<tr><th id="43">43</th><td>	cmp	$-<var>1</var>, %RAX_LP</td></tr>
+<tr><th id="44">44</th><td>	je	<var>1f</var></td></tr>
+<tr><th id="45">45</th><td>	add	TI_OFFSET_OFFSET(%rdi), %RAX_LP</td></tr>
+<tr><th id="46">46</th><td>	ret</td></tr>
+<tr><th id="47">47</th><td><var>1</var>:</td></tr>
+<tr><th id="48">48</th><td>	<i>/* On the slow path, align the stack.  */</i></td></tr>
+<tr><th id="49">49</th><td>	pushq	%rbp</td></tr>
+<tr><th id="50">50</th><td>	cfi_def_cfa_offset (<var>16</var>)</td></tr>
+<tr><th id="51">51</th><td>	cfi_offset (%rbp, -<var>16</var>)</td></tr>
+<tr><th id="52">52</th><td>	mov	%RSP_LP, %RBP_LP</td></tr>
+<tr><th id="53">53</th><td>	cfi_def_cfa_register (%rbp)</td></tr>
+<tr><th id="54">54</th><td>	and	$-<var>16</var>, %RSP_LP</td></tr>
+<tr><th id="55">55</th><td>	call	__tls_get_addr_slow</td></tr>
+<tr><th id="56">56</th><td>	mov	%RBP_LP, %RSP_LP</td></tr>
+<tr><th id="57">57</th><td>	popq	%rbp</td></tr>
+<tr><th id="58">58</th><td>	cfi_def_cfa (%rsp, <var>8</var>)</td></tr>
+<tr><th id="59">59</th><td>	ret</td></tr>
+<tr><th id="60">60</th><td>END (__tls_get_addr)</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="19">endif</span> /* SHARED */</u></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,828 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>getopt.c source code [glibc_src_2.29/posix/getopt.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/posix/getopt.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>posix</a>/<a href='getopt.c.html'>getopt.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Getopt for GNU.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1987-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library and is also part of gnulib.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Patches to this file should be submitted to both projects.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="21">21</th><td><u># include &lt;config.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="getopt.h.html">"getopt.h"</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="32">32</th><td><i>/* When used as part of glibc, error printing must be done differently</i></td></tr>
+<tr><th id="33">33</th><td><i>   for standards compliance.  getopt is not a cancellation point, so</i></td></tr>
+<tr><th id="34">34</th><td><i>   it must not call functions that are, and it is specified by an</i></td></tr>
+<tr><th id="35">35</th><td><i>   older standard than stdio locking, so it must not refer to</i></td></tr>
+<tr><th id="36">36</th><td><i>   functions in the "user namespace" related to stdio locking.</i></td></tr>
+<tr><th id="37">37</th><td><i>   Finally, it must use glibc's internal message translation so that</i></td></tr>
+<tr><th id="38">38</th><td><i>   the messages are looked up in the proper text domain.  */</i></td></tr>
+<tr><th id="39">39</th><td><u># include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u># define <dfn class="macro" id="_M/fprintf" data-ref="_M/fprintf">fprintf</dfn> <a class="ref fn" href="../include/stdio.h.html#__fxprintf_nocancel" title='__fxprintf_nocancel' data-ref="__fxprintf_nocancel" data-ref-filename="__fxprintf_nocancel">__fxprintf_nocancel</a></u></td></tr>
+<tr><th id="41">41</th><td><u># define <dfn class="macro" id="_M/flockfile" data-ref="_M/flockfile">flockfile</dfn>(fp) _IO_flockfile (fp)</u></td></tr>
+<tr><th id="42">42</th><td><u># define <dfn class="macro" id="_M/funlockfile" data-ref="_M/funlockfile">funlockfile</dfn>(fp) _IO_funlockfile (fp)</u></td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="31">else</span></u></td></tr>
+<tr><th id="44">44</th><td><u># include "gettext.h"</u></td></tr>
+<tr><th id="45">45</th><td><u># define _(msgid) gettext (msgid)</u></td></tr>
+<tr><th id="46">46</th><td><i>/* When used standalone, flockfile and funlockfile might not be</i></td></tr>
+<tr><th id="47">47</th><td><i>   available.  */</i></td></tr>
+<tr><th id="48">48</th><td><u># ifndef _POSIX_THREAD_SAFE_FUNCTIONS</u></td></tr>
+<tr><th id="49">49</th><td><u>#  define flockfile(fp) /* nop */</u></td></tr>
+<tr><th id="50">50</th><td><u>#  define funlockfile(fp) /* nop */</u></td></tr>
+<tr><th id="51">51</th><td><u># endif</u></td></tr>
+<tr><th id="52">52</th><td><i>/* When used standalone, do not attempt to use alloca.  */</i></td></tr>
+<tr><th id="53">53</th><td><u># define __libc_use_alloca(size) 0</u></td></tr>
+<tr><th id="54">54</th><td><u># undef alloca</u></td></tr>
+<tr><th id="55">55</th><td><u># define alloca(size) (abort (), (void *)0)</u></td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* This implementation of 'getopt' has three modes for handling</i></td></tr>
+<tr><th id="59">59</th><td><i>   options interspersed with non-option arguments.  It can stop</i></td></tr>
+<tr><th id="60">60</th><td><i>   scanning for options at the first non-option argument encountered,</i></td></tr>
+<tr><th id="61">61</th><td><i>   as POSIX specifies.  It can continue scanning for options after the</i></td></tr>
+<tr><th id="62">62</th><td><i>   first non-option argument, but permute 'argv' as it goes so that,</i></td></tr>
+<tr><th id="63">63</th><td><i>   after 'getopt' is done, all the options precede all the non-option</i></td></tr>
+<tr><th id="64">64</th><td><i>   arguments and 'optind' points to the first non-option argument.</i></td></tr>
+<tr><th id="65">65</th><td><i>   Or, it can report non-option arguments as if they were arguments to</i></td></tr>
+<tr><th id="66">66</th><td><i>   the option character '\x01'.</i></td></tr>
+<tr><th id="67">67</th><td><i></i></td></tr>
+<tr><th id="68">68</th><td><i>   The default behavior of 'getopt_long' is to permute the argument list.</i></td></tr>
+<tr><th id="69">69</th><td><i>   When this implementation is used standalone, the default behavior of</i></td></tr>
+<tr><th id="70">70</th><td><i>   'getopt' is to stop at the first non-option argument, but when it is</i></td></tr>
+<tr><th id="71">71</th><td><i>   used as part of GNU libc it also permutes the argument list.  In both</i></td></tr>
+<tr><th id="72">72</th><td><i>   cases, setting the environment variable POSIXLY_CORRECT to any value</i></td></tr>
+<tr><th id="73">73</th><td><i>   disables permutation.</i></td></tr>
+<tr><th id="74">74</th><td><i></i></td></tr>
+<tr><th id="75">75</th><td><i>   If the first character of the OPTSTRING argument to 'getopt' or</i></td></tr>
+<tr><th id="76">76</th><td><i>   'getopt_long' is '+', both functions will stop at the first</i></td></tr>
+<tr><th id="77">77</th><td><i>   non-option argument.  If it is '-', both functions will report</i></td></tr>
+<tr><th id="78">78</th><td><i>   non-option arguments as arguments to the option character '\x01'.  */</i></td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><u>#include <a href="getopt_int.h.html">"getopt_int.h"</a></u></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* For communication from 'getopt' to the caller.</i></td></tr>
+<tr><th id="83">83</th><td><i>   When 'getopt' finds an option that takes an argument,</i></td></tr>
+<tr><th id="84">84</th><td><i>   the argument value is returned here.</i></td></tr>
+<tr><th id="85">85</th><td><i>   Also, when 'ordering' is RETURN_IN_ORDER,</i></td></tr>
+<tr><th id="86">86</th><td><i>   each non-option ARGV-element is returned here.  */</i></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><em>char</em> *<dfn class="decl def" id="optarg" title='optarg' data-ref="optarg" data-ref-filename="optarg">optarg</dfn>;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><i>/* Index in ARGV of the next element to be scanned.</i></td></tr>
+<tr><th id="91">91</th><td><i>   This is used for communication to and from the caller</i></td></tr>
+<tr><th id="92">92</th><td><i>   and for communication between successive calls to 'getopt'.</i></td></tr>
+<tr><th id="93">93</th><td><i></i></td></tr>
+<tr><th id="94">94</th><td><i>   On entry to 'getopt', zero means this is the first call; initialize.</i></td></tr>
+<tr><th id="95">95</th><td><i></i></td></tr>
+<tr><th id="96">96</th><td><i>   When 'getopt' returns -1, this is the index of the first of the</i></td></tr>
+<tr><th id="97">97</th><td><i>   non-option elements that the caller should itself scan.</i></td></tr>
+<tr><th id="98">98</th><td><i></i></td></tr>
+<tr><th id="99">99</th><td><i>   Otherwise, 'optind' communicates from one call to the next</i></td></tr>
+<tr><th id="100">100</th><td><i>   how much of ARGV has been scanned so far.  */</i></td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><i>/* 1003.2 says this must be 1 before any call.  */</i></td></tr>
+<tr><th id="103">103</th><td><em>int</em> <dfn class="decl def" id="optind" title='optind' data-ref="optind" data-ref-filename="optind">optind</dfn> = <var>1</var>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i>/* Callers store zero here to inhibit the error message</i></td></tr>
+<tr><th id="106">106</th><td><i>   for unrecognized options.  */</i></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><em>int</em> <dfn class="decl def" id="opterr" title='opterr' data-ref="opterr" data-ref-filename="opterr">opterr</dfn> = <var>1</var>;</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><i>/* Set to an option character which was unrecognized.</i></td></tr>
+<tr><th id="111">111</th><td><i>   This must be initialized on some systems to avoid linking in the</i></td></tr>
+<tr><th id="112">112</th><td><i>   system's own getopt implementation.  */</i></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><em>int</em> <dfn class="decl def" id="optopt" title='optopt' data-ref="optopt" data-ref-filename="optopt">optopt</dfn> = <kbd>'?'</kbd>;</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i  data-doc="getopt_data">/* Keep a global copy of all internal members of getopt_data.  */</i></td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td><em>static</em> <b>struct</b> <a class="type" href="getopt_int.h.html#_getopt_data" title='_getopt_data' data-ref="_getopt_data" data-ref-filename="_getopt_data">_getopt_data</a> <dfn class="tu decl def" id="getopt_data" title='getopt_data' data-type='struct _getopt_data' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</dfn>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i  data-doc="exchange">/* Exchange two adjacent subsequences of ARGV.</i></td></tr>
+<tr><th id="121">121</th><td><i  data-doc="exchange">   One subsequence is elements [first_nonopt,last_nonopt)</i></td></tr>
+<tr><th id="122">122</th><td><i  data-doc="exchange">   which contains all the non-options that have been skipped so far.</i></td></tr>
+<tr><th id="123">123</th><td><i  data-doc="exchange">   The other is elements [last_nonopt,optind), which contains all</i></td></tr>
+<tr><th id="124">124</th><td><i  data-doc="exchange">   the options processed since those non-options were skipped.</i></td></tr>
+<tr><th id="125">125</th><td><i  data-doc="exchange"></i></td></tr>
+<tr><th id="126">126</th><td><i  data-doc="exchange">   'first_nonopt' and 'last_nonopt' are relocated so that they describe</i></td></tr>
+<tr><th id="127">127</th><td><i  data-doc="exchange">   the new indices of the non-options in ARGV after they are moved.  */</i></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="130">130</th><td><dfn class="tu decl def fn" id="exchange" title='exchange' data-type='void exchange(char ** argv, struct _getopt_data * d)' data-ref="exchange" data-ref-filename="exchange">exchange</dfn> (<em>char</em> **<dfn class="local col1 decl" id="1argv" title='argv' data-type='char **' data-ref="1argv" data-ref-filename="1argv">argv</dfn>, <b>struct</b> <a class="type" href="getopt_int.h.html#_getopt_data" title='_getopt_data' data-ref="_getopt_data" data-ref-filename="_getopt_data">_getopt_data</a> *<dfn class="local col2 decl" id="2d" title='d' data-type='struct _getopt_data *' data-ref="2d" data-ref-filename="2d">d</dfn>)</td></tr>
+<tr><th id="131">131</th><td>{</td></tr>
+<tr><th id="132">132</th><td>  <em>int</em> <dfn class="local col3 decl" id="3bottom" title='bottom' data-type='int' data-ref="3bottom" data-ref-filename="3bottom">bottom</dfn> = <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a>;</td></tr>
+<tr><th id="133">133</th><td>  <em>int</em> <dfn class="local col4 decl" id="4middle" title='middle' data-type='int' data-ref="4middle" data-ref-filename="4middle">middle</dfn> = <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a>;</td></tr>
+<tr><th id="134">134</th><td>  <em>int</em> <dfn class="local col5 decl" id="5top" title='top' data-type='int' data-ref="5top" data-ref-filename="5top">top</dfn> = <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="135">135</th><td>  <em>char</em> *<dfn class="local col6 decl" id="6tem" title='tem' data-type='char *' data-ref="6tem" data-ref-filename="6tem">tem</dfn>;</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>  <i>/* Exchange the shorter segment with the far end of the longer segment.</i></td></tr>
+<tr><th id="138">138</th><td><i>     That puts the shorter segment into the right place.</i></td></tr>
+<tr><th id="139">139</th><td><i>     It leaves the longer segment in the right place overall,</i></td></tr>
+<tr><th id="140">140</th><td><i>     but it consists of two parts that need to be swapped next.  */</i></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>  <b>while</b> (<a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> &gt; <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> &amp;&amp; <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> &gt; <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a>)</td></tr>
+<tr><th id="143">143</th><td>    {</td></tr>
+<tr><th id="144">144</th><td>      <b>if</b> (<a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> - <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> &gt; <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> - <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a>)</td></tr>
+<tr><th id="145">145</th><td>	{</td></tr>
+<tr><th id="146">146</th><td>	  <i>/* Bottom segment is the short one.  */</i></td></tr>
+<tr><th id="147">147</th><td>	  <em>int</em> <dfn class="local col7 decl" id="7len" title='len' data-type='int' data-ref="7len" data-ref-filename="7len">len</dfn> = <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> - <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a>;</td></tr>
+<tr><th id="148">148</th><td>	  <em>int</em> <dfn class="local col8 decl" id="8i" title='i' data-type='int' data-ref="8i" data-ref-filename="8i">i</dfn>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	  <i>/* Swap it with the top part of the top segment.  */</i></td></tr>
+<tr><th id="151">151</th><td>	  <b>for</b> (<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a> = <var>0</var>; <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a> &lt; <a class="local col7 ref" href="#7len" title='len' data-ref="7len" data-ref-filename="7len">len</a>; <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>++)</td></tr>
+<tr><th id="152">152</th><td>	    {</td></tr>
+<tr><th id="153">153</th><td>	      <a class="local col6 ref" href="#6tem" title='tem' data-ref="6tem" data-ref-filename="6tem">tem</a> = <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a> + <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>];</td></tr>
+<tr><th id="154">154</th><td>	      <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a> + <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>] = <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> - (<a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> - <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a>) + <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>];</td></tr>
+<tr><th id="155">155</th><td>	      <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> - (<a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> - <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a>) + <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>] = <a class="local col6 ref" href="#6tem" title='tem' data-ref="6tem" data-ref-filename="6tem">tem</a>;</td></tr>
+<tr><th id="156">156</th><td>	    }</td></tr>
+<tr><th id="157">157</th><td>	  <i>/* Exclude the moved bottom segment from further swapping.  */</i></td></tr>
+<tr><th id="158">158</th><td>	  <a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> -= <a class="local col7 ref" href="#7len" title='len' data-ref="7len" data-ref-filename="7len">len</a>;</td></tr>
+<tr><th id="159">159</th><td>	}</td></tr>
+<tr><th id="160">160</th><td>      <b>else</b></td></tr>
+<tr><th id="161">161</th><td>	{</td></tr>
+<tr><th id="162">162</th><td>	  <i>/* Top segment is the short one.  */</i></td></tr>
+<tr><th id="163">163</th><td>	  <em>int</em> <dfn class="local col9 decl" id="9len" title='len' data-type='int' data-ref="9len" data-ref-filename="9len">len</dfn> = <a class="local col5 ref" href="#5top" title='top' data-ref="5top" data-ref-filename="5top">top</a> - <a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a>;</td></tr>
+<tr><th id="164">164</th><td>	  <em>int</em> <dfn class="local col0 decl" id="10i" title='i' data-type='int' data-ref="10i" data-ref-filename="10i">i</dfn>;</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>	  <i>/* Swap it with the bottom part of the bottom segment.  */</i></td></tr>
+<tr><th id="167">167</th><td>	  <b>for</b> (<a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a> = <var>0</var>; <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a> &lt; <a class="local col9 ref" href="#9len" title='len' data-ref="9len" data-ref-filename="9len">len</a>; <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a>++)</td></tr>
+<tr><th id="168">168</th><td>	    {</td></tr>
+<tr><th id="169">169</th><td>	      <a class="local col6 ref" href="#6tem" title='tem' data-ref="6tem" data-ref-filename="6tem">tem</a> = <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a> + <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a>];</td></tr>
+<tr><th id="170">170</th><td>	      <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a> + <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a>] = <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> + <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a>];</td></tr>
+<tr><th id="171">171</th><td>	      <a class="local col1 ref" href="#1argv" title='argv' data-ref="1argv" data-ref-filename="1argv">argv</a>[<a class="local col4 ref" href="#4middle" title='middle' data-ref="4middle" data-ref-filename="4middle">middle</a> + <a class="local col0 ref" href="#10i" title='i' data-ref="10i" data-ref-filename="10i">i</a>] = <a class="local col6 ref" href="#6tem" title='tem' data-ref="6tem" data-ref-filename="6tem">tem</a>;</td></tr>
+<tr><th id="172">172</th><td>	    }</td></tr>
+<tr><th id="173">173</th><td>	  <i>/* Exclude the moved top segment from further swapping.  */</i></td></tr>
+<tr><th id="174">174</th><td>	  <a class="local col3 ref" href="#3bottom" title='bottom' data-ref="3bottom" data-ref-filename="3bottom">bottom</a> += <a class="local col9 ref" href="#9len" title='len' data-ref="9len" data-ref-filename="9len">len</a>;</td></tr>
+<tr><th id="175">175</th><td>	}</td></tr>
+<tr><th id="176">176</th><td>    }</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>  <i>/* Update records for the slots the non-options now occupy.  */</i></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>  <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> += (<a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> - <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a>);</td></tr>
+<tr><th id="181">181</th><td>  <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> = <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="182">182</th><td>}</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><i  data-doc="process_long_option">/* Process the argument starting with d-&gt;__nextchar as a long option.</i></td></tr>
+<tr><th id="185">185</th><td><i  data-doc="process_long_option">   d-&gt;optind should *not* have been advanced over this argument.</i></td></tr>
+<tr><th id="186">186</th><td><i  data-doc="process_long_option"></i></td></tr>
+<tr><th id="187">187</th><td><i  data-doc="process_long_option">   If the value returned is -1, it was not actually a long option, the</i></td></tr>
+<tr><th id="188">188</th><td><i  data-doc="process_long_option">   state is unchanged, and the argument should be processed as a set</i></td></tr>
+<tr><th id="189">189</th><td><i  data-doc="process_long_option">   of short options (this can only happen when long_only is true).</i></td></tr>
+<tr><th id="190">190</th><td><i  data-doc="process_long_option">   Otherwise, the option (and its argument, if any) have been consumed</i></td></tr>
+<tr><th id="191">191</th><td><i  data-doc="process_long_option">   and the return value is the value to return from _getopt_internal_r.  */</i></td></tr>
+<tr><th id="192">192</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="193">193</th><td><dfn class="tu decl def fn" id="process_long_option" title='process_long_option' data-type='int process_long_option(int argc, char ** argv, const char * optstring, const struct option * longopts, int * longind, int long_only, struct _getopt_data * d, int print_errors, const char * prefix)' data-ref="process_long_option" data-ref-filename="process_long_option">process_long_option</dfn> (<em>int</em> <dfn class="local col1 decl" id="11argc" title='argc' data-type='int' data-ref="11argc" data-ref-filename="11argc">argc</dfn>, <em>char</em> **<dfn class="local col2 decl" id="12argv" title='argv' data-type='char **' data-ref="12argv" data-ref-filename="12argv">argv</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="13optstring" title='optstring' data-type='const char *' data-ref="13optstring" data-ref-filename="13optstring">optstring</dfn>,</td></tr>
+<tr><th id="194">194</th><td>		     <em>const</em> <b>struct</b> <a class="type" href="bits/getopt_ext.h.html#option" title='option' data-ref="option" data-ref-filename="option">option</a> *<dfn class="local col4 decl" id="14longopts" title='longopts' data-type='const struct option *' data-ref="14longopts" data-ref-filename="14longopts">longopts</dfn>, <em>int</em> *<dfn class="local col5 decl" id="15longind" title='longind' data-type='int *' data-ref="15longind" data-ref-filename="15longind">longind</dfn>,</td></tr>
+<tr><th id="195">195</th><td>		     <em>int</em> <dfn class="local col6 decl" id="16long_only" title='long_only' data-type='int' data-ref="16long_only" data-ref-filename="16long_only">long_only</dfn>, <b>struct</b> <a class="type" href="getopt_int.h.html#_getopt_data" title='_getopt_data' data-ref="_getopt_data" data-ref-filename="_getopt_data">_getopt_data</a> *<dfn class="local col7 decl" id="17d" title='d' data-type='struct _getopt_data *' data-ref="17d" data-ref-filename="17d">d</dfn>,</td></tr>
+<tr><th id="196">196</th><td>		     <em>int</em> <dfn class="local col8 decl" id="18print_errors" title='print_errors' data-type='int' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</dfn>, <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="19prefix" title='prefix' data-type='const char *' data-ref="19prefix" data-ref-filename="19prefix">prefix</dfn>)</td></tr>
+<tr><th id="197">197</th><td>{</td></tr>
+<tr><th id="198">198</th><td>  <em>char</em> *<dfn class="local col0 decl" id="20nameend" title='nameend' data-type='char *' data-ref="20nameend" data-ref-filename="20nameend">nameend</dfn>;</td></tr>
+<tr><th id="199">199</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="21namelen" title='namelen' data-type='size_t' data-ref="21namelen" data-ref-filename="21namelen">namelen</dfn>;</td></tr>
+<tr><th id="200">200</th><td>  <em>const</em> <b>struct</b> <a class="type" href="bits/getopt_ext.h.html#option" title='option' data-ref="option" data-ref-filename="option">option</a> *<dfn class="local col2 decl" id="22p" title='p' data-type='const struct option *' data-ref="22p" data-ref-filename="22p">p</dfn>;</td></tr>
+<tr><th id="201">201</th><td>  <em>const</em> <b>struct</b> <a class="type" href="bits/getopt_ext.h.html#option" title='option' data-ref="option" data-ref-filename="option">option</a> *<dfn class="local col3 decl" id="23pfound" title='pfound' data-type='const struct option *' data-ref="23pfound" data-ref-filename="23pfound">pfound</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="202">202</th><td>  <em>int</em> <dfn class="local col4 decl" id="24n_options" title='n_options' data-type='int' data-ref="24n_options" data-ref-filename="24n_options">n_options</dfn>;</td></tr>
+<tr><th id="203">203</th><td>  <em>int</em> <dfn class="local col5 decl" id="25option_index" title='option_index' data-type='int' data-ref="25option_index" data-ref-filename="25option_index">option_index</dfn>;</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>  <b>for</b> (<a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a> = <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>; *<a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a> &amp;&amp; *<a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a> != <kbd>'='</kbd>; <a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a>++)</td></tr>
+<tr><th id="206">206</th><td>    <i>/* Do nothing.  */</i> ;</td></tr>
+<tr><th id="207">207</th><td>  <a class="local col1 ref" href="#21namelen" title='namelen' data-ref="21namelen" data-ref-filename="21namelen">namelen</a> = <a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a> - <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>  <i>/* First look for an exact match, counting the options as a side</i></td></tr>
+<tr><th id="210">210</th><td><i>     effect.  */</i></td></tr>
+<tr><th id="211">211</th><td>  <b>for</b> (<a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a> = <a class="local col4 ref" href="#14longopts" title='longopts' data-ref="14longopts" data-ref-filename="14longopts">longopts</a>, <a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a> = <var>0</var>; <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>; <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>++, <a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>++)</td></tr>
+<tr><th id="212">212</th><td>    <b>if</b> (!<a class="ref fn" href="../string/string.h.html#strncmp" title='strncmp' data-ref="strncmp" data-ref-filename="strncmp">strncmp</a> (<a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>, <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>, <a class="local col1 ref" href="#21namelen" title='namelen' data-ref="21namelen" data-ref-filename="21namelen">namelen</a>)</td></tr>
+<tr><th id="213">213</th><td>	&amp;&amp; <a class="local col1 ref" href="#21namelen" title='namelen' data-ref="21namelen" data-ref-filename="21namelen">namelen</a> == <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>))</td></tr>
+<tr><th id="214">214</th><td>      {</td></tr>
+<tr><th id="215">215</th><td>	<i>/* Exact match found.  */</i></td></tr>
+<tr><th id="216">216</th><td>	<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a> = <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>;</td></tr>
+<tr><th id="217">217</th><td>	<a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a> = <a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>;</td></tr>
+<tr><th id="218">218</th><td>	<b>break</b>;</td></tr>
+<tr><th id="219">219</th><td>      }</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>  <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="222">222</th><td>    {</td></tr>
+<tr><th id="223">223</th><td>      <i>/* Didn't find an exact match, so look for abbreviations.  */</i></td></tr>
+<tr><th id="224">224</th><td>      <em>unsigned</em> <em>char</em> *<dfn class="local col6 decl" id="26ambig_set" title='ambig_set' data-type='unsigned char *' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="225">225</th><td>      <em>int</em> <dfn class="local col7 decl" id="27ambig_malloced" title='ambig_malloced' data-type='int' data-ref="27ambig_malloced" data-ref-filename="27ambig_malloced">ambig_malloced</dfn> = <var>0</var>;</td></tr>
+<tr><th id="226">226</th><td>      <em>int</em> <dfn class="local col8 decl" id="28ambig_fallback" title='ambig_fallback' data-type='int' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</dfn> = <var>0</var>;</td></tr>
+<tr><th id="227">227</th><td>      <em>int</em> <dfn class="local col9 decl" id="29indfound" title='indfound' data-type='int' data-ref="29indfound" data-ref-filename="29indfound">indfound</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>      <b>for</b> (<a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a> = <a class="local col4 ref" href="#14longopts" title='longopts' data-ref="14longopts" data-ref-filename="14longopts">longopts</a>, <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a> = <var>0</var>; <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>; <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>++, <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>++)</td></tr>
+<tr><th id="230">230</th><td>	<b>if</b> (!<a class="ref fn" href="../string/string.h.html#strncmp" title='strncmp' data-ref="strncmp" data-ref-filename="strncmp">strncmp</a> (<a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>, <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>, <a class="local col1 ref" href="#21namelen" title='namelen' data-ref="21namelen" data-ref-filename="21namelen">namelen</a>))</td></tr>
+<tr><th id="231">231</th><td>	  {</td></tr>
+<tr><th id="232">232</th><td>	    <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="233">233</th><td>	      {</td></tr>
+<tr><th id="234">234</th><td>		<i>/* First nonexact match found.  */</i></td></tr>
+<tr><th id="235">235</th><td>		<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a> = <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>;</td></tr>
+<tr><th id="236">236</th><td>		<a class="local col9 ref" href="#29indfound" title='indfound' data-ref="29indfound" data-ref-filename="29indfound">indfound</a> = <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>;</td></tr>
+<tr><th id="237">237</th><td>	      }</td></tr>
+<tr><th id="238">238</th><td>	    <b>else</b> <b>if</b> (<a class="local col6 ref" href="#16long_only" title='long_only' data-ref="16long_only" data-ref-filename="16long_only">long_only</a></td></tr>
+<tr><th id="239">239</th><td>		     || <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::has_arg" title='option::has_arg' data-ref="option::has_arg" data-ref-filename="option..has_arg">has_arg</a> != <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::has_arg" title='option::has_arg' data-ref="option::has_arg" data-ref-filename="option..has_arg">has_arg</a></td></tr>
+<tr><th id="240">240</th><td>		     || <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::flag" title='option::flag' data-ref="option::flag" data-ref-filename="option..flag">flag</a> != <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::flag" title='option::flag' data-ref="option::flag" data-ref-filename="option..flag">flag</a></td></tr>
+<tr><th id="241">241</th><td>		     || <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a> != <a class="local col2 ref" href="#22p" title='p' data-ref="22p" data-ref-filename="22p">p</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a>)</td></tr>
+<tr><th id="242">242</th><td>	      {</td></tr>
+<tr><th id="243">243</th><td>		<i>/* Second or later nonexact match found.  */</i></td></tr>
+<tr><th id="244">244</th><td>		<b>if</b> (!<a class="local col8 ref" href="#28ambig_fallback" title='ambig_fallback' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</a>)</td></tr>
+<tr><th id="245">245</th><td>		  {</td></tr>
+<tr><th id="246">246</th><td>		    <b>if</b> (!<a class="local col8 ref" href="#18print_errors" title='print_errors' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</a>)</td></tr>
+<tr><th id="247">247</th><td>		      <i>/* Don't waste effort tracking the ambig set if</i></td></tr>
+<tr><th id="248">248</th><td><i>			 we're not going to print it anyway.  */</i></td></tr>
+<tr><th id="249">249</th><td>		      <a class="local col8 ref" href="#28ambig_fallback" title='ambig_fallback' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</a> = <var>1</var>;</td></tr>
+<tr><th id="250">250</th><td>		    <b>else</b> <b>if</b> (!<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>)</td></tr>
+<tr><th id="251">251</th><td>		      {</td></tr>
+<tr><th id="252">252</th><td>			<b>if</b> (<a class="ref fn" href="../include/alloca.h.html#__libc_use_alloca" title='__libc_use_alloca' data-ref="__libc_use_alloca" data-ref-filename="__libc_use_alloca">__libc_use_alloca</a> (<a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>))</td></tr>
+<tr><th id="253">253</th><td>			  <a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a> = <a class="macro" href="../stdlib/alloca.h.html#35" title="__builtin_alloca (n_options)" data-ref="_M/alloca">alloca</a> (<a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>);</td></tr>
+<tr><th id="254">254</th><td>			<b>else</b> <b>if</b> ((<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>)) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="255">255</th><td>			  <i>/* Fall back to simpler error message.  */</i></td></tr>
+<tr><th id="256">256</th><td>			  <a class="local col8 ref" href="#28ambig_fallback" title='ambig_fallback' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</a> = <var>1</var>;</td></tr>
+<tr><th id="257">257</th><td>			<b>else</b></td></tr>
+<tr><th id="258">258</th><td>			  <a class="local col7 ref" href="#27ambig_malloced" title='ambig_malloced' data-ref="27ambig_malloced" data-ref-filename="27ambig_malloced">ambig_malloced</a> = <var>1</var>;</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>			<b>if</b> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>)</td></tr>
+<tr><th id="261">261</th><td>			  {</td></tr>
+<tr><th id="262">262</th><td>			    <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>, <var>0</var>, <a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>);</td></tr>
+<tr><th id="263">263</th><td>			    <a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>[<a class="local col9 ref" href="#29indfound" title='indfound' data-ref="29indfound" data-ref-filename="29indfound">indfound</a>] = <var>1</var>;</td></tr>
+<tr><th id="264">264</th><td>			  }</td></tr>
+<tr><th id="265">265</th><td>		      }</td></tr>
+<tr><th id="266">266</th><td>		    <b>if</b> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>)</td></tr>
+<tr><th id="267">267</th><td>		      <a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>[<a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>] = <var>1</var>;</td></tr>
+<tr><th id="268">268</th><td>		  }</td></tr>
+<tr><th id="269">269</th><td>	      }</td></tr>
+<tr><th id="270">270</th><td>	  }</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>      <b>if</b> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a> || <a class="local col8 ref" href="#28ambig_fallback" title='ambig_fallback' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</a>)</td></tr>
+<tr><th id="273">273</th><td>	{</td></tr>
+<tr><th id="274">274</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18print_errors" title='print_errors' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</a>)</td></tr>
+<tr><th id="275">275</th><td>	    {</td></tr>
+<tr><th id="276">276</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28ambig_fallback" title='ambig_fallback' data-ref="28ambig_fallback" data-ref-filename="28ambig_fallback">ambig_fallback</a>)</td></tr>
+<tr><th id="277">277</th><td>		<a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option &apos;%s%s&apos; is ambiguous\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option '%s%s' is ambiguous\n"</q>),</td></tr>
+<tr><th id="278">278</th><td>			 <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<var>0</var>], <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>);</td></tr>
+<tr><th id="279">279</th><td>	      <b>else</b></td></tr>
+<tr><th id="280">280</th><td>		{</td></tr>
+<tr><th id="281">281</th><td>		  <a class="macro" href="#41" title="" data-ref="_M/flockfile">flockfile</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>);</td></tr>
+<tr><th id="282">282</th><td>		  <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="283">283</th><td>			   <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option &apos;%s%s&apos; is ambiguous; possibilities:&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option '%s%s' is ambiguous; possibilities:"</q>),</td></tr>
+<tr><th id="284">284</th><td>			   <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<var>0</var>], <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>);</td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td>		  <b>for</b> (<a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a> = <var>0</var>; <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a> &lt; <a class="local col4 ref" href="#24n_options" title='n_options' data-ref="24n_options" data-ref-filename="24n_options">n_options</a>; <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>++)</td></tr>
+<tr><th id="287">287</th><td>		    <b>if</b> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>[<a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>])</td></tr>
+<tr><th id="288">288</th><td>		      <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>, <q>" '%s%s'"</q>,</td></tr>
+<tr><th id="289">289</th><td>			       <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col4 ref" href="#14longopts" title='longopts' data-ref="14longopts" data-ref-filename="14longopts">longopts</a>[<a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>].<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>);</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td>		  <i>/* This must use 'fprintf' even though it's only</i></td></tr>
+<tr><th id="292">292</th><td><i>		     printing a single character, so that it goes through</i></td></tr>
+<tr><th id="293">293</th><td><i>		     __fxprintf_nocancel when compiled as part of glibc.  */</i></td></tr>
+<tr><th id="294">294</th><td>		  <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"\n"</q>);</td></tr>
+<tr><th id="295">295</th><td>		  <a class="macro" href="#42" title="((void) 0)" data-ref="_M/funlockfile">funlockfile</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>);</td></tr>
+<tr><th id="296">296</th><td>		}</td></tr>
+<tr><th id="297">297</th><td>	    }</td></tr>
+<tr><th id="298">298</th><td>	  <b>if</b> (<a class="local col7 ref" href="#27ambig_malloced" title='ambig_malloced' data-ref="27ambig_malloced" data-ref-filename="27ambig_malloced">ambig_malloced</a>)</td></tr>
+<tr><th id="299">299</th><td>	    <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col6 ref" href="#26ambig_set" title='ambig_set' data-ref="26ambig_set" data-ref-filename="26ambig_set">ambig_set</a>);</td></tr>
+<tr><th id="300">300</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>);</td></tr>
+<tr><th id="301">301</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="302">302</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <var>0</var>;</td></tr>
+<tr><th id="303">303</th><td>	  <b>return</b> <kbd>'?'</kbd>;</td></tr>
+<tr><th id="304">304</th><td>	}</td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td>      <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a> = <a class="local col9 ref" href="#29indfound" title='indfound' data-ref="29indfound" data-ref-filename="29indfound">indfound</a>;</td></tr>
+<tr><th id="307">307</th><td>    }</td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td>  <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="310">310</th><td>    {</td></tr>
+<tr><th id="311">311</th><td>      <i>/* Can't find it as a long option.  If this is not getopt_long_only,</i></td></tr>
+<tr><th id="312">312</th><td><i>	 or the option starts with '--' or is not a valid short option,</i></td></tr>
+<tr><th id="313">313</th><td><i>	 then it's an error.  */</i></td></tr>
+<tr><th id="314">314</th><td>      <b>if</b> (!<a class="local col6 ref" href="#16long_only" title='long_only' data-ref="16long_only" data-ref-filename="16long_only">long_only</a> || <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][<var>1</var>] == <kbd>'-'</kbd></td></tr>
+<tr><th id="315">315</th><td>	  || <a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a> (<a class="local col3 ref" href="#13optstring" title='optstring' data-ref="13optstring" data-ref-filename="13optstring">optstring</a>, *<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="316">316</th><td>	{</td></tr>
+<tr><th id="317">317</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18print_errors" title='print_errors' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</a>)</td></tr>
+<tr><th id="318">318</th><td>	    <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: unrecognized option &apos;%s%s&apos;\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: unrecognized option '%s%s'\n"</q>),</td></tr>
+<tr><th id="319">319</th><td>		     <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<var>0</var>], <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>);</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="322">322</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="323">323</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <var>0</var>;</td></tr>
+<tr><th id="324">324</th><td>	  <b>return</b> <kbd>'?'</kbd>;</td></tr>
+<tr><th id="325">325</th><td>	}</td></tr>
+<tr><th id="326">326</th><td></td></tr>
+<tr><th id="327">327</th><td>      <i>/* Otherwise interpret it as a short option.  */</i></td></tr>
+<tr><th id="328">328</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="329">329</th><td>    }</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>  <i>/* We have found a matching long option.  Consume it.  */</i></td></tr>
+<tr><th id="332">332</th><td>  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="333">333</th><td>  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="334">334</th><td>  <b>if</b> (*<a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a>)</td></tr>
+<tr><th id="335">335</th><td>    {</td></tr>
+<tr><th id="336">336</th><td>      <i>/* Don't test has_arg with &gt;, because some C compilers don't</i></td></tr>
+<tr><th id="337">337</th><td><i>	 allow it to be used on enums.  */</i></td></tr>
+<tr><th id="338">338</th><td>      <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::has_arg" title='option::has_arg' data-ref="option::has_arg" data-ref-filename="option..has_arg">has_arg</a>)</td></tr>
+<tr><th id="339">339</th><td>	<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col0 ref" href="#20nameend" title='nameend' data-ref="20nameend" data-ref-filename="20nameend">nameend</a> + <var>1</var>;</td></tr>
+<tr><th id="340">340</th><td>      <b>else</b></td></tr>
+<tr><th id="341">341</th><td>	{</td></tr>
+<tr><th id="342">342</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18print_errors" title='print_errors' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</a>)</td></tr>
+<tr><th id="343">343</th><td>	    <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="344">344</th><td>		     <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option &apos;%s%s&apos; doesn&apos;t allow an argument\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option '%s%s' doesn't allow an argument\n"</q>),</td></tr>
+<tr><th id="345">345</th><td>		     <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<var>0</var>], <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>);</td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a>;</td></tr>
+<tr><th id="348">348</th><td>	  <b>return</b> <kbd>'?'</kbd>;</td></tr>
+<tr><th id="349">349</th><td>	}</td></tr>
+<tr><th id="350">350</th><td>    }</td></tr>
+<tr><th id="351">351</th><td>  <b>else</b> <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::has_arg" title='option::has_arg' data-ref="option::has_arg" data-ref-filename="option..has_arg">has_arg</a> == <var>1</var>)</td></tr>
+<tr><th id="352">352</th><td>    {</td></tr>
+<tr><th id="353">353</th><td>      <b>if</b> (<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> &lt; <a class="local col1 ref" href="#11argc" title='argc' data-ref="11argc" data-ref-filename="11argc">argc</a>)</td></tr>
+<tr><th id="354">354</th><td>	<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++];</td></tr>
+<tr><th id="355">355</th><td>      <b>else</b></td></tr>
+<tr><th id="356">356</th><td>	{</td></tr>
+<tr><th id="357">357</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18print_errors" title='print_errors' data-ref="18print_errors" data-ref-filename="18print_errors">print_errors</a>)</td></tr>
+<tr><th id="358">358</th><td>	    <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="359">359</th><td>		     <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option &apos;%s%s&apos; requires an argument\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option '%s%s' requires an argument\n"</q>),</td></tr>
+<tr><th id="360">360</th><td>		     <a class="local col2 ref" href="#12argv" title='argv' data-ref="12argv" data-ref-filename="12argv">argv</a>[<var>0</var>], <a class="local col9 ref" href="#19prefix" title='prefix' data-ref="19prefix" data-ref-filename="19prefix">prefix</a>, <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::name" title='option::name' data-ref="option::name" data-ref-filename="option..name">name</a>);</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>	  <a class="local col7 ref" href="#17d" title='d' data-ref="17d" data-ref-filename="17d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a>;</td></tr>
+<tr><th id="363">363</th><td>	  <b>return</b> <a class="local col3 ref" href="#13optstring" title='optstring' data-ref="13optstring" data-ref-filename="13optstring">optstring</a>[<var>0</var>] == <kbd>':'</kbd> ? <kbd>':'</kbd> : <kbd>'?'</kbd>;</td></tr>
+<tr><th id="364">364</th><td>	}</td></tr>
+<tr><th id="365">365</th><td>    }</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td>  <b>if</b> (<a class="local col5 ref" href="#15longind" title='longind' data-ref="15longind" data-ref-filename="15longind">longind</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="368">368</th><td>    *<a class="local col5 ref" href="#15longind" title='longind' data-ref="15longind" data-ref-filename="15longind">longind</a> = <a class="local col5 ref" href="#25option_index" title='option_index' data-ref="25option_index" data-ref-filename="25option_index">option_index</a>;</td></tr>
+<tr><th id="369">369</th><td>  <b>if</b> (<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::flag" title='option::flag' data-ref="option::flag" data-ref-filename="option..flag">flag</a>)</td></tr>
+<tr><th id="370">370</th><td>    {</td></tr>
+<tr><th id="371">371</th><td>      *(<a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::flag" title='option::flag' data-ref="option::flag" data-ref-filename="option..flag">flag</a>) = <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a>;</td></tr>
+<tr><th id="372">372</th><td>      <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="373">373</th><td>    }</td></tr>
+<tr><th id="374">374</th><td>  <b>return</b> <a class="local col3 ref" href="#23pfound" title='pfound' data-ref="23pfound" data-ref-filename="23pfound">pfound</a>-&gt;<a class="ref field" href="bits/getopt_ext.h.html#option::val" title='option::val' data-ref="option::val" data-ref-filename="option..val">val</a>;</td></tr>
+<tr><th id="375">375</th><td>}</td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td><i  data-doc="_getopt_initialize">/* Initialize internal data upon the first call to getopt.  */</i></td></tr>
+<tr><th id="378">378</th><td></td></tr>
+<tr><th id="379">379</th><td><em>static</em> <em>const</em> <em>char</em> *</td></tr>
+<tr><th id="380">380</th><td><dfn class="tu decl def fn" id="_getopt_initialize" title='_getopt_initialize' data-type='const char * _getopt_initialize(int argc, char ** argv, const char * optstring, struct _getopt_data * d, int posixly_correct)' data-ref="_getopt_initialize" data-ref-filename="_getopt_initialize">_getopt_initialize</dfn> (<em>int</em> <dfn class="local col0 decl" id="30argc" title='argc' data-type='int' data-ref="30argc" data-ref-filename="30argc">argc</dfn> <a class="macro" href="../include/libc-symbols.h.html#1057" title="__attribute__ ((__unused__))" data-ref="_M/_GL_UNUSED">_GL_UNUSED</a>,</td></tr>
+<tr><th id="381">381</th><td>		    <em>char</em> **<dfn class="local col1 decl" id="31argv" title='argv' data-type='char **' data-ref="31argv" data-ref-filename="31argv">argv</dfn> <a class="macro" href="../include/libc-symbols.h.html#1057" title="__attribute__ ((__unused__))" data-ref="_M/_GL_UNUSED">_GL_UNUSED</a>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="32optstring" title='optstring' data-type='const char *' data-ref="32optstring" data-ref-filename="32optstring">optstring</dfn>,</td></tr>
+<tr><th id="382">382</th><td>		    <b>struct</b> <a class="type" href="getopt_int.h.html#_getopt_data" title='_getopt_data' data-ref="_getopt_data" data-ref-filename="_getopt_data">_getopt_data</a> *<dfn class="local col3 decl" id="33d" title='d' data-type='struct _getopt_data *' data-ref="33d" data-ref-filename="33d">d</dfn>, <em>int</em> <dfn class="local col4 decl" id="34posixly_correct" title='posixly_correct' data-type='int' data-ref="34posixly_correct" data-ref-filename="34posixly_correct">posixly_correct</dfn>)</td></tr>
+<tr><th id="383">383</th><td>{</td></tr>
+<tr><th id="384">384</th><td>  <i>/* Start processing options with ARGV-element 1 (since ARGV-element 0</i></td></tr>
+<tr><th id="385">385</th><td><i>     is the program name); the sequence of previously skipped</i></td></tr>
+<tr><th id="386">386</th><td><i>     non-option ARGV-elements is empty.  */</i></td></tr>
+<tr><th id="387">387</th><td>  <b>if</b> (<a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> == <var>0</var>)</td></tr>
+<tr><th id="388">388</th><td>    <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> = <var>1</var>;</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>  <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> = <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> = <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="391">391</th><td>  <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td>  <i>/* Determine how to handle the ordering of options and nonoptions.  */</i></td></tr>
+<tr><th id="394">394</th><td>  <b>if</b> (<a class="local col2 ref" href="#32optstring" title='optstring' data-ref="32optstring" data-ref-filename="32optstring">optstring</a>[<var>0</var>] == <kbd>'-'</kbd>)</td></tr>
+<tr><th id="395">395</th><td>    {</td></tr>
+<tr><th id="396">396</th><td>      <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> = <a class="enum" href="getopt_int.h.html#RETURN_IN_ORDER" title='RETURN_IN_ORDER' data-ref="RETURN_IN_ORDER" data-ref-filename="RETURN_IN_ORDER">RETURN_IN_ORDER</a>;</td></tr>
+<tr><th id="397">397</th><td>      ++<a class="local col2 ref" href="#32optstring" title='optstring' data-ref="32optstring" data-ref-filename="32optstring">optstring</a>;</td></tr>
+<tr><th id="398">398</th><td>    }</td></tr>
+<tr><th id="399">399</th><td>  <b>else</b> <b>if</b> (<a class="local col2 ref" href="#32optstring" title='optstring' data-ref="32optstring" data-ref-filename="32optstring">optstring</a>[<var>0</var>] == <kbd>'+'</kbd>)</td></tr>
+<tr><th id="400">400</th><td>    {</td></tr>
+<tr><th id="401">401</th><td>      <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> = <a class="enum" href="getopt_int.h.html#REQUIRE_ORDER" title='REQUIRE_ORDER' data-ref="REQUIRE_ORDER" data-ref-filename="REQUIRE_ORDER">REQUIRE_ORDER</a>;</td></tr>
+<tr><th id="402">402</th><td>      ++<a class="local col2 ref" href="#32optstring" title='optstring' data-ref="32optstring" data-ref-filename="32optstring">optstring</a>;</td></tr>
+<tr><th id="403">403</th><td>    }</td></tr>
+<tr><th id="404">404</th><td>  <b>else</b> <b>if</b> (<a class="local col4 ref" href="#34posixly_correct" title='posixly_correct' data-ref="34posixly_correct" data-ref-filename="34posixly_correct">posixly_correct</a> || !!<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"POSIXLY_CORRECT"</q>))</td></tr>
+<tr><th id="405">405</th><td>    <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> = <a class="enum" href="getopt_int.h.html#REQUIRE_ORDER" title='REQUIRE_ORDER' data-ref="REQUIRE_ORDER" data-ref-filename="REQUIRE_ORDER">REQUIRE_ORDER</a>;</td></tr>
+<tr><th id="406">406</th><td>  <b>else</b></td></tr>
+<tr><th id="407">407</th><td>    <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> = <a class="enum" href="getopt_int.h.html#PERMUTE" title='PERMUTE' data-ref="PERMUTE" data-ref-filename="PERMUTE">PERMUTE</a>;</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td>  <a class="local col3 ref" href="#33d" title='d' data-ref="33d" data-ref-filename="33d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__initialized" title='_getopt_data::__initialized' data-ref="_getopt_data::__initialized" data-ref-filename="_getopt_data..__initialized">__initialized</a> = <var>1</var>;</td></tr>
+<tr><th id="410">410</th><td>  <b>return</b> <a class="local col2 ref" href="#32optstring" title='optstring' data-ref="32optstring" data-ref-filename="32optstring">optstring</a>;</td></tr>
+<tr><th id="411">411</th><td>}</td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td><i>/* Scan elements of ARGV (whose length is ARGC) for option characters</i></td></tr>
+<tr><th id="414">414</th><td><i>   given in OPTSTRING.</i></td></tr>
+<tr><th id="415">415</th><td><i></i></td></tr>
+<tr><th id="416">416</th><td><i>   If an element of ARGV starts with '-', and is not exactly "-" or "--",</i></td></tr>
+<tr><th id="417">417</th><td><i>   then it is an option element.  The characters of this element</i></td></tr>
+<tr><th id="418">418</th><td><i>   (aside from the initial '-') are option characters.  If 'getopt'</i></td></tr>
+<tr><th id="419">419</th><td><i>   is called repeatedly, it returns successively each of the option characters</i></td></tr>
+<tr><th id="420">420</th><td><i>   from each of the option elements.</i></td></tr>
+<tr><th id="421">421</th><td><i></i></td></tr>
+<tr><th id="422">422</th><td><i>   If 'getopt' finds another option character, it returns that character,</i></td></tr>
+<tr><th id="423">423</th><td><i>   updating 'optind' and 'nextchar' so that the next call to 'getopt' can</i></td></tr>
+<tr><th id="424">424</th><td><i>   resume the scan with the following option character or ARGV-element.</i></td></tr>
+<tr><th id="425">425</th><td><i></i></td></tr>
+<tr><th id="426">426</th><td><i>   If there are no more option characters, 'getopt' returns -1.</i></td></tr>
+<tr><th id="427">427</th><td><i>   Then 'optind' is the index in ARGV of the first ARGV-element</i></td></tr>
+<tr><th id="428">428</th><td><i>   that is not an option.  (The ARGV-elements have been permuted</i></td></tr>
+<tr><th id="429">429</th><td><i>   so that those that are not options now come last.)</i></td></tr>
+<tr><th id="430">430</th><td><i></i></td></tr>
+<tr><th id="431">431</th><td><i>   OPTSTRING is a string containing the legitimate option characters.</i></td></tr>
+<tr><th id="432">432</th><td><i>   If an option character is seen that is not listed in OPTSTRING,</i></td></tr>
+<tr><th id="433">433</th><td><i>   return '?' after printing an error message.  If you set 'opterr' to</i></td></tr>
+<tr><th id="434">434</th><td><i>   zero, the error message is suppressed but we still return '?'.</i></td></tr>
+<tr><th id="435">435</th><td><i></i></td></tr>
+<tr><th id="436">436</th><td><i>   If a char in OPTSTRING is followed by a colon, that means it wants an arg,</i></td></tr>
+<tr><th id="437">437</th><td><i>   so the following text in the same ARGV-element, or the text of the following</i></td></tr>
+<tr><th id="438">438</th><td><i>   ARGV-element, is returned in 'optarg'.  Two colons mean an option that</i></td></tr>
+<tr><th id="439">439</th><td><i>   wants an optional arg; if there is text in the current ARGV-element,</i></td></tr>
+<tr><th id="440">440</th><td><i>   it is returned in 'optarg', otherwise 'optarg' is set to zero.</i></td></tr>
+<tr><th id="441">441</th><td><i></i></td></tr>
+<tr><th id="442">442</th><td><i>   If OPTSTRING starts with '-' or '+', it requests different methods of</i></td></tr>
+<tr><th id="443">443</th><td><i>   handling the non-option ARGV-elements.</i></td></tr>
+<tr><th id="444">444</th><td><i>   See the comments about RETURN_IN_ORDER and REQUIRE_ORDER, above.</i></td></tr>
+<tr><th id="445">445</th><td><i></i></td></tr>
+<tr><th id="446">446</th><td><i>   Long-named options begin with '--' instead of '-'.</i></td></tr>
+<tr><th id="447">447</th><td><i>   Their names may be abbreviated as long as the abbreviation is unique</i></td></tr>
+<tr><th id="448">448</th><td><i>   or is an exact match for some defined option.  If they have an</i></td></tr>
+<tr><th id="449">449</th><td><i>   argument, it follows the option name in the same ARGV-element, separated</i></td></tr>
+<tr><th id="450">450</th><td><i>   from the option name by a '=', or else the in next ARGV-element.</i></td></tr>
+<tr><th id="451">451</th><td><i>   When 'getopt' finds a long-named option, it returns 0 if that option's</i></td></tr>
+<tr><th id="452">452</th><td><i>   'flag' field is nonzero, the value of the option's 'val' field</i></td></tr>
+<tr><th id="453">453</th><td><i>   if the 'flag' field is zero.</i></td></tr>
+<tr><th id="454">454</th><td><i></i></td></tr>
+<tr><th id="455">455</th><td><i>   The elements of ARGV aren't really const, because we permute them.</i></td></tr>
+<tr><th id="456">456</th><td><i>   But we pretend they're const in the prototype to be compatible</i></td></tr>
+<tr><th id="457">457</th><td><i>   with other systems.</i></td></tr>
+<tr><th id="458">458</th><td><i></i></td></tr>
+<tr><th id="459">459</th><td><i>   LONGOPTS is a vector of 'struct option' terminated by an</i></td></tr>
+<tr><th id="460">460</th><td><i>   element containing a name which is zero.</i></td></tr>
+<tr><th id="461">461</th><td><i></i></td></tr>
+<tr><th id="462">462</th><td><i>   LONGIND returns the index in LONGOPT of the long-named option found.</i></td></tr>
+<tr><th id="463">463</th><td><i>   It is only valid when a long-named option has been found by the most</i></td></tr>
+<tr><th id="464">464</th><td><i>   recent call.</i></td></tr>
+<tr><th id="465">465</th><td><i></i></td></tr>
+<tr><th id="466">466</th><td><i>   If LONG_ONLY is nonzero, '-' as well as '--' can introduce</i></td></tr>
+<tr><th id="467">467</th><td><i>   long-named options.  */</i></td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td><em>int</em></td></tr>
+<tr><th id="470">470</th><td><dfn class="decl def fn" id="_getopt_internal_r" title='_getopt_internal_r' data-ref="_getopt_internal_r" data-ref-filename="_getopt_internal_r">_getopt_internal_r</dfn> (<em>int</em> <dfn class="local col5 decl" id="35argc" title='argc' data-type='int' data-ref="35argc" data-ref-filename="35argc">argc</dfn>, <em>char</em> **<dfn class="local col6 decl" id="36argv" title='argv' data-type='char **' data-ref="36argv" data-ref-filename="36argv">argv</dfn>, <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="37optstring" title='optstring' data-type='const char *' data-ref="37optstring" data-ref-filename="37optstring">optstring</dfn>,</td></tr>
+<tr><th id="471">471</th><td>		    <em>const</em> <b>struct</b> <a class="type" href="bits/getopt_ext.h.html#option" title='option' data-ref="option" data-ref-filename="option">option</a> *<dfn class="local col8 decl" id="38longopts" title='longopts' data-type='const struct option *' data-ref="38longopts" data-ref-filename="38longopts">longopts</dfn>, <em>int</em> *<dfn class="local col9 decl" id="39longind" title='longind' data-type='int *' data-ref="39longind" data-ref-filename="39longind">longind</dfn>,</td></tr>
+<tr><th id="472">472</th><td>		    <em>int</em> <dfn class="local col0 decl" id="40long_only" title='long_only' data-type='int' data-ref="40long_only" data-ref-filename="40long_only">long_only</dfn>, <b>struct</b> <a class="type" href="getopt_int.h.html#_getopt_data" title='_getopt_data' data-ref="_getopt_data" data-ref-filename="_getopt_data">_getopt_data</a> *<dfn class="local col1 decl" id="41d" title='d' data-type='struct _getopt_data *' data-ref="41d" data-ref-filename="41d">d</dfn>, <em>int</em> <dfn class="local col2 decl" id="42posixly_correct" title='posixly_correct' data-type='int' data-ref="42posixly_correct" data-ref-filename="42posixly_correct">posixly_correct</dfn>)</td></tr>
+<tr><th id="473">473</th><td>{</td></tr>
+<tr><th id="474">474</th><td>  <em>int</em> <dfn class="local col3 decl" id="43print_errors" title='print_errors' data-type='int' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</dfn> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::opterr" title='_getopt_data::opterr' data-ref="_getopt_data::opterr" data-ref-filename="_getopt_data..opterr">opterr</a>;</td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td>  <b>if</b> (<a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a> &lt; <var>1</var>)</td></tr>
+<tr><th id="477">477</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> == <var>0</var> || !<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__initialized" title='_getopt_data::__initialized' data-ref="_getopt_data::__initialized" data-ref-filename="_getopt_data..__initialized">__initialized</a>)</td></tr>
+<tr><th id="482">482</th><td>    <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a> = <a class="tu ref fn" href="#_getopt_initialize" title='_getopt_initialize' data-use='c' data-ref="_getopt_initialize" data-ref-filename="_getopt_initialize">_getopt_initialize</a> (<a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>, <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>, <a class="local col2 ref" href="#42posixly_correct" title='posixly_correct' data-ref="42posixly_correct" data-ref-filename="42posixly_correct">posixly_correct</a>);</td></tr>
+<tr><th id="483">483</th><td>  <b>else</b> <b>if</b> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>[<var>0</var>] == <kbd>'-'</kbd> || <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>[<var>0</var>] == <kbd>'+'</kbd>)</td></tr>
+<tr><th id="484">484</th><td>    <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>++;</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td>  <b>if</b> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>[<var>0</var>] == <kbd>':'</kbd>)</td></tr>
+<tr><th id="487">487</th><td>    <a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a> = <var>0</var>;</td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td>  <i>/* Test whether ARGV[optind] points to a non-option argument.  */</i></td></tr>
+<tr><th id="490">490</th><td><u>#define <dfn class="macro" id="_M/NONOPTION_P" data-ref="_M/NONOPTION_P">NONOPTION_P</dfn> (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][0] != '-' || <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][1] == '\0')</u></td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td>  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || *<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="493">493</th><td>    {</td></tr>
+<tr><th id="494">494</th><td>      <i>/* Advance to the next ARGV-element.  */</i></td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>      <i>/* Give FIRST_NONOPT &amp; LAST_NONOPT rational values if OPTIND has been</i></td></tr>
+<tr><th id="497">497</th><td><i>	 moved back by the user (who may also have changed the arguments).  */</i></td></tr>
+<tr><th id="498">498</th><td>      <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> &gt; <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>)</td></tr>
+<tr><th id="499">499</th><td>	<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="500">500</th><td>      <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> &gt; <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>)</td></tr>
+<tr><th id="501">501</th><td>	<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="502">502</th><td></td></tr>
+<tr><th id="503">503</th><td>      <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> == <a class="enum" href="getopt_int.h.html#PERMUTE" title='PERMUTE' data-ref="PERMUTE" data-ref-filename="PERMUTE">PERMUTE</a>)</td></tr>
+<tr><th id="504">504</th><td>	{</td></tr>
+<tr><th id="505">505</th><td>	  <i>/* If we have just processed some options following some non-options,</i></td></tr>
+<tr><th id="506">506</th><td><i>	     exchange them so that the options come first.  */</i></td></tr>
+<tr><th id="507">507</th><td></td></tr>
+<tr><th id="508">508</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a></td></tr>
+<tr><th id="509">509</th><td>	      &amp;&amp; <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>)</td></tr>
+<tr><th id="510">510</th><td>	    <a class="tu ref fn" href="#exchange" title='exchange' data-use='c' data-ref="exchange" data-ref-filename="exchange">exchange</a> (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>);</td></tr>
+<tr><th id="511">511</th><td>	  <b>else</b> <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>)</td></tr>
+<tr><th id="512">512</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td>	  <i>/* Skip any additional non-options</i></td></tr>
+<tr><th id="515">515</th><td><i>	     and extend the range of non-options previously skipped.  */</i></td></tr>
+<tr><th id="516">516</th><td></td></tr>
+<tr><th id="517">517</th><td>	  <b>while</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> &lt; <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a> &amp;&amp; <a class="macro" href="#490" title="(argv[d-&gt;optind][0] != &apos;-&apos; || argv[d-&gt;optind][1] == &apos;\0&apos;)" data-ref="_M/NONOPTION_P">NONOPTION_P</a>)</td></tr>
+<tr><th id="518">518</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="519">519</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="520">520</th><td>	}</td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td>      <i>/* The special ARGV-element '--' means premature end of options.</i></td></tr>
+<tr><th id="523">523</th><td><i>	 Skip it like a null option,</i></td></tr>
+<tr><th id="524">524</th><td><i>	 then exchange with previous non-options as if it were an option,</i></td></tr>
+<tr><th id="525">525</th><td><i>	 then skip everything else like a non-option.  */</i></td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td>      <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> != <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a> &amp;&amp; !<a class="ref fn" href="../string/string.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a> (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>], <q>"--"</q>))</td></tr>
+<tr><th id="528">528</th><td>	{</td></tr>
+<tr><th id="529">529</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="530">530</th><td></td></tr>
+<tr><th id="531">531</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a></td></tr>
+<tr><th id="532">532</th><td>	      &amp;&amp; <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>)</td></tr>
+<tr><th id="533">533</th><td>	    <a class="tu ref fn" href="#exchange" title='exchange' data-use='c' data-ref="exchange" data-ref-filename="exchange">exchange</a> (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>);</td></tr>
+<tr><th id="534">534</th><td>	  <b>else</b> <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> == <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a>)</td></tr>
+<tr><th id="535">535</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="536">536</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a> = <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>;</td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> = <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>;</td></tr>
+<tr><th id="539">539</th><td>	}</td></tr>
+<tr><th id="540">540</th><td></td></tr>
+<tr><th id="541">541</th><td>      <i>/* If we have done all the ARGV-elements, stop the scan</i></td></tr>
+<tr><th id="542">542</th><td><i>	 and back over any non-options that we skipped and permuted.  */</i></td></tr>
+<tr><th id="543">543</th><td></td></tr>
+<tr><th id="544">544</th><td>      <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> == <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>)</td></tr>
+<tr><th id="545">545</th><td>	{</td></tr>
+<tr><th id="546">546</th><td>	  <i>/* Set the next-arg-index to point at the non-options</i></td></tr>
+<tr><th id="547">547</th><td><i>	     that we previously skipped, so the caller will digest them.  */</i></td></tr>
+<tr><th id="548">548</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a> != <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__last_nonopt" title='_getopt_data::__last_nonopt' data-ref="_getopt_data::__last_nonopt" data-ref-filename="_getopt_data..__last_nonopt">__last_nonopt</a>)</td></tr>
+<tr><th id="549">549</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__first_nonopt" title='_getopt_data::__first_nonopt' data-ref="_getopt_data::__first_nonopt" data-ref-filename="_getopt_data..__first_nonopt">__first_nonopt</a>;</td></tr>
+<tr><th id="550">550</th><td>	  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="551">551</th><td>	}</td></tr>
+<tr><th id="552">552</th><td></td></tr>
+<tr><th id="553">553</th><td>      <i>/* If we have come to a non-option and did not permute it,</i></td></tr>
+<tr><th id="554">554</th><td><i>	 either stop the scan or describe it to the caller and pass it by.  */</i></td></tr>
+<tr><th id="555">555</th><td></td></tr>
+<tr><th id="556">556</th><td>      <b>if</b> (<a class="macro" href="#490" title="(argv[d-&gt;optind][0] != &apos;-&apos; || argv[d-&gt;optind][1] == &apos;\0&apos;)" data-ref="_M/NONOPTION_P">NONOPTION_P</a>)</td></tr>
+<tr><th id="557">557</th><td>	{</td></tr>
+<tr><th id="558">558</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__ordering" title='_getopt_data::__ordering' data-ref="_getopt_data::__ordering" data-ref-filename="_getopt_data..__ordering">__ordering</a> == <a class="enum" href="getopt_int.h.html#REQUIRE_ORDER" title='REQUIRE_ORDER' data-ref="REQUIRE_ORDER" data-ref-filename="REQUIRE_ORDER">REQUIRE_ORDER</a>)</td></tr>
+<tr><th id="559">559</th><td>	    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="560">560</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++];</td></tr>
+<tr><th id="561">561</th><td>	  <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="562">562</th><td>	}</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td>      <i>/* We have found another option-ARGV-element.</i></td></tr>
+<tr><th id="565">565</th><td><i>	 Check whether it might be a long option.  */</i></td></tr>
+<tr><th id="566">566</th><td>      <b>if</b> (<a class="local col8 ref" href="#38longopts" title='longopts' data-ref="38longopts" data-ref-filename="38longopts">longopts</a>)</td></tr>
+<tr><th id="567">567</th><td>	{</td></tr>
+<tr><th id="568">568</th><td>	  <b>if</b> (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][<var>1</var>] == <kbd>'-'</kbd>)</td></tr>
+<tr><th id="569">569</th><td>	    {</td></tr>
+<tr><th id="570">570</th><td>	      <i>/* "--foo" is always a long option.  The special option</i></td></tr>
+<tr><th id="571">571</th><td><i>		 "--" was handled above.  */</i></td></tr>
+<tr><th id="572">572</th><td>	      <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>] + <var>2</var>;</td></tr>
+<tr><th id="573">573</th><td>	      <b>return</b> <a class="tu ref fn" href="#process_long_option" title='process_long_option' data-use='c' data-ref="process_long_option" data-ref-filename="process_long_option">process_long_option</a> (<a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>, <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col8 ref" href="#38longopts" title='longopts' data-ref="38longopts" data-ref-filename="38longopts">longopts</a>,</td></tr>
+<tr><th id="574">574</th><td>					  <a class="local col9 ref" href="#39longind" title='longind' data-ref="39longind" data-ref-filename="39longind">longind</a>, <a class="local col0 ref" href="#40long_only" title='long_only' data-ref="40long_only" data-ref-filename="40long_only">long_only</a>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>,</td></tr>
+<tr><th id="575">575</th><td>					  <a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>, <q>"--"</q>);</td></tr>
+<tr><th id="576">576</th><td>	    }</td></tr>
+<tr><th id="577">577</th><td></td></tr>
+<tr><th id="578">578</th><td>	  <i>/* If long_only and the ARGV-element has the form "-f",</i></td></tr>
+<tr><th id="579">579</th><td><i>	     where f is a valid short option, don't consider it an</i></td></tr>
+<tr><th id="580">580</th><td><i>	     abbreviated form of a long option that starts with f.</i></td></tr>
+<tr><th id="581">581</th><td><i>	     Otherwise there would be no way to give the -f short</i></td></tr>
+<tr><th id="582">582</th><td><i>	     option.</i></td></tr>
+<tr><th id="583">583</th><td><i></i></td></tr>
+<tr><th id="584">584</th><td><i>	     On the other hand, if there's a long option "fubar" and</i></td></tr>
+<tr><th id="585">585</th><td><i>	     the ARGV-element is "-fu", do consider that an</i></td></tr>
+<tr><th id="586">586</th><td><i>	     abbreviation of the long option, just like "--fu", and</i></td></tr>
+<tr><th id="587">587</th><td><i>	     not "-f" with arg "u".</i></td></tr>
+<tr><th id="588">588</th><td><i></i></td></tr>
+<tr><th id="589">589</th><td><i>	     This distinction seems to be the most useful approach.  */</i></td></tr>
+<tr><th id="590">590</th><td>	  <b>if</b> (<a class="local col0 ref" href="#40long_only" title='long_only' data-ref="40long_only" data-ref-filename="40long_only">long_only</a> &amp;&amp; (<a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][<var>2</var>]</td></tr>
+<tr><th id="591">591</th><td>			    || !<a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>][<var>1</var>])))</td></tr>
+<tr><th id="592">592</th><td>	    {</td></tr>
+<tr><th id="593">593</th><td>	      <em>int</em> <dfn class="local col4 decl" id="44code" title='code' data-type='int' data-ref="44code" data-ref-filename="44code">code</dfn>;</td></tr>
+<tr><th id="594">594</th><td>	      <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>] + <var>1</var>;</td></tr>
+<tr><th id="595">595</th><td>	      <a class="local col4 ref" href="#44code" title='code' data-ref="44code" data-ref-filename="44code">code</a> = <a class="tu ref fn" href="#process_long_option" title='process_long_option' data-use='c' data-ref="process_long_option" data-ref-filename="process_long_option">process_long_option</a> (<a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>, <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col8 ref" href="#38longopts" title='longopts' data-ref="38longopts" data-ref-filename="38longopts">longopts</a>,</td></tr>
+<tr><th id="596">596</th><td>					  <a class="local col9 ref" href="#39longind" title='longind' data-ref="39longind" data-ref-filename="39longind">longind</a>, <a class="local col0 ref" href="#40long_only" title='long_only' data-ref="40long_only" data-ref-filename="40long_only">long_only</a>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>,</td></tr>
+<tr><th id="597">597</th><td>					  <a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>, <q>"-"</q>);</td></tr>
+<tr><th id="598">598</th><td>	      <b>if</b> (<a class="local col4 ref" href="#44code" title='code' data-ref="44code" data-ref-filename="44code">code</a> != -<var>1</var>)</td></tr>
+<tr><th id="599">599</th><td>		<b>return</b> <a class="local col4 ref" href="#44code" title='code' data-ref="44code" data-ref-filename="44code">code</a>;</td></tr>
+<tr><th id="600">600</th><td>	    }</td></tr>
+<tr><th id="601">601</th><td>	}</td></tr>
+<tr><th id="602">602</th><td></td></tr>
+<tr><th id="603">603</th><td>      <i>/* It is not a long option.  Skip the initial punctuation.  */</i></td></tr>
+<tr><th id="604">604</th><td>      <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>] + <var>1</var>;</td></tr>
+<tr><th id="605">605</th><td>    }</td></tr>
+<tr><th id="606">606</th><td></td></tr>
+<tr><th id="607">607</th><td>  <i>/* Look at and handle the next short option-character.  */</i></td></tr>
+<tr><th id="608">608</th><td></td></tr>
+<tr><th id="609">609</th><td>  {</td></tr>
+<tr><th id="610">610</th><td>    <em>char</em> <dfn class="local col5 decl" id="45c" title='c' data-type='char' data-ref="45c" data-ref-filename="45c">c</dfn> = *<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>++;</td></tr>
+<tr><th id="611">611</th><td>    <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="46temp" title='temp' data-type='const char *' data-ref="46temp" data-ref-filename="46temp">temp</dfn> = <a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>);</td></tr>
+<tr><th id="612">612</th><td></td></tr>
+<tr><th id="613">613</th><td>    <i>/* Increment 'optind' when we start to process its last character.  */</i></td></tr>
+<tr><th id="614">614</th><td>    <b>if</b> (*<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="615">615</th><td>      ++<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="616">616</th><td></td></tr>
+<tr><th id="617">617</th><td>    <b>if</b> (<a class="local col6 ref" href="#46temp" title='temp' data-ref="46temp" data-ref-filename="46temp">temp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> == <kbd>':'</kbd> || <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> == <kbd>';'</kbd>)</td></tr>
+<tr><th id="618">618</th><td>      {</td></tr>
+<tr><th id="619">619</th><td>	<b>if</b> (<a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>)</td></tr>
+<tr><th id="620">620</th><td>	  <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: invalid option -- &apos;%c&apos;\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: invalid option -- '%c'\n"</q>), <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<var>0</var>], <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>);</td></tr>
+<tr><th id="621">621</th><td>	<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>;</td></tr>
+<tr><th id="622">622</th><td>	<b>return</b> <kbd>'?'</kbd>;</td></tr>
+<tr><th id="623">623</th><td>      }</td></tr>
+<tr><th id="624">624</th><td></td></tr>
+<tr><th id="625">625</th><td>    <i>/* Convenience. Treat POSIX -W foo same as long option --foo */</i></td></tr>
+<tr><th id="626">626</th><td>    <b>if</b> (<a class="local col6 ref" href="#46temp" title='temp' data-ref="46temp" data-ref-filename="46temp">temp</a>[<var>0</var>] == <kbd>'W'</kbd> &amp;&amp; <a class="local col6 ref" href="#46temp" title='temp' data-ref="46temp" data-ref-filename="46temp">temp</a>[<var>1</var>] == <kbd>';'</kbd> &amp;&amp; <a class="local col8 ref" href="#38longopts" title='longopts' data-ref="38longopts" data-ref-filename="38longopts">longopts</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="627">627</th><td>      {</td></tr>
+<tr><th id="628">628</th><td>	<i>/* This is an option that requires an argument.  */</i></td></tr>
+<tr><th id="629">629</th><td>	<b>if</b> (*<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="630">630</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>;</td></tr>
+<tr><th id="631">631</th><td>	<b>else</b> <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> == <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>)</td></tr>
+<tr><th id="632">632</th><td>	  {</td></tr>
+<tr><th id="633">633</th><td>	    <b>if</b> (<a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>)</td></tr>
+<tr><th id="634">634</th><td>	      <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="635">635</th><td>		       <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option requires an argument -- &apos;%c&apos;\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option requires an argument -- '%c'\n"</q>),</td></tr>
+<tr><th id="636">636</th><td>		       <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<var>0</var>], <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>);</td></tr>
+<tr><th id="637">637</th><td></td></tr>
+<tr><th id="638">638</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>;</td></tr>
+<tr><th id="639">639</th><td>	    <b>if</b> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>[<var>0</var>] == <kbd>':'</kbd>)</td></tr>
+<tr><th id="640">640</th><td>	      <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> = <kbd>':'</kbd>;</td></tr>
+<tr><th id="641">641</th><td>	    <b>else</b></td></tr>
+<tr><th id="642">642</th><td>	      <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> = <kbd>'?'</kbd>;</td></tr>
+<tr><th id="643">643</th><td>	    <b>return</b> <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>;</td></tr>
+<tr><th id="644">644</th><td>	  }</td></tr>
+<tr><th id="645">645</th><td>	<b>else</b></td></tr>
+<tr><th id="646">646</th><td>	  <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>];</td></tr>
+<tr><th id="647">647</th><td></td></tr>
+<tr><th id="648">648</th><td>	<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a>;</td></tr>
+<tr><th id="649">649</th><td>	<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="650">650</th><td>	<b>return</b> <a class="tu ref fn" href="#process_long_option" title='process_long_option' data-use='c' data-ref="process_long_option" data-ref-filename="process_long_option">process_long_option</a> (<a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>, <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>, <a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>, <a class="local col8 ref" href="#38longopts" title='longopts' data-ref="38longopts" data-ref-filename="38longopts">longopts</a>, <a class="local col9 ref" href="#39longind" title='longind' data-ref="39longind" data-ref-filename="39longind">longind</a>,</td></tr>
+<tr><th id="651">651</th><td>				    <var>0</var> <i>/* long_only */</i>, <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>, <a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>, <q>"-W "</q>);</td></tr>
+<tr><th id="652">652</th><td>      }</td></tr>
+<tr><th id="653">653</th><td>    <b>if</b> (<a class="local col6 ref" href="#46temp" title='temp' data-ref="46temp" data-ref-filename="46temp">temp</a>[<var>1</var>] == <kbd>':'</kbd>)</td></tr>
+<tr><th id="654">654</th><td>      {</td></tr>
+<tr><th id="655">655</th><td>	<b>if</b> (<a class="local col6 ref" href="#46temp" title='temp' data-ref="46temp" data-ref-filename="46temp">temp</a>[<var>2</var>] == <kbd>':'</kbd>)</td></tr>
+<tr><th id="656">656</th><td>	  {</td></tr>
+<tr><th id="657">657</th><td>	    <i>/* This is an option that accepts an argument optionally.  */</i></td></tr>
+<tr><th id="658">658</th><td>	    <b>if</b> (*<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="659">659</th><td>	      {</td></tr>
+<tr><th id="660">660</th><td>		<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>;</td></tr>
+<tr><th id="661">661</th><td>		<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="662">662</th><td>	      }</td></tr>
+<tr><th id="663">663</th><td>	    <b>else</b></td></tr>
+<tr><th id="664">664</th><td>	      <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="665">665</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="666">666</th><td>	  }</td></tr>
+<tr><th id="667">667</th><td>	<b>else</b></td></tr>
+<tr><th id="668">668</th><td>	  {</td></tr>
+<tr><th id="669">669</th><td>	    <i>/* This is an option that requires an argument.  */</i></td></tr>
+<tr><th id="670">670</th><td>	    <b>if</b> (*<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="671">671</th><td>	      {</td></tr>
+<tr><th id="672">672</th><td>		<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a>;</td></tr>
+<tr><th id="673">673</th><td>		<i>/* If we end this ARGV-element by taking the rest as an arg,</i></td></tr>
+<tr><th id="674">674</th><td><i>		   we must advance to the next element now.  */</i></td></tr>
+<tr><th id="675">675</th><td>		<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++;</td></tr>
+<tr><th id="676">676</th><td>	      }</td></tr>
+<tr><th id="677">677</th><td>	    <b>else</b> <b>if</b> (<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> == <a class="local col5 ref" href="#35argc" title='argc' data-ref="35argc" data-ref-filename="35argc">argc</a>)</td></tr>
+<tr><th id="678">678</th><td>	      {</td></tr>
+<tr><th id="679">679</th><td>		<b>if</b> (<a class="local col3 ref" href="#43print_errors" title='print_errors' data-ref="43print_errors" data-ref-filename="43print_errors">print_errors</a>)</td></tr>
+<tr><th id="680">680</th><td>		  <a class="macro" href="#40" title="__fxprintf_nocancel" data-ref="_M/fprintf">fprintf</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="681">681</th><td>			   <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s: option requires an argument -- &apos;%c&apos;\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s: option requires an argument -- '%c'\n"</q>),</td></tr>
+<tr><th id="682">682</th><td>			   <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<var>0</var>], <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>);</td></tr>
+<tr><th id="683">683</th><td></td></tr>
+<tr><th id="684">684</th><td>		<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a> = <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>;</td></tr>
+<tr><th id="685">685</th><td>		<b>if</b> (<a class="local col7 ref" href="#37optstring" title='optstring' data-ref="37optstring" data-ref-filename="37optstring">optstring</a>[<var>0</var>] == <kbd>':'</kbd>)</td></tr>
+<tr><th id="686">686</th><td>		  <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> = <kbd>':'</kbd>;</td></tr>
+<tr><th id="687">687</th><td>		<b>else</b></td></tr>
+<tr><th id="688">688</th><td>		  <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a> = <kbd>'?'</kbd>;</td></tr>
+<tr><th id="689">689</th><td>	      }</td></tr>
+<tr><th id="690">690</th><td>	    <b>else</b></td></tr>
+<tr><th id="691">691</th><td>	      <i>/* We already incremented 'optind' once;</i></td></tr>
+<tr><th id="692">692</th><td><i>		 increment it again when taking next ARGV-elt as argument.  */</i></td></tr>
+<tr><th id="693">693</th><td>	      <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a> = <a class="local col6 ref" href="#36argv" title='argv' data-ref="36argv" data-ref-filename="36argv">argv</a>[<a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>++];</td></tr>
+<tr><th id="694">694</th><td>	    <a class="local col1 ref" href="#41d" title='d' data-ref="41d" data-ref-filename="41d">d</a>-&gt;<a class="ref field" href="getopt_int.h.html#_getopt_data::__nextchar" title='_getopt_data::__nextchar' data-ref="_getopt_data::__nextchar" data-ref-filename="_getopt_data..__nextchar">__nextchar</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="695">695</th><td>	  }</td></tr>
+<tr><th id="696">696</th><td>      }</td></tr>
+<tr><th id="697">697</th><td>    <b>return</b> <a class="local col5 ref" href="#45c" title='c' data-ref="45c" data-ref-filename="45c">c</a>;</td></tr>
+<tr><th id="698">698</th><td>  }</td></tr>
+<tr><th id="699">699</th><td>}</td></tr>
+<tr><th id="700">700</th><td></td></tr>
+<tr><th id="701">701</th><td><em>int</em></td></tr>
+<tr><th id="702">702</th><td><dfn class="decl def fn" id="_getopt_internal" title='_getopt_internal' data-ref="_getopt_internal" data-ref-filename="_getopt_internal">_getopt_internal</dfn> (<em>int</em> <dfn class="local col7 decl" id="47argc" title='argc' data-type='int' data-ref="47argc" data-ref-filename="47argc">argc</dfn>, <em>char</em> **<dfn class="local col8 decl" id="48argv" title='argv' data-type='char **' data-ref="48argv" data-ref-filename="48argv">argv</dfn>, <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="49optstring" title='optstring' data-type='const char *' data-ref="49optstring" data-ref-filename="49optstring">optstring</dfn>,</td></tr>
+<tr><th id="703">703</th><td>		  <em>const</em> <b>struct</b> <a class="type" href="bits/getopt_ext.h.html#option" title='option' data-ref="option" data-ref-filename="option">option</a> *<dfn class="local col0 decl" id="50longopts" title='longopts' data-type='const struct option *' data-ref="50longopts" data-ref-filename="50longopts">longopts</dfn>, <em>int</em> *<dfn class="local col1 decl" id="51longind" title='longind' data-type='int *' data-ref="51longind" data-ref-filename="51longind">longind</dfn>, <em>int</em> <dfn class="local col2 decl" id="52long_only" title='long_only' data-type='int' data-ref="52long_only" data-ref-filename="52long_only">long_only</dfn>,</td></tr>
+<tr><th id="704">704</th><td>		  <em>int</em> <dfn class="local col3 decl" id="53posixly_correct" title='posixly_correct' data-type='int' data-ref="53posixly_correct" data-ref-filename="53posixly_correct">posixly_correct</dfn>)</td></tr>
+<tr><th id="705">705</th><td>{</td></tr>
+<tr><th id="706">706</th><td>  <em>int</em> <dfn class="local col4 decl" id="54result" title='result' data-type='int' data-ref="54result" data-ref-filename="54result">result</dfn>;</td></tr>
+<tr><th id="707">707</th><td></td></tr>
+<tr><th id="708">708</th><td>  <a class="tu ref" href="#getopt_data" title='getopt_data' data-use='m' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>.<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a> = <a class="ref" href="bits/getopt_core.h.html#optind" title='optind' data-ref="optind" data-ref-filename="optind">optind</a>;</td></tr>
+<tr><th id="709">709</th><td>  <a class="tu ref" href="#getopt_data" title='getopt_data' data-use='m' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>.<a class="ref field" href="getopt_int.h.html#_getopt_data::opterr" title='_getopt_data::opterr' data-ref="_getopt_data::opterr" data-ref-filename="_getopt_data..opterr">opterr</a> = <a class="ref" href="bits/getopt_core.h.html#opterr" title='opterr' data-ref="opterr" data-ref-filename="opterr">opterr</a>;</td></tr>
+<tr><th id="710">710</th><td></td></tr>
+<tr><th id="711">711</th><td>  <a class="local col4 ref" href="#54result" title='result' data-ref="54result" data-ref-filename="54result">result</a> = <a class="ref fn" href="#_getopt_internal_r" title='_getopt_internal_r' data-ref="_getopt_internal_r" data-ref-filename="_getopt_internal_r">_getopt_internal_r</a> (<a class="local col7 ref" href="#47argc" title='argc' data-ref="47argc" data-ref-filename="47argc">argc</a>, <a class="local col8 ref" href="#48argv" title='argv' data-ref="48argv" data-ref-filename="48argv">argv</a>, <a class="local col9 ref" href="#49optstring" title='optstring' data-ref="49optstring" data-ref-filename="49optstring">optstring</a>, <a class="local col0 ref" href="#50longopts" title='longopts' data-ref="50longopts" data-ref-filename="50longopts">longopts</a>,</td></tr>
+<tr><th id="712">712</th><td>			       <a class="local col1 ref" href="#51longind" title='longind' data-ref="51longind" data-ref-filename="51longind">longind</a>, <a class="local col2 ref" href="#52long_only" title='long_only' data-ref="52long_only" data-ref-filename="52long_only">long_only</a>, &amp;<a class="tu ref" href="#getopt_data" title='getopt_data' data-use='a' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>,</td></tr>
+<tr><th id="713">713</th><td>			       <a class="local col3 ref" href="#53posixly_correct" title='posixly_correct' data-ref="53posixly_correct" data-ref-filename="53posixly_correct">posixly_correct</a>);</td></tr>
+<tr><th id="714">714</th><td></td></tr>
+<tr><th id="715">715</th><td>  <a class="ref" href="bits/getopt_core.h.html#optind" title='optind' data-ref="optind" data-ref-filename="optind">optind</a> = <a class="tu ref" href="#getopt_data" title='getopt_data' data-use='m' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>.<a class="ref field" href="getopt_int.h.html#_getopt_data::optind" title='_getopt_data::optind' data-ref="_getopt_data::optind" data-ref-filename="_getopt_data..optind">optind</a>;</td></tr>
+<tr><th id="716">716</th><td>  <a class="ref" href="bits/getopt_core.h.html#optarg" title='optarg' data-ref="optarg" data-ref-filename="optarg">optarg</a> = <a class="tu ref" href="#getopt_data" title='getopt_data' data-use='m' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>.<a class="ref field" href="getopt_int.h.html#_getopt_data::optarg" title='_getopt_data::optarg' data-ref="_getopt_data::optarg" data-ref-filename="_getopt_data..optarg">optarg</a>;</td></tr>
+<tr><th id="717">717</th><td>  <a class="ref" href="bits/getopt_core.h.html#optopt" title='optopt' data-ref="optopt" data-ref-filename="optopt">optopt</a> = <a class="tu ref" href="#getopt_data" title='getopt_data' data-use='m' data-ref="getopt_data" data-ref-filename="getopt_data">getopt_data</a>.<a class="ref field" href="getopt_int.h.html#_getopt_data::optopt" title='_getopt_data::optopt' data-ref="_getopt_data::optopt" data-ref-filename="_getopt_data..optopt">optopt</a>;</td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td>  <b>return</b> <a class="local col4 ref" href="#54result" title='result' data-ref="54result" data-ref-filename="54result">result</a>;</td></tr>
+<tr><th id="720">720</th><td>}</td></tr>
+<tr><th id="721">721</th><td></td></tr>
+<tr><th id="722">722</th><td><i>/* glibc gets a LSB-compliant getopt and a POSIX-complaint __posix_getopt.</i></td></tr>
+<tr><th id="723">723</th><td><i>   Standalone applications just get a POSIX-compliant getopt.</i></td></tr>
+<tr><th id="724">724</th><td><i>   POSIX and LSB both require these functions to take 'char *const *argv'</i></td></tr>
+<tr><th id="725">725</th><td><i>   even though this is incorrect (because of the permutation).  */</i></td></tr>
+<tr><th id="726">726</th><td><u>#define <dfn class="macro" id="_M/GETOPT_ENTRY" data-ref="_M/GETOPT_ENTRY">GETOPT_ENTRY</dfn>(NAME, POSIXLY_CORRECT)			\</u></td></tr>
+<tr><th id="727">727</th><td><u>  int								\</u></td></tr>
+<tr><th id="728">728</th><td><u>  NAME (int <dfn class="local col5 decl" id="55argc" title='argc' data-type='int' data-ref="55argc" data-ref-filename="55argc"><dfn class="local col8 decl" id="58argc" title='argc' data-type='int' data-ref="58argc" data-ref-filename="58argc">argc</dfn></dfn>, char *const *<dfn class="local col6 decl" id="56argv" title='argv' data-type='char *const *' data-ref="56argv" data-ref-filename="56argv"><dfn class="local col9 decl" id="59argv" title='argv' data-type='char *const *' data-ref="59argv" data-ref-filename="59argv">argv</dfn></dfn>, const char *<dfn class="local col7 decl" id="57optstring" title='optstring' data-type='const char *' data-ref="57optstring" data-ref-filename="57optstring"><dfn class="local col0 decl" id="60optstring" title='optstring' data-type='const char *' data-ref="60optstring" data-ref-filename="60optstring">optstring</dfn></dfn>)	\</u></td></tr>
+<tr><th id="729">729</th><td><u>  {								\</u></td></tr>
+<tr><th id="730">730</th><td><u>    return <a class="ref fn" href="#_getopt_internal" title='_getopt_internal' data-ref="_getopt_internal" data-ref-filename="_getopt_internal">_getopt_internal</a> (<a class="local col5 ref" href="#735" title='argc' data-ref="55argc" data-ref-filename="55argc"><a class="local col8 ref" href="#736" title='argc' data-ref="58argc" data-ref-filename="58argc">argc</a></a>, (char **)<a class="local col6 ref" href="#735" title='argv' data-ref="56argv" data-ref-filename="56argv"><a class="local col9 ref" href="#736" title='argv' data-ref="59argv" data-ref-filename="59argv">argv</a></a>, <a class="local col7 ref" href="#735" title='optstring' data-ref="57optstring" data-ref-filename="57optstring"><a class="local col0 ref" href="#736" title='optstring' data-ref="60optstring" data-ref-filename="60optstring">optstring</a></a>,	\</u></td></tr>
+<tr><th id="731">731</th><td><u>			     0, 0, 0, POSIXLY_CORRECT);		\</u></td></tr>
+<tr><th id="732">732</th><td><u>  }</u></td></tr>
+<tr><th id="733">733</th><td></td></tr>
+<tr><th id="734">734</th><td><u>#<span data-ppcond="734">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="735">735</th><td><a class="macro" href="#726" title="int getopt (int argc, char *const *argv, const char *optstring) { return _getopt_internal (argc, (char **)argv, optstring, 0, 0, 0, 0); }" data-ref="_M/GETOPT_ENTRY">GETOPT_ENTRY</a>(<dfn class="decl def fn" id="getopt" title='getopt' data-ref="getopt" data-ref-filename="getopt">getopt</dfn>, <var>0</var>)</td></tr>
+<tr><th id="736">736</th><td><a class="macro" href="#726" title="int __posix_getopt (int argc, char *const *argv, const char *optstring) { return _getopt_internal (argc, (char **)argv, optstring, 0, 0, 0, 1); }" data-ref="_M/GETOPT_ENTRY">GETOPT_ENTRY</a>(<dfn class="decl def fn" id="__posix_getopt" title='__posix_getopt' data-ref="__posix_getopt" data-ref-filename="__posix_getopt">__posix_getopt</dfn>, <var>1</var>)</td></tr>
+<tr><th id="737">737</th><td><u>#<span data-ppcond="734">else</span></u></td></tr>
+<tr><th id="738">738</th><td>GETOPT_ENTRY(getopt, <var>1</var>)</td></tr>
+<tr><th id="739">739</th><td><u>#<span data-ppcond="734">endif</span></u></td></tr>
+<tr><th id="740">740</th><td></td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td><u>#<span data-ppcond="742">ifdef</span> <span class="macro" data-ref="_M/TEST">TEST</span></u></td></tr>
+<tr><th id="743">743</th><td></td></tr>
+<tr><th id="744">744</th><td><i>/* Compile with -DTEST to make an executable for use in testing</i></td></tr>
+<tr><th id="745">745</th><td><i>   the above definition of 'getopt'.  */</i></td></tr>
+<tr><th id="746">746</th><td></td></tr>
+<tr><th id="747">747</th><td><em>int</em></td></tr>
+<tr><th id="748">748</th><td>main (<em>int</em> argc, <em>char</em> **argv)</td></tr>
+<tr><th id="749">749</th><td>{</td></tr>
+<tr><th id="750">750</th><td>  <em>int</em> c;</td></tr>
+<tr><th id="751">751</th><td>  <em>int</em> digit_optind = <var>0</var>;</td></tr>
+<tr><th id="752">752</th><td></td></tr>
+<tr><th id="753">753</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="754">754</th><td>    {</td></tr>
+<tr><th id="755">755</th><td>      <em>int</em> this_option_optind = optind ? optind : <var>1</var>;</td></tr>
+<tr><th id="756">756</th><td></td></tr>
+<tr><th id="757">757</th><td>      c = getopt (argc, argv, <q>"abc:d:0123456789"</q>);</td></tr>
+<tr><th id="758">758</th><td>      <b>if</b> (c == -<var>1</var>)</td></tr>
+<tr><th id="759">759</th><td>	<b>break</b>;</td></tr>
+<tr><th id="760">760</th><td></td></tr>
+<tr><th id="761">761</th><td>      <b>switch</b> (c)</td></tr>
+<tr><th id="762">762</th><td>	{</td></tr>
+<tr><th id="763">763</th><td>	<b>case</b> <kbd>'0'</kbd>:</td></tr>
+<tr><th id="764">764</th><td>	<b>case</b> <kbd>'1'</kbd>:</td></tr>
+<tr><th id="765">765</th><td>	<b>case</b> <kbd>'2'</kbd>:</td></tr>
+<tr><th id="766">766</th><td>	<b>case</b> <kbd>'3'</kbd>:</td></tr>
+<tr><th id="767">767</th><td>	<b>case</b> <kbd>'4'</kbd>:</td></tr>
+<tr><th id="768">768</th><td>	<b>case</b> <kbd>'5'</kbd>:</td></tr>
+<tr><th id="769">769</th><td>	<b>case</b> <kbd>'6'</kbd>:</td></tr>
+<tr><th id="770">770</th><td>	<b>case</b> <kbd>'7'</kbd>:</td></tr>
+<tr><th id="771">771</th><td>	<b>case</b> <kbd>'8'</kbd>:</td></tr>
+<tr><th id="772">772</th><td>	<b>case</b> <kbd>'9'</kbd>:</td></tr>
+<tr><th id="773">773</th><td>	  <b>if</b> (digit_optind != <var>0</var> &amp;&amp; digit_optind != this_option_optind)</td></tr>
+<tr><th id="774">774</th><td>	    printf (<q>"digits occur in two different argv-elements.\n"</q>);</td></tr>
+<tr><th id="775">775</th><td>	  digit_optind = this_option_optind;</td></tr>
+<tr><th id="776">776</th><td>	  printf (<q>"option %c\n"</q>, c);</td></tr>
+<tr><th id="777">777</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="778">778</th><td></td></tr>
+<tr><th id="779">779</th><td>	<b>case</b> <kbd>'a'</kbd>:</td></tr>
+<tr><th id="780">780</th><td>	  printf (<q>"option a\n"</q>);</td></tr>
+<tr><th id="781">781</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="782">782</th><td></td></tr>
+<tr><th id="783">783</th><td>	<b>case</b> <kbd>'b'</kbd>:</td></tr>
+<tr><th id="784">784</th><td>	  printf (<q>"option b\n"</q>);</td></tr>
+<tr><th id="785">785</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="786">786</th><td></td></tr>
+<tr><th id="787">787</th><td>	<b>case</b> <kbd>'c'</kbd>:</td></tr>
+<tr><th id="788">788</th><td>	  printf (<q>"option c with value '%s'\n"</q>, optarg);</td></tr>
+<tr><th id="789">789</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="790">790</th><td></td></tr>
+<tr><th id="791">791</th><td>	<b>case</b> <kbd>'?'</kbd>:</td></tr>
+<tr><th id="792">792</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="793">793</th><td></td></tr>
+<tr><th id="794">794</th><td>	<b>default</b>:</td></tr>
+<tr><th id="795">795</th><td>	  printf (<q>"?? getopt returned character code 0%o ??\n"</q>, c);</td></tr>
+<tr><th id="796">796</th><td>	}</td></tr>
+<tr><th id="797">797</th><td>    }</td></tr>
+<tr><th id="798">798</th><td></td></tr>
+<tr><th id="799">799</th><td>  <b>if</b> (optind &lt; argc)</td></tr>
+<tr><th id="800">800</th><td>    {</td></tr>
+<tr><th id="801">801</th><td>      printf (<q>"non-option ARGV-elements: "</q>);</td></tr>
+<tr><th id="802">802</th><td>      <b>while</b> (optind &lt; argc)</td></tr>
+<tr><th id="803">803</th><td>	printf (<q>"%s "</q>, argv[optind++]);</td></tr>
+<tr><th id="804">804</th><td>      printf (<q>"\n"</q>);</td></tr>
+<tr><th id="805">805</th><td>    }</td></tr>
+<tr><th id="806">806</th><td></td></tr>
+<tr><th id="807">807</th><td>  exit (<var>0</var>);</td></tr>
+<tr><th id="808">808</th><td>}</td></tr>
+<tr><th id="809">809</th><td></td></tr>
+<tr><th id="810">810</th><td><u>#<span data-ppcond="742">endif</span> /* TEST */</u></td></tr>
+<tr><th id="811">811</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

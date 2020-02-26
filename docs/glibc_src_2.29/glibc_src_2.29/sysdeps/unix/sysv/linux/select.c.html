@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>select.c source code [glibc_src_2.29/sysdeps/unix/sysv/linux/select.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/unix/sysv/linux/select.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.29</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='select.c.html'>select.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Linux select implementation.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2017-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library.  If not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/sys/time.h.html">&lt;sys/time.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/sys/select.h.html">&lt;sys/select.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="sysdep-cancel.h.html">&lt;sysdep-cancel.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* Check the first NFDS descriptors each in READFDS (if not NULL) for read</i></td></tr>
+<tr><th id="26">26</th><td><i>   readiness, in WRITEFDS (if not NULL) for write readiness, and in EXCEPTFDS</i></td></tr>
+<tr><th id="27">27</th><td><i>   (if not NULL) for exceptional conditions.  If TIMEOUT is not NULL, time out</i></td></tr>
+<tr><th id="28">28</th><td><i>   after waiting the interval specified therein.  Returns the number of ready</i></td></tr>
+<tr><th id="29">29</th><td><i>   descriptors, or -1 for errors.  */</i></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">ifdef</span> <span class="macro" data-ref="_M/__NR__newselect">__NR__newselect</span></u></td></tr>
+<tr><th id="32">32</th><td><u># undef __NR_select</u></td></tr>
+<tr><th id="33">33</th><td><u># define __NR_select __NR__newselect</u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><em>int</em></td></tr>
+<tr><th id="37">37</th><td><dfn class="decl def fn" id="__select" title='__select' data-ref="__select" data-ref-filename="__select">__select</dfn> (<em>int</em> <dfn class="local col1 decl" id="1nfds" title='nfds' data-type='int' data-ref="1nfds" data-ref-filename="1nfds">nfds</dfn>, <a class="typedef" href="../../../../misc/sys/select.h.html#fd_set" title='fd_set' data-type='struct fd_set' data-ref="fd_set" data-ref-filename="fd_set">fd_set</a> *<dfn class="local col2 decl" id="2readfds" title='readfds' data-type='fd_set *' data-ref="2readfds" data-ref-filename="2readfds">readfds</dfn>, <a class="typedef" href="../../../../misc/sys/select.h.html#fd_set" title='fd_set' data-type='struct fd_set' data-ref="fd_set" data-ref-filename="fd_set">fd_set</a> *<dfn class="local col3 decl" id="3writefds" title='writefds' data-type='fd_set *' data-ref="3writefds" data-ref-filename="3writefds">writefds</dfn>, <a class="typedef" href="../../../../misc/sys/select.h.html#fd_set" title='fd_set' data-type='struct fd_set' data-ref="fd_set" data-ref-filename="fd_set">fd_set</a> *<dfn class="local col4 decl" id="4exceptfds" title='exceptfds' data-type='fd_set *' data-ref="4exceptfds" data-ref-filename="4exceptfds">exceptfds</dfn>,</td></tr>
+<tr><th id="38">38</th><td>	  <b>struct</b> <a class="type" href="../../../../time/bits/types/struct_timeval.h.html#timeval" title='timeval' data-ref="timeval" data-ref-filename="timeval">timeval</a> *<dfn class="local col5 decl" id="5timeout" title='timeout' data-type='struct timeval *' data-ref="5timeout" data-ref-filename="5timeout">timeout</dfn>)</td></tr>
+<tr><th id="39">39</th><td>{</td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="40">ifdef</span> <a class="macro" href="../../../../../include/x86_64-linux-gnu/asm/unistd_64.h.html#27" data-ref="_M/__NR_select">__NR_select</a></u></td></tr>
+<tr><th id="41">41</th><td>  <b>return</b> <a class="macro" href="../../sysdep.h.html#91" title="({ long int sc_ret; if (__builtin_expect ((({ __typeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) __value; if (sizeof (__value) == 1) asm volatile (&quot;movb %%fs:%P2,%b0&quot; : &quot;=q&quot; (__value) : &quot;0&quot; (0), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else if (sizeof (__value) == 4) asm volatile (&quot;movl %%fs:%P1,%0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else { if (sizeof (__value) != 8) abort (); asm volatile (&quot;movq %%fs:%P1,%q0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); } __value; }) == 0), 1)) sc_ret = ({ unsigned long int resultvar = ({ unsigned long int resultvar; __typeof__ ((timeout) - (timeout)) __arg5 = ((__typeof__ ((timeout) - (timeout))) (timeout)); __typeof__ ((exceptfds) - (exceptfds)) __arg4 = ((__typeof__ ((exceptfds) - (exceptfds))) (exceptfds)); __typeof__ ((writefds) - (writefds)) __arg3 = ((__typeof__ ((writefds) - (writefds))) (writefds)); __typeof__ ((readfds) - (readfds)) __arg2 = ((__typeof__ ((readfds) - (readfds))) (readfds)); __typeof__ ((nfds) - (nfds)) __arg1 = ((__typeof__ ((nfds) - (nfds))) (nfds)); register __typeof__ ((timeout) - (timeout)) _a5 asm (&quot;r8&quot;) = __arg5; register __typeof__ ((exceptfds) - (exceptfds)) _a4 asm (&quot;r10&quot;) = __arg4; register __typeof__ ((writefds) - (writefds)) _a3 asm (&quot;rdx&quot;) = __arg3; register __typeof__ ((readfds) - (readfds)) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((nfds) - (nfds)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (23), &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3), &quot;r&quot; (_a4), &quot;r&quot; (_a5) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); else { int sc_cancel_oldtype = __libc_enable_asynccancel (); sc_ret = ({ unsigned long int resultvar = ({ unsigned long int resultvar; __typeof__ ((timeout) - (timeout)) __arg5 = ((__typeof__ ((timeout) - (timeout))) (timeout)); __typeof__ ((exceptfds) - (exceptfds)) __arg4 = ((__typeof__ ((exceptfds) - (exceptfds))) (exceptfds)); __typeof__ ((writefds) - (writefds)) __arg3 = ((__typeof__ ((writefds) - (writefds))) (writefds)); __typeof__ ((readfds) - (readfds)) __arg2 = ((__typeof__ ((readfds) - (readfds))) (readfds)); __typeof__ ((nfds) - (nfds)) __arg1 = ((__typeof__ ((nfds) - (nfds))) (nfds)); register __typeof__ ((timeout) - (timeout)) _a5 asm (&quot;r8&quot;) = __arg5; register __typeof__ ((exceptfds) - (exceptfds)) _a4 asm (&quot;r10&quot;) = __arg4; register __typeof__ ((writefds) - (writefds)) _a3 asm (&quot;rdx&quot;) = __arg3; register __typeof__ ((readfds) - (readfds)) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((nfds) - (nfds)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (23), &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3), &quot;r&quot; (_a4), &quot;r&quot; (_a5) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); __libc_disable_asynccancel (sc_cancel_oldtype); } sc_ret; })" data-ref="_M/SYSCALL_CANCEL">SYSCALL_CANCEL</a> (select, <a class="local col1 ref" href="#1nfds" title='nfds' data-ref="1nfds" data-ref-filename="1nfds">nfds</a>, <a class="local col2 ref" href="#2readfds" title='readfds' data-ref="2readfds" data-ref-filename="2readfds">readfds</a>, <a class="local col3 ref" href="#3writefds" title='writefds' data-ref="3writefds" data-ref-filename="3writefds">writefds</a>, <a class="local col4 ref" href="#4exceptfds" title='exceptfds' data-ref="4exceptfds" data-ref-filename="4exceptfds">exceptfds</a>,</td></tr>
+<tr><th id="42">42</th><td>			 <a class="local col5 ref" href="#5timeout" title='timeout' data-ref="5timeout" data-ref-filename="5timeout">timeout</a>);</td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="40">else</span></u></td></tr>
+<tr><th id="44">44</th><td>  <em>int</em> result;</td></tr>
+<tr><th id="45">45</th><td>  <b>struct</b> timespec ts, *tsp = NULL;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>  <b>if</b> (timeout)</td></tr>
+<tr><th id="48">48</th><td>    {</td></tr>
+<tr><th id="49">49</th><td>      TIMEVAL_TO_TIMESPEC (timeout, &amp;ts);</td></tr>
+<tr><th id="50">50</th><td>      tsp = &amp;ts;</td></tr>
+<tr><th id="51">51</th><td>    }</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>  result = SYSCALL_CANCEL (pselect6, nfds, readfds, writefds, exceptfds, tsp,</td></tr>
+<tr><th id="54">54</th><td>			   NULL);</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  <b>if</b> (timeout)</td></tr>
+<tr><th id="57">57</th><td>    {</td></tr>
+<tr><th id="58">58</th><td>      <i>/* Linux by default will update the timeout after a pselect6 syscall</i></td></tr>
+<tr><th id="59">59</th><td><i>         (though the pselect() glibc call suppresses this behavior).</i></td></tr>
+<tr><th id="60">60</th><td><i>         Since select() on Linux has the same behavior as the pselect6</i></td></tr>
+<tr><th id="61">61</th><td><i>         syscall, we update the timeout here.  */</i></td></tr>
+<tr><th id="62">62</th><td>      TIMESPEC_TO_TIMEVAL (timeout, &amp;ts);</td></tr>
+<tr><th id="63">63</th><td>    }</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="40">endif</span></u></td></tr>
+<tr><th id="67">67</th><td>}</td></tr>
+<tr><th id="68">68</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#619" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (__select)</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#150" title="extern __typeof (__select) select __attribute__ ((weak, alias (&quot;__select&quot;))) ;" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__select" title='__select' data-ref="__select" data-ref-filename="__select">__select</a>, <dfn class="decl def fn" id="select" title='select' data-ref="select" data-ref-filename="select">select</dfn>)</td></tr>
+<tr><th id="71">71</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#150" title="extern __typeof (__select) __libc_select __attribute__ ((weak, alias (&quot;__select&quot;))) ;" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__select" title='__select' data-ref="__select" data-ref-filename="__select">__select</a>, <dfn class="decl def fn" id="__libc_select" title='__libc_select' data-ref="__libc_select" data-ref-filename="__libc_select">__libc_select</dfn>)</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

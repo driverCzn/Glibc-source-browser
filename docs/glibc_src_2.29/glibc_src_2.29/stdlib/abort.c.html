@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>abort.c source code [glibc_src_2.29/stdlib/abort.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/stdlib/abort.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>stdlib</a>/<a href='abort.c.html'>abort.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1991-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/signal.h.html">&lt;signal.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/sigsetops.h.html">&lt;sigsetops.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/* Try to get a machine dependent instruction which will make the</i></td></tr>
+<tr><th id="27">27</th><td><i>   program crash.  This is used in case everything else fails.  */</i></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../sysdeps/x86_64/abort-instr.h.html">&lt;abort-instr.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#<span data-ppcond="29">ifndef</span> <a class="macro" href="../sysdeps/x86_64/abort-instr.h.html#2" data-ref="_M/ABORT_INSTRUCTION">ABORT_INSTRUCTION</a></u></td></tr>
+<tr><th id="30">30</th><td><i>/* No such instruction is available.  */</i></td></tr>
+<tr><th id="31">31</th><td><u># define ABORT_INSTRUCTION</u></td></tr>
+<tr><th id="32">32</th><td><u>#<span data-ppcond="29">endif</span></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* Exported variable to locate abort message in core files etc.  */</i></td></tr>
+<tr><th id="35">35</th><td><b>struct</b> <a class="type" href="../include/stdlib.h.html#abort_msg_s" title='abort_msg_s' data-ref="abort_msg_s" data-ref-filename="abort_msg_s">abort_msg_s</a> *<dfn class="decl def" id="__abort_msg" title='__abort_msg' data-ref="__abort_msg" data-ref-filename="__abort_msg">__abort_msg</dfn> <b>__attribute__</b> ((nocommon));</td></tr>
+<tr><th id="36">36</th><td><a class="macro" href="../include/libc-symbols.h.html#619" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (__abort_msg)</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i  data-doc="stage">/* We must avoid to run in circles.  Therefore we remember how far we</i></td></tr>
+<tr><th id="39">39</th><td><i  data-doc="stage">   already got.  */</i></td></tr>
+<tr><th id="40">40</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="stage" title='stage' data-type='int' data-ref="stage" data-ref-filename="stage">stage</dfn>;</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><i>/* We should be prepared for multiple threads trying to run abort.  */</i></td></tr>
+<tr><th id="43">43</th><td><a class="macro" href="../sysdeps/nptl/libc-lock.h.html#51" title="static __libc_lock_recursive_t lock = { (0), 0, ((void*)0) };" data-ref="_M/__libc_lock_define_initialized_recursive">__libc_lock_define_initialized_recursive</a> (<em>static</em>, <dfn class="tu decl def" id="lock" title='lock' data-type='__libc_lock_recursive_t' data-ref="lock" data-ref-filename="lock">lock</dfn>);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i>/* Cause an abnormal program termination with core-dump.  */</i></td></tr>
+<tr><th id="47">47</th><td><em>void</em></td></tr>
+<tr><th id="48">48</th><td><dfn class="decl def fn" id="abort" title='abort' data-ref="abort" data-ref-filename="abort">abort</dfn> (<em>void</em>)</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>  <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#sigaction" title='sigaction' data-ref="sigaction" data-ref-filename="sigaction">sigaction</a> <dfn class="local col1 decl" id="1act" title='act' data-type='struct sigaction' data-ref="1act" data-ref-filename="1act">act</dfn>;</td></tr>
+<tr><th id="51">51</th><td>  <a class="typedef" href="../signal/bits/types/sigset_t.h.html#sigset_t" title='sigset_t' data-type='__sigset_t' data-ref="sigset_t" data-ref-filename="sigset_t">sigset_t</a> <dfn class="local col2 decl" id="2sigs" title='sigs' data-type='sigset_t' data-ref="2sigs" data-ref-filename="2sigs">sigs</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>  <i>/* First acquire the lock.  */</i></td></tr>
+<tr><th id="54">54</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lock.h.html#90" title="do { void *self = ({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;}); if ((lock).owner != self) { ((void) ({ if (__builtin_expect ((({ __typeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) __value; if (sizeof (__value) == 1) asm volatile (&quot;movb %%fs:%P2,%b0&quot; : &quot;=q&quot; (__value) : &quot;0&quot; (0), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else if (sizeof (__value) == 4) asm volatile (&quot;movl %%fs:%P1,%0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else { if (sizeof (__value) != 8) abort (); asm volatile (&quot;movq %%fs:%P1,%q0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); } __value; }) == 0), 1)) __lll_cas_lock (&amp;((lock).lock)); else ((void) ({ int *__futex = (&amp;((lock).lock)); if (__builtin_expect (((! __sync_bool_compare_and_swap (__futex, 0, 1))), 0)) { if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __lll_lock_wait_private (__futex); else __lll_lock_wait (__futex, 0); } })); })); (lock).owner = self; } ++(lock).cnt; } while (0)" data-ref="_M/__libc_lock_lock_recursive">__libc_lock_lock_recursive</a> (<a class="tu ref" href="#43" title='lock' data-use='m' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  <i>/* Now it's for sure we are alone.  But recursive calls are possible.  */</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>  <i>/* Unblock SIGABRT.  */</i></td></tr>
+<tr><th id="59">59</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>0</var>)</td></tr>
+<tr><th id="60">60</th><td>    {</td></tr>
+<tr><th id="61">61</th><td>      ++<a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="62">62</th><td>      <a class="macro" href="../sysdeps/unix/sysv/linux/sigsetops.h.html#31" title="(__extension__ ({ int __cnt = (1024 / (8 * sizeof (unsigned long int))); sigset_t *__set = (&amp;sigs); while (--__cnt &gt;= 0) __set-&gt;__val[__cnt] = 0; (void)0; }))" data-ref="_M/__sigemptyset">__sigemptyset</a> (&amp;<a class="local col2 ref" href="#2sigs" title='sigs' data-ref="2sigs" data-ref-filename="2sigs">sigs</a>);</td></tr>
+<tr><th id="63">63</th><td>      <a class="macro" href="../sysdeps/unix/sysv/linux/sigsetops.h.html#92" title="(__extension__ ({ unsigned long int __mask = (((unsigned long int) 1) &lt;&lt; (((6) - 1) % (8 * sizeof (unsigned long int)))); unsigned long int __word = (((6) - 1) / (8 * sizeof (unsigned long int))); (&amp;sigs)-&gt;__val[__word] |= __mask; (void)0; }))" data-ref="_M/__sigaddset">__sigaddset</a> (&amp;<a class="local col2 ref" href="#2sigs" title='sigs' data-ref="2sigs" data-ref-filename="2sigs">sigs</a>, <a class="macro" href="../bits/signum-generic.h.html#50" title="6" data-ref="_M/SIGABRT">SIGABRT</a>);</td></tr>
+<tr><th id="64">64</th><td>      <a class="ref fn" href="../include/signal.h.html#__sigprocmask" title='__sigprocmask' data-ref="__sigprocmask" data-ref-filename="__sigprocmask">__sigprocmask</a> (<a class="macro" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#80" title="1" data-ref="_M/SIG_UNBLOCK">SIG_UNBLOCK</a>, &amp;<a class="local col2 ref" href="#2sigs" title='sigs' data-ref="2sigs" data-ref-filename="2sigs">sigs</a>, <var>0</var>);</td></tr>
+<tr><th id="65">65</th><td>    }</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>  <i>/* Send signal which possibly calls a user handler.  */</i></td></tr>
+<tr><th id="68">68</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>1</var>)</td></tr>
+<tr><th id="69">69</th><td>    {</td></tr>
+<tr><th id="70">70</th><td>      <i>/* This stage is special: we must allow repeated calls of</i></td></tr>
+<tr><th id="71">71</th><td><i>	 `abort' when a user defined handler for SIGABRT is installed.</i></td></tr>
+<tr><th id="72">72</th><td><i>	 This is risky since the `raise' implementation might also</i></td></tr>
+<tr><th id="73">73</th><td><i>	 fail but I don't see another possibility.  */</i></td></tr>
+<tr><th id="74">74</th><td>      <em>int</em> <dfn class="local col3 decl" id="3save_stage" title='save_stage' data-type='int' data-ref="3save_stage" data-ref-filename="3save_stage">save_stage</dfn> = <a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>      <a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a> = <var>0</var>;</td></tr>
+<tr><th id="77">77</th><td>      <a class="macro" href="../sysdeps/nptl/libc-lock.h.html#133" title="do { if (--(lock).cnt == 0) { (lock).owner = ((void*)0); ((void) ({ if (__builtin_expect ((({ __typeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) __value; if (sizeof (__value) == 1) asm volatile (&quot;movb %%fs:%P2,%b0&quot; : &quot;=q&quot; (__value) : &quot;0&quot; (0), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else if (sizeof (__value) == 4) asm volatile (&quot;movl %%fs:%P1,%0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else { if (sizeof (__value) != 8) abort (); asm volatile (&quot;movq %%fs:%P1,%q0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); } __value; }) == 0), 1)) ((lock).lock)--; else ((void) ({ int *__futex = (&amp;((lock).lock)); int __private = (0); int __oldval = ({ __typeof (*__futex) result; if (sizeof (*__futex) == 1) __asm __volatile (&quot;xchgb %b0, %1&quot; : &quot;=q&quot; (result), &quot;=m&quot; (*__futex) : &quot;0&quot; (0), &quot;m&quot; (*__futex)); else if (sizeof (*__futex) == 2) __asm __volatile (&quot;xchgw %w0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*__futex) : &quot;0&quot; (0), &quot;m&quot; (*__futex)); else if (sizeof (*__futex) == 4) __asm __volatile (&quot;xchgl %0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*__futex) : &quot;0&quot; (0), &quot;m&quot; (*__futex)); else if (1) __asm __volatile (&quot;xchgq %q0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*__futex) : &quot;0&quot; ((atomic64_t) ((__typeof__ (*(0 ? (__typeof__ (0 ? (__typeof__ ((__typeof__ (0)) 0) *) 0 : (void *) ((__builtin_classify_type ((__typeof__ (0)) 0) == 5)))) 0 : (__typeof__ (0 ? (intptr_t *) 0 : (void *) (!((__builtin_classify_type ((__typeof__ (0)) 0) == 5))))) 0))) (0))), &quot;m&quot; (*__futex)); else { result = 0; __atomic_link_error (); } result; }); if (__builtin_expect ((__oldval &gt; 1), 0)) ({ do { } while (0); long int __ret = ({ unsigned long int resultvar; __typeof__ ((0) - (0)) __arg4 = ((__typeof__ ((0) - (0))) (0)); __typeof__ ((1) - (1)) __arg3 = ((__typeof__ ((1) - (1))) (1)); __typeof__ ((({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); })) - (({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); }))) __arg2 = ((__typeof__ ((({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); })) - (({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); })))) (({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); }))); __typeof__ ((__futex) - (__futex)) __arg1 = ((__typeof__ ((__futex) - (__futex))) (__futex)); register __typeof__ ((0) - (0)) _a4 asm (&quot;r10&quot;) = __arg4; register __typeof__ ((1) - (1)) _a3 asm (&quot;rdx&quot;) = __arg3; register __typeof__ ((({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); })) - (({ int __lll_private_flag_priv __attribute__ ((unused)); __lll_private_flag_priv = (__private); ((1) | 128); }))) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((__futex) - (__futex)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (202), &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3), &quot;r&quot; (_a4) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); (__builtin_expect ((((unsigned long int) (long int) (__ret) &gt;= -4095L)), 0) ? -(-(__ret)) : 0); }); })); })); } } while (0)" data-ref="_M/__libc_lock_unlock_recursive">__libc_lock_unlock_recursive</a> (<a class="tu ref" href="#43" title='lock' data-use='m' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>      <a class="ref fn" href="../signal/signal.h.html#raise" title='raise' data-ref="raise" data-ref-filename="raise">raise</a> (<a class="macro" href="../bits/signum-generic.h.html#50" title="6" data-ref="_M/SIGABRT">SIGABRT</a>);</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>      <a class="macro" href="../sysdeps/nptl/libc-lock.h.html#90" title="do { void *self = ({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;}); if ((lock).owner != self) { ((void) ({ if (__builtin_expect ((({ __typeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) __value; if (sizeof (__value) == 1) asm volatile (&quot;movb %%fs:%P2,%b0&quot; : &quot;=q&quot; (__value) : &quot;0&quot; (0), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else if (sizeof (__value) == 4) asm volatile (&quot;movl %%fs:%P1,%0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else { if (sizeof (__value) != 8) abort (); asm volatile (&quot;movq %%fs:%P1,%q0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); } __value; }) == 0), 1)) __lll_cas_lock (&amp;((lock).lock)); else ((void) ({ int *__futex = (&amp;((lock).lock)); if (__builtin_expect (((! __sync_bool_compare_and_swap (__futex, 0, 1))), 0)) { if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __lll_lock_wait_private (__futex); else __lll_lock_wait (__futex, 0); } })); })); (lock).owner = self; } ++(lock).cnt; } while (0)" data-ref="_M/__libc_lock_lock_recursive">__libc_lock_lock_recursive</a> (<a class="tu ref" href="#43" title='lock' data-use='m' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="82">82</th><td>      <a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a> = <a class="local col3 ref" href="#3save_stage" title='save_stage' data-ref="3save_stage" data-ref-filename="3save_stage">save_stage</a> + <var>1</var>;</td></tr>
+<tr><th id="83">83</th><td>    }</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>  <i>/* There was a handler installed.  Now remove it.  */</i></td></tr>
+<tr><th id="86">86</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>2</var>)</td></tr>
+<tr><th id="87">87</th><td>    {</td></tr>
+<tr><th id="88">88</th><td>      ++<a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="89">89</th><td>      <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (&amp;<a class="local col1 ref" href="#1act" title='act' data-ref="1act" data-ref-filename="1act">act</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#sigaction" title='sigaction' data-ref="sigaction" data-ref-filename="sigaction">sigaction</a>));</td></tr>
+<tr><th id="90">90</th><td>      <a class="local col1 ref" href="#1act" title='act' data-ref="1act" data-ref-filename="1act">act</a>.<a class="macro" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#39" title="__sigaction_handler.sa_handler" data-ref="_M/sa_handler">sa_handler</a> = <a class="macro" href="../bits/signum-generic.h.html#29" title="((__sighandler_t) 0)" data-ref="_M/SIG_DFL">SIG_DFL</a>;</td></tr>
+<tr><th id="91">91</th><td>      <a class="macro" href="../sysdeps/unix/sysv/linux/sigsetops.h.html#40" title="(__extension__ ({ int __cnt = (1024 / (8 * sizeof (unsigned long int))); sigset_t *__set = (&amp;act.sa_mask); while (--__cnt &gt;= 0) __set-&gt;__val[__cnt] = ~0UL; (void)0; }))" data-ref="_M/__sigfillset">__sigfillset</a> (&amp;<a class="local col1 ref" href="#1act" title='act' data-ref="1act" data-ref-filename="1act">act</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#sigaction::sa_mask" title='sigaction::sa_mask' data-ref="sigaction::sa_mask" data-ref-filename="sigaction..sa_mask">sa_mask</a>);</td></tr>
+<tr><th id="92">92</th><td>      <a class="local col1 ref" href="#1act" title='act' data-ref="1act" data-ref-filename="1act">act</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/bits/sigaction.h.html#sigaction::sa_flags" title='sigaction::sa_flags' data-ref="sigaction::sa_flags" data-ref-filename="sigaction..sa_flags">sa_flags</a> = <var>0</var>;</td></tr>
+<tr><th id="93">93</th><td>      <a class="ref fn" href="../include/signal.h.html#__sigaction" title='__sigaction' data-ref="__sigaction" data-ref-filename="__sigaction">__sigaction</a> (<a class="macro" href="../bits/signum-generic.h.html#50" title="6" data-ref="_M/SIGABRT">SIGABRT</a>, &amp;<a class="local col1 ref" href="#1act" title='act' data-ref="1act" data-ref-filename="1act">act</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="94">94</th><td>    }</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>  <i>/* Try again.  */</i></td></tr>
+<tr><th id="97">97</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>3</var>)</td></tr>
+<tr><th id="98">98</th><td>    {</td></tr>
+<tr><th id="99">99</th><td>      ++<a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="100">100</th><td>      <a class="ref fn" href="../signal/signal.h.html#raise" title='raise' data-ref="raise" data-ref-filename="raise">raise</a> (<a class="macro" href="../bits/signum-generic.h.html#50" title="6" data-ref="_M/SIGABRT">SIGABRT</a>);</td></tr>
+<tr><th id="101">101</th><td>    }</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>  <i>/* Now try to abort using the system specific command.  */</i></td></tr>
+<tr><th id="104">104</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>4</var>)</td></tr>
+<tr><th id="105">105</th><td>    {</td></tr>
+<tr><th id="106">106</th><td>      ++<a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="107">107</th><td>      <a class="macro" href="../sysdeps/x86_64/abort-instr.h.html#2" title="asm (&quot;hlt&quot;)" data-ref="_M/ABORT_INSTRUCTION">ABORT_INSTRUCTION</a>;</td></tr>
+<tr><th id="108">108</th><td>    }</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>  <i>/* If we can't signal ourselves and the abort instruction failed, exit.  */</i></td></tr>
+<tr><th id="111">111</th><td>  <b>if</b> (<a class="tu ref" href="#stage" title='stage' data-use='r' data-ref="stage" data-ref-filename="stage">stage</a> == <var>5</var>)</td></tr>
+<tr><th id="112">112</th><td>    {</td></tr>
+<tr><th id="113">113</th><td>      ++<a class="tu ref" href="#stage" title='stage' data-use='w' data-ref="stage" data-ref-filename="stage">stage</a>;</td></tr>
+<tr><th id="114">114</th><td>      <a class="ref fn" href="../posix/unistd.h.html#_exit" title='_exit' data-ref="_exit" data-ref-filename="_exit">_exit</a> (<var>127</var>);</td></tr>
+<tr><th id="115">115</th><td>    }</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>  <i>/* If even this fails try to use the provided instruction to crash</i></td></tr>
+<tr><th id="118">118</th><td><i>     or otherwise make sure we never return.  */</i></td></tr>
+<tr><th id="119">119</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="120">120</th><td>    <i>/* Try for ever and ever.  */</i></td></tr>
+<tr><th id="121">121</th><td>    <a class="macro" href="../sysdeps/x86_64/abort-instr.h.html#2" title="asm (&quot;hlt&quot;)" data-ref="_M/ABORT_INSTRUCTION">ABORT_INSTRUCTION</a>;</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td><a class="macro" href="../include/libc-symbols.h.html#619" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (abort)</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

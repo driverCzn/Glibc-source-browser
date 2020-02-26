@@ -1,0 +1,968 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>s_erfl.c source code [glibc_src_2.29/sysdeps/ieee754/ldbl-128/s_erfl.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/ieee754/ldbl-128/s_erfl.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.29</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-128</a>/<a href='s_erfl.c.html'>s_erfl.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Developed at SunPro, a Sun Microsystems, Inc. business.</i></td></tr>
+<tr><th id="6">6</th><td><i> * Permission to use, copy, modify, and distribute this</i></td></tr>
+<tr><th id="7">7</th><td><i> * software is freely granted, provided that this notice</i></td></tr>
+<tr><th id="8">8</th><td><i> * is preserved.</i></td></tr>
+<tr><th id="9">9</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="10">10</th><td><i> */</i></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><i>/* Modifications and expansions for 128-bit long double are</i></td></tr>
+<tr><th id="13">13</th><td><i>   Copyright (C) 2001 Stephen L. Moshier &lt;moshier@na-net.ornl.gov&gt;</i></td></tr>
+<tr><th id="14">14</th><td><i>   and are incorporated herein by permission of the author.  The author</i></td></tr>
+<tr><th id="15">15</th><td><i>   reserves the right to distribute this material elsewhere under different</i></td></tr>
+<tr><th id="16">16</th><td><i>   copying permissions.  These modifications are distributed here under</i></td></tr>
+<tr><th id="17">17</th><td><i>   the following terms:</i></td></tr>
+<tr><th id="18">18</th><td><i></i></td></tr>
+<tr><th id="19">19</th><td><i>    This library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="20">20</th><td><i>    modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="21">21</th><td><i>    License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="22">22</th><td><i>    version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="23">23</th><td><i></i></td></tr>
+<tr><th id="24">24</th><td><i>    This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="25">25</th><td><i>    but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="26">26</th><td><i>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="27">27</th><td><i>    Lesser General Public License for more details.</i></td></tr>
+<tr><th id="28">28</th><td><i></i></td></tr>
+<tr><th id="29">29</th><td><i>    You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="30">30</th><td><i>    License along with this library; if not, see</i></td></tr>
+<tr><th id="31">31</th><td><i>    &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* double erf(double x)</i></td></tr>
+<tr><th id="34">34</th><td><i> * double erfc(double x)</i></td></tr>
+<tr><th id="35">35</th><td><i> *			     x</i></td></tr>
+<tr><th id="36">36</th><td><i> *		      2      |\</i></td></tr>
+<tr><th id="37">37</th><td><i> *     erf(x)  =  ---------  | exp(-t*t)dt</i></td></tr>
+<tr><th id="38">38</th><td><i> *		   sqrt(pi) \|</i></td></tr>
+<tr><th id="39">39</th><td><i> *			     0</i></td></tr>
+<tr><th id="40">40</th><td><i> *</i></td></tr>
+<tr><th id="41">41</th><td><i> *     erfc(x) =  1-erf(x)</i></td></tr>
+<tr><th id="42">42</th><td><i> *  Note that</i></td></tr>
+<tr><th id="43">43</th><td><i> *		erf(-x) = -erf(x)</i></td></tr>
+<tr><th id="44">44</th><td><i> *		erfc(-x) = 2 - erfc(x)</i></td></tr>
+<tr><th id="45">45</th><td><i> *</i></td></tr>
+<tr><th id="46">46</th><td><i> * Method:</i></td></tr>
+<tr><th id="47">47</th><td><i> *	1.  erf(x)  = x + x*R(x^2) for |x| in [0, 7/8]</i></td></tr>
+<tr><th id="48">48</th><td><i> *	   Remark. The formula is derived by noting</i></td></tr>
+<tr><th id="49">49</th><td><i> *          erf(x) = (2/sqrt(pi))*(x - x^3/3 + x^5/10 - x^7/42 + ....)</i></td></tr>
+<tr><th id="50">50</th><td><i> *	   and that</i></td></tr>
+<tr><th id="51">51</th><td><i> *          2/sqrt(pi) = 1.128379167095512573896158903121545171688</i></td></tr>
+<tr><th id="52">52</th><td><i> *	   is close to one.</i></td></tr>
+<tr><th id="53">53</th><td><i> *</i></td></tr>
+<tr><th id="54">54</th><td><i> *      1a. erf(x)  = 1 - erfc(x), for |x| &gt; 1.0</i></td></tr>
+<tr><th id="55">55</th><td><i> *          erfc(x) = 1 - erf(x)  if |x| &lt; 1/4</i></td></tr>
+<tr><th id="56">56</th><td><i> *</i></td></tr>
+<tr><th id="57">57</th><td><i> *      2. For |x| in [7/8, 1], let s = |x| - 1, and</i></td></tr>
+<tr><th id="58">58</th><td><i> *         c = 0.84506291151 rounded to single (24 bits)</i></td></tr>
+<tr><th id="59">59</th><td><i> *	erf(s + c)  = sign(x) * (c  + P1(s)/Q1(s))</i></td></tr>
+<tr><th id="60">60</th><td><i> *	   Remark: here we use the taylor series expansion at x=1.</i></td></tr>
+<tr><th id="61">61</th><td><i> *		erf(1+s) = erf(1) + s*Poly(s)</i></td></tr>
+<tr><th id="62">62</th><td><i> *			 = 0.845.. + P1(s)/Q1(s)</i></td></tr>
+<tr><th id="63">63</th><td><i> *	   Note that |P1/Q1|&lt; 0.078 for x in [0.84375,1.25]</i></td></tr>
+<tr><th id="64">64</th><td><i> *</i></td></tr>
+<tr><th id="65">65</th><td><i> *      3. For x in [1/4, 5/4],</i></td></tr>
+<tr><th id="66">66</th><td><i> *	erfc(s + const)  = erfc(const)  + s P1(s)/Q1(s)</i></td></tr>
+<tr><th id="67">67</th><td><i> *              for const = 1/4, 3/8, ..., 9/8</i></td></tr>
+<tr><th id="68">68</th><td><i> *              and 0 &lt;= s &lt;= 1/8 .</i></td></tr>
+<tr><th id="69">69</th><td><i> *</i></td></tr>
+<tr><th id="70">70</th><td><i> *      4. For x in [5/4, 107],</i></td></tr>
+<tr><th id="71">71</th><td><i> *	erfc(x) = (1/x)*exp(-x*x-0.5625 + R(z))</i></td></tr>
+<tr><th id="72">72</th><td><i> *              z=1/x^2</i></td></tr>
+<tr><th id="73">73</th><td><i> *         The interval is partitioned into several segments</i></td></tr>
+<tr><th id="74">74</th><td><i> *         of width 1/8 in 1/x.</i></td></tr>
+<tr><th id="75">75</th><td><i> *</i></td></tr>
+<tr><th id="76">76</th><td><i> *      Note1:</i></td></tr>
+<tr><th id="77">77</th><td><i> *	   To compute exp(-x*x-0.5625+R/S), let s be a single</i></td></tr>
+<tr><th id="78">78</th><td><i> *	   precision number and s := x; then</i></td></tr>
+<tr><th id="79">79</th><td><i> *		-x*x = -s*s + (s-x)*(s+x)</i></td></tr>
+<tr><th id="80">80</th><td><i> *	        exp(-x*x-0.5626+R/S) =</i></td></tr>
+<tr><th id="81">81</th><td><i> *			exp(-s*s-0.5625)*exp((s-x)*(s+x)+R/S);</i></td></tr>
+<tr><th id="82">82</th><td><i> *      Note2:</i></td></tr>
+<tr><th id="83">83</th><td><i> *	   Here 4 and 5 make use of the asymptotic series</i></td></tr>
+<tr><th id="84">84</th><td><i> *			  exp(-x*x)</i></td></tr>
+<tr><th id="85">85</th><td><i> *		erfc(x) ~ ---------- * ( 1 + Poly(1/x^2) )</i></td></tr>
+<tr><th id="86">86</th><td><i> *			  x*sqrt(pi)</i></td></tr>
+<tr><th id="87">87</th><td><i> *</i></td></tr>
+<tr><th id="88">88</th><td><i> *      5. For inf &gt; x &gt;= 107</i></td></tr>
+<tr><th id="89">89</th><td><i> *	erf(x)  = sign(x) *(1 - tiny)  (raise inexact)</i></td></tr>
+<tr><th id="90">90</th><td><i> *	erfc(x) = tiny*tiny (raise underflow) if x &gt; 0</i></td></tr>
+<tr><th id="91">91</th><td><i> *			= 2 - tiny if x&lt;0</i></td></tr>
+<tr><th id="92">92</th><td><i> *</i></td></tr>
+<tr><th id="93">93</th><td><i> *      7. Special case:</i></td></tr>
+<tr><th id="94">94</th><td><i> *	erf(0)  = 0, erf(inf)  = 1, erf(-inf) = -1,</i></td></tr>
+<tr><th id="95">95</th><td><i> *	erfc(0) = 1, erfc(inf) = 0, erfc(-inf) = 2,</i></td></tr>
+<tr><th id="96">96</th><td><i> *		erfc/erf(NaN) is NaN</i></td></tr>
+<tr><th id="97">97</th><td><i> */</i></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><u>#include <a href="../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="100">100</th><td><u>#include <a href="../../../include/float.h.html">&lt;float.h&gt;</a></u></td></tr>
+<tr><th id="101">101</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="102">102</th><td><u>#include <a href="../../x86/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="103">103</th><td><u>#include <a href="../../../math/math-underflow.h.html">&lt;math-underflow.h&gt;</a></u></td></tr>
+<tr><th id="104">104</th><td><u>#include <a href="../../generic/libm-alias-ldouble.h.html">&lt;libm-alias-ldouble.h&gt;</a></u></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/* Evaluate P[n] x^n  +  P[n-1] x^(n-1)  +  ...  +  P[0] */</i></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><em>static</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="109">109</th><td><dfn class="decl def fn" id="neval" title='neval' data-ref="neval" data-ref-filename="neval">neval</dfn> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x, <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> *p, <em>int</em> n)</td></tr>
+<tr><th id="110">110</th><td>{</td></tr>
+<tr><th id="111">111</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>  p += n;</td></tr>
+<tr><th id="114">114</th><td>  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = *p--;</td></tr>
+<tr><th id="115">115</th><td>  <b>do</b></td></tr>
+<tr><th id="116">116</th><td>    {</td></tr>
+<tr><th id="117">117</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> * x + *p--;</td></tr>
+<tr><th id="118">118</th><td>    }</td></tr>
+<tr><th id="119">119</th><td>  <b>while</b> (--<a class="local col1 ref" href="#1n" title='n' data-ref="1n" data-ref-filename="1n">n</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="120">120</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="121">121</th><td>}</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>/* Evaluate x^n+1  +  P[n] x^(n)  +  P[n-1] x^(n-1)  +  ...  +  P[0] */</i></td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><em>static</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="127">127</th><td><dfn class="decl def fn" id="deval" title='deval' data-ref="deval" data-ref-filename="deval">deval</dfn> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x, <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> *p, <em>int</em> n)</td></tr>
+<tr><th id="128">128</th><td>{</td></tr>
+<tr><th id="129">129</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>  p += n;</td></tr>
+<tr><th id="132">132</th><td>  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = x + *p--;</td></tr>
+<tr><th id="133">133</th><td>  <b>do</b></td></tr>
+<tr><th id="134">134</th><td>    {</td></tr>
+<tr><th id="135">135</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> * x + *p--;</td></tr>
+<tr><th id="136">136</th><td>    }</td></tr>
+<tr><th id="137">137</th><td>  <b>while</b> (--<a class="local col2 ref" href="#2n" title='n' data-ref="2n" data-ref-filename="2n">n</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="138">138</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="139">139</th><td>}</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="144">144</th><td><dfn class="decl def" id="tiny" title='tiny' data-ref="tiny" data-ref-filename="tiny">tiny</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1e-4931)" data-ref="_M/L">L</a>(<span class='error' title="magnitude of floating-point constant too small for type &apos;double&apos;; minimum is 4.9406564584124654E-324"><var>1e-4931</var></span>),</td></tr>
+<tr><th id="145">145</th><td>  one<span class='error' title="expected &apos;;&apos; after top level declarator"></span> = <var>1</var>,</td></tr>
+<tr><th id="146">146</th><td>  two = <var>2</var>,</td></tr>
+<tr><th id="147">147</th><td>  <i>/* 2/sqrt(pi) - 1 */</i></td></tr>
+<tr><th id="148">148</th><td>  efx = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.2837916709551257389615890312154517168810E-1)" data-ref="_M/L">L</a>(<var>1.2837916709551257389615890312154517168810E-1</var>);</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i>/* erf(x)  = x  + x R(x^2)</i></td></tr>
+<tr><th id="152">152</th><td><i>   0 &lt;= x &lt;= 7/8</i></td></tr>
+<tr><th id="153">153</th><td><i>   Peak relative error 1.8e-35  */</i></td></tr>
+<tr><th id="154">154</th><td><u>#define <dfn class="macro" id="_M/NTN1" data-ref="_M/NTN1">NTN1</dfn> 8</u></td></tr>
+<tr><th id="155">155</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="TN1" title='TN1' data-ref="TN1" data-ref-filename="TN1">TN1</dfn>[<a class="macro" href="#154" title="8" data-ref="_M/NTN1">NTN1</a> + <var>1</var>] =</td></tr>
+<tr><th id="156">156</th><td>{</td></tr>
+<tr><th id="157">157</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.858252324254637124543172907442106422373E10)" data-ref="_M/L">L</a>(-<var>3.858252324254637124543172907442106422373E10</var>),</td></tr>
+<tr><th id="158">158</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.580319248590464682316366876952214879858E10)" data-ref="_M/L">L</a>(<var>9.580319248590464682316366876952214879858E10</var>),</td></tr>
+<tr><th id="159">159</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.302170519734879977595901236693040544854E10)" data-ref="_M/L">L</a>(<var>1.302170519734879977595901236693040544854E10</var>),</td></tr>
+<tr><th id="160">160</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.922956950426397417800321486727032845006E9)" data-ref="_M/L">L</a>(<var>2.922956950426397417800321486727032845006E9</var>),</td></tr>
+<tr><th id="161">161</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.764317520783319397868923218385468729799E8)" data-ref="_M/L">L</a>(<var>1.764317520783319397868923218385468729799E8</var>),</td></tr>
+<tr><th id="162">162</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.573436014601118630105796794840834145120E7)" data-ref="_M/L">L</a>(<var>1.573436014601118630105796794840834145120E7</var>),</td></tr>
+<tr><th id="163">163</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.028077380105721388745632295157816229289E5)" data-ref="_M/L">L</a>(<var>4.028077380105721388745632295157816229289E5</var>),</td></tr>
+<tr><th id="164">164</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.644056806467289066852135096352853491530E4)" data-ref="_M/L">L</a>(<var>1.644056806467289066852135096352853491530E4</var>),</td></tr>
+<tr><th id="165">165</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.390868480059991640235675479463287886081E1)" data-ref="_M/L">L</a>(<var>3.390868480059991640235675479463287886081E1</var>)</td></tr>
+<tr><th id="166">166</th><td>};</td></tr>
+<tr><th id="167">167</th><td><u>#define <dfn class="macro" id="_M/NTD1" data-ref="_M/NTD1">NTD1</dfn> 8</u></td></tr>
+<tr><th id="168">168</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="TD1" title='TD1' data-ref="TD1" data-ref-filename="TD1">TD1</dfn>[<a class="macro" href="#167" title="8" data-ref="_M/NTD1">NTD1</a> + <var>1</var>] =</td></tr>
+<tr><th id="169">169</th><td>{</td></tr>
+<tr><th id="170">170</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.005357030696532927149885530689529032152E11)" data-ref="_M/L">L</a>(-<var>3.005357030696532927149885530689529032152E11</var>),</td></tr>
+<tr><th id="171">171</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.342602283126282827411658673839982164042E11)" data-ref="_M/L">L</a>(-<var>1.342602283126282827411658673839982164042E11</var>),</td></tr>
+<tr><th id="172">172</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.777153893355340961288511024443668743399E10)" data-ref="_M/L">L</a>(-<var>2.777153893355340961288511024443668743399E10</var>),</td></tr>
+<tr><th id="173">173</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.483826391033531996955620074072768276974E9)" data-ref="_M/L">L</a>(-<var>3.483826391033531996955620074072768276974E9</var>),</td></tr>
+<tr><th id="174">174</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.906321047071299585682722511260895227921E8)" data-ref="_M/L">L</a>(-<var>2.906321047071299585682722511260895227921E8</var>),</td></tr>
+<tr><th id="175">175</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.653347985722154162439387878512427542691E7)" data-ref="_M/L">L</a>(-<var>1.653347985722154162439387878512427542691E7</var>),</td></tr>
+<tr><th id="176">176</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.245520581562848778466500301865173123136E5)" data-ref="_M/L">L</a>(-<var>6.245520581562848778466500301865173123136E5</var>),</td></tr>
+<tr><th id="177">177</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.402124304177498828590239373389110545142E4)" data-ref="_M/L">L</a>(-<var>1.402124304177498828590239373389110545142E4</var>),</td></tr>
+<tr><th id="178">178</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.209368072473510674493129989468348633579E2)" data-ref="_M/L">L</a>(-<var>1.209368072473510674493129989468348633579E2</var>)</td></tr>
+<tr><th id="179">179</th><td><i>/* 1.0E0 */</i></td></tr>
+<tr><th id="180">180</th><td>};</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><i>/* erf(z+1)  = erf_const + P(z)/Q(z)</i></td></tr>
+<tr><th id="184">184</th><td><i>   -.125 &lt;= z &lt;= 0</i></td></tr>
+<tr><th id="185">185</th><td><i>   Peak relative error 7.3e-36  */</i></td></tr>
+<tr><th id="186">186</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="erf_const" title='erf_const' data-ref="erf_const" data-ref-filename="erf_const">erf_const</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.845062911510467529296875)" data-ref="_M/L">L</a>(<var>0.845062911510467529296875</var>);</td></tr>
+<tr><th id="187">187</th><td><u>#define <dfn class="macro" id="_M/NTN2" data-ref="_M/NTN2">NTN2</dfn> 8</u></td></tr>
+<tr><th id="188">188</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="TN2" title='TN2' data-ref="TN2" data-ref-filename="TN2">TN2</dfn>[<a class="macro" href="#187" title="8" data-ref="_M/NTN2">NTN2</a> + <var>1</var>] =</td></tr>
+<tr><th id="189">189</th><td>{</td></tr>
+<tr><th id="190">190</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.088889697077485301010486931817357000235E1)" data-ref="_M/L">L</a>(-<var>4.088889697077485301010486931817357000235E1</var>),</td></tr>
+<tr><th id="191">191</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.157046430681808553842307502826960051036E3)" data-ref="_M/L">L</a>(<var>7.157046430681808553842307502826960051036E3</var>),</td></tr>
+<tr><th id="192">192</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.191561912574409865550015485451373731780E3)" data-ref="_M/L">L</a>(-<var>2.191561912574409865550015485451373731780E3</var>),</td></tr>
+<tr><th id="193">193</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.180174916555316874988981177654057337219E3)" data-ref="_M/L">L</a>(<var>2.180174916555316874988981177654057337219E3</var>),</td></tr>
+<tr><th id="194">194</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.848578658049670668231333682379720943455E2)" data-ref="_M/L">L</a>(<var>2.848578658049670668231333682379720943455E2</var>),</td></tr>
+<tr><th id="195">195</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.630362490952512836762810462174798925274E2)" data-ref="_M/L">L</a>(<var>1.630362490952512836762810462174798925274E2</var>),</td></tr>
+<tr><th id="196">196</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.317712353961866974143739396865293596895E0)" data-ref="_M/L">L</a>(<var>6.317712353961866974143739396865293596895E0</var>),</td></tr>
+<tr><th id="197">197</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.450441034183492434655586496522857578066E1)" data-ref="_M/L">L</a>(<var>2.450441034183492434655586496522857578066E1</var>),</td></tr>
+<tr><th id="198">198</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.127662277706787664956025545897050896203E-1)" data-ref="_M/L">L</a>(<var>5.127662277706787664956025545897050896203E-1</var>)</td></tr>
+<tr><th id="199">199</th><td>};</td></tr>
+<tr><th id="200">200</th><td><u>#define <dfn class="macro" id="_M/NTD2" data-ref="_M/NTD2">NTD2</dfn> 8</u></td></tr>
+<tr><th id="201">201</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="TD2" title='TD2' data-ref="TD2" data-ref-filename="TD2">TD2</dfn>[<a class="macro" href="#200" title="8" data-ref="_M/NTD2">NTD2</a> + <var>1</var>] =</td></tr>
+<tr><th id="202">202</th><td>{</td></tr>
+<tr><th id="203">203</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.731026445926834008273768924015161048885E4)" data-ref="_M/L">L</a>(<var>1.731026445926834008273768924015161048885E4</var>),</td></tr>
+<tr><th id="204">204</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.209682239007990370796112604286048173750E4)" data-ref="_M/L">L</a>(<var>1.209682239007990370796112604286048173750E4</var>),</td></tr>
+<tr><th id="205">205</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.160950290217993641320602282462976163857E4)" data-ref="_M/L">L</a>(<var>1.160950290217993641320602282462976163857E4</var>),</td></tr>
+<tr><th id="206">206</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.394294645127126577825507169061355698157E3)" data-ref="_M/L">L</a>(<var>5.394294645127126577825507169061355698157E3</var>),</td></tr>
+<tr><th id="207">207</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.791239340533632669442158497532521776093E3)" data-ref="_M/L">L</a>(<var>2.791239340533632669442158497532521776093E3</var>),</td></tr>
+<tr><th id="208">208</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.989365571337319032943005387378993827684E2)" data-ref="_M/L">L</a>(<var>8.989365571337319032943005387378993827684E2</var>),</td></tr>
+<tr><th id="209">209</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.974016493766349409725385710897298069677E2)" data-ref="_M/L">L</a>(<var>2.974016493766349409725385710897298069677E2</var>),</td></tr>
+<tr><th id="210">210</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.148192754590376378740261072533527271947E1)" data-ref="_M/L">L</a>(<var>6.148192754590376378740261072533527271947E1</var>),</td></tr>
+<tr><th id="211">211</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.178502892490738445655468927408440847480E1)" data-ref="_M/L">L</a>(<var>1.178502892490738445655468927408440847480E1</var>)</td></tr>
+<tr><th id="212">212</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="213">213</th><td>};</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td><i>/* erfc(x + 0.25) = erfc(0.25) + x R(x)</i></td></tr>
+<tr><th id="217">217</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="218">218</th><td><i>   Peak relative error 1.4e-35  */</i></td></tr>
+<tr><th id="219">219</th><td><u>#define <dfn class="macro" id="_M/NRNr13" data-ref="_M/NRNr13">NRNr13</dfn> 8</u></td></tr>
+<tr><th id="220">220</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr13" title='RNr13' data-ref="RNr13" data-ref-filename="RNr13">RNr13</dfn>[<a class="macro" href="#219" title="8" data-ref="_M/NRNr13">NRNr13</a> + <var>1</var>] =</td></tr>
+<tr><th id="221">221</th><td>{</td></tr>
+<tr><th id="222">222</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.353707097641280550282633036456457014829E3)" data-ref="_M/L">L</a>(-<var>2.353707097641280550282633036456457014829E3</var>),</td></tr>
+<tr><th id="223">223</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.871159656228743599994116143079870279866E2)" data-ref="_M/L">L</a>(<var>3.871159656228743599994116143079870279866E2</var>),</td></tr>
+<tr><th id="224">224</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.888105134258266192210485617504098426679E2)" data-ref="_M/L">L</a>(-<var>3.888105134258266192210485617504098426679E2</var>),</td></tr>
+<tr><th id="225">225</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.129998539120061668038806696199343094971E1)" data-ref="_M/L">L</a>(-<var>2.129998539120061668038806696199343094971E1</var>),</td></tr>
+<tr><th id="226">226</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.125462263594034672468446317145384108734E1)" data-ref="_M/L">L</a>(-<var>8.125462263594034672468446317145384108734E1</var>),</td></tr>
+<tr><th id="227">227</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.151549093983505810118308635926270319660E0)" data-ref="_M/L">L</a>(<var>8.151549093983505810118308635926270319660E0</var>),</td></tr>
+<tr><th id="228">228</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.033362032729207310462422357772568553670E0)" data-ref="_M/L">L</a>(-<var>5.033362032729207310462422357772568553670E0</var>),</td></tr>
+<tr><th id="229">229</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.253956621135136090295893547735851168471E-2)" data-ref="_M/L">L</a>(-<var>4.253956621135136090295893547735851168471E-2</var>),</td></tr>
+<tr><th id="230">230</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.098602878463854789780108161581050357814E-2)" data-ref="_M/L">L</a>(-<var>8.098602878463854789780108161581050357814E-2</var>)</td></tr>
+<tr><th id="231">231</th><td>};</td></tr>
+<tr><th id="232">232</th><td><u>#define <dfn class="macro" id="_M/NRDr13" data-ref="_M/NRDr13">NRDr13</dfn> 7</u></td></tr>
+<tr><th id="233">233</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr13" title='RDr13' data-ref="RDr13" data-ref-filename="RDr13">RDr13</dfn>[<a class="macro" href="#232" title="7" data-ref="_M/NRDr13">NRDr13</a> + <var>1</var>] =</td></tr>
+<tr><th id="234">234</th><td>{</td></tr>
+<tr><th id="235">235</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.220448796306693503549505450626652881752E3)" data-ref="_M/L">L</a>(<var>2.220448796306693503549505450626652881752E3</var>),</td></tr>
+<tr><th id="236">236</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.899133258779578688791041599040951431383E2)" data-ref="_M/L">L</a>(<var>1.899133258779578688791041599040951431383E2</var>),</td></tr>
+<tr><th id="237">237</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.061906712284961110196427571557149268454E3)" data-ref="_M/L">L</a>(<var>1.061906712284961110196427571557149268454E3</var>),</td></tr>
+<tr><th id="238">238</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.497086072306967965180978101974566760042E1)" data-ref="_M/L">L</a>(<var>7.497086072306967965180978101974566760042E1</var>),</td></tr>
+<tr><th id="239">239</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.146796115662672795876463568170441327274E2)" data-ref="_M/L">L</a>(<var>2.146796115662672795876463568170441327274E2</var>),</td></tr>
+<tr><th id="240">240</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.120156008362573736664338015952284925592E1)" data-ref="_M/L">L</a>(<var>1.120156008362573736664338015952284925592E1</var>),</td></tr>
+<tr><th id="241">241</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.211014952075052616409845051695042741074E1)" data-ref="_M/L">L</a>(<var>2.211014952075052616409845051695042741074E1</var>),</td></tr>
+<tr><th id="242">242</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.469655675326150785692908453094054988938E-1)" data-ref="_M/L">L</a>(<var>6.469655675326150785692908453094054988938E-1</var>)</td></tr>
+<tr><th id="243">243</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="244">244</th><td>};</td></tr>
+<tr><th id="245">245</th><td><i>/* erfc(0.25) = C13a + C13b to extra precision.  */</i></td></tr>
+<tr><th id="246">246</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C13a" title='C13a' data-ref="C13a" data-ref-filename="C13a">C13a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.723663330078125)" data-ref="_M/L">L</a>(<var>0.723663330078125</var>);</td></tr>
+<tr><th id="247">247</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C13b" title='C13b' data-ref="C13b" data-ref-filename="C13b">C13b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.0279753638067014931732235184287934646022E-5)" data-ref="_M/L">L</a>(<var>1.0279753638067014931732235184287934646022E-5</var>);</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><i>/* erfc(x + 0.375) = erfc(0.375) + x R(x)</i></td></tr>
+<tr><th id="251">251</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="252">252</th><td><i>   Peak relative error 1.2e-35  */</i></td></tr>
+<tr><th id="253">253</th><td><u>#define <dfn class="macro" id="_M/NRNr14" data-ref="_M/NRNr14">NRNr14</dfn> 8</u></td></tr>
+<tr><th id="254">254</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr14" title='RNr14' data-ref="RNr14" data-ref-filename="RNr14">RNr14</dfn>[<a class="macro" href="#253" title="8" data-ref="_M/NRNr14">NRNr14</a> + <var>1</var>] =</td></tr>
+<tr><th id="255">255</th><td>{</td></tr>
+<tr><th id="256">256</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.446164016404426277577283038988918202456E3)" data-ref="_M/L">L</a>(-<var>2.446164016404426277577283038988918202456E3</var>),</td></tr>
+<tr><th id="257">257</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.718753324496563913392217011618096698140E2)" data-ref="_M/L">L</a>(<var>6.718753324496563913392217011618096698140E2</var>),</td></tr>
+<tr><th id="258">258</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.581631138049836157425391886957389240794E2)" data-ref="_M/L">L</a>(-<var>4.581631138049836157425391886957389240794E2</var>),</td></tr>
+<tr><th id="259">259</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.382844088987092233033215402335026078208E1)" data-ref="_M/L">L</a>(-<var>2.382844088987092233033215402335026078208E1</var>),</td></tr>
+<tr><th id="260">260</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-7.119237852400600507927038680970936336458E1)" data-ref="_M/L">L</a>(-<var>7.119237852400600507927038680970936336458E1</var>),</td></tr>
+<tr><th id="261">261</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.313609646108420136332418282286454287146E1)" data-ref="_M/L">L</a>(<var>1.313609646108420136332418282286454287146E1</var>),</td></tr>
+<tr><th id="262">262</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.188608702082264389155862490056401365834E0)" data-ref="_M/L">L</a>(-<var>6.188608702082264389155862490056401365834E0</var>),</td></tr>
+<tr><th id="263">263</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.787116601106678287277373011101132659279E-2)" data-ref="_M/L">L</a>(-<var>2.787116601106678287277373011101132659279E-2</var>),</td></tr>
+<tr><th id="264">264</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.230395570574153963203348263549700967918E-2)" data-ref="_M/L">L</a>(-<var>2.230395570574153963203348263549700967918E-2</var>)</td></tr>
+<tr><th id="265">265</th><td>};</td></tr>
+<tr><th id="266">266</th><td><u>#define <dfn class="macro" id="_M/NRDr14" data-ref="_M/NRDr14">NRDr14</dfn> 7</u></td></tr>
+<tr><th id="267">267</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr14" title='RDr14' data-ref="RDr14" data-ref-filename="RDr14">RDr14</dfn>[<a class="macro" href="#266" title="7" data-ref="_M/NRDr14">NRDr14</a> + <var>1</var>] =</td></tr>
+<tr><th id="268">268</th><td>{</td></tr>
+<tr><th id="269">269</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.495187439241869732696223349840963702875E3)" data-ref="_M/L">L</a>(<var>2.495187439241869732696223349840963702875E3</var>),</td></tr>
+<tr><th id="270">270</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.503549449872925580011284635695738412162E2)" data-ref="_M/L">L</a>(<var>2.503549449872925580011284635695738412162E2</var>),</td></tr>
+<tr><th id="271">271</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.159033560988895481698051531263861842461E3)" data-ref="_M/L">L</a>(<var>1.159033560988895481698051531263861842461E3</var>),</td></tr>
+<tr><th id="272">272</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.493751466542304491261487998684383688622E1)" data-ref="_M/L">L</a>(<var>9.493751466542304491261487998684383688622E1</var>),</td></tr>
+<tr><th id="273">273</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.276214929562354328261422263078480321204E2)" data-ref="_M/L">L</a>(<var>2.276214929562354328261422263078480321204E2</var>),</td></tr>
+<tr><th id="274">274</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.367697521219069280358984081407807931847E1)" data-ref="_M/L">L</a>(<var>1.367697521219069280358984081407807931847E1</var>),</td></tr>
+<tr><th id="275">275</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.276988395995528495055594829206582732682E1)" data-ref="_M/L">L</a>(<var>2.276988395995528495055594829206582732682E1</var>),</td></tr>
+<tr><th id="276">276</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.647745753648996559837591812375456641163E-1)" data-ref="_M/L">L</a>(<var>7.647745753648996559837591812375456641163E-1</var>)</td></tr>
+<tr><th id="277">277</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="278">278</th><td>};</td></tr>
+<tr><th id="279">279</th><td><i>/* erfc(0.375) = C14a + C14b to extra precision.  */</i></td></tr>
+<tr><th id="280">280</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C14a" title='C14a' data-ref="C14a" data-ref-filename="C14a">C14a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.5958709716796875)" data-ref="_M/L">L</a>(<var>0.5958709716796875</var>);</td></tr>
+<tr><th id="281">281</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C14b" title='C14b' data-ref="C14b" data-ref-filename="C14b">C14b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.2118885490201676174914080878232469565953E-5)" data-ref="_M/L">L</a>(<var>1.2118885490201676174914080878232469565953E-5</var>);</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td><i>/* erfc(x + 0.5) = erfc(0.5) + x R(x)</i></td></tr>
+<tr><th id="284">284</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="285">285</th><td><i>   Peak relative error 4.7e-36  */</i></td></tr>
+<tr><th id="286">286</th><td><u>#define <dfn class="macro" id="_M/NRNr15" data-ref="_M/NRNr15">NRNr15</dfn> 8</u></td></tr>
+<tr><th id="287">287</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr15" title='RNr15' data-ref="RNr15" data-ref-filename="RNr15">RNr15</dfn>[<a class="macro" href="#286" title="8" data-ref="_M/NRNr15">NRNr15</a> + <var>1</var>] =</td></tr>
+<tr><th id="288">288</th><td>{</td></tr>
+<tr><th id="289">289</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.624212418011181487924855581955853461925E3)" data-ref="_M/L">L</a>(-<var>2.624212418011181487924855581955853461925E3</var>),</td></tr>
+<tr><th id="290">290</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.473828904647825181073831556439301342756E2)" data-ref="_M/L">L</a>(<var>8.473828904647825181073831556439301342756E2</var>),</td></tr>
+<tr><th id="291">291</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.286207458628380765099405359607331669027E2)" data-ref="_M/L">L</a>(-<var>5.286207458628380765099405359607331669027E2</var>),</td></tr>
+<tr><th id="292">292</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.895781234155315729088407259045269652318E1)" data-ref="_M/L">L</a>(-<var>3.895781234155315729088407259045269652318E1</var>),</td></tr>
+<tr><th id="293">293</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.200857908065163618041240848728398496256E1)" data-ref="_M/L">L</a>(-<var>6.200857908065163618041240848728398496256E1</var>),</td></tr>
+<tr><th id="294">294</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.469324610346924001393137895116129204737E1)" data-ref="_M/L">L</a>(<var>1.469324610346924001393137895116129204737E1</var>),</td></tr>
+<tr><th id="295">295</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.961356525370658572800674953305625578903E0)" data-ref="_M/L">L</a>(-<var>6.961356525370658572800674953305625578903E0</var>),</td></tr>
+<tr><th id="296">296</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.145724386641163809595512876629030548495E-3)" data-ref="_M/L">L</a>(<var>5.145724386641163809595512876629030548495E-3</var>),</td></tr>
+<tr><th id="297">297</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.990253655948179713415957791776180406812E-2)" data-ref="_M/L">L</a>(<var>1.990253655948179713415957791776180406812E-2</var>)</td></tr>
+<tr><th id="298">298</th><td>};</td></tr>
+<tr><th id="299">299</th><td><u>#define <dfn class="macro" id="_M/NRDr15" data-ref="_M/NRDr15">NRDr15</dfn> 7</u></td></tr>
+<tr><th id="300">300</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr15" title='RDr15' data-ref="RDr15" data-ref-filename="RDr15">RDr15</dfn>[<a class="macro" href="#299" title="7" data-ref="_M/NRDr15">NRDr15</a> + <var>1</var>] =</td></tr>
+<tr><th id="301">301</th><td>{</td></tr>
+<tr><th id="302">302</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.986190760847974943034021764693341524962E3)" data-ref="_M/L">L</a>(<var>2.986190760847974943034021764693341524962E3</var>),</td></tr>
+<tr><th id="303">303</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.288262758961073066335410218650047725985E2)" data-ref="_M/L">L</a>(<var>5.288262758961073066335410218650047725985E2</var>),</td></tr>
+<tr><th id="304">304</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.363649178071006978355113026427856008978E3)" data-ref="_M/L">L</a>(<var>1.363649178071006978355113026427856008978E3</var>),</td></tr>
+<tr><th id="305">305</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.921707975649915894241864988942255320833E2)" data-ref="_M/L">L</a>(<var>1.921707975649915894241864988942255320833E2</var>),</td></tr>
+<tr><th id="306">306</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.588651100651029023069013885900085533226E2)" data-ref="_M/L">L</a>(<var>2.588651100651029023069013885900085533226E2</var>),</td></tr>
+<tr><th id="307">307</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.628752920321455606558942309396855629459E1)" data-ref="_M/L">L</a>(<var>2.628752920321455606558942309396855629459E1</var>),</td></tr>
+<tr><th id="308">308</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.455649035885114308978333741080991380610E1)" data-ref="_M/L">L</a>(<var>2.455649035885114308978333741080991380610E1</var>),</td></tr>
+<tr><th id="309">309</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.378826653595128464383127836412100939126E0)" data-ref="_M/L">L</a>(<var>1.378826653595128464383127836412100939126E0</var>)</td></tr>
+<tr><th id="310">310</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="311">311</th><td>};</td></tr>
+<tr><th id="312">312</th><td><i>/* erfc(0.5) = C15a + C15b to extra precision.  */</i></td></tr>
+<tr><th id="313">313</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C15a" title='C15a' data-ref="C15a" data-ref-filename="C15a">C15a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.4794921875)" data-ref="_M/L">L</a>(<var>0.4794921875</var>);</td></tr>
+<tr><th id="314">314</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C15b" title='C15b' data-ref="C15b" data-ref-filename="C15b">C15b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.9346869534623172533461080354712635484242E-6)" data-ref="_M/L">L</a>(<var>7.9346869534623172533461080354712635484242E-6</var>);</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td><i>/* erfc(x + 0.625) = erfc(0.625) + x R(x)</i></td></tr>
+<tr><th id="317">317</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="318">318</th><td><i>   Peak relative error 5.1e-36  */</i></td></tr>
+<tr><th id="319">319</th><td><u>#define <dfn class="macro" id="_M/NRNr16" data-ref="_M/NRNr16">NRNr16</dfn> 8</u></td></tr>
+<tr><th id="320">320</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr16" title='RNr16' data-ref="RNr16" data-ref-filename="RNr16">RNr16</dfn>[<a class="macro" href="#319" title="8" data-ref="_M/NRNr16">NRNr16</a> + <var>1</var>] =</td></tr>
+<tr><th id="321">321</th><td>{</td></tr>
+<tr><th id="322">322</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.347887943200680563784690094002722906820E3)" data-ref="_M/L">L</a>(-<var>2.347887943200680563784690094002722906820E3</var>),</td></tr>
+<tr><th id="323">323</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.008590660692105004780722726421020136482E2)" data-ref="_M/L">L</a>(<var>8.008590660692105004780722726421020136482E2</var>),</td></tr>
+<tr><th id="324">324</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.257363310384119728760181252132311447963E2)" data-ref="_M/L">L</a>(-<var>5.257363310384119728760181252132311447963E2</var>),</td></tr>
+<tr><th id="325">325</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.471737717857801230450290232600243795637E1)" data-ref="_M/L">L</a>(-<var>4.471737717857801230450290232600243795637E1</var>),</td></tr>
+<tr><th id="326">326</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.849540386452573306708795324759300320304E1)" data-ref="_M/L">L</a>(-<var>4.849540386452573306708795324759300320304E1</var>),</td></tr>
+<tr><th id="327">327</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.140885264677134679275986782978655952843E1)" data-ref="_M/L">L</a>(<var>1.140885264677134679275986782978655952843E1</var>),</td></tr>
+<tr><th id="328">328</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.731591085460269447926746876983786152300E0)" data-ref="_M/L">L</a>(-<var>6.731591085460269447926746876983786152300E0</var>),</td></tr>
+<tr><th id="329">329</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.370831653033047440345050025876085121231E-1)" data-ref="_M/L">L</a>(<var>1.370831653033047440345050025876085121231E-1</var>),</td></tr>
+<tr><th id="330">330</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.022958279982138755020825717073966576670E-2)" data-ref="_M/L">L</a>(<var>2.022958279982138755020825717073966576670E-2</var>),</td></tr>
+<tr><th id="331">331</th><td>};</td></tr>
+<tr><th id="332">332</th><td><u>#define <dfn class="macro" id="_M/NRDr16" data-ref="_M/NRDr16">NRDr16</dfn> 7</u></td></tr>
+<tr><th id="333">333</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr16" title='RDr16' data-ref="RDr16" data-ref-filename="RDr16">RDr16</dfn>[<a class="macro" href="#332" title="7" data-ref="_M/NRDr16">NRDr16</a> + <var>1</var>] =</td></tr>
+<tr><th id="334">334</th><td>{</td></tr>
+<tr><th id="335">335</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.075166170024837215399323264868308087281E3)" data-ref="_M/L">L</a>(<var>3.075166170024837215399323264868308087281E3</var>),</td></tr>
+<tr><th id="336">336</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.730468942160798031608053127270430036627E2)" data-ref="_M/L">L</a>(<var>8.730468942160798031608053127270430036627E2</var>),</td></tr>
+<tr><th id="337">337</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.458472799166340479742581949088453244767E3)" data-ref="_M/L">L</a>(<var>1.458472799166340479742581949088453244767E3</var>),</td></tr>
+<tr><th id="338">338</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.230423687568019709453130785873540386217E2)" data-ref="_M/L">L</a>(<var>3.230423687568019709453130785873540386217E2</var>),</td></tr>
+<tr><th id="339">339</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.804009872719893612081109617983169474655E2)" data-ref="_M/L">L</a>(<var>2.804009872719893612081109617983169474655E2</var>),</td></tr>
+<tr><th id="340">340</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.465334221323222943418085830026979293091E1)" data-ref="_M/L">L</a>(<var>4.465334221323222943418085830026979293091E1</var>),</td></tr>
+<tr><th id="341">341</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.612723259683205928103787842214809134746E1)" data-ref="_M/L">L</a>(<var>2.612723259683205928103787842214809134746E1</var>),</td></tr>
+<tr><th id="342">342</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.341526751185244109722204018543276124997E0)" data-ref="_M/L">L</a>(<var>2.341526751185244109722204018543276124997E0</var>),</td></tr>
+<tr><th id="343">343</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="344">344</th><td>};</td></tr>
+<tr><th id="345">345</th><td><i>/* erfc(0.625) = C16a + C16b to extra precision.  */</i></td></tr>
+<tr><th id="346">346</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C16a" title='C16a' data-ref="C16a" data-ref-filename="C16a">C16a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.3767547607421875)" data-ref="_M/L">L</a>(<var>0.3767547607421875</var>);</td></tr>
+<tr><th id="347">347</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C16b" title='C16b' data-ref="C16b" data-ref-filename="C16b">C16b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.3570693945275513594941232097252997287766E-6)" data-ref="_M/L">L</a>(<var>4.3570693945275513594941232097252997287766E-6</var>);</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td><i>/* erfc(x + 0.75) = erfc(0.75) + x R(x)</i></td></tr>
+<tr><th id="350">350</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="351">351</th><td><i>   Peak relative error 1.7e-35  */</i></td></tr>
+<tr><th id="352">352</th><td><u>#define <dfn class="macro" id="_M/NRNr17" data-ref="_M/NRNr17">NRNr17</dfn> 8</u></td></tr>
+<tr><th id="353">353</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr17" title='RNr17' data-ref="RNr17" data-ref-filename="RNr17">RNr17</dfn>[<a class="macro" href="#352" title="8" data-ref="_M/NRNr17">NRNr17</a> + <var>1</var>] =</td></tr>
+<tr><th id="354">354</th><td>{</td></tr>
+<tr><th id="355">355</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.767068734220277728233364375724380366826E3)" data-ref="_M/L">L</a>(-<var>1.767068734220277728233364375724380366826E3</var>),</td></tr>
+<tr><th id="356">356</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.693746645665242832426891888805363898707E2)" data-ref="_M/L">L</a>(<var>6.693746645665242832426891888805363898707E2</var>),</td></tr>
+<tr><th id="357">357</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.746224241837275958126060307406616817753E2)" data-ref="_M/L">L</a>(-<var>4.746224241837275958126060307406616817753E2</var>),</td></tr>
+<tr><th id="358">358</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.274160637728782675145666064841883803196E1)" data-ref="_M/L">L</a>(-<var>2.274160637728782675145666064841883803196E1</var>),</td></tr>
+<tr><th id="359">359</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.541232266140939050094370552538987982637E1)" data-ref="_M/L">L</a>(-<var>3.541232266140939050094370552538987982637E1</var>),</td></tr>
+<tr><th id="360">360</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.988950514747052676394491563585179503865E0)" data-ref="_M/L">L</a>(<var>6.988950514747052676394491563585179503865E0</var>),</td></tr>
+<tr><th id="361">361</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.807687216836540830881352383529281215100E0)" data-ref="_M/L">L</a>(-<var>5.807687216836540830881352383529281215100E0</var>),</td></tr>
+<tr><th id="362">362</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.631915988567346438830283503729569443642E-1)" data-ref="_M/L">L</a>(<var>3.631915988567346438830283503729569443642E-1</var>),</td></tr>
+<tr><th id="363">363</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.488945487149634820537348176770282391202E-2)" data-ref="_M/L">L</a>(-<var>1.488945487149634820537348176770282391202E-2</var>)</td></tr>
+<tr><th id="364">364</th><td>};</td></tr>
+<tr><th id="365">365</th><td><u>#define <dfn class="macro" id="_M/NRDr17" data-ref="_M/NRDr17">NRDr17</dfn> 7</u></td></tr>
+<tr><th id="366">366</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr17" title='RDr17' data-ref="RDr17" data-ref-filename="RDr17">RDr17</dfn>[<a class="macro" href="#365" title="7" data-ref="_M/NRDr17">NRDr17</a> + <var>1</var>] =</td></tr>
+<tr><th id="367">367</th><td>{</td></tr>
+<tr><th id="368">368</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.748457523498150741964464942246913394647E3)" data-ref="_M/L">L</a>(<var>2.748457523498150741964464942246913394647E3</var>),</td></tr>
+<tr><th id="369">369</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.020213390713477686776037331757871252652E3)" data-ref="_M/L">L</a>(<var>1.020213390713477686776037331757871252652E3</var>),</td></tr>
+<tr><th id="370">370</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.388857635935432621972601695296561952738E3)" data-ref="_M/L">L</a>(<var>1.388857635935432621972601695296561952738E3</var>),</td></tr>
+<tr><th id="371">371</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.903363681143817750895999579637315491087E2)" data-ref="_M/L">L</a>(<var>3.903363681143817750895999579637315491087E2</var>),</td></tr>
+<tr><th id="372">372</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.784568344378139499217928969529219886578E2)" data-ref="_M/L">L</a>(<var>2.784568344378139499217928969529219886578E2</var>),</td></tr>
+<tr><th id="373">373</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.555800830216764702779238020065345401144E1)" data-ref="_M/L">L</a>(<var>5.555800830216764702779238020065345401144E1</var>),</td></tr>
+<tr><th id="374">374</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.646215470959050279430447295801291168941E1)" data-ref="_M/L">L</a>(<var>2.646215470959050279430447295801291168941E1</var>),</td></tr>
+<tr><th id="375">375</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.984905282103517497081766758550112011265E0)" data-ref="_M/L">L</a>(<var>2.984905282103517497081766758550112011265E0</var>),</td></tr>
+<tr><th id="376">376</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="377">377</th><td>};</td></tr>
+<tr><th id="378">378</th><td><i>/* erfc(0.75) = C17a + C17b to extra precision.  */</i></td></tr>
+<tr><th id="379">379</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C17a" title='C17a' data-ref="C17a" data-ref-filename="C17a">C17a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.2888336181640625)" data-ref="_M/L">L</a>(<var>0.2888336181640625</var>);</td></tr>
+<tr><th id="380">380</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C17b" title='C17b' data-ref="C17b" data-ref-filename="C17b">C17b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.0748182422368401062165408589222625794046E-5)" data-ref="_M/L">L</a>(<var>1.0748182422368401062165408589222625794046E-5</var>);</td></tr>
+<tr><th id="381">381</th><td></td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td><i>/* erfc(x + 0.875) = erfc(0.875) + x R(x)</i></td></tr>
+<tr><th id="384">384</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="385">385</th><td><i>   Peak relative error 2.2e-35  */</i></td></tr>
+<tr><th id="386">386</th><td><u>#define <dfn class="macro" id="_M/NRNr18" data-ref="_M/NRNr18">NRNr18</dfn> 8</u></td></tr>
+<tr><th id="387">387</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr18" title='RNr18' data-ref="RNr18" data-ref-filename="RNr18">RNr18</dfn>[<a class="macro" href="#386" title="8" data-ref="_M/NRNr18">NRNr18</a> + <var>1</var>] =</td></tr>
+<tr><th id="388">388</th><td>{</td></tr>
+<tr><th id="389">389</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.342044899087593397419622771847219619588E3)" data-ref="_M/L">L</a>(-<var>1.342044899087593397419622771847219619588E3</var>),</td></tr>
+<tr><th id="390">390</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.127221294229172997509252330961641850598E2)" data-ref="_M/L">L</a>(<var>6.127221294229172997509252330961641850598E2</var>),</td></tr>
+<tr><th id="391">391</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.519821356522291185621206350470820610727E2)" data-ref="_M/L">L</a>(-<var>4.519821356522291185621206350470820610727E2</var>),</td></tr>
+<tr><th id="392">392</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.223275177825128732497510264197915160235E1)" data-ref="_M/L">L</a>(<var>1.223275177825128732497510264197915160235E1</var>),</td></tr>
+<tr><th id="393">393</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.730789571382971355625020710543532867692E1)" data-ref="_M/L">L</a>(-<var>2.730789571382971355625020710543532867692E1</var>),</td></tr>
+<tr><th id="394">394</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.045181204921538886880171727755445395862E0)" data-ref="_M/L">L</a>(<var>4.045181204921538886880171727755445395862E0</var>),</td></tr>
+<tr><th id="395">395</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.925146477876592723401384464691452700539E0)" data-ref="_M/L">L</a>(-<var>4.925146477876592723401384464691452700539E0</var>),</td></tr>
+<tr><th id="396">396</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.933878036611279244654299924101068088582E-1)" data-ref="_M/L">L</a>(<var>5.933878036611279244654299924101068088582E-1</var>),</td></tr>
+<tr><th id="397">397</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.557645435858916025452563379795159124753E-2)" data-ref="_M/L">L</a>(-<var>5.557645435858916025452563379795159124753E-2</var>)</td></tr>
+<tr><th id="398">398</th><td>};</td></tr>
+<tr><th id="399">399</th><td><u>#define <dfn class="macro" id="_M/NRDr18" data-ref="_M/NRDr18">NRDr18</dfn> 7</u></td></tr>
+<tr><th id="400">400</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr18" title='RDr18' data-ref="RDr18" data-ref-filename="RDr18">RDr18</dfn>[<a class="macro" href="#399" title="7" data-ref="_M/NRDr18">NRDr18</a> + <var>1</var>] =</td></tr>
+<tr><th id="401">401</th><td>{</td></tr>
+<tr><th id="402">402</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.557518000661700588758505116291983092951E3)" data-ref="_M/L">L</a>(<var>2.557518000661700588758505116291983092951E3</var>),</td></tr>
+<tr><th id="403">403</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.070171433382888994954602511991940418588E3)" data-ref="_M/L">L</a>(<var>1.070171433382888994954602511991940418588E3</var>),</td></tr>
+<tr><th id="404">404</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.344842834423493081054489613250688918709E3)" data-ref="_M/L">L</a>(<var>1.344842834423493081054489613250688918709E3</var>),</td></tr>
+<tr><th id="405">405</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.161144478449381901208660598266288188426E2)" data-ref="_M/L">L</a>(<var>4.161144478449381901208660598266288188426E2</var>),</td></tr>
+<tr><th id="406">406</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.763670252219855198052378138756906980422E2)" data-ref="_M/L">L</a>(<var>2.763670252219855198052378138756906980422E2</var>),</td></tr>
+<tr><th id="407">407</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.998153487868943708236273854747564557632E1)" data-ref="_M/L">L</a>(<var>5.998153487868943708236273854747564557632E1</var>),</td></tr>
+<tr><th id="408">408</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.657695108438628847733050476209037025318E1)" data-ref="_M/L">L</a>(<var>2.657695108438628847733050476209037025318E1</var>),</td></tr>
+<tr><th id="409">409</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.252140524394421868923289114410336976512E0)" data-ref="_M/L">L</a>(<var>3.252140524394421868923289114410336976512E0</var>),</td></tr>
+<tr><th id="410">410</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="411">411</th><td>};</td></tr>
+<tr><th id="412">412</th><td><i>/* erfc(0.875) = C18a + C18b to extra precision.  */</i></td></tr>
+<tr><th id="413">413</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C18a" title='C18a' data-ref="C18a" data-ref-filename="C18a">C18a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.215911865234375)" data-ref="_M/L">L</a>(<var>0.215911865234375</var>);</td></tr>
+<tr><th id="414">414</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C18b" title='C18b' data-ref="C18b" data-ref-filename="C18b">C18b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.3073705765341685464282101150637224028267E-5)" data-ref="_M/L">L</a>(<var>1.3073705765341685464282101150637224028267E-5</var>);</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td><i>/* erfc(x + 1.0) = erfc(1.0) + x R(x)</i></td></tr>
+<tr><th id="417">417</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="418">418</th><td><i>   Peak relative error 1.6e-35  */</i></td></tr>
+<tr><th id="419">419</th><td><u>#define <dfn class="macro" id="_M/NRNr19" data-ref="_M/NRNr19">NRNr19</dfn> 8</u></td></tr>
+<tr><th id="420">420</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr19" title='RNr19' data-ref="RNr19" data-ref-filename="RNr19">RNr19</dfn>[<a class="macro" href="#419" title="8" data-ref="_M/NRNr19">NRNr19</a> + <var>1</var>] =</td></tr>
+<tr><th id="421">421</th><td>{</td></tr>
+<tr><th id="422">422</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.139180936454157193495882956565663294826E3)" data-ref="_M/L">L</a>(-<var>1.139180936454157193495882956565663294826E3</var>),</td></tr>
+<tr><th id="423">423</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.134903129086899737514712477207945973616E2)" data-ref="_M/L">L</a>(<var>6.134903129086899737514712477207945973616E2</var>),</td></tr>
+<tr><th id="424">424</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.628909024715329562325555164720732868263E2)" data-ref="_M/L">L</a>(-<var>4.628909024715329562325555164720732868263E2</var>),</td></tr>
+<tr><th id="425">425</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.165702387210732352564932347500364010833E1)" data-ref="_M/L">L</a>(<var>4.165702387210732352564932347500364010833E1</var>),</td></tr>
+<tr><th id="426">426</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.286979913515229747204101330405771801610E1)" data-ref="_M/L">L</a>(-<var>2.286979913515229747204101330405771801610E1</var>),</td></tr>
+<tr><th id="427">427</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.870695256449872743066783202326943667722E0)" data-ref="_M/L">L</a>(<var>1.870695256449872743066783202326943667722E0</var>),</td></tr>
+<tr><th id="428">428</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.177486601273105752879868187237000032364E0)" data-ref="_M/L">L</a>(-<var>4.177486601273105752879868187237000032364E0</var>),</td></tr>
+<tr><th id="429">429</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.533980372789646140112424811291782526263E-1)" data-ref="_M/L">L</a>(<var>7.533980372789646140112424811291782526263E-1</var>),</td></tr>
+<tr><th id="430">430</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.629945436917752003058064731308767664446E-2)" data-ref="_M/L">L</a>(-<var>8.629945436917752003058064731308767664446E-2</var>)</td></tr>
+<tr><th id="431">431</th><td>};</td></tr>
+<tr><th id="432">432</th><td><u>#define <dfn class="macro" id="_M/NRDr19" data-ref="_M/NRDr19">NRDr19</dfn> 7</u></td></tr>
+<tr><th id="433">433</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr19" title='RDr19' data-ref="RDr19" data-ref-filename="RDr19">RDr19</dfn>[<a class="macro" href="#432" title="7" data-ref="_M/NRDr19">NRDr19</a> + <var>1</var>] =</td></tr>
+<tr><th id="434">434</th><td>{</td></tr>
+<tr><th id="435">435</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.744303447981132701432716278363418643778E3)" data-ref="_M/L">L</a>(<var>2.744303447981132701432716278363418643778E3</var>),</td></tr>
+<tr><th id="436">436</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.266396359526187065222528050591302171471E3)" data-ref="_M/L">L</a>(<var>1.266396359526187065222528050591302171471E3</var>),</td></tr>
+<tr><th id="437">437</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.466739461422073351497972255511919814273E3)" data-ref="_M/L">L</a>(<var>1.466739461422073351497972255511919814273E3</var>),</td></tr>
+<tr><th id="438">438</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.868710570759693955597496520298058147162E2)" data-ref="_M/L">L</a>(<var>4.868710570759693955597496520298058147162E2</var>),</td></tr>
+<tr><th id="439">439</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.993694301559756046478189634131722579643E2)" data-ref="_M/L">L</a>(<var>2.993694301559756046478189634131722579643E2</var>),</td></tr>
+<tr><th id="440">440</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.868976819510254139741559102693828237440E1)" data-ref="_M/L">L</a>(<var>6.868976819510254139741559102693828237440E1</var>),</td></tr>
+<tr><th id="441">441</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.801505816247677193480190483913753613630E1)" data-ref="_M/L">L</a>(<var>2.801505816247677193480190483913753613630E1</var>),</td></tr>
+<tr><th id="442">442</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.604439909194350263552750347742663954481E0)" data-ref="_M/L">L</a>(<var>3.604439909194350263552750347742663954481E0</var>),</td></tr>
+<tr><th id="443">443</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="444">444</th><td>};</td></tr>
+<tr><th id="445">445</th><td><i>/* erfc(1.0) = C19a + C19b to extra precision.  */</i></td></tr>
+<tr><th id="446">446</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C19a" title='C19a' data-ref="C19a" data-ref-filename="C19a">C19a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.15728759765625)" data-ref="_M/L">L</a>(<var>0.15728759765625</var>);</td></tr>
+<tr><th id="447">447</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C19b" title='C19b' data-ref="C19b" data-ref-filename="C19b">C19b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.1609394035130658779364917390740703933002E-5)" data-ref="_M/L">L</a>(<var>1.1609394035130658779364917390740703933002E-5</var>);</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><i>/* erfc(x + 1.125) = erfc(1.125) + x R(x)</i></td></tr>
+<tr><th id="450">450</th><td><i>   0 &lt;= x &lt; 0.125</i></td></tr>
+<tr><th id="451">451</th><td><i>   Peak relative error 3.6e-36  */</i></td></tr>
+<tr><th id="452">452</th><td><u>#define <dfn class="macro" id="_M/NRNr20" data-ref="_M/NRNr20">NRNr20</dfn> 8</u></td></tr>
+<tr><th id="453">453</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr20" title='RNr20' data-ref="RNr20" data-ref-filename="RNr20">RNr20</dfn>[<a class="macro" href="#452" title="8" data-ref="_M/NRNr20">NRNr20</a> + <var>1</var>] =</td></tr>
+<tr><th id="454">454</th><td>{</td></tr>
+<tr><th id="455">455</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-9.652706916457973956366721379612508047640E2)" data-ref="_M/L">L</a>(-<var>9.652706916457973956366721379612508047640E2</var>),</td></tr>
+<tr><th id="456">456</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.577066396050932776683469951773643880634E2)" data-ref="_M/L">L</a>(<var>5.577066396050932776683469951773643880634E2</var>),</td></tr>
+<tr><th id="457">457</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.406335508848496713572223098693575485978E2)" data-ref="_M/L">L</a>(-<var>4.406335508848496713572223098693575485978E2</var>),</td></tr>
+<tr><th id="458">458</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.202893466490242733570232680736966655434E1)" data-ref="_M/L">L</a>(<var>5.202893466490242733570232680736966655434E1</var>),</td></tr>
+<tr><th id="459">459</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.931311847665757913322495948705563937159E1)" data-ref="_M/L">L</a>(-<var>1.931311847665757913322495948705563937159E1</var>),</td></tr>
+<tr><th id="460">460</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-9.364318268748287664267341457164918090611E-2)" data-ref="_M/L">L</a>(-<var>9.364318268748287664267341457164918090611E-2</var>),</td></tr>
+<tr><th id="461">461</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.306390351286352764891355375882586201069E0)" data-ref="_M/L">L</a>(-<var>3.306390351286352764891355375882586201069E0</var>),</td></tr>
+<tr><th id="462">462</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.573806045289044647727613003096916516475E-1)" data-ref="_M/L">L</a>(<var>7.573806045289044647727613003096916516475E-1</var>),</td></tr>
+<tr><th id="463">463</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-9.611744011489092894027478899545635991213E-2)" data-ref="_M/L">L</a>(-<var>9.611744011489092894027478899545635991213E-2</var>)</td></tr>
+<tr><th id="464">464</th><td>};</td></tr>
+<tr><th id="465">465</th><td><u>#define <dfn class="macro" id="_M/NRDr20" data-ref="_M/NRDr20">NRDr20</dfn> 7</u></td></tr>
+<tr><th id="466">466</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr20" title='RDr20' data-ref="RDr20" data-ref-filename="RDr20">RDr20</dfn>[<a class="macro" href="#465" title="7" data-ref="_M/NRDr20">NRDr20</a> + <var>1</var>] =</td></tr>
+<tr><th id="467">467</th><td>{</td></tr>
+<tr><th id="468">468</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.032829629520142564106649167182428189014E3)" data-ref="_M/L">L</a>(<var>3.032829629520142564106649167182428189014E3</var>),</td></tr>
+<tr><th id="469">469</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.659648470721967719961167083684972196891E3)" data-ref="_M/L">L</a>(<var>1.659648470721967719961167083684972196891E3</var>),</td></tr>
+<tr><th id="470">470</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.703545128657284619402511356932569292535E3)" data-ref="_M/L">L</a>(<var>1.703545128657284619402511356932569292535E3</var>),</td></tr>
+<tr><th id="471">471</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.393465677731598872500200253155257708763E2)" data-ref="_M/L">L</a>(<var>6.393465677731598872500200253155257708763E2</var>),</td></tr>
+<tr><th id="472">472</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.489131397281030947405287112726059221934E2)" data-ref="_M/L">L</a>(<var>3.489131397281030947405287112726059221934E2</var>),</td></tr>
+<tr><th id="473">473</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.848641738570783406484348434387611713070E1)" data-ref="_M/L">L</a>(<var>8.848641738570783406484348434387611713070E1</var>),</td></tr>
+<tr><th id="474">474</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.132269062552392974833215844236160958502E1)" data-ref="_M/L">L</a>(<var>3.132269062552392974833215844236160958502E1</var>),</td></tr>
+<tr><th id="475">475</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.430131663290563523933419966185230513168E0)" data-ref="_M/L">L</a>(<var>4.430131663290563523933419966185230513168E0</var>)</td></tr>
+<tr><th id="476">476</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="477">477</th><td>};</td></tr>
+<tr><th id="478">478</th><td><i>/* erfc(1.125) = C20a + C20b to extra precision.  */</i></td></tr>
+<tr><th id="479">479</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C20a" title='C20a' data-ref="C20a" data-ref-filename="C20a">C20a</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.111602783203125)" data-ref="_M/L">L</a>(<var>0.111602783203125</var>);</td></tr>
+<tr><th id="480">480</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="C20b" title='C20b' data-ref="C20b" data-ref-filename="C20b">C20b</dfn> = <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.9850951672359304215530728365232161564636E-6)" data-ref="_M/L">L</a>(<var>8.9850951672359304215530728365232161564636E-6</var>);</td></tr>
+<tr><th id="481">481</th><td></td></tr>
+<tr><th id="482">482</th><td><i>/* erfc(1/x) = 1/x exp (-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="483">483</th><td><i>   7/8 &lt;= 1/x &lt; 1</i></td></tr>
+<tr><th id="484">484</th><td><i>   Peak relative error 1.4e-35  */</i></td></tr>
+<tr><th id="485">485</th><td><u>#define <dfn class="macro" id="_M/NRNr8" data-ref="_M/NRNr8">NRNr8</dfn> 9</u></td></tr>
+<tr><th id="486">486</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr8" title='RNr8' data-ref="RNr8" data-ref-filename="RNr8">RNr8</dfn>[<a class="macro" href="#485" title="9" data-ref="_M/NRNr8">NRNr8</a> + <var>1</var>] =</td></tr>
+<tr><th id="487">487</th><td>{</td></tr>
+<tr><th id="488">488</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.587451489255356250759834295199296936784E1)" data-ref="_M/L">L</a>(<var>3.587451489255356250759834295199296936784E1</var>),</td></tr>
+<tr><th id="489">489</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.406249749087340431871378009874875889602E2)" data-ref="_M/L">L</a>(<var>5.406249749087340431871378009874875889602E2</var>),</td></tr>
+<tr><th id="490">490</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.931301290625250886238822286506381194157E3)" data-ref="_M/L">L</a>(<var>2.931301290625250886238822286506381194157E3</var>),</td></tr>
+<tr><th id="491">491</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.359254185241795584113047248898753470923E3)" data-ref="_M/L">L</a>(<var>7.359254185241795584113047248898753470923E3</var>),</td></tr>
+<tr><th id="492">492</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.201031849810636104112101947312492532314E3)" data-ref="_M/L">L</a>(<var>9.201031849810636104112101947312492532314E3</var>),</td></tr>
+<tr><th id="493">493</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.749697096193191467751650366613289284777E3)" data-ref="_M/L">L</a>(<var>5.749697096193191467751650366613289284777E3</var>),</td></tr>
+<tr><th id="494">494</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.710415234419860825710780802678697889231E3)" data-ref="_M/L">L</a>(<var>1.710415234419860825710780802678697889231E3</var>),</td></tr>
+<tr><th id="495">495</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.150753982543378580859546706243022719599E2)" data-ref="_M/L">L</a>(<var>2.150753982543378580859546706243022719599E2</var>),</td></tr>
+<tr><th id="496">496</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.740953582272147335100537849981160931197E0)" data-ref="_M/L">L</a>(<var>8.740953582272147335100537849981160931197E0</var>),</td></tr>
+<tr><th id="497">497</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.876422978828717219629814794707963640913E-2)" data-ref="_M/L">L</a>(<var>4.876422978828717219629814794707963640913E-2</var>)</td></tr>
+<tr><th id="498">498</th><td>};</td></tr>
+<tr><th id="499">499</th><td><u>#define <dfn class="macro" id="_M/NRDr8" data-ref="_M/NRDr8">NRDr8</dfn> 8</u></td></tr>
+<tr><th id="500">500</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr8" title='RDr8' data-ref="RDr8" data-ref-filename="RDr8">RDr8</dfn>[<a class="macro" href="#499" title="8" data-ref="_M/NRDr8">NRDr8</a> + <var>1</var>] =</td></tr>
+<tr><th id="501">501</th><td>{</td></tr>
+<tr><th id="502">502</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.358593134096908350929496535931630140282E1)" data-ref="_M/L">L</a>(<var>6.358593134096908350929496535931630140282E1</var>),</td></tr>
+<tr><th id="503">503</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.900253816552450073757174323424051765523E2)" data-ref="_M/L">L</a>(<var>9.900253816552450073757174323424051765523E2</var>),</td></tr>
+<tr><th id="504">504</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.642928777856801020545245437089490805186E3)" data-ref="_M/L">L</a>(<var>5.642928777856801020545245437089490805186E3</var>),</td></tr>
+<tr><th id="505">505</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.524195375199570868195152698617273739609E4)" data-ref="_M/L">L</a>(<var>1.524195375199570868195152698617273739609E4</var>),</td></tr>
+<tr><th id="506">506</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.113829644500006749947332935305800887345E4)" data-ref="_M/L">L</a>(<var>2.113829644500006749947332935305800887345E4</var>),</td></tr>
+<tr><th id="507">507</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.526438562626465706267943737310282977138E4)" data-ref="_M/L">L</a>(<var>1.526438562626465706267943737310282977138E4</var>),</td></tr>
+<tr><th id="508">508</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.561370922149241457131421914140039411782E3)" data-ref="_M/L">L</a>(<var>5.561370922149241457131421914140039411782E3</var>),</td></tr>
+<tr><th id="509">509</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.394035530179705051609070428036834496942E2)" data-ref="_M/L">L</a>(<var>9.394035530179705051609070428036834496942E2</var>),</td></tr>
+<tr><th id="510">510</th><td>  <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.147019596150394577984175188032707343615E1)" data-ref="_M/L">L</a>(<var>6.147019596150394577984175188032707343615E1</var>)</td></tr>
+<tr><th id="511">511</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="512">512</th><td>};</td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td><i>/* erfc(1/x) = 1/x exp (-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="515">515</th><td><i>   0.75 &lt;= 1/x &lt;= 0.875</i></td></tr>
+<tr><th id="516">516</th><td><i>   Peak relative error 2.0e-36  */</i></td></tr>
+<tr><th id="517">517</th><td><u>#define <dfn class="macro" id="_M/NRNr7" data-ref="_M/NRNr7">NRNr7</dfn> 9</u></td></tr>
+<tr><th id="518">518</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr7" title='RNr7' data-ref="RNr7" data-ref-filename="RNr7">RNr7</dfn>[<a class="macro" href="#517" title="9" data-ref="_M/NRNr7">NRNr7</a> + <var>1</var>] =</td></tr>
+<tr><th id="519">519</th><td>{</td></tr>
+<tr><th id="520">520</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.686222193385987690785945787708644476545E1)" data-ref="_M/L">L</a>(<var>1.686222193385987690785945787708644476545E1</var>),</td></tr>
+<tr><th id="521">521</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.178224543567604215602418571310612066594E3)" data-ref="_M/L">L</a>(<var>1.178224543567604215602418571310612066594E3</var>),</td></tr>
+<tr><th id="522">522</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.764550584290149466653899886088166091093E4)" data-ref="_M/L">L</a>(<var>1.764550584290149466653899886088166091093E4</var>),</td></tr>
+<tr><th id="523">523</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.073758321890334822002849369898232811561E5)" data-ref="_M/L">L</a>(<var>1.073758321890334822002849369898232811561E5</var>),</td></tr>
+<tr><th id="524">524</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.132840749205943137619839114451290324371E5)" data-ref="_M/L">L</a>(<var>3.132840749205943137619839114451290324371E5</var>),</td></tr>
+<tr><th id="525">525</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.607864939974100224615527007793867585915E5)" data-ref="_M/L">L</a>(<var>4.607864939974100224615527007793867585915E5</var>),</td></tr>
+<tr><th id="526">526</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.389781820105852303125270837910972384510E5)" data-ref="_M/L">L</a>(<var>3.389781820105852303125270837910972384510E5</var>),</td></tr>
+<tr><th id="527">527</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.174042187110565202875011358512564753399E5)" data-ref="_M/L">L</a>(<var>1.174042187110565202875011358512564753399E5</var>),</td></tr>
+<tr><th id="528">528</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.660013606011167144046604892622504338313E4)" data-ref="_M/L">L</a>(<var>1.660013606011167144046604892622504338313E4</var>),</td></tr>
+<tr><th id="529">529</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.700393957480661937695573729183733234400E2)" data-ref="_M/L">L</a>(<var>6.700393957480661937695573729183733234400E2</var>)</td></tr>
+<tr><th id="530">530</th><td>};</td></tr>
+<tr><th id="531">531</th><td><u>#define <dfn class="macro" id="_M/NRDr7" data-ref="_M/NRDr7">NRDr7</dfn> 9</u></td></tr>
+<tr><th id="532">532</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr7" title='RDr7' data-ref="RDr7" data-ref-filename="RDr7">RDr7</dfn>[<a class="macro" href="#531" title="9" data-ref="_M/NRDr7">NRDr7</a> + <var>1</var>] =</td></tr>
+<tr><th id="533">533</th><td>{</td></tr>
+<tr><th id="534">534</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.709305024718358874701575813642933561169E3)" data-ref="_M/L">L</a>(-<var>1.709305024718358874701575813642933561169E3</var>),</td></tr>
+<tr><th id="535">535</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.280033887481333199580464617020514788369E4)" data-ref="_M/L">L</a>(-<var>3.280033887481333199580464617020514788369E4</var>),</td></tr>
+<tr><th id="536">536</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.345284228022521885093072363418750835214E5)" data-ref="_M/L">L</a>(-<var>2.345284228022521885093072363418750835214E5</var>),</td></tr>
+<tr><th id="537">537</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.086758123097763971926711729242327554917E5)" data-ref="_M/L">L</a>(-<var>8.086758123097763971926711729242327554917E5</var>),</td></tr>
+<tr><th id="538">538</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.456900414510108718402423999575992450138E6)" data-ref="_M/L">L</a>(-<var>1.456900414510108718402423999575992450138E6</var>),</td></tr>
+<tr><th id="539">539</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.391654264881255068392389037292702041855E6)" data-ref="_M/L">L</a>(-<var>1.391654264881255068392389037292702041855E6</var>),</td></tr>
+<tr><th id="540">540</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.842360801869939983674527468509852583855E5)" data-ref="_M/L">L</a>(-<var>6.842360801869939983674527468509852583855E5</var>),</td></tr>
+<tr><th id="541">541</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.597430214446573566179675395199807533371E5)" data-ref="_M/L">L</a>(-<var>1.597430214446573566179675395199807533371E5</var>),</td></tr>
+<tr><th id="542">542</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.488876130609876681421645314851760773480E4)" data-ref="_M/L">L</a>(-<var>1.488876130609876681421645314851760773480E4</var>),</td></tr>
+<tr><th id="543">543</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.511762950935060301403599443436465645703E2)" data-ref="_M/L">L</a>(-<var>3.511762950935060301403599443436465645703E2</var>)</td></tr>
+<tr><th id="544">544</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="545">545</th><td>};</td></tr>
+<tr><th id="546">546</th><td></td></tr>
+<tr><th id="547">547</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="548">548</th><td><i>   5/8 &lt;= 1/x &lt; 3/4</i></td></tr>
+<tr><th id="549">549</th><td><i>   Peak relative error 1.9e-35  */</i></td></tr>
+<tr><th id="550">550</th><td><u>#define <dfn class="macro" id="_M/NRNr6" data-ref="_M/NRNr6">NRNr6</dfn> 9</u></td></tr>
+<tr><th id="551">551</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr6" title='RNr6' data-ref="RNr6" data-ref-filename="RNr6">RNr6</dfn>[<a class="macro" href="#550" title="9" data-ref="_M/NRNr6">NRNr6</a> + <var>1</var>] =</td></tr>
+<tr><th id="552">552</th><td>{</td></tr>
+<tr><th id="553">553</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.642076876176834390623842732352935761108E0)" data-ref="_M/L">L</a>(<var>1.642076876176834390623842732352935761108E0</var>),</td></tr>
+<tr><th id="554">554</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.207150003611117689000664385596211076662E2)" data-ref="_M/L">L</a>(<var>1.207150003611117689000664385596211076662E2</var>),</td></tr>
+<tr><th id="555">555</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.119260779316389904742873816462800103939E3)" data-ref="_M/L">L</a>(<var>2.119260779316389904742873816462800103939E3</var>),</td></tr>
+<tr><th id="556">556</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.562942227734663441801452930916044224174E4)" data-ref="_M/L">L</a>(<var>1.562942227734663441801452930916044224174E4</var>),</td></tr>
+<tr><th id="557">557</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.656779189549710079988084081145693580479E4)" data-ref="_M/L">L</a>(<var>5.656779189549710079988084081145693580479E4</var>),</td></tr>
+<tr><th id="558">558</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.052166241021481691922831746350942786299E5)" data-ref="_M/L">L</a>(<var>1.052166241021481691922831746350942786299E5</var>),</td></tr>
+<tr><th id="559">559</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.949798524786000595621602790068349165758E4)" data-ref="_M/L">L</a>(<var>9.949798524786000595621602790068349165758E4</var>),</td></tr>
+<tr><th id="560">560</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.491790734080265043407035220188849562856E4)" data-ref="_M/L">L</a>(<var>4.491790734080265043407035220188849562856E4</var>),</td></tr>
+<tr><th id="561">561</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.377074098301530326270432059434791287601E3)" data-ref="_M/L">L</a>(<var>8.377074098301530326270432059434791287601E3</var>),</td></tr>
+<tr><th id="562">562</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.506934806567986810091824791963991057083E2)" data-ref="_M/L">L</a>(<var>4.506934806567986810091824791963991057083E2</var>)</td></tr>
+<tr><th id="563">563</th><td>};</td></tr>
+<tr><th id="564">564</th><td><u>#define <dfn class="macro" id="_M/NRDr6" data-ref="_M/NRDr6">NRDr6</dfn> 9</u></td></tr>
+<tr><th id="565">565</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr6" title='RDr6' data-ref="RDr6" data-ref-filename="RDr6">RDr6</dfn>[<a class="macro" href="#564" title="9" data-ref="_M/NRDr6">NRDr6</a> + <var>1</var>] =</td></tr>
+<tr><th id="566">566</th><td>{</td></tr>
+<tr><th id="567">567</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.664557643928263091879301304019826629067E2)" data-ref="_M/L">L</a>(-<var>1.664557643928263091879301304019826629067E2</var>),</td></tr>
+<tr><th id="568">568</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.800035902507656624590531122291160668452E3)" data-ref="_M/L">L</a>(-<var>3.800035902507656624590531122291160668452E3</var>),</td></tr>
+<tr><th id="569">569</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.277028191591734928360050685359277076056E4)" data-ref="_M/L">L</a>(-<var>3.277028191591734928360050685359277076056E4</var>),</td></tr>
+<tr><th id="570">570</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.381359471502885446400589109566587443987E5)" data-ref="_M/L">L</a>(-<var>1.381359471502885446400589109566587443987E5</var>),</td></tr>
+<tr><th id="571">571</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.082204287382581873532528989283748656546E5)" data-ref="_M/L">L</a>(-<var>3.082204287382581873532528989283748656546E5</var>),</td></tr>
+<tr><th id="572">572</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.691071488256738343008271448234631037095E5)" data-ref="_M/L">L</a>(-<var>3.691071488256738343008271448234631037095E5</var>),</td></tr>
+<tr><th id="573">573</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.300482443038349815750714219117566715043E5)" data-ref="_M/L">L</a>(-<var>2.300482443038349815750714219117566715043E5</var>),</td></tr>
+<tr><th id="574">574</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.873955300927636236692803579555752171530E4)" data-ref="_M/L">L</a>(-<var>6.873955300927636236692803579555752171530E4</var>),</td></tr>
+<tr><th id="575">575</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.262158817978334142081581542749986845399E3)" data-ref="_M/L">L</a>(-<var>8.262158817978334142081581542749986845399E3</var>),</td></tr>
+<tr><th id="576">576</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.517122254384430859629423488157361983661E2)" data-ref="_M/L">L</a>(-<var>2.517122254384430859629423488157361983661E2</var>)</td></tr>
+<tr><th id="577">577</th><td> <i>/* 1.00 */</i></td></tr>
+<tr><th id="578">578</th><td>};</td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="581">581</th><td><i>   1/2 &lt;= 1/x &lt; 5/8</i></td></tr>
+<tr><th id="582">582</th><td><i>   Peak relative error 4.6e-36  */</i></td></tr>
+<tr><th id="583">583</th><td><u>#define <dfn class="macro" id="_M/NRNr5" data-ref="_M/NRNr5">NRNr5</dfn> 10</u></td></tr>
+<tr><th id="584">584</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr5" title='RNr5' data-ref="RNr5" data-ref-filename="RNr5">RNr5</dfn>[<a class="macro" href="#583" title="10" data-ref="_M/NRNr5">NRNr5</a> + <var>1</var>] =</td></tr>
+<tr><th id="585">585</th><td>{</td></tr>
+<tr><th id="586">586</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.332258927455285458355550878136506961608E-3)" data-ref="_M/L">L</a>(-<var>3.332258927455285458355550878136506961608E-3</var>),</td></tr>
+<tr><th id="587">587</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.697100758900280402659586595884478660721E-1)" data-ref="_M/L">L</a>(-<var>2.697100758900280402659586595884478660721E-1</var>),</td></tr>
+<tr><th id="588">588</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.083328551139621521416618424949137195536E0)" data-ref="_M/L">L</a>(-<var>6.083328551139621521416618424949137195536E0</var>),</td></tr>
+<tr><th id="589">589</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.119863528983308012970821226810162441263E1)" data-ref="_M/L">L</a>(-<var>6.119863528983308012970821226810162441263E1</var>),</td></tr>
+<tr><th id="590">590</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.176535282475593173248810678636522589861E2)" data-ref="_M/L">L</a>(-<var>3.176535282475593173248810678636522589861E2</var>),</td></tr>
+<tr><th id="591">591</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.933395175080560925809992467187963260693E2)" data-ref="_M/L">L</a>(-<var>8.933395175080560925809992467187963260693E2</var>),</td></tr>
+<tr><th id="592">592</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.360019508488475978060917477620199499560E3)" data-ref="_M/L">L</a>(-<var>1.360019508488475978060917477620199499560E3</var>),</td></tr>
+<tr><th id="593">593</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.075075579828188621541398761300910213280E3)" data-ref="_M/L">L</a>(-<var>1.075075579828188621541398761300910213280E3</var>),</td></tr>
+<tr><th id="594">594</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.017346561586014822824459436695197089916E2)" data-ref="_M/L">L</a>(-<var>4.017346561586014822824459436695197089916E2</var>),</td></tr>
+<tr><th id="595">595</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.857581368145266249509589726077645791341E1)" data-ref="_M/L">L</a>(-<var>5.857581368145266249509589726077645791341E1</var>),</td></tr>
+<tr><th id="596">596</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.077715925587834606379119585995758954399E0)" data-ref="_M/L">L</a>(-<var>2.077715925587834606379119585995758954399E0</var>)</td></tr>
+<tr><th id="597">597</th><td>};</td></tr>
+<tr><th id="598">598</th><td><u>#define <dfn class="macro" id="_M/NRDr5" data-ref="_M/NRDr5">NRDr5</dfn> 9</u></td></tr>
+<tr><th id="599">599</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr5" title='RDr5' data-ref="RDr5" data-ref-filename="RDr5">RDr5</dfn>[<a class="macro" href="#598" title="9" data-ref="_M/NRDr5">NRDr5</a> + <var>1</var>] =</td></tr>
+<tr><th id="600">600</th><td>{</td></tr>
+<tr><th id="601">601</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.377879570417399341550710467744693125385E-1)" data-ref="_M/L">L</a>(<var>3.377879570417399341550710467744693125385E-1</var>),</td></tr>
+<tr><th id="602">602</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.021963322742390735430008860602594456187E1)" data-ref="_M/L">L</a>(<var>1.021963322742390735430008860602594456187E1</var>),</td></tr>
+<tr><th id="603">603</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.200847646592942095192766255154827011939E2)" data-ref="_M/L">L</a>(<var>1.200847646592942095192766255154827011939E2</var>),</td></tr>
+<tr><th id="604">604</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.118915528142927104078182863387116942836E2)" data-ref="_M/L">L</a>(<var>7.118915528142927104078182863387116942836E2</var>),</td></tr>
+<tr><th id="605">605</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.318159380062066469386544552429625026238E3)" data-ref="_M/L">L</a>(<var>2.318159380062066469386544552429625026238E3</var>),</td></tr>
+<tr><th id="606">606</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.238729853534009221025582008928765281620E3)" data-ref="_M/L">L</a>(<var>4.238729853534009221025582008928765281620E3</var>),</td></tr>
+<tr><th id="607">607</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.279114907284825886266493994833515580782E3)" data-ref="_M/L">L</a>(<var>4.279114907284825886266493994833515580782E3</var>),</td></tr>
+<tr><th id="608">608</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.257277186663261531053293222591851737504E3)" data-ref="_M/L">L</a>(<var>2.257277186663261531053293222591851737504E3</var>),</td></tr>
+<tr><th id="609">609</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.570475501285054293371908382916063822957E2)" data-ref="_M/L">L</a>(<var>5.570475501285054293371908382916063822957E2</var>),</td></tr>
+<tr><th id="610">610</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (5.142189243856288981145786492585432443560E1)" data-ref="_M/L">L</a>(<var>5.142189243856288981145786492585432443560E1</var>)</td></tr>
+<tr><th id="611">611</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="612">612</th><td>};</td></tr>
+<tr><th id="613">613</th><td></td></tr>
+<tr><th id="614">614</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="615">615</th><td><i>   3/8 &lt;= 1/x &lt; 1/2</i></td></tr>
+<tr><th id="616">616</th><td><i>   Peak relative error 2.0e-36  */</i></td></tr>
+<tr><th id="617">617</th><td><u>#define <dfn class="macro" id="_M/NRNr4" data-ref="_M/NRNr4">NRNr4</dfn> 10</u></td></tr>
+<tr><th id="618">618</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr4" title='RNr4' data-ref="RNr4" data-ref-filename="RNr4">RNr4</dfn>[<a class="macro" href="#617" title="10" data-ref="_M/NRNr4">NRNr4</a> + <var>1</var>] =</td></tr>
+<tr><th id="619">619</th><td>{</td></tr>
+<tr><th id="620">620</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.258530712024527835089319075288494524465E-3)" data-ref="_M/L">L</a>(<var>3.258530712024527835089319075288494524465E-3</var>),</td></tr>
+<tr><th id="621">621</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.987056016877277929720231688689431056567E-1)" data-ref="_M/L">L</a>(<var>2.987056016877277929720231688689431056567E-1</var>),</td></tr>
+<tr><th id="622">622</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.738729089340199750734409156830371528862E0)" data-ref="_M/L">L</a>(<var>8.738729089340199750734409156830371528862E0</var>),</td></tr>
+<tr><th id="623">623</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.207211160148647782396337792426311125923E2)" data-ref="_M/L">L</a>(<var>1.207211160148647782396337792426311125923E2</var>),</td></tr>
+<tr><th id="624">624</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.997558632489032902250523945248208224445E2)" data-ref="_M/L">L</a>(<var>8.997558632489032902250523945248208224445E2</var>),</td></tr>
+<tr><th id="625">625</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.798025197699757225978410230530640879762E3)" data-ref="_M/L">L</a>(<var>3.798025197699757225978410230530640879762E3</var>),</td></tr>
+<tr><th id="626">626</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.113203668683080975637043118209210146846E3)" data-ref="_M/L">L</a>(<var>9.113203668683080975637043118209210146846E3</var>),</td></tr>
+<tr><th id="627">627</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.203285891339933238608683715194034900149E4)" data-ref="_M/L">L</a>(<var>1.203285891339933238608683715194034900149E4</var>),</td></tr>
+<tr><th id="628">628</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.100647057919140328536743641735339740855E3)" data-ref="_M/L">L</a>(<var>8.100647057919140328536743641735339740855E3</var>),</td></tr>
+<tr><th id="629">629</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.383888249907144945837976899822927411769E3)" data-ref="_M/L">L</a>(<var>2.383888249907144945837976899822927411769E3</var>),</td></tr>
+<tr><th id="630">630</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.127493573166454249221983582495245662319E2)" data-ref="_M/L">L</a>(<var>2.127493573166454249221983582495245662319E2</var>)</td></tr>
+<tr><th id="631">631</th><td>};</td></tr>
+<tr><th id="632">632</th><td><u>#define <dfn class="macro" id="_M/NRDr4" data-ref="_M/NRDr4">NRDr4</dfn> 10</u></td></tr>
+<tr><th id="633">633</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr4" title='RDr4' data-ref="RDr4" data-ref-filename="RDr4">RDr4</dfn>[<a class="macro" href="#632" title="10" data-ref="_M/NRDr4">NRDr4</a> + <var>1</var>] =</td></tr>
+<tr><th id="634">634</th><td>{</td></tr>
+<tr><th id="635">635</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.303141981514540274165450687270180479586E-1)" data-ref="_M/L">L</a>(-<var>3.303141981514540274165450687270180479586E-1</var>),</td></tr>
+<tr><th id="636">636</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.353768629363605300707949368917687066724E1)" data-ref="_M/L">L</a>(-<var>1.353768629363605300707949368917687066724E1</var>),</td></tr>
+<tr><th id="637">637</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.206127630303621521950193783894598987033E2)" data-ref="_M/L">L</a>(-<var>2.206127630303621521950193783894598987033E2</var>),</td></tr>
+<tr><th id="638">638</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.861800338758066696514480386180875607204E3)" data-ref="_M/L">L</a>(-<var>1.861800338758066696514480386180875607204E3</var>),</td></tr>
+<tr><th id="639">639</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.889048775872605708249140016201753255599E3)" data-ref="_M/L">L</a>(-<var>8.889048775872605708249140016201753255599E3</var>),</td></tr>
+<tr><th id="640">640</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.465888106627948210478692168261494857089E4)" data-ref="_M/L">L</a>(-<var>2.465888106627948210478692168261494857089E4</var>),</td></tr>
+<tr><th id="641">641</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.934642211710774494879042116768390014289E4)" data-ref="_M/L">L</a>(-<var>3.934642211710774494879042116768390014289E4</var>),</td></tr>
+<tr><th id="642">642</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.455077258242252974937480623730228841003E4)" data-ref="_M/L">L</a>(-<var>3.455077258242252974937480623730228841003E4</var>),</td></tr>
+<tr><th id="643">643</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.524083977439690284820586063729912653196E4)" data-ref="_M/L">L</a>(-<var>1.524083977439690284820586063729912653196E4</var>),</td></tr>
+<tr><th id="644">644</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.810541887397984804237552337349093953857E3)" data-ref="_M/L">L</a>(-<var>2.810541887397984804237552337349093953857E3</var>),</td></tr>
+<tr><th id="645">645</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.343929553541159933824901621702567066156E2)" data-ref="_M/L">L</a>(-<var>1.343929553541159933824901621702567066156E2</var>)</td></tr>
+<tr><th id="646">646</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="647">647</th><td>};</td></tr>
+<tr><th id="648">648</th><td></td></tr>
+<tr><th id="649">649</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="650">650</th><td><i>   1/4 &lt;= 1/x &lt; 3/8</i></td></tr>
+<tr><th id="651">651</th><td><i>   Peak relative error 8.4e-37  */</i></td></tr>
+<tr><th id="652">652</th><td><u>#define <dfn class="macro" id="_M/NRNr3" data-ref="_M/NRNr3">NRNr3</dfn> 11</u></td></tr>
+<tr><th id="653">653</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr3" title='RNr3' data-ref="RNr3" data-ref-filename="RNr3">RNr3</dfn>[<a class="macro" href="#652" title="11" data-ref="_M/NRNr3">NRNr3</a> + <var>1</var>] =</td></tr>
+<tr><th id="654">654</th><td>{</td></tr>
+<tr><th id="655">655</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.952401126551202208698629992497306292987E-6)" data-ref="_M/L">L</a>(-<var>1.952401126551202208698629992497306292987E-6</var>),</td></tr>
+<tr><th id="656">656</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.130881743066372952515162564941682716125E-4)" data-ref="_M/L">L</a>(-<var>2.130881743066372952515162564941682716125E-4</var>),</td></tr>
+<tr><th id="657">657</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.376493958090190943737529486107282224387E-3)" data-ref="_M/L">L</a>(-<var>8.376493958090190943737529486107282224387E-3</var>),</td></tr>
+<tr><th id="658">658</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.650592646560987700661598877522831234791E-1)" data-ref="_M/L">L</a>(-<var>1.650592646560987700661598877522831234791E-1</var>),</td></tr>
+<tr><th id="659">659</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.839290818933317338111364667708678163199E0)" data-ref="_M/L">L</a>(-<var>1.839290818933317338111364667708678163199E0</var>),</td></tr>
+<tr><th id="660">660</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.216278715570882422410442318517814388470E1)" data-ref="_M/L">L</a>(-<var>1.216278715570882422410442318517814388470E1</var>),</td></tr>
+<tr><th id="661">661</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.818759344462360427612133632533779091386E1)" data-ref="_M/L">L</a>(-<var>4.818759344462360427612133632533779091386E1</var>),</td></tr>
+<tr><th id="662">662</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.120994661297476876804405329172164436784E2)" data-ref="_M/L">L</a>(-<var>1.120994661297476876804405329172164436784E2</var>),</td></tr>
+<tr><th id="663">663</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.452850765662319264191141091859300126931E2)" data-ref="_M/L">L</a>(-<var>1.452850765662319264191141091859300126931E2</var>),</td></tr>
+<tr><th id="664">664</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-9.485207851128957108648038238656777241333E1)" data-ref="_M/L">L</a>(-<var>9.485207851128957108648038238656777241333E1</var>),</td></tr>
+<tr><th id="665">665</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.563663855025796641216191848818620020073E1)" data-ref="_M/L">L</a>(-<var>2.563663855025796641216191848818620020073E1</var>),</td></tr>
+<tr><th id="666">666</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.787995944187565676837847610706317833247E0)" data-ref="_M/L">L</a>(-<var>1.787995944187565676837847610706317833247E0</var>)</td></tr>
+<tr><th id="667">667</th><td>};</td></tr>
+<tr><th id="668">668</th><td><u>#define <dfn class="macro" id="_M/NRDr3" data-ref="_M/NRDr3">NRDr3</dfn> 10</u></td></tr>
+<tr><th id="669">669</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr3" title='RDr3' data-ref="RDr3" data-ref-filename="RDr3">RDr3</dfn>[<a class="macro" href="#668" title="10" data-ref="_M/NRDr3">NRDr3</a> + <var>1</var>] =</td></tr>
+<tr><th id="670">670</th><td>{</td></tr>
+<tr><th id="671">671</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.979130686770349481460559711878399476903E-4)" data-ref="_M/L">L</a>(<var>1.979130686770349481460559711878399476903E-4</var>),</td></tr>
+<tr><th id="672">672</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.156941716128488266238105813374635099057E-2)" data-ref="_M/L">L</a>(<var>1.156941716128488266238105813374635099057E-2</var>),</td></tr>
+<tr><th id="673">673</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.752657634309886336431266395637285974292E-1)" data-ref="_M/L">L</a>(<var>2.752657634309886336431266395637285974292E-1</var>),</td></tr>
+<tr><th id="674">674</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.482245457248318787349778336603569327521E0)" data-ref="_M/L">L</a>(<var>3.482245457248318787349778336603569327521E0</var>),</td></tr>
+<tr><th id="675">675</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.569347069372696358578399521203959253162E1)" data-ref="_M/L">L</a>(<var>2.569347069372696358578399521203959253162E1</var>),</td></tr>
+<tr><th id="676">676</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.142279000180457419740314694631879921561E2)" data-ref="_M/L">L</a>(<var>1.142279000180457419740314694631879921561E2</var>),</td></tr>
+<tr><th id="677">677</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.056503977190564294341422623108332700840E2)" data-ref="_M/L">L</a>(<var>3.056503977190564294341422623108332700840E2</var>),</td></tr>
+<tr><th id="678">678</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.780844020923794821656358157128719184422E2)" data-ref="_M/L">L</a>(<var>4.780844020923794821656358157128719184422E2</var>),</td></tr>
+<tr><th id="679">679</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.105972727212554277496256802312730410518E2)" data-ref="_M/L">L</a>(<var>4.105972727212554277496256802312730410518E2</var>),</td></tr>
+<tr><th id="680">680</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.724072188063746970865027817017067646246E2)" data-ref="_M/L">L</a>(<var>1.724072188063746970865027817017067646246E2</var>),</td></tr>
+<tr><th id="681">681</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.815939183464818198705278118326590370435E1)" data-ref="_M/L">L</a>(<var>2.815939183464818198705278118326590370435E1</var>)</td></tr>
+<tr><th id="682">682</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="683">683</th><td>};</td></tr>
+<tr><th id="684">684</th><td></td></tr>
+<tr><th id="685">685</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="686">686</th><td><i>   1/8 &lt;= 1/x &lt; 1/4</i></td></tr>
+<tr><th id="687">687</th><td><i>   Peak relative error 1.5e-36  */</i></td></tr>
+<tr><th id="688">688</th><td><u>#define <dfn class="macro" id="_M/NRNr2" data-ref="_M/NRNr2">NRNr2</dfn> 11</u></td></tr>
+<tr><th id="689">689</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr2" title='RNr2' data-ref="RNr2" data-ref-filename="RNr2">RNr2</dfn>[<a class="macro" href="#688" title="11" data-ref="_M/NRNr2">NRNr2</a> + <var>1</var>] =</td></tr>
+<tr><th id="690">690</th><td>{</td></tr>
+<tr><th id="691">691</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.638914383420287212401687401284326363787E-8)" data-ref="_M/L">L</a>(-<var>2.638914383420287212401687401284326363787E-8</var>),</td></tr>
+<tr><th id="692">692</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-3.479198370260633977258201271399116766619E-6)" data-ref="_M/L">L</a>(-<var>3.479198370260633977258201271399116766619E-6</var>),</td></tr>
+<tr><th id="693">693</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.783985295335697686382487087502222519983E-4)" data-ref="_M/L">L</a>(-<var>1.783985295335697686382487087502222519983E-4</var>),</td></tr>
+<tr><th id="694">694</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.777876933122576014266349277217559356276E-3)" data-ref="_M/L">L</a>(-<var>4.777876933122576014266349277217559356276E-3</var>),</td></tr>
+<tr><th id="695">695</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-7.450634738987325004070761301045014986520E-2)" data-ref="_M/L">L</a>(-<var>7.450634738987325004070761301045014986520E-2</var>),</td></tr>
+<tr><th id="696">696</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-7.068318854874733315971973707247467326619E-1)" data-ref="_M/L">L</a>(-<var>7.068318854874733315971973707247467326619E-1</var>),</td></tr>
+<tr><th id="697">697</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.113919921935944795764071670806867038732E0)" data-ref="_M/L">L</a>(-<var>4.113919921935944795764071670806867038732E0</var>),</td></tr>
+<tr><th id="698">698</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.440447573226906222417767283691888875082E1)" data-ref="_M/L">L</a>(-<var>1.440447573226906222417767283691888875082E1</var>),</td></tr>
+<tr><th id="699">699</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.883484031530718428417168042141288943905E1)" data-ref="_M/L">L</a>(-<var>2.883484031530718428417168042141288943905E1</var>),</td></tr>
+<tr><th id="700">700</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.990886974328476387277797361464279931446E1)" data-ref="_M/L">L</a>(-<var>2.990886974328476387277797361464279931446E1</var>),</td></tr>
+<tr><th id="701">701</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.325283914915104866248279787536128997331E1)" data-ref="_M/L">L</a>(-<var>1.325283914915104866248279787536128997331E1</var>),</td></tr>
+<tr><th id="702">702</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.572436106228070195510230310658206154374E0)" data-ref="_M/L">L</a>(-<var>1.572436106228070195510230310658206154374E0</var>)</td></tr>
+<tr><th id="703">703</th><td>};</td></tr>
+<tr><th id="704">704</th><td><u>#define <dfn class="macro" id="_M/NRDr2" data-ref="_M/NRDr2">NRDr2</dfn> 10</u></td></tr>
+<tr><th id="705">705</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr2" title='RDr2' data-ref="RDr2" data-ref-filename="RDr2">RDr2</dfn>[<a class="macro" href="#704" title="10" data-ref="_M/NRDr2">NRDr2</a> + <var>1</var>] =</td></tr>
+<tr><th id="706">706</th><td>{</td></tr>
+<tr><th id="707">707</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.675042728136731923554119302571867799673E-6)" data-ref="_M/L">L</a>(<var>2.675042728136731923554119302571867799673E-6</var>),</td></tr>
+<tr><th id="708">708</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (2.170997868451812708585443282998329996268E-4)" data-ref="_M/L">L</a>(<var>2.170997868451812708585443282998329996268E-4</var>),</td></tr>
+<tr><th id="709">709</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (7.249969752687540289422684951196241427445E-3)" data-ref="_M/L">L</a>(<var>7.249969752687540289422684951196241427445E-3</var>),</td></tr>
+<tr><th id="710">710</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.302040375859768674620410563307838448508E-1)" data-ref="_M/L">L</a>(<var>1.302040375859768674620410563307838448508E-1</var>),</td></tr>
+<tr><th id="711">711</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.380202483082910888897654537144485285549E0)" data-ref="_M/L">L</a>(<var>1.380202483082910888897654537144485285549E0</var>),</td></tr>
+<tr><th id="712">712</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.926594113174165352623847870299170069350E0)" data-ref="_M/L">L</a>(<var>8.926594113174165352623847870299170069350E0</var>),</td></tr>
+<tr><th id="713">713</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.521089584782616472372909095331572607185E1)" data-ref="_M/L">L</a>(<var>3.521089584782616472372909095331572607185E1</var>),</td></tr>
+<tr><th id="714">714</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (8.233547427533181375185259050330809105570E1)" data-ref="_M/L">L</a>(<var>8.233547427533181375185259050330809105570E1</var>),</td></tr>
+<tr><th id="715">715</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.072971579885803033079469639073292840135E2)" data-ref="_M/L">L</a>(<var>1.072971579885803033079469639073292840135E2</var>),</td></tr>
+<tr><th id="716">716</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.943803113337964469736022094105143158033E1)" data-ref="_M/L">L</a>(<var>6.943803113337964469736022094105143158033E1</var>),</td></tr>
+<tr><th id="717">717</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.775695341031607738233608307835017282662E1)" data-ref="_M/L">L</a>(<var>1.775695341031607738233608307835017282662E1</var>)</td></tr>
+<tr><th id="718">718</th><td> <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="719">719</th><td>};</td></tr>
+<tr><th id="720">720</th><td></td></tr>
+<tr><th id="721">721</th><td><i>/* erfc(1/x) = 1/x exp(-1/x^2 - 0.5625 + R(1/x^2))</i></td></tr>
+<tr><th id="722">722</th><td><i>   1/128 &lt;= 1/x &lt; 1/8</i></td></tr>
+<tr><th id="723">723</th><td><i>   Peak relative error 2.2e-36  */</i></td></tr>
+<tr><th id="724">724</th><td><u>#define <dfn class="macro" id="_M/NRNr1" data-ref="_M/NRNr1">NRNr1</dfn> 9</u></td></tr>
+<tr><th id="725">725</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RNr1" title='RNr1' data-ref="RNr1" data-ref-filename="RNr1">RNr1</dfn>[<a class="macro" href="#724" title="9" data-ref="_M/NRNr1">NRNr1</a> + <var>1</var>] =</td></tr>
+<tr><th id="726">726</th><td>{</td></tr>
+<tr><th id="727">727</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-4.250780883202361946697751475473042685782E-8)" data-ref="_M/L">L</a>(-<var>4.250780883202361946697751475473042685782E-8</var>),</td></tr>
+<tr><th id="728">728</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.375777053288612282487696975623206383019E-6)" data-ref="_M/L">L</a>(-<var>5.375777053288612282487696975623206383019E-6</var>),</td></tr>
+<tr><th id="729">729</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.573645949220896816208565944117382460452E-4)" data-ref="_M/L">L</a>(-<var>2.573645949220896816208565944117382460452E-4</var>),</td></tr>
+<tr><th id="730">730</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.199032928113542080263152610799113086319E-3)" data-ref="_M/L">L</a>(-<var>6.199032928113542080263152610799113086319E-3</var>),</td></tr>
+<tr><th id="731">731</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-8.262721198693404060380104048479916247786E-2)" data-ref="_M/L">L</a>(-<var>8.262721198693404060380104048479916247786E-2</var>),</td></tr>
+<tr><th id="732">732</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-6.242615227257324746371284637695778043982E-1)" data-ref="_M/L">L</a>(-<var>6.242615227257324746371284637695778043982E-1</var>),</td></tr>
+<tr><th id="733">733</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-2.609874739199595400225113299437099626386E0)" data-ref="_M/L">L</a>(-<var>2.609874739199595400225113299437099626386E0</var>),</td></tr>
+<tr><th id="734">734</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.581967563336676737146358534602770006970E0)" data-ref="_M/L">L</a>(-<var>5.581967563336676737146358534602770006970E0</var>),</td></tr>
+<tr><th id="735">735</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-5.124398923356022609707490956634280573882E0)" data-ref="_M/L">L</a>(-<var>5.124398923356022609707490956634280573882E0</var>),</td></tr>
+<tr><th id="736">736</th><td><a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (-1.290865243944292370661544030414667556649E0)" data-ref="_M/L">L</a>(-<var>1.290865243944292370661544030414667556649E0</var>)</td></tr>
+<tr><th id="737">737</th><td>};</td></tr>
+<tr><th id="738">738</th><td><u>#define <dfn class="macro" id="_M/NRDr1" data-ref="_M/NRDr1">NRDr1</dfn> 8</u></td></tr>
+<tr><th id="739">739</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="RDr1" title='RDr1' data-ref="RDr1" data-ref-filename="RDr1">RDr1</dfn>[<a class="macro" href="#738" title="8" data-ref="_M/NRDr1">NRDr1</a> + <var>1</var>] =</td></tr>
+<tr><th id="740">740</th><td>{</td></tr>
+<tr><th id="741">741</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (4.308976661749509034845251315983612976224E-6)" data-ref="_M/L">L</a>(<var>4.308976661749509034845251315983612976224E-6</var>),</td></tr>
+<tr><th id="742">742</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (3.265390126432780184125233455960049294580E-4)" data-ref="_M/L">L</a>(<var>3.265390126432780184125233455960049294580E-4</var>),</td></tr>
+<tr><th id="743">743</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.811328839187040701901866531796570418691E-3)" data-ref="_M/L">L</a>(<var>9.811328839187040701901866531796570418691E-3</var>),</td></tr>
+<tr><th id="744">744</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.511222515036021033410078631914783519649E-1)" data-ref="_M/L">L</a>(<var>1.511222515036021033410078631914783519649E-1</var>),</td></tr>
+<tr><th id="745">745</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.289264341917429958858379585970225092274E0)" data-ref="_M/L">L</a>(<var>1.289264341917429958858379585970225092274E0</var>),</td></tr>
+<tr><th id="746">746</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (6.147640356182230769548007536914983522270E0)" data-ref="_M/L">L</a>(<var>6.147640356182230769548007536914983522270E0</var>),</td></tr>
+<tr><th id="747">747</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.573966871337739784518246317003956180750E1)" data-ref="_M/L">L</a>(<var>1.573966871337739784518246317003956180750E1</var>),</td></tr>
+<tr><th id="748">748</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.955534123435095067199574045529218238263E1)" data-ref="_M/L">L</a>(<var>1.955534123435095067199574045529218238263E1</var>),</td></tr>
+<tr><th id="749">749</th><td> <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (9.472613121363135472247929109615785855865E0)" data-ref="_M/L">L</a>(<var>9.472613121363135472247929109615785855865E0</var>)</td></tr>
+<tr><th id="750">750</th><td>  <i>/* 1.0E0 */</i></td></tr>
+<tr><th id="751">751</th><td>};</td></tr>
+<tr><th id="752">752</th><td></td></tr>
+<tr><th id="753">753</th><td></td></tr>
+<tr><th id="754">754</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="755">755</th><td><a class="macro" href="../float128/float128_private.h.html#213" title="__erff128" data-ref="_M/__erfl">__erfl</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x)</td></tr>
+<tr><th id="756">756</th><td>{</td></tr>
+<tr><th id="757">757</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> a, y, z;</td></tr>
+<tr><th id="758">758</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col3 decl" id="3i" title='i' data-type='int32_t' data-ref="3i" data-ref-filename="3i">i</dfn>, <dfn class="local col4 decl" id="4ix" title='ix' data-type='int32_t' data-ref="4ix" data-ref-filename="4ix">ix</dfn>, <dfn class="local col5 decl" id="5sign" title='sign' data-type='int32_t' data-ref="5sign" data-ref-filename="5sign">sign</dfn>;</td></tr>
+<tr><th id="759">759</th><td>  <a class="macro" href="../float128/float128_private.h.html#34" title="ieee854_float128_shape_type" data-ref="_M/ieee854_long_double_shape_type">ieee854_long_double_shape_type</a> <dfn class="local col6 decl" id="6u" title='u' data-type='ieee854_float128_shape_type' data-ref="6u" data-ref-filename="6u">u</dfn>;</td></tr>
+<tr><th id="760">760</th><td></td></tr>
+<tr><th id="761">761</th><td>  u.value = x;</td></tr>
+<tr><th id="762">762</th><td>  <a class="local col5 ref" href="#5sign" title='sign' data-ref="5sign" data-ref-filename="5sign">sign</a> = <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col7 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="7w0" data-ref-filename="7w0">w0</a>;</td></tr>
+<tr><th id="763">763</th><td>  <a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> = <a class="local col5 ref" href="#5sign" title='sign' data-ref="5sign" data-ref-filename="5sign">sign</a> &amp; <var>0x7fffffff</var>;</td></tr>
+<tr><th id="764">764</th><td></td></tr>
+<tr><th id="765">765</th><td>  <b>if</b> (<a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> &gt;= <var>0x7fff0000</var>)</td></tr>
+<tr><th id="766">766</th><td>    {				<i>/* erf(nan)=nan */</i></td></tr>
+<tr><th id="767">767</th><td>      <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> = ((<a class="local col5 ref" href="#5sign" title='sign' data-ref="5sign" data-ref-filename="5sign">sign</a> &amp; <var>0xffff0000</var>) &gt;&gt; <var>31</var>) &lt;&lt; <var>1</var>;</td></tr>
+<tr><th id="768">768</th><td>      <b>return</b> (<span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span>) (<var>1</var> - i) + <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> / x;	<i>/* erf(+-inf)=+-1 */</i></td></tr>
+<tr><th id="769">769</th><td>    }</td></tr>
+<tr><th id="770">770</th><td></td></tr>
+<tr><th id="771">771</th><td>  <b>if</b> (<a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> &gt;= <var>0x3fff0000</var>) <i>/* |x| &gt;= 1.0 */</i></td></tr>
+<tr><th id="772">772</th><td>    {</td></tr>
+<tr><th id="773">773</th><td>      <b>if</b> (ix &gt;= <var>0x40030000</var> &amp;&amp; sign &gt; <var>0</var>)</td></tr>
+<tr><th id="774">774</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span>; <i>/* x &gt;= 16, avoid spurious underflow from erfc.  */</i></td></tr>
+<tr><th id="775">775</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <a class="macro" href="../float128/float128_private.h.html#212" title="__erfcf128" data-ref="_M/__erfcl">__erfcl</a> (x);</td></tr>
+<tr><th id="776">776</th><td>      <b>return</b> (<span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> - <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>);</td></tr>
+<tr><th id="777">777</th><td>      <i>/*    return (one - __erfcl (x)); */</i></td></tr>
+<tr><th id="778">778</th><td>    }</td></tr>
+<tr><th id="779">779</th><td>  <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col7 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="7w0" data-ref-filename="7w0">w0</a> = <a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a>;</td></tr>
+<tr><th id="780">780</th><td>  <span class='error' title="use of undeclared identifier &apos;a&apos;">a</span> = u.value;</td></tr>
+<tr><th id="781">781</th><td>  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x * x;</td></tr>
+<tr><th id="782">782</th><td>  <b>if</b> (<a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> &lt; <var>0x3ffec000</var>)  <i>/* a &lt; 0.875 */</i></td></tr>
+<tr><th id="783">783</th><td>    {</td></tr>
+<tr><th id="784">784</th><td>      <b>if</b> (<a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> &lt; <var>0x3fc60000</var>) <i>/* |x|&lt;2**-57 */</i></td></tr>
+<tr><th id="785">785</th><td>	{</td></tr>
+<tr><th id="786">786</th><td>	  <b>if</b> (<a class="local col4 ref" href="#4ix" title='ix' data-ref="4ix" data-ref-filename="4ix">ix</a> &lt; <var>0x00080000</var>)</td></tr>
+<tr><th id="787">787</th><td>	    {</td></tr>
+<tr><th id="788">788</th><td>	      <i>/* Avoid spurious underflow.  */</i></td></tr>
+<tr><th id="789">789</th><td>	      <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> ret =  <var>0.0625</var> * (<var>16.0</var> * x + (<var>16.0</var> * efx) * x);</td></tr>
+<tr><th id="790">790</th><td>	      <a class="macro" href="../../../math/math-underflow.h.html#41" title="do { __typeof (ret) force_underflow_tmp = (ret); if ((sizeof ((force_underflow_tmp)) == sizeof (float) ? (__typeof (force_underflow_tmp)) __builtin_fabsf (force_underflow_tmp) : sizeof ((force_underflow_tmp)) == sizeof (double) ? (__typeof (force_underflow_tmp)) __builtin_fabs (force_underflow_tmp) : (__typeof (force_underflow_tmp)) __builtin_fabsl (force_underflow_tmp)) &lt; (sizeof ((force_underflow_tmp)) == sizeof (float) ? (__typeof (force_underflow_tmp)) 1.17549435e-38F : sizeof ((force_underflow_tmp)) == sizeof (double) ? (__typeof (force_underflow_tmp)) 2.2250738585072014e-308 : (__typeof (force_underflow_tmp)) FLT128_MIN)) { __typeof (force_underflow_tmp) force_underflow_tmp2 = force_underflow_tmp * force_underflow_tmp; do { if (sizeof (force_underflow_tmp2) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (force_underflow_tmp2), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (force_underflow_tmp2)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (force_underflow_tmp2)); } while (0); } } while (0)" data-ref="_M/math_check_force_underflow">math_check_force_underflow</a> (<span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span>);</td></tr>
+<tr><th id="791">791</th><td>	      <b>return</b> <span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span>;</td></tr>
+<tr><th id="792">792</th><td>	    }</td></tr>
+<tr><th id="793">793</th><td>	  <b>return</b> x + <span class='error' title="use of undeclared identifier &apos;efx&apos;">efx</span> * x;</td></tr>
+<tr><th id="794">794</th><td>	}</td></tr>
+<tr><th id="795">795</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <span class='error' title="use of undeclared identifier &apos;a&apos;">a</span> + <span class='error' title="use of undeclared identifier &apos;a&apos;">a</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, TN1, <a class="macro" href="#154" title="8" data-ref="_M/NTN1">NTN1</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, TD1, <a class="macro" href="#167" title="8" data-ref="_M/NTD1">NTD1</a>);</td></tr>
+<tr><th id="796">796</th><td>    }</td></tr>
+<tr><th id="797">797</th><td>  <b>else</b></td></tr>
+<tr><th id="798">798</th><td>    {</td></tr>
+<tr><th id="799">799</th><td>      <span class='error' title="use of undeclared identifier &apos;a&apos;">a</span> = <span class='error' title="use of undeclared identifier &apos;a&apos;">a</span> - <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span>;</td></tr>
+<tr><th id="800">800</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = erf_const + neval (<span class='error' title="use of undeclared identifier &apos;a&apos;">a</span>, TN2, <a class="macro" href="#187" title="8" data-ref="_M/NTN2">NTN2</a>) / deval (<span class='error' title="use of undeclared identifier &apos;a&apos;">a</span>, TD2, <a class="macro" href="#200" title="8" data-ref="_M/NTD2">NTD2</a>);</td></tr>
+<tr><th id="801">801</th><td>    }</td></tr>
+<tr><th id="802">802</th><td></td></tr>
+<tr><th id="803">803</th><td>  <b>if</b> (sign &amp; <var>0x80000000</var>) <i>/* x &lt; 0 */</i></td></tr>
+<tr><th id="804">804</th><td>    <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = -<span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="805">805</th><td>  <b>return</b>( <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> );</td></tr>
+<tr><th id="806">806</th><td>}</td></tr>
+<tr><th id="807">807</th><td></td></tr>
+<tr><th id="808">808</th><td><a class="macro" href="../../generic/libm-alias-ldouble.h.html#63" title="extern __typeof (__erff128) erff128 __attribute__ ((weak, alias (&quot;__erff128&quot;))) ;;" data-ref="_M/libm_alias_ldouble">libm_alias_ldouble</a> (__erf, erf)</td></tr>
+<tr><th id="809">809</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="810">810</th><td><a class="macro" href="../float128/float128_private.h.html#212" title="__erfcf128" data-ref="_M/__erfcl">__erfcl</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x)</td></tr>
+<tr><th id="811">811</th><td>{</td></tr>
+<tr><th id="812">812</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> y, z, p, r;</td></tr>
+<tr><th id="813">813</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col9 decl" id="9i" title='i' data-type='int32_t' data-ref="9i" data-ref-filename="9i">i</dfn>, <dfn class="local col0 decl" id="10ix" title='ix' data-type='int32_t' data-ref="10ix" data-ref-filename="10ix">ix</dfn>, <dfn class="local col1 decl" id="11sign" title='sign' data-type='int32_t' data-ref="11sign" data-ref-filename="11sign">sign</dfn>;</td></tr>
+<tr><th id="814">814</th><td>  <a class="macro" href="../float128/float128_private.h.html#34" title="ieee854_float128_shape_type" data-ref="_M/ieee854_long_double_shape_type">ieee854_long_double_shape_type</a> <dfn class="local col2 decl" id="12u" title='u' data-type='ieee854_float128_shape_type' data-ref="12u" data-ref-filename="12u">u</dfn>;</td></tr>
+<tr><th id="815">815</th><td></td></tr>
+<tr><th id="816">816</th><td>  u.value = x;</td></tr>
+<tr><th id="817">817</th><td>  <a class="local col1 ref" href="#11sign" title='sign' data-ref="11sign" data-ref-filename="11sign">sign</a> = <a class="local col2 ref" href="#12u" title='u' data-ref="12u" data-ref-filename="12u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col7 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="7w0" data-ref-filename="7w0">w0</a>;</td></tr>
+<tr><th id="818">818</th><td>  <a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> = <a class="local col1 ref" href="#11sign" title='sign' data-ref="11sign" data-ref-filename="11sign">sign</a> &amp; <var>0x7fffffff</var>;</td></tr>
+<tr><th id="819">819</th><td>  <a class="local col2 ref" href="#12u" title='u' data-ref="12u" data-ref-filename="12u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col7 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="7w0" data-ref-filename="7w0">w0</a> = <a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a>;</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &gt;= <var>0x7fff0000</var>)</td></tr>
+<tr><th id="822">822</th><td>    {				<i>/* erfc(nan)=nan */</i></td></tr>
+<tr><th id="823">823</th><td>      <i>/* erfc(+-inf)=0,2 */</i></td></tr>
+<tr><th id="824">824</th><td>      <b>return</b> (<span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span>) (((uint32_t) sign &gt;&gt; <var>31</var>) &lt;&lt; <var>1</var>) + <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> / x;</td></tr>
+<tr><th id="825">825</th><td>    }</td></tr>
+<tr><th id="826">826</th><td></td></tr>
+<tr><th id="827">827</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x3ffd0000</var>) <i>/* |x| &lt;1/4 */</i></td></tr>
+<tr><th id="828">828</th><td>    {</td></tr>
+<tr><th id="829">829</th><td>      <b>if</b> (ix &lt; <var>0x3f8d0000</var>) <i>/* |x|&lt;2**-114 */</i></td></tr>
+<tr><th id="830">830</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> - x;</td></tr>
+<tr><th id="831">831</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> - <a class="macro" href="../float128/float128_private.h.html#213" title="__erff128" data-ref="_M/__erfl">__erfl</a> (x);</td></tr>
+<tr><th id="832">832</th><td>    }</td></tr>
+<tr><th id="833">833</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x3fff4000</var>) <i>/* 1.25 */</i></td></tr>
+<tr><th id="834">834</th><td>    {</td></tr>
+<tr><th id="835">835</th><td>      x = u.value;</td></tr>
+<tr><th id="836">836</th><td>      i = <var>8.0</var> * x;</td></tr>
+<tr><th id="837">837</th><td>      <b>switch</b> (<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>)</td></tr>
+<tr><th id="838">838</th><td>	{</td></tr>
+<tr><th id="839">839</th><td>	<b>case</b> <var>2</var>:</td></tr>
+<tr><th id="840">840</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.25)" data-ref="_M/L">L</a>(<var>0.25</var>);</td></tr>
+<tr><th id="841">841</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C13b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr13, <a class="macro" href="#219" title="8" data-ref="_M/NRNr13">NRNr13</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr13, <a class="macro" href="#232" title="7" data-ref="_M/NRDr13">NRDr13</a>);</td></tr>
+<tr><th id="842">842</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C13a;</td></tr>
+<tr><th id="843">843</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="844">844</th><td>	<b>case</b> <var>3</var>:</td></tr>
+<tr><th id="845">845</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.375)" data-ref="_M/L">L</a>(<var>0.375</var>);</td></tr>
+<tr><th id="846">846</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C14b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr14, <a class="macro" href="#253" title="8" data-ref="_M/NRNr14">NRNr14</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr14, <a class="macro" href="#266" title="7" data-ref="_M/NRDr14">NRDr14</a>);</td></tr>
+<tr><th id="847">847</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C14a;</td></tr>
+<tr><th id="848">848</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="849">849</th><td>	<b>case</b> <var>4</var>:</td></tr>
+<tr><th id="850">850</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.5)" data-ref="_M/L">L</a>(<var>0.5</var>);</td></tr>
+<tr><th id="851">851</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C15b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr15, <a class="macro" href="#286" title="8" data-ref="_M/NRNr15">NRNr15</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr15, <a class="macro" href="#299" title="7" data-ref="_M/NRDr15">NRDr15</a>);</td></tr>
+<tr><th id="852">852</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C15a;</td></tr>
+<tr><th id="853">853</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="854">854</th><td>	<b>case</b> <var>5</var>:</td></tr>
+<tr><th id="855">855</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.625)" data-ref="_M/L">L</a>(<var>0.625</var>);</td></tr>
+<tr><th id="856">856</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C16b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr16, <a class="macro" href="#319" title="8" data-ref="_M/NRNr16">NRNr16</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr16, <a class="macro" href="#332" title="7" data-ref="_M/NRDr16">NRDr16</a>);</td></tr>
+<tr><th id="857">857</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C16a;</td></tr>
+<tr><th id="858">858</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="859">859</th><td>	<b>case</b> <var>6</var>:</td></tr>
+<tr><th id="860">860</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.75)" data-ref="_M/L">L</a>(<var>0.75</var>);</td></tr>
+<tr><th id="861">861</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C17b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr17, <a class="macro" href="#352" title="8" data-ref="_M/NRNr17">NRNr17</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr17, <a class="macro" href="#365" title="7" data-ref="_M/NRDr17">NRDr17</a>);</td></tr>
+<tr><th id="862">862</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C17a;</td></tr>
+<tr><th id="863">863</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="864">864</th><td>	<b>case</b> <var>7</var>:</td></tr>
+<tr><th id="865">865</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (0.875)" data-ref="_M/L">L</a>(<var>0.875</var>);</td></tr>
+<tr><th id="866">866</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C18b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr18, <a class="macro" href="#386" title="8" data-ref="_M/NRNr18">NRNr18</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr18, <a class="macro" href="#399" title="7" data-ref="_M/NRDr18">NRDr18</a>);</td></tr>
+<tr><th id="867">867</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C18a;</td></tr>
+<tr><th id="868">868</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="869">869</th><td>	<b>case</b> <var>8</var>:</td></tr>
+<tr><th id="870">870</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <var>1</var>;</td></tr>
+<tr><th id="871">871</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C19b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr19, <a class="macro" href="#419" title="8" data-ref="_M/NRNr19">NRNr19</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr19, <a class="macro" href="#432" title="7" data-ref="_M/NRDr19">NRDr19</a>);</td></tr>
+<tr><th id="872">872</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C19a;</td></tr>
+<tr><th id="873">873</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="874">874</th><td>	<b>default</b>: <i>/* i == 9.  */</i></td></tr>
+<tr><th id="875">875</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x - <a class="macro" href="../float128/float128_private.h.html#345" title="__f128 (1.125)" data-ref="_M/L">L</a>(<var>1.125</var>);</td></tr>
+<tr><th id="876">876</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = C20b + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr20, <a class="macro" href="#452" title="8" data-ref="_M/NRNr20">NRNr20</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr20, <a class="macro" href="#465" title="7" data-ref="_M/NRDr20">NRDr20</a>);</td></tr>
+<tr><th id="877">877</th><td>	  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> += C20a;</td></tr>
+<tr><th id="878">878</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="879">879</th><td>	}</td></tr>
+<tr><th id="880">880</th><td>      <b>if</b> (sign &amp; <var>0x80000000</var>)</td></tr>
+<tr><th id="881">881</th><td>	<span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <var>2</var> - <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="882">882</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="883">883</th><td>    }</td></tr>
+<tr><th id="884">884</th><td>  <i>/* 1.25 &lt; |x| &lt; 107 */</i></td></tr>
+<tr><th id="885">885</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x4005ac00</var>)</td></tr>
+<tr><th id="886">886</th><td>    {</td></tr>
+<tr><th id="887">887</th><td>      <i>/* x &lt; -9 */</i></td></tr>
+<tr><th id="888">888</th><td>      <b>if</b> ((ix &gt;= <var>0x40022000</var>) &amp;&amp; (sign &amp; <var>0x80000000</var>))</td></tr>
+<tr><th id="889">889</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;two&apos;">two</span> - tiny;</td></tr>
+<tr><th id="890">890</th><td></td></tr>
+<tr><th id="891">891</th><td>      x = <a class="macro" href="../float128/float128_private.h.html#285" title="fabsf128" data-ref="_M/fabsl">fabsl</a> (x);</td></tr>
+<tr><th id="892">892</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;one&apos;">one</span> / (x * x);</td></tr>
+<tr><th id="893">893</th><td>      i = <var>8.0</var> / x;</td></tr>
+<tr><th id="894">894</th><td>      <b>switch</b> (<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>)</td></tr>
+<tr><th id="895">895</th><td>	{</td></tr>
+<tr><th id="896">896</th><td>	<b>default</b>:</td></tr>
+<tr><th id="897">897</th><td>	<b>case</b> <var>0</var>:</td></tr>
+<tr><th id="898">898</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr1, <a class="macro" href="#724" title="9" data-ref="_M/NRNr1">NRNr1</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr1, <a class="macro" href="#738" title="8" data-ref="_M/NRDr1">NRDr1</a>);</td></tr>
+<tr><th id="899">899</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="900">900</th><td>	<b>case</b> <var>1</var>:</td></tr>
+<tr><th id="901">901</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr2, <a class="macro" href="#688" title="11" data-ref="_M/NRNr2">NRNr2</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr2, <a class="macro" href="#704" title="10" data-ref="_M/NRDr2">NRDr2</a>);</td></tr>
+<tr><th id="902">902</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="903">903</th><td>	<b>case</b> <var>2</var>:</td></tr>
+<tr><th id="904">904</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr3, <a class="macro" href="#652" title="11" data-ref="_M/NRNr3">NRNr3</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr3, <a class="macro" href="#668" title="10" data-ref="_M/NRDr3">NRDr3</a>);</td></tr>
+<tr><th id="905">905</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="906">906</th><td>	<b>case</b> <var>3</var>:</td></tr>
+<tr><th id="907">907</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr4, <a class="macro" href="#617" title="10" data-ref="_M/NRNr4">NRNr4</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr4, <a class="macro" href="#632" title="10" data-ref="_M/NRDr4">NRDr4</a>);</td></tr>
+<tr><th id="908">908</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="909">909</th><td>	<b>case</b> <var>4</var>:</td></tr>
+<tr><th id="910">910</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr5, <a class="macro" href="#583" title="10" data-ref="_M/NRNr5">NRNr5</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr5, <a class="macro" href="#598" title="9" data-ref="_M/NRDr5">NRDr5</a>);</td></tr>
+<tr><th id="911">911</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="912">912</th><td>	<b>case</b> <var>5</var>:</td></tr>
+<tr><th id="913">913</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr6, <a class="macro" href="#550" title="9" data-ref="_M/NRNr6">NRNr6</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr6, <a class="macro" href="#564" title="9" data-ref="_M/NRDr6">NRDr6</a>);</td></tr>
+<tr><th id="914">914</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="915">915</th><td>	<b>case</b> <var>6</var>:</td></tr>
+<tr><th id="916">916</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr7, <a class="macro" href="#517" title="9" data-ref="_M/NRNr7">NRNr7</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr7, <a class="macro" href="#531" title="9" data-ref="_M/NRDr7">NRDr7</a>);</td></tr>
+<tr><th id="917">917</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="918">918</th><td>	<b>case</b> <var>7</var>:</td></tr>
+<tr><th id="919">919</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RNr8, <a class="macro" href="#485" title="9" data-ref="_M/NRNr8">NRNr8</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, RDr8, <a class="macro" href="#499" title="8" data-ref="_M/NRDr8">NRDr8</a>);</td></tr>
+<tr><th id="920">920</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="921">921</th><td>	}</td></tr>
+<tr><th id="922">922</th><td>      u.value = x;</td></tr>
+<tr><th id="923">923</th><td>      <a class="local col2 ref" href="#12u" title='u' data-ref="12u" data-ref-filename="12u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col3 ref field" href="../float128/ieee754_float128.h.html#55" title='w3' data-ref="13w3" data-ref-filename="13w3">w3</a> = <var>0</var>;</td></tr>
+<tr><th id="924">924</th><td>      <a class="local col2 ref" href="#12u" title='u' data-ref="12u" data-ref-filename="12u">u</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#8parts32" title='parts32' data-ref="8parts32" data-ref-filename="8parts32">parts32</a>.<a class="local col4 ref field" href="../float128/ieee754_float128.h.html#55" title='w2' data-ref="14w2" data-ref-filename="14w2">w2</a> &amp;= <var>0xfe000000</var>;</td></tr>
+<tr><th id="925">925</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = u.value;</td></tr>
+<tr><th id="926">926</th><td>      <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <a class="macro" href="../float128/float128_private.h.html#154" title="__ieee754_expf128" data-ref="_M/__ieee754_expl">__ieee754_expl</a> (-<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> - <var>0.5625</var>) *</td></tr>
+<tr><th id="927">927</th><td>	<a class="macro" href="../float128/float128_private.h.html#154" title="__ieee754_expf128" data-ref="_M/__ieee754_expl">__ieee754_expl</a> ((<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> - x) * (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> + x) + <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>);</td></tr>
+<tr><th id="928">928</th><td>      <b>if</b> ((<a class="local col1 ref" href="#11sign" title='sign' data-ref="11sign" data-ref-filename="11sign">sign</a> &amp; <var>0x80000000</var>) == <var>0</var>)</td></tr>
+<tr><th id="929">929</th><td>	{</td></tr>
+<tr><th id="930">930</th><td>	  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> ret = r / x;</td></tr>
+<tr><th id="931">931</th><td>	  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span> == <var>0</var>)</td></tr>
+<tr><th id="932">932</th><td>	    <a class="macro" href="../../../include/errno.h.html#37" title="(errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="933">933</th><td>	  <b>return</b> <span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span>;</td></tr>
+<tr><th id="934">934</th><td>	}</td></tr>
+<tr><th id="935">935</th><td>      <b>else</b></td></tr>
+<tr><th id="936">936</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;two&apos;">two</span> - <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> / x;</td></tr>
+<tr><th id="937">937</th><td>    }</td></tr>
+<tr><th id="938">938</th><td>  <b>else</b></td></tr>
+<tr><th id="939">939</th><td>    {</td></tr>
+<tr><th id="940">940</th><td>      <b>if</b> ((<a class="local col1 ref" href="#11sign" title='sign' data-ref="11sign" data-ref-filename="11sign">sign</a> &amp; <var>0x80000000</var>) == <var>0</var>)</td></tr>
+<tr><th id="941">941</th><td>	{</td></tr>
+<tr><th id="942">942</th><td>	  <a class="macro" href="../../../include/errno.h.html#37" title="(errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="943">943</th><td>	  <b>return</b> tiny * tiny;</td></tr>
+<tr><th id="944">944</th><td>	}</td></tr>
+<tr><th id="945">945</th><td>      <b>else</b></td></tr>
+<tr><th id="946">946</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;two&apos;">two</span> - tiny;</td></tr>
+<tr><th id="947">947</th><td>    }</td></tr>
+<tr><th id="948">948</th><td>}</td></tr>
+<tr><th id="949">949</th><td></td></tr>
+<tr><th id="950">950</th><td><a class="macro" href="../../generic/libm-alias-ldouble.h.html#63" title="extern __typeof (__erfcf128) erfcf128 __attribute__ ((weak, alias (&quot;__erfcf128&quot;))) ;;" data-ref="_M/libm_alias_ldouble">libm_alias_ldouble</a> (__erfc, erfc)</td></tr>
+<tr><th id="951">951</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../float128/s_erff128.c.html'>glibc_src_2.29/sysdeps/ieee754/float128/s_erff128.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

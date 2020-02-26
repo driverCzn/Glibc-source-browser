@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>lowlevellock.h source code [glibc_src_2.29/sysdeps/unix/sysv/linux/x86/lowlevellock.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/unix/sysv/linux/x86/lowlevellock.h'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>glibc_src_2.29</a>/<a href='../../../..'>sysdeps</a>/<a href='../../..'>unix</a>/<a href='../..'>sysv</a>/<a href='..'>linux</a>/<a href='./'>x86</a>/<a href='lowlevellock.h.html'>lowlevellock.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Low-level lock implementation, x86 version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifndef</span> <span class="macro" data-ref="_M/_X86_64_LOWLEVELLOCK_H">_X86_64_LOWLEVELLOCK_H</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/_X86_64_LOWLEVELLOCK_H" data-ref="_M/_X86_64_LOWLEVELLOCK_H">_X86_64_LOWLEVELLOCK_H</dfn>	1</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="22">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLER__">__ASSEMBLER__</span></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../../nptl/lowlevellock.h.html">&lt;sysdeps/nptl/lowlevellock.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../single-thread.h.html">&lt;single-thread.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/* The lll_trylock, lll_lock, and lll_unlock implements a single-thread</i></td></tr>
+<tr><th id="27">27</th><td><i>   optimization using the cmpxchgl instruction.  It checks if the process</i></td></tr>
+<tr><th id="28">28</th><td><i>   is single thread and avoid a more expensive atomic instruction.  */</i></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><i>/* The single-thread optimization only works for libc itself, we need</i></td></tr>
+<tr><th id="31">31</th><td><i>   atomicity for libpthread in case of shared futexes.  */</i></td></tr>
+<tr><th id="32">32</th><td><u>#<span data-ppcond="32">if</span> !<a class="macro" href="../../../../../include/libc-symbols.h.html#35" title="(2 == 19)" data-ref="_M/IS_IN">IS_IN</a>(libc)</u></td></tr>
+<tr><th id="33">33</th><td><u># define <dfn class="macro" id="_M/is_single_thread" data-ref="_M/is_single_thread">is_single_thread</dfn> 0</u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="32">else</span></u></td></tr>
+<tr><th id="35">35</th><td><u># define is_single_thread SINGLE_THREAD_P</u></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="32">endif</span></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/* In the __lllc_as we simply return the value in %eax after the cmpxchg</i></td></tr>
+<tr><th id="39">39</th><td><i>   instruction.  In case the operation succeeded this value is zero.  In case</i></td></tr>
+<tr><th id="40">40</th><td><i>   the operation failed, the cmpxchg instruction has loaded the current value</i></td></tr>
+<tr><th id="41">41</th><td><i>   of the memory work which is guaranteed to be nonzero.  */</i></td></tr>
+<tr><th id="42">42</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="43">43</th><td><b>__attribute__</b> ((always_inline))</td></tr>
+<tr><th id="44">44</th><td><dfn class="decl def fn" id="__lll_cas_lock" title='__lll_cas_lock' data-ref="__lll_cas_lock" data-ref-filename="__lll_cas_lock">__lll_cas_lock</dfn> (<em>int</em> *<dfn class="local col5 decl" id="15futex" title='futex' data-type='int *' data-ref="15futex" data-ref-filename="15futex">futex</dfn>)</td></tr>
+<tr><th id="45">45</th><td>{</td></tr>
+<tr><th id="46">46</th><td>  <em>int</em> <dfn class="local col6 decl" id="16ret" title='ret' data-type='int' data-ref="16ret" data-ref-filename="16ret">ret</dfn>;</td></tr>
+<tr><th id="47">47</th><td>  <b>asm</b> <em>volatile</em> (<q>"cmpxchgl %2, %1"</q></td></tr>
+<tr><th id="48">48</th><td>		: <q>"=a"</q> (<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>), <q>"=m"</q> (*<a class="local col5 ref" href="#15futex" title='futex' data-ref="15futex" data-ref-filename="15futex">futex</a>)</td></tr>
+<tr><th id="49">49</th><td>		: <q>"r"</q> (<var>1</var>), <q>"m"</q> (*<a class="local col5 ref" href="#15futex" title='futex' data-ref="15futex" data-ref-filename="15futex">futex</a>), <q>"0"</q> (<var>0</var>)</td></tr>
+<tr><th id="50">50</th><td>		: <q>"memory"</q>);</td></tr>
+<tr><th id="51">51</th><td>  <b>return</b> <a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>;</td></tr>
+<tr><th id="52">52</th><td>}</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><u>#undef <a class="macro" href="../../../../nptl/lowlevellock.h.html#68" data-ref="_M/lll_trylock">lll_trylock</a></u></td></tr>
+<tr><th id="55">55</th><td><u>#define <dfn class="macro" id="_M/lll_trylock" data-ref="_M/lll_trylock">lll_trylock</dfn>(lock)						     \</u></td></tr>
+<tr><th id="56">56</th><td><u>  ({									     \</u></td></tr>
+<tr><th id="57">57</th><td><u>    int __ret;								     \</u></td></tr>
+<tr><th id="58">58</th><td><u>    if (is_single_thread)						     \</u></td></tr>
+<tr><th id="59">59</th><td><u>      __ret = __lll_cas_lock (&amp;(lock));					     \</u></td></tr>
+<tr><th id="60">60</th><td><u>    else								     \</u></td></tr>
+<tr><th id="61">61</th><td><u>      __ret = __lll_trylock (&amp;(lock));					     \</u></td></tr>
+<tr><th id="62">62</th><td><u>    __ret;								     \</u></td></tr>
+<tr><th id="63">63</th><td><u>  })</u></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><u>#undef <a class="macro" href="../../../../nptl/lowlevellock.h.html#103" data-ref="_M/lll_lock">lll_lock</a></u></td></tr>
+<tr><th id="66">66</th><td><u>#define <dfn class="macro" id="_M/lll_lock" data-ref="_M/lll_lock">lll_lock</dfn>(lock, private)						     \</u></td></tr>
+<tr><th id="67">67</th><td><u>  ((void)								     \</u></td></tr>
+<tr><th id="68">68</th><td><u>   ({									     \</u></td></tr>
+<tr><th id="69">69</th><td><u>     if (is_single_thread)						     \</u></td></tr>
+<tr><th id="70">70</th><td><u>       __lll_cas_lock (&amp;(lock));					     \</u></td></tr>
+<tr><th id="71">71</th><td><u>     else								     \</u></td></tr>
+<tr><th id="72">72</th><td><u>       __lll_lock (&amp;(lock), private);					     \</u></td></tr>
+<tr><th id="73">73</th><td><u>   }))</u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><u>#undef <a class="macro" href="../../../../nptl/lowlevellock.h.html#167" data-ref="_M/lll_unlock">lll_unlock</a></u></td></tr>
+<tr><th id="76">76</th><td><u>#define <dfn class="macro" id="_M/lll_unlock" data-ref="_M/lll_unlock">lll_unlock</dfn>(lock, private)					     \</u></td></tr>
+<tr><th id="77">77</th><td><u>  ((void)								     \</u></td></tr>
+<tr><th id="78">78</th><td><u>   ({									     \</u></td></tr>
+<tr><th id="79">79</th><td><u>     if (is_single_thread)						     \</u></td></tr>
+<tr><th id="80">80</th><td><u>       (lock)--;							     \</u></td></tr>
+<tr><th id="81">81</th><td><u>     else								     \</u></td></tr>
+<tr><th id="82">82</th><td><u>       __lll_unlock (&amp;(lock), private);					     \</u></td></tr>
+<tr><th id="83">83</th><td><u>   }))</u></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__lll_clocklock_elision" title='__lll_clocklock_elision' data-ref="__lll_clocklock_elision" data-ref-filename="__lll_clocklock_elision">__lll_clocklock_elision</dfn> (<em>int</em> *<dfn class="local col7 decl" id="17futex" title='futex' data-type='int *' data-ref="17futex" data-ref-filename="17futex">futex</dfn>, <em>short</em> *<dfn class="local col8 decl" id="18adapt_count" title='adapt_count' data-type='short *' data-ref="18adapt_count" data-ref-filename="18adapt_count">adapt_count</dfn>,</td></tr>
+<tr><th id="86">86</th><td>                                    <a class="typedef" href="../../../../../time/bits/types/clockid_t.h.html#clockid_t" title='clockid_t' data-type='__clockid_t' data-ref="clockid_t" data-ref-filename="clockid_t">clockid_t</a> <dfn class="local col9 decl" id="19clockid" title='clockid' data-type='clockid_t' data-ref="19clockid" data-ref-filename="19clockid">clockid</dfn>,</td></tr>
+<tr><th id="87">87</th><td>				    <em>const</em> <b>struct</b> <a class="type" href="../../../../../time/bits/types/struct_timespec.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col0 decl" id="20timeout" title='timeout' data-type='const struct timespec *' data-ref="20timeout" data-ref-filename="20timeout">timeout</dfn>,</td></tr>
+<tr><th id="88">88</th><td>				    <em>int</em> <dfn class="local col1 decl" id="21private" title='private' data-type='int' data-ref="21private" data-ref-filename="21private">private</dfn>) <a class="macro" href="../../../../../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><u>#define <dfn class="macro" id="_M/lll_clocklock_elision" data-ref="_M/lll_clocklock_elision">lll_clocklock_elision</dfn>(futex, adapt_count, clockid, timeout, private) \</u></td></tr>
+<tr><th id="91">91</th><td><u>  __lll_clocklock_elision (&amp;(futex), &amp;(adapt_count), clockid, timeout, private)</u></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__lll_lock_elision" title='__lll_lock_elision' data-ref="__lll_lock_elision" data-ref-filename="__lll_lock_elision">__lll_lock_elision</dfn> (<em>int</em> *<dfn class="local col2 decl" id="22futex" title='futex' data-type='int *' data-ref="22futex" data-ref-filename="22futex">futex</dfn>, <em>short</em> *<dfn class="local col3 decl" id="23adapt_count" title='adapt_count' data-type='short *' data-ref="23adapt_count" data-ref-filename="23adapt_count">adapt_count</dfn>, <em>int</em> <dfn class="local col4 decl" id="24private" title='private' data-type='int' data-ref="24private" data-ref-filename="24private">private</dfn>)</td></tr>
+<tr><th id="94">94</th><td>  <a class="macro" href="../../../../../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__lll_unlock_elision" title='__lll_unlock_elision' data-ref="__lll_unlock_elision" data-ref-filename="__lll_unlock_elision">__lll_unlock_elision</dfn> (<em>int</em> *<dfn class="local col5 decl" id="25lock" title='lock' data-type='int *' data-ref="25lock" data-ref-filename="25lock">lock</dfn>, <em>int</em> <dfn class="local col6 decl" id="26private" title='private' data-type='int' data-ref="26private" data-ref-filename="26private">private</dfn>)</td></tr>
+<tr><th id="97">97</th><td>  <a class="macro" href="../../../../../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__lll_trylock_elision" title='__lll_trylock_elision' data-ref="__lll_trylock_elision" data-ref-filename="__lll_trylock_elision">__lll_trylock_elision</dfn> (<em>int</em> *<dfn class="local col7 decl" id="27lock" title='lock' data-type='int *' data-ref="27lock" data-ref-filename="27lock">lock</dfn>, <em>short</em> *<dfn class="local col8 decl" id="28adapt_count" title='adapt_count' data-type='short *' data-ref="28adapt_count" data-ref-filename="28adapt_count">adapt_count</dfn>)</td></tr>
+<tr><th id="100">100</th><td>  <a class="macro" href="../../../../../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><u>#define <dfn class="macro" id="_M/lll_lock_elision" data-ref="_M/lll_lock_elision">lll_lock_elision</dfn>(futex, adapt_count, private) \</u></td></tr>
+<tr><th id="103">103</th><td><u>  __lll_lock_elision (&amp;(futex), &amp;(adapt_count), private)</u></td></tr>
+<tr><th id="104">104</th><td><u>#define <dfn class="macro" id="_M/lll_unlock_elision" data-ref="_M/lll_unlock_elision">lll_unlock_elision</dfn>(futex, adapt_count, private) \</u></td></tr>
+<tr><th id="105">105</th><td><u>  __lll_unlock_elision (&amp;(futex), private)</u></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/lll_trylock_elision" data-ref="_M/lll_trylock_elision">lll_trylock_elision</dfn>(futex, adapt_count) \</u></td></tr>
+<tr><th id="107">107</th><td><u>  __lll_trylock_elision (&amp;(futex), &amp;(adapt_count))</u></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="22">endif</span>  /* !__ASSEMBLER__ */</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><u>#<span data-ppcond="19">endif</span>	/* lowlevellock.h */</u></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../../../../iconvdata/ibm930.c.html'>glibc_src_2.29/iconvdata/ibm930.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

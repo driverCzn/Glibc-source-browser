@@ -1,0 +1,847 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>atomic.h source code [glibc_src_2.29/include/atomic.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/include/atomic.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>include</a>/<a href='atomic.h.html'>atomic.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Internal macros for atomic operations for GNU C Library.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2002-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2002.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <span class="macro" data-ref="_M/_ATOMIC_H">_ATOMIC_H</span></u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/_ATOMIC_H" data-ref="_M/_ATOMIC_H">_ATOMIC_H</dfn>	1</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/* This header defines three types of macros:</i></td></tr>
+<tr><th id="24">24</th><td><i></i></td></tr>
+<tr><th id="25">25</th><td><i>   - atomic arithmetic and logic operation on memory.  They all</i></td></tr>
+<tr><th id="26">26</th><td><i>     have the prefix "atomic_".</i></td></tr>
+<tr><th id="27">27</th><td><i></i></td></tr>
+<tr><th id="28">28</th><td><i>   - conditionally atomic operations of the same kinds.  These</i></td></tr>
+<tr><th id="29">29</th><td><i>     always behave identical but can be faster when atomicity</i></td></tr>
+<tr><th id="30">30</th><td><i>     is not really needed since only one thread has access to</i></td></tr>
+<tr><th id="31">31</th><td><i>     the memory location.  In that case the code is slower in</i></td></tr>
+<tr><th id="32">32</th><td><i>     the multi-thread case.  The interfaces have the prefix</i></td></tr>
+<tr><th id="33">33</th><td><i>     "catomic_".</i></td></tr>
+<tr><th id="34">34</th><td><i></i></td></tr>
+<tr><th id="35">35</th><td><i>   - support functions like barriers.  They also have the prefix</i></td></tr>
+<tr><th id="36">36</th><td><i>     "atomic_".</i></td></tr>
+<tr><th id="37">37</th><td><i></i></td></tr>
+<tr><th id="38">38</th><td><i>   Architectures must provide a few lowlevel macros (the compare</i></td></tr>
+<tr><th id="39">39</th><td><i>   and exchange definitions).  All others are optional.  They</i></td></tr>
+<tr><th id="40">40</th><td><i>   should only be provided if the architecture has specific</i></td></tr>
+<tr><th id="41">41</th><td><i>   support for the operation.</i></td></tr>
+<tr><th id="42">42</th><td><i></i></td></tr>
+<tr><th id="43">43</th><td><i>   As &lt;atomic.h&gt; macros are usually heavily nested and often use local</i></td></tr>
+<tr><th id="44">44</th><td><i>   variables to make sure side-effects are evaluated properly, use for</i></td></tr>
+<tr><th id="45">45</th><td><i>   macro local variables a per-macro unique prefix.  This file uses</i></td></tr>
+<tr><th id="46">46</th><td><i>   __atgN_ prefix where N is different in each macro.  */</i></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#include <a href="stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><u>#include <a href="../sysdeps/x86/atomic-machine.h.html">&lt;atomic-machine.h&gt;</a></u></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><i>/* Wrapper macros to call pre_NN_post (mem, ...) where NN is the</i></td></tr>
+<tr><th id="53">53</th><td><i>   bit width of *MEM.  The calling macro puts parens around MEM</i></td></tr>
+<tr><th id="54">54</th><td><i>   and following args.  */</i></td></tr>
+<tr><th id="55">55</th><td><u>#define <dfn class="macro" id="_M/__atomic_val_bysize" data-ref="_M/__atomic_val_bysize">__atomic_val_bysize</dfn>(pre, post, mem, ...)			      \</u></td></tr>
+<tr><th id="56">56</th><td><u>  ({									      \</u></td></tr>
+<tr><th id="57">57</th><td><u>    __typeof ((__typeof (*(mem))) *(mem)) __atg1_result;		      \</u></td></tr>
+<tr><th id="58">58</th><td><u>    if (sizeof (*mem) == 1)						      \</u></td></tr>
+<tr><th id="59">59</th><td><u>      __atg1_result = pre##_8_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="60">60</th><td><u>    else if (sizeof (*mem) == 2)					      \</u></td></tr>
+<tr><th id="61">61</th><td><u>      __atg1_result = pre##_16_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="62">62</th><td><u>    else if (sizeof (*mem) == 4)					      \</u></td></tr>
+<tr><th id="63">63</th><td><u>      __atg1_result = pre##_32_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="64">64</th><td><u>    else if (sizeof (*mem) == 8)					      \</u></td></tr>
+<tr><th id="65">65</th><td><u>      __atg1_result = pre##_64_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="66">66</th><td><u>    else								      \</u></td></tr>
+<tr><th id="67">67</th><td><u>      abort ();								      \</u></td></tr>
+<tr><th id="68">68</th><td><u>    __atg1_result;							      \</u></td></tr>
+<tr><th id="69">69</th><td><u>  })</u></td></tr>
+<tr><th id="70">70</th><td><u>#define <dfn class="macro" id="_M/__atomic_bool_bysize" data-ref="_M/__atomic_bool_bysize">__atomic_bool_bysize</dfn>(pre, post, mem, ...)			      \</u></td></tr>
+<tr><th id="71">71</th><td><u>  ({									      \</u></td></tr>
+<tr><th id="72">72</th><td><u>    int __atg2_result;							      \</u></td></tr>
+<tr><th id="73">73</th><td><u>    if (sizeof (*mem) == 1)						      \</u></td></tr>
+<tr><th id="74">74</th><td><u>      __atg2_result = pre##_8_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="75">75</th><td><u>    else if (sizeof (*mem) == 2)					      \</u></td></tr>
+<tr><th id="76">76</th><td><u>      __atg2_result = pre##_16_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="77">77</th><td><u>    else if (sizeof (*mem) == 4)					      \</u></td></tr>
+<tr><th id="78">78</th><td><u>      __atg2_result = pre##_32_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="79">79</th><td><u>    else if (sizeof (*mem) == 8)					      \</u></td></tr>
+<tr><th id="80">80</th><td><u>      __atg2_result = pre##_64_##post (mem, __VA_ARGS__);		      \</u></td></tr>
+<tr><th id="81">81</th><td><u>    else								      \</u></td></tr>
+<tr><th id="82">82</th><td><u>      abort ();								      \</u></td></tr>
+<tr><th id="83">83</th><td><u>    __atg2_result;							      \</u></td></tr>
+<tr><th id="84">84</th><td><u>  })</u></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><i>/* Atomically store NEWVAL in *MEM if *MEM is equal to OLDVAL.</i></td></tr>
+<tr><th id="88">88</th><td><i>   Return the old *MEM value.  */</i></td></tr>
+<tr><th id="89">89</th><td><u>#<span data-ppcond="89">if</span> !defined <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#77" data-ref="_M/atomic_compare_and_exchange_val_acq">atomic_compare_and_exchange_val_acq</a> \</u></td></tr>
+<tr><th id="90">90</th><td><u>    &amp;&amp; defined <span class="macro" data-ref="_M/__arch_compare_and_exchange_val_32_acq">__arch_compare_and_exchange_val_32_acq</span></u></td></tr>
+<tr><th id="91">91</th><td><u># define atomic_compare_and_exchange_val_acq(mem, newval, oldval) \</u></td></tr>
+<tr><th id="92">92</th><td><u>  __atomic_val_bysize (__arch_compare_and_exchange_val,acq,		      \</u></td></tr>
+<tr><th id="93">93</th><td><u>		       mem, newval, oldval)</u></td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="89">endif</span></u></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="97">ifndef</span> <span class="macro" data-ref="_M/catomic_compare_and_exchange_val_acq">catomic_compare_and_exchange_val_acq</span></u></td></tr>
+<tr><th id="98">98</th><td><u># <span data-ppcond="98">ifdef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#105" data-ref="_M/__arch_c_compare_and_exchange_val_32_acq">__arch_c_compare_and_exchange_val_32_acq</a></u></td></tr>
+<tr><th id="99">99</th><td><u>#  define <dfn class="macro" id="_M/catomic_compare_and_exchange_val_acq" data-ref="_M/catomic_compare_and_exchange_val_acq">catomic_compare_and_exchange_val_acq</dfn>(mem, newval, oldval) \</u></td></tr>
+<tr><th id="100">100</th><td><u>  __atomic_val_bysize (__arch_c_compare_and_exchange_val,acq,		      \</u></td></tr>
+<tr><th id="101">101</th><td><u>		       mem, newval, oldval)</u></td></tr>
+<tr><th id="102">102</th><td><u># <span data-ppcond="98">else</span></u></td></tr>
+<tr><th id="103">103</th><td><u>#  define catomic_compare_and_exchange_val_acq(mem, newval, oldval) \</u></td></tr>
+<tr><th id="104">104</th><td><u>  atomic_compare_and_exchange_val_acq (mem, newval, oldval)</u></td></tr>
+<tr><th id="105">105</th><td><u># <span data-ppcond="98">endif</span></u></td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="97">endif</span></u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="109">ifndef</span> <span class="macro" data-ref="_M/catomic_compare_and_exchange_val_rel">catomic_compare_and_exchange_val_rel</span></u></td></tr>
+<tr><th id="110">110</th><td><u># <span data-ppcond="110">ifndef</span> <span class="macro" data-ref="_M/atomic_compare_and_exchange_val_rel">atomic_compare_and_exchange_val_rel</span></u></td></tr>
+<tr><th id="111">111</th><td><u>#  define <dfn class="macro" id="_M/catomic_compare_and_exchange_val_rel" data-ref="_M/catomic_compare_and_exchange_val_rel">catomic_compare_and_exchange_val_rel</dfn>(mem, newval, oldval)	      \</u></td></tr>
+<tr><th id="112">112</th><td><u>  catomic_compare_and_exchange_val_acq (mem, newval, oldval)</u></td></tr>
+<tr><th id="113">113</th><td><u># <span data-ppcond="110">else</span></u></td></tr>
+<tr><th id="114">114</th><td><u>#  define catomic_compare_and_exchange_val_rel(mem, newval, oldval)	      \</u></td></tr>
+<tr><th id="115">115</th><td><u>  atomic_compare_and_exchange_val_rel (mem, newval, oldval)</u></td></tr>
+<tr><th id="116">116</th><td><u># <span data-ppcond="110">endif</span></u></td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="109">endif</span></u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="120">ifndef</span> <span class="macro" data-ref="_M/atomic_compare_and_exchange_val_rel">atomic_compare_and_exchange_val_rel</span></u></td></tr>
+<tr><th id="121">121</th><td><u># define <dfn class="macro" id="_M/atomic_compare_and_exchange_val_rel" data-ref="_M/atomic_compare_and_exchange_val_rel">atomic_compare_and_exchange_val_rel</dfn>(mem, newval, oldval)	      \</u></td></tr>
+<tr><th id="122">122</th><td><u>  atomic_compare_and_exchange_val_acq (mem, newval, oldval)</u></td></tr>
+<tr><th id="123">123</th><td><u>#<span data-ppcond="120">endif</span></u></td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><i>/* Atomically store NEWVAL in *MEM if *MEM is equal to OLDVAL.</i></td></tr>
+<tr><th id="127">127</th><td><i>   Return zero if *MEM was changed or non-zero if no exchange happened.  */</i></td></tr>
+<tr><th id="128">128</th><td><u>#<span data-ppcond="128">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#79" data-ref="_M/atomic_compare_and_exchange_bool_acq">atomic_compare_and_exchange_bool_acq</a></u></td></tr>
+<tr><th id="129">129</th><td><u># ifdef __arch_compare_and_exchange_bool_32_acq</u></td></tr>
+<tr><th id="130">130</th><td><u>#  define atomic_compare_and_exchange_bool_acq(mem, newval, oldval) \</u></td></tr>
+<tr><th id="131">131</th><td><u>  __atomic_bool_bysize (__arch_compare_and_exchange_bool,acq,		      \</u></td></tr>
+<tr><th id="132">132</th><td><u>		        mem, newval, oldval)</u></td></tr>
+<tr><th id="133">133</th><td><u># else</u></td></tr>
+<tr><th id="134">134</th><td><u>#  define atomic_compare_and_exchange_bool_acq(mem, newval, oldval) \</u></td></tr>
+<tr><th id="135">135</th><td><u>  ({ /* Cannot use __oldval here, because macros later in this file might     \</u></td></tr>
+<tr><th id="136">136</th><td><u>	call this macro with __oldval argument.	 */			      \</u></td></tr>
+<tr><th id="137">137</th><td><u>     __typeof (oldval) __atg3_old = (oldval);				      \</u></td></tr>
+<tr><th id="138">138</th><td><u>     atomic_compare_and_exchange_val_acq (mem, newval, __atg3_old)	      \</u></td></tr>
+<tr><th id="139">139</th><td><u>       != __atg3_old;							      \</u></td></tr>
+<tr><th id="140">140</th><td><u>  })</u></td></tr>
+<tr><th id="141">141</th><td><u># endif</u></td></tr>
+<tr><th id="142">142</th><td><u>#<span data-ppcond="128">endif</span></u></td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="145">ifndef</span> <span class="macro" data-ref="_M/catomic_compare_and_exchange_bool_acq">catomic_compare_and_exchange_bool_acq</span></u></td></tr>
+<tr><th id="146">146</th><td><u># <span data-ppcond="146">ifdef</span> <span class="macro" data-ref="_M/__arch_c_compare_and_exchange_bool_32_acq">__arch_c_compare_and_exchange_bool_32_acq</span></u></td></tr>
+<tr><th id="147">147</th><td><u>#  define catomic_compare_and_exchange_bool_acq(mem, newval, oldval) \</u></td></tr>
+<tr><th id="148">148</th><td><u>  __atomic_bool_bysize (__arch_c_compare_and_exchange_bool,acq,		      \</u></td></tr>
+<tr><th id="149">149</th><td><u>		        mem, newval, oldval)</u></td></tr>
+<tr><th id="150">150</th><td><u># <span data-ppcond="146">else</span></u></td></tr>
+<tr><th id="151">151</th><td><u>#  define <dfn class="macro" id="_M/catomic_compare_and_exchange_bool_acq" data-ref="_M/catomic_compare_and_exchange_bool_acq">catomic_compare_and_exchange_bool_acq</dfn>(mem, newval, oldval) \</u></td></tr>
+<tr><th id="152">152</th><td><u>  ({ /* Cannot use __oldval here, because macros later in this file might     \</u></td></tr>
+<tr><th id="153">153</th><td><u>	call this macro with __oldval argument.	 */			      \</u></td></tr>
+<tr><th id="154">154</th><td><u>     __typeof (oldval) __atg4_old = (oldval);				      \</u></td></tr>
+<tr><th id="155">155</th><td><u>     catomic_compare_and_exchange_val_acq (mem, newval, __atg4_old)	      \</u></td></tr>
+<tr><th id="156">156</th><td><u>       != __atg4_old;							      \</u></td></tr>
+<tr><th id="157">157</th><td><u>  })</u></td></tr>
+<tr><th id="158">158</th><td><u># <span data-ppcond="146">endif</span></u></td></tr>
+<tr><th id="159">159</th><td><u>#<span data-ppcond="145">endif</span></u></td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><i>/* Store NEWVALUE in *MEM and return the old value.  */</i></td></tr>
+<tr><th id="163">163</th><td><u>#<span data-ppcond="163">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#179" data-ref="_M/atomic_exchange_acq">atomic_exchange_acq</a></u></td></tr>
+<tr><th id="164">164</th><td><u># define atomic_exchange_acq(mem, newvalue) \</u></td></tr>
+<tr><th id="165">165</th><td><u>  ({ __typeof ((__typeof (*(mem))) *(mem)) __atg5_oldval;		      \</u></td></tr>
+<tr><th id="166">166</th><td><u>     __typeof (mem) __atg5_memp = (mem);				      \</u></td></tr>
+<tr><th id="167">167</th><td><u>     __typeof ((__typeof (*(mem))) *(mem)) __atg5_value = (newvalue);	      \</u></td></tr>
+<tr><th id="168">168</th><td><u>									      \</u></td></tr>
+<tr><th id="169">169</th><td><u>     do									      \</u></td></tr>
+<tr><th id="170">170</th><td><u>       __atg5_oldval = *__atg5_memp;					      \</u></td></tr>
+<tr><th id="171">171</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="172">172</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg5_memp, __atg5_value, \</u></td></tr>
+<tr><th id="173">173</th><td><u>						   __atg5_oldval), 0));	      \</u></td></tr>
+<tr><th id="174">174</th><td><u>									      \</u></td></tr>
+<tr><th id="175">175</th><td><u>     __atg5_oldval; })</u></td></tr>
+<tr><th id="176">176</th><td><u>#<span data-ppcond="163">endif</span></u></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="178">ifndef</span> <span class="macro" data-ref="_M/atomic_exchange_rel">atomic_exchange_rel</span></u></td></tr>
+<tr><th id="179">179</th><td><u># define <dfn class="macro" id="_M/atomic_exchange_rel" data-ref="_M/atomic_exchange_rel">atomic_exchange_rel</dfn>(mem, newvalue) atomic_exchange_acq (mem, newvalue)</u></td></tr>
+<tr><th id="180">180</th><td><u>#<span data-ppcond="178">endif</span></u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><i>/* Add VALUE to *MEM and return the old value of *MEM.  */</i></td></tr>
+<tr><th id="184">184</th><td><u>#<span data-ppcond="184">ifndef</span> <span class="macro" data-ref="_M/atomic_exchange_and_add_acq">atomic_exchange_and_add_acq</span></u></td></tr>
+<tr><th id="185">185</th><td><u># <span data-ppcond="185">ifdef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#234" data-ref="_M/atomic_exchange_and_add">atomic_exchange_and_add</a></u></td></tr>
+<tr><th id="186">186</th><td><u>#  define <dfn class="macro" id="_M/atomic_exchange_and_add_acq" data-ref="_M/atomic_exchange_and_add_acq">atomic_exchange_and_add_acq</dfn>(mem, value) \</u></td></tr>
+<tr><th id="187">187</th><td><u>  atomic_exchange_and_add (mem, value)</u></td></tr>
+<tr><th id="188">188</th><td><u># <span data-ppcond="185">else</span></u></td></tr>
+<tr><th id="189">189</th><td><u>#  define atomic_exchange_and_add_acq(mem, value) \</u></td></tr>
+<tr><th id="190">190</th><td><u>  ({ __typeof (*(mem)) __atg6_oldval;					      \</u></td></tr>
+<tr><th id="191">191</th><td><u>     __typeof (mem) __atg6_memp = (mem);				      \</u></td></tr>
+<tr><th id="192">192</th><td><u>     __typeof (*(mem)) __atg6_value = (value);				      \</u></td></tr>
+<tr><th id="193">193</th><td><u>									      \</u></td></tr>
+<tr><th id="194">194</th><td><u>     do									      \</u></td></tr>
+<tr><th id="195">195</th><td><u>       __atg6_oldval = *__atg6_memp;					      \</u></td></tr>
+<tr><th id="196">196</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="197">197</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg6_memp,		      \</u></td></tr>
+<tr><th id="198">198</th><td><u>						   __atg6_oldval	      \</u></td></tr>
+<tr><th id="199">199</th><td><u>						   + __atg6_value,	      \</u></td></tr>
+<tr><th id="200">200</th><td><u>						   __atg6_oldval), 0));	      \</u></td></tr>
+<tr><th id="201">201</th><td><u>									      \</u></td></tr>
+<tr><th id="202">202</th><td><u>     __atg6_oldval; })</u></td></tr>
+<tr><th id="203">203</th><td><u># <span data-ppcond="185">endif</span></u></td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="184">endif</span></u></td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td><u>#<span data-ppcond="206">ifndef</span> <span class="macro" data-ref="_M/atomic_exchange_and_add_rel">atomic_exchange_and_add_rel</span></u></td></tr>
+<tr><th id="207">207</th><td><u># define <dfn class="macro" id="_M/atomic_exchange_and_add_rel" data-ref="_M/atomic_exchange_and_add_rel">atomic_exchange_and_add_rel</dfn>(mem, value) \</u></td></tr>
+<tr><th id="208">208</th><td><u>  atomic_exchange_and_add_acq(mem, value)</u></td></tr>
+<tr><th id="209">209</th><td><u>#<span data-ppcond="206">endif</span></u></td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><u>#<span data-ppcond="211">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#234" data-ref="_M/atomic_exchange_and_add">atomic_exchange_and_add</a></u></td></tr>
+<tr><th id="212">212</th><td><u># define atomic_exchange_and_add(mem, value) \</u></td></tr>
+<tr><th id="213">213</th><td><u>  atomic_exchange_and_add_acq(mem, value)</u></td></tr>
+<tr><th id="214">214</th><td><u>#<span data-ppcond="211">endif</span></u></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td><u>#<span data-ppcond="216">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#240" data-ref="_M/catomic_exchange_and_add">catomic_exchange_and_add</a></u></td></tr>
+<tr><th id="217">217</th><td><u># define catomic_exchange_and_add(mem, value) \</u></td></tr>
+<tr><th id="218">218</th><td><u>  ({ __typeof (*(mem)) __atg7_oldv;					      \</u></td></tr>
+<tr><th id="219">219</th><td><u>     __typeof (mem) __atg7_memp = (mem);				      \</u></td></tr>
+<tr><th id="220">220</th><td><u>     __typeof (*(mem)) __atg7_value = (value);				      \</u></td></tr>
+<tr><th id="221">221</th><td><u>									      \</u></td></tr>
+<tr><th id="222">222</th><td><u>     do									      \</u></td></tr>
+<tr><th id="223">223</th><td><u>       __atg7_oldv = *__atg7_memp;					      \</u></td></tr>
+<tr><th id="224">224</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="225">225</th><td><u>	    (catomic_compare_and_exchange_bool_acq (__atg7_memp,	      \</u></td></tr>
+<tr><th id="226">226</th><td><u>						    __atg7_oldv		      \</u></td></tr>
+<tr><th id="227">227</th><td><u>						    + __atg7_value,	      \</u></td></tr>
+<tr><th id="228">228</th><td><u>						    __atg7_oldv), 0));	      \</u></td></tr>
+<tr><th id="229">229</th><td><u>									      \</u></td></tr>
+<tr><th id="230">230</th><td><u>     __atg7_oldv; })</u></td></tr>
+<tr><th id="231">231</th><td><u>#<span data-ppcond="216">endif</span></u></td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td><u>#<span data-ppcond="234">ifndef</span> <span class="macro" data-ref="_M/atomic_max">atomic_max</span></u></td></tr>
+<tr><th id="235">235</th><td><u># define <dfn class="macro" id="_M/atomic_max" data-ref="_M/atomic_max">atomic_max</dfn>(mem, value) \</u></td></tr>
+<tr><th id="236">236</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="237">237</th><td><u>    __typeof (*(mem)) __atg8_oldval;					      \</u></td></tr>
+<tr><th id="238">238</th><td><u>    __typeof (mem) __atg8_memp = (mem);					      \</u></td></tr>
+<tr><th id="239">239</th><td><u>    __typeof (*(mem)) __atg8_value = (value);				      \</u></td></tr>
+<tr><th id="240">240</th><td><u>    do {								      \</u></td></tr>
+<tr><th id="241">241</th><td><u>      __atg8_oldval = *__atg8_memp;					      \</u></td></tr>
+<tr><th id="242">242</th><td><u>      if (__atg8_oldval &gt;= __atg8_value)				      \</u></td></tr>
+<tr><th id="243">243</th><td><u>	break;								      \</u></td></tr>
+<tr><th id="244">244</th><td><u>    } while (__builtin_expect						      \</u></td></tr>
+<tr><th id="245">245</th><td><u>	     (atomic_compare_and_exchange_bool_acq (__atg8_memp, __atg8_value,\</u></td></tr>
+<tr><th id="246">246</th><td><u>						    __atg8_oldval), 0));      \</u></td></tr>
+<tr><th id="247">247</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="248">248</th><td><u>#<span data-ppcond="234">endif</span></u></td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td><u>#<span data-ppcond="251">ifndef</span> <span class="macro" data-ref="_M/catomic_max">catomic_max</span></u></td></tr>
+<tr><th id="252">252</th><td><u># define <dfn class="macro" id="_M/catomic_max" data-ref="_M/catomic_max">catomic_max</dfn>(mem, value) \</u></td></tr>
+<tr><th id="253">253</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="254">254</th><td><u>    __typeof (*(mem)) __atg9_oldv;					      \</u></td></tr>
+<tr><th id="255">255</th><td><u>    __typeof (mem) __atg9_memp = (mem);					      \</u></td></tr>
+<tr><th id="256">256</th><td><u>    __typeof (*(mem)) __atg9_value = (value);				      \</u></td></tr>
+<tr><th id="257">257</th><td><u>    do {								      \</u></td></tr>
+<tr><th id="258">258</th><td><u>      __atg9_oldv = *__atg9_memp;					      \</u></td></tr>
+<tr><th id="259">259</th><td><u>      if (__atg9_oldv &gt;= __atg9_value)					      \</u></td></tr>
+<tr><th id="260">260</th><td><u>	break;								      \</u></td></tr>
+<tr><th id="261">261</th><td><u>    } while (__builtin_expect						      \</u></td></tr>
+<tr><th id="262">262</th><td><u>	     (catomic_compare_and_exchange_bool_acq (__atg9_memp,	      \</u></td></tr>
+<tr><th id="263">263</th><td><u>						     __atg9_value,	      \</u></td></tr>
+<tr><th id="264">264</th><td><u>						     __atg9_oldv), 0));	      \</u></td></tr>
+<tr><th id="265">265</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="266">266</th><td><u>#<span data-ppcond="251">endif</span></u></td></tr>
+<tr><th id="267">267</th><td></td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><u>#<span data-ppcond="269">ifndef</span> <span class="macro" data-ref="_M/atomic_min">atomic_min</span></u></td></tr>
+<tr><th id="270">270</th><td><u># define <dfn class="macro" id="_M/atomic_min" data-ref="_M/atomic_min">atomic_min</dfn>(mem, value) \</u></td></tr>
+<tr><th id="271">271</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="272">272</th><td><u>    __typeof (*(mem)) __atg10_oldval;					      \</u></td></tr>
+<tr><th id="273">273</th><td><u>    __typeof (mem) __atg10_memp = (mem);				      \</u></td></tr>
+<tr><th id="274">274</th><td><u>    __typeof (*(mem)) __atg10_value = (value);				      \</u></td></tr>
+<tr><th id="275">275</th><td><u>    do {								      \</u></td></tr>
+<tr><th id="276">276</th><td><u>      __atg10_oldval = *__atg10_memp;					      \</u></td></tr>
+<tr><th id="277">277</th><td><u>      if (__atg10_oldval &lt;= __atg10_value)				      \</u></td></tr>
+<tr><th id="278">278</th><td><u>	break;								      \</u></td></tr>
+<tr><th id="279">279</th><td><u>    } while (__builtin_expect						      \</u></td></tr>
+<tr><th id="280">280</th><td><u>	     (atomic_compare_and_exchange_bool_acq (__atg10_memp,	      \</u></td></tr>
+<tr><th id="281">281</th><td><u>						    __atg10_value,	      \</u></td></tr>
+<tr><th id="282">282</th><td><u>						    __atg10_oldval), 0));     \</u></td></tr>
+<tr><th id="283">283</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="284">284</th><td><u>#<span data-ppcond="269">endif</span></u></td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td><u>#<span data-ppcond="287">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#276" data-ref="_M/atomic_add">atomic_add</a></u></td></tr>
+<tr><th id="288">288</th><td><u># define atomic_add(mem, value) (void) atomic_exchange_and_add ((mem), (value))</u></td></tr>
+<tr><th id="289">289</th><td><u>#<span data-ppcond="287">endif</span></u></td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td></td></tr>
+<tr><th id="292">292</th><td><u>#<span data-ppcond="292">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#282" data-ref="_M/catomic_add">catomic_add</a></u></td></tr>
+<tr><th id="293">293</th><td><u># define catomic_add(mem, value) \</u></td></tr>
+<tr><th id="294">294</th><td><u>  (void) catomic_exchange_and_add ((mem), (value))</u></td></tr>
+<tr><th id="295">295</th><td><u>#<span data-ppcond="292">endif</span></u></td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><u>#<span data-ppcond="298">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#360" data-ref="_M/atomic_increment">atomic_increment</a></u></td></tr>
+<tr><th id="299">299</th><td><u># define atomic_increment(mem) atomic_add ((mem), 1)</u></td></tr>
+<tr><th id="300">300</th><td><u>#<span data-ppcond="298">endif</span></u></td></tr>
+<tr><th id="301">301</th><td></td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><u>#<span data-ppcond="303">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#365" data-ref="_M/catomic_increment">catomic_increment</a></u></td></tr>
+<tr><th id="304">304</th><td><u># define catomic_increment(mem) catomic_add ((mem), 1)</u></td></tr>
+<tr><th id="305">305</th><td><u>#<span data-ppcond="303">endif</span></u></td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td><u>#<span data-ppcond="308">ifndef</span> <span class="macro" data-ref="_M/atomic_increment_val">atomic_increment_val</span></u></td></tr>
+<tr><th id="309">309</th><td><u># define <dfn class="macro" id="_M/atomic_increment_val" data-ref="_M/atomic_increment_val">atomic_increment_val</dfn>(mem) (atomic_exchange_and_add ((mem), 1) + 1)</u></td></tr>
+<tr><th id="310">310</th><td><u>#<span data-ppcond="308">endif</span></u></td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td><u>#<span data-ppcond="313">ifndef</span> <span class="macro" data-ref="_M/catomic_increment_val">catomic_increment_val</span></u></td></tr>
+<tr><th id="314">314</th><td><u># define <dfn class="macro" id="_M/catomic_increment_val" data-ref="_M/catomic_increment_val">catomic_increment_val</dfn>(mem) (catomic_exchange_and_add ((mem), 1) + 1)</u></td></tr>
+<tr><th id="315">315</th><td><u>#<span data-ppcond="313">endif</span></u></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td><i>/* Add one to *MEM and return true iff it's now zero.  */</i></td></tr>
+<tr><th id="319">319</th><td><u>#<span data-ppcond="319">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#369" data-ref="_M/atomic_increment_and_test">atomic_increment_and_test</a></u></td></tr>
+<tr><th id="320">320</th><td><u># define atomic_increment_and_test(mem) \</u></td></tr>
+<tr><th id="321">321</th><td><u>  (atomic_exchange_and_add ((mem), 1) + 1 == 0)</u></td></tr>
+<tr><th id="322">322</th><td><u>#<span data-ppcond="319">endif</span></u></td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td><u>#<span data-ppcond="325">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#418" data-ref="_M/atomic_decrement">atomic_decrement</a></u></td></tr>
+<tr><th id="326">326</th><td><u># define atomic_decrement(mem) atomic_add ((mem), -1)</u></td></tr>
+<tr><th id="327">327</th><td><u>#<span data-ppcond="325">endif</span></u></td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td><u>#<span data-ppcond="330">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#423" data-ref="_M/catomic_decrement">catomic_decrement</a></u></td></tr>
+<tr><th id="331">331</th><td><u># define catomic_decrement(mem) catomic_add ((mem), -1)</u></td></tr>
+<tr><th id="332">332</th><td><u>#<span data-ppcond="330">endif</span></u></td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td><u>#<span data-ppcond="335">ifndef</span> <span class="macro" data-ref="_M/atomic_decrement_val">atomic_decrement_val</span></u></td></tr>
+<tr><th id="336">336</th><td><u># define <dfn class="macro" id="_M/atomic_decrement_val" data-ref="_M/atomic_decrement_val">atomic_decrement_val</dfn>(mem) (atomic_exchange_and_add ((mem), -1) - 1)</u></td></tr>
+<tr><th id="337">337</th><td><u>#<span data-ppcond="335">endif</span></u></td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td><u>#<span data-ppcond="340">ifndef</span> <span class="macro" data-ref="_M/catomic_decrement_val">catomic_decrement_val</span></u></td></tr>
+<tr><th id="341">341</th><td><u># define <dfn class="macro" id="_M/catomic_decrement_val" data-ref="_M/catomic_decrement_val">catomic_decrement_val</dfn>(mem) (catomic_exchange_and_add ((mem), -1) - 1)</u></td></tr>
+<tr><th id="342">342</th><td><u>#<span data-ppcond="340">endif</span></u></td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td><i>/* Subtract 1 from *MEM and return true iff it's now zero.  */</i></td></tr>
+<tr><th id="346">346</th><td><u>#<span data-ppcond="346">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#427" data-ref="_M/atomic_decrement_and_test">atomic_decrement_and_test</a></u></td></tr>
+<tr><th id="347">347</th><td><u># define atomic_decrement_and_test(mem) \</u></td></tr>
+<tr><th id="348">348</th><td><u>  (atomic_exchange_and_add ((mem), -1) == 1)</u></td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="346">endif</span></u></td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td><i>/* Decrement *MEM if it is &gt; 0, and return the old value.  */</i></td></tr>
+<tr><th id="353">353</th><td><u>#<span data-ppcond="353">ifndef</span> <span class="macro" data-ref="_M/atomic_decrement_if_positive">atomic_decrement_if_positive</span></u></td></tr>
+<tr><th id="354">354</th><td><u># define <dfn class="macro" id="_M/atomic_decrement_if_positive" data-ref="_M/atomic_decrement_if_positive">atomic_decrement_if_positive</dfn>(mem) \</u></td></tr>
+<tr><th id="355">355</th><td><u>  ({ __typeof (*(mem)) __atg11_oldval;					      \</u></td></tr>
+<tr><th id="356">356</th><td><u>     __typeof (mem) __atg11_memp = (mem);				      \</u></td></tr>
+<tr><th id="357">357</th><td><u>									      \</u></td></tr>
+<tr><th id="358">358</th><td><u>     do									      \</u></td></tr>
+<tr><th id="359">359</th><td><u>       {								      \</u></td></tr>
+<tr><th id="360">360</th><td><u>	 __atg11_oldval = *__atg11_memp;				      \</u></td></tr>
+<tr><th id="361">361</th><td><u>	 if (__glibc_unlikely (__atg11_oldval &lt;= 0))			      \</u></td></tr>
+<tr><th id="362">362</th><td><u>	   break;							      \</u></td></tr>
+<tr><th id="363">363</th><td><u>       }								      \</u></td></tr>
+<tr><th id="364">364</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="365">365</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg11_memp,	      \</u></td></tr>
+<tr><th id="366">366</th><td><u>						   __atg11_oldval - 1,	      \</u></td></tr>
+<tr><th id="367">367</th><td><u>						   __atg11_oldval), 0));      \</u></td></tr>
+<tr><th id="368">368</th><td><u>     __atg11_oldval; })</u></td></tr>
+<tr><th id="369">369</th><td><u>#<span data-ppcond="353">endif</span></u></td></tr>
+<tr><th id="370">370</th><td></td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td><u>#<span data-ppcond="372">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#286" data-ref="_M/atomic_add_negative">atomic_add_negative</a></u></td></tr>
+<tr><th id="373">373</th><td><u># define atomic_add_negative(mem, value)				      \</u></td></tr>
+<tr><th id="374">374</th><td><u>  ({ __typeof (value) __atg12_value = (value);				      \</u></td></tr>
+<tr><th id="375">375</th><td><u>     atomic_exchange_and_add (mem, __atg12_value) &lt; -__atg12_value; })</u></td></tr>
+<tr><th id="376">376</th><td><u>#<span data-ppcond="372">endif</span></u></td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td></td></tr>
+<tr><th id="379">379</th><td><u>#<span data-ppcond="379">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#310" data-ref="_M/atomic_add_zero">atomic_add_zero</a></u></td></tr>
+<tr><th id="380">380</th><td><u># define atomic_add_zero(mem, value)					      \</u></td></tr>
+<tr><th id="381">381</th><td><u>  ({ __typeof (value) __atg13_value = (value);				      \</u></td></tr>
+<tr><th id="382">382</th><td><u>     atomic_exchange_and_add (mem, __atg13_value) == -__atg13_value; })</u></td></tr>
+<tr><th id="383">383</th><td><u>#<span data-ppcond="379">endif</span></u></td></tr>
+<tr><th id="384">384</th><td></td></tr>
+<tr><th id="385">385</th><td></td></tr>
+<tr><th id="386">386</th><td><u>#<span data-ppcond="386">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#448" data-ref="_M/atomic_bit_set">atomic_bit_set</a></u></td></tr>
+<tr><th id="387">387</th><td><u># define atomic_bit_set(mem, bit) \</u></td></tr>
+<tr><th id="388">388</th><td><u>  (void) atomic_bit_test_set(mem, bit)</u></td></tr>
+<tr><th id="389">389</th><td><u>#<span data-ppcond="386">endif</span></u></td></tr>
+<tr><th id="390">390</th><td></td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td><u>#<span data-ppcond="392">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#475" data-ref="_M/atomic_bit_test_set">atomic_bit_test_set</a></u></td></tr>
+<tr><th id="393">393</th><td><u># define atomic_bit_test_set(mem, bit) \</u></td></tr>
+<tr><th id="394">394</th><td><u>  ({ __typeof (*(mem)) __atg14_old;					      \</u></td></tr>
+<tr><th id="395">395</th><td><u>     __typeof (mem) __atg14_memp = (mem);				      \</u></td></tr>
+<tr><th id="396">396</th><td><u>     __typeof (*(mem)) __atg14_mask = ((__typeof (*(mem))) 1 &lt;&lt; (bit));	      \</u></td></tr>
+<tr><th id="397">397</th><td><u>									      \</u></td></tr>
+<tr><th id="398">398</th><td><u>     do									      \</u></td></tr>
+<tr><th id="399">399</th><td><u>       __atg14_old = (*__atg14_memp);					      \</u></td></tr>
+<tr><th id="400">400</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="401">401</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg14_memp,	      \</u></td></tr>
+<tr><th id="402">402</th><td><u>						   __atg14_old | __atg14_mask,\</u></td></tr>
+<tr><th id="403">403</th><td><u>						   __atg14_old), 0));	      \</u></td></tr>
+<tr><th id="404">404</th><td><u>									      \</u></td></tr>
+<tr><th id="405">405</th><td><u>     __atg14_old &amp; __atg14_mask; })</u></td></tr>
+<tr><th id="406">406</th><td><u>#<span data-ppcond="392">endif</span></u></td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td><i>/* Atomically *mem &amp;= mask.  */</i></td></tr>
+<tr><th id="409">409</th><td><u>#<span data-ppcond="409">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#527" data-ref="_M/atomic_and">atomic_and</a></u></td></tr>
+<tr><th id="410">410</th><td><u># define atomic_and(mem, mask) \</u></td></tr>
+<tr><th id="411">411</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="412">412</th><td><u>    __typeof (*(mem)) __atg15_old;					      \</u></td></tr>
+<tr><th id="413">413</th><td><u>    __typeof (mem) __atg15_memp = (mem);				      \</u></td></tr>
+<tr><th id="414">414</th><td><u>    __typeof (*(mem)) __atg15_mask = (mask);				      \</u></td></tr>
+<tr><th id="415">415</th><td><u>									      \</u></td></tr>
+<tr><th id="416">416</th><td><u>    do									      \</u></td></tr>
+<tr><th id="417">417</th><td><u>      __atg15_old = (*__atg15_memp);					      \</u></td></tr>
+<tr><th id="418">418</th><td><u>    while (__builtin_expect						      \</u></td></tr>
+<tr><th id="419">419</th><td><u>	   (atomic_compare_and_exchange_bool_acq (__atg15_memp,		      \</u></td></tr>
+<tr><th id="420">420</th><td><u>						  __atg15_old &amp; __atg15_mask, \</u></td></tr>
+<tr><th id="421">421</th><td><u>						  __atg15_old), 0));	      \</u></td></tr>
+<tr><th id="422">422</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="423">423</th><td><u>#<span data-ppcond="409">endif</span></u></td></tr>
+<tr><th id="424">424</th><td></td></tr>
+<tr><th id="425">425</th><td><u>#<span data-ppcond="425">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#529" data-ref="_M/catomic_and">catomic_and</a></u></td></tr>
+<tr><th id="426">426</th><td><u># define catomic_and(mem, mask) \</u></td></tr>
+<tr><th id="427">427</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="428">428</th><td><u>    __typeof (*(mem)) __atg20_old;					      \</u></td></tr>
+<tr><th id="429">429</th><td><u>    __typeof (mem) __atg20_memp = (mem);				      \</u></td></tr>
+<tr><th id="430">430</th><td><u>    __typeof (*(mem)) __atg20_mask = (mask);				      \</u></td></tr>
+<tr><th id="431">431</th><td><u>									      \</u></td></tr>
+<tr><th id="432">432</th><td><u>    do									      \</u></td></tr>
+<tr><th id="433">433</th><td><u>      __atg20_old = (*__atg20_memp);					      \</u></td></tr>
+<tr><th id="434">434</th><td><u>    while (__builtin_expect						      \</u></td></tr>
+<tr><th id="435">435</th><td><u>	   (catomic_compare_and_exchange_bool_acq (__atg20_memp,	      \</u></td></tr>
+<tr><th id="436">436</th><td><u>						   __atg20_old &amp; __atg20_mask,\</u></td></tr>
+<tr><th id="437">437</th><td><u>						   __atg20_old), 0));	      \</u></td></tr>
+<tr><th id="438">438</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="439">439</th><td><u>#<span data-ppcond="425">endif</span></u></td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td><i>/* Atomically *mem &amp;= mask and return the old value of *mem.  */</i></td></tr>
+<tr><th id="442">442</th><td><u>#<span data-ppcond="442">ifndef</span> <span class="macro" data-ref="_M/atomic_and_val">atomic_and_val</span></u></td></tr>
+<tr><th id="443">443</th><td><u># define <dfn class="macro" id="_M/atomic_and_val" data-ref="_M/atomic_and_val">atomic_and_val</dfn>(mem, mask) \</u></td></tr>
+<tr><th id="444">444</th><td><u>  ({ __typeof (*(mem)) __atg16_old;					      \</u></td></tr>
+<tr><th id="445">445</th><td><u>     __typeof (mem) __atg16_memp = (mem);				      \</u></td></tr>
+<tr><th id="446">446</th><td><u>     __typeof (*(mem)) __atg16_mask = (mask);				      \</u></td></tr>
+<tr><th id="447">447</th><td><u>									      \</u></td></tr>
+<tr><th id="448">448</th><td><u>     do									      \</u></td></tr>
+<tr><th id="449">449</th><td><u>       __atg16_old = (*__atg16_memp);					      \</u></td></tr>
+<tr><th id="450">450</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="451">451</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg16_memp,	      \</u></td></tr>
+<tr><th id="452">452</th><td><u>						   __atg16_old &amp; __atg16_mask,\</u></td></tr>
+<tr><th id="453">453</th><td><u>						   __atg16_old), 0));	      \</u></td></tr>
+<tr><th id="454">454</th><td><u>									      \</u></td></tr>
+<tr><th id="455">455</th><td><u>     __atg16_old; })</u></td></tr>
+<tr><th id="456">456</th><td><u>#<span data-ppcond="442">endif</span></u></td></tr>
+<tr><th id="457">457</th><td></td></tr>
+<tr><th id="458">458</th><td><i>/* Atomically *mem |= mask and return the old value of *mem.  */</i></td></tr>
+<tr><th id="459">459</th><td><u>#<span data-ppcond="459">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#558" data-ref="_M/atomic_or">atomic_or</a></u></td></tr>
+<tr><th id="460">460</th><td><u># define atomic_or(mem, mask) \</u></td></tr>
+<tr><th id="461">461</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="462">462</th><td><u>    __typeof (*(mem)) __atg17_old;					      \</u></td></tr>
+<tr><th id="463">463</th><td><u>    __typeof (mem) __atg17_memp = (mem);				      \</u></td></tr>
+<tr><th id="464">464</th><td><u>    __typeof (*(mem)) __atg17_mask = (mask);				      \</u></td></tr>
+<tr><th id="465">465</th><td><u>									      \</u></td></tr>
+<tr><th id="466">466</th><td><u>    do									      \</u></td></tr>
+<tr><th id="467">467</th><td><u>      __atg17_old = (*__atg17_memp);					      \</u></td></tr>
+<tr><th id="468">468</th><td><u>    while (__builtin_expect						      \</u></td></tr>
+<tr><th id="469">469</th><td><u>	   (atomic_compare_and_exchange_bool_acq (__atg17_memp,		      \</u></td></tr>
+<tr><th id="470">470</th><td><u>						  __atg17_old | __atg17_mask, \</u></td></tr>
+<tr><th id="471">471</th><td><u>						  __atg17_old), 0));	      \</u></td></tr>
+<tr><th id="472">472</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="473">473</th><td><u>#<span data-ppcond="459">endif</span></u></td></tr>
+<tr><th id="474">474</th><td></td></tr>
+<tr><th id="475">475</th><td><u>#<span data-ppcond="475">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#560" data-ref="_M/catomic_or">catomic_or</a></u></td></tr>
+<tr><th id="476">476</th><td><u># define catomic_or(mem, mask) \</u></td></tr>
+<tr><th id="477">477</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="478">478</th><td><u>    __typeof (*(mem)) __atg18_old;					      \</u></td></tr>
+<tr><th id="479">479</th><td><u>    __typeof (mem) __atg18_memp = (mem);				      \</u></td></tr>
+<tr><th id="480">480</th><td><u>    __typeof (*(mem)) __atg18_mask = (mask);				      \</u></td></tr>
+<tr><th id="481">481</th><td><u>									      \</u></td></tr>
+<tr><th id="482">482</th><td><u>    do									      \</u></td></tr>
+<tr><th id="483">483</th><td><u>      __atg18_old = (*__atg18_memp);					      \</u></td></tr>
+<tr><th id="484">484</th><td><u>    while (__builtin_expect						      \</u></td></tr>
+<tr><th id="485">485</th><td><u>	   (catomic_compare_and_exchange_bool_acq (__atg18_memp,	      \</u></td></tr>
+<tr><th id="486">486</th><td><u>						   __atg18_old | __atg18_mask,\</u></td></tr>
+<tr><th id="487">487</th><td><u>						   __atg18_old), 0));	      \</u></td></tr>
+<tr><th id="488">488</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="489">489</th><td><u>#<span data-ppcond="475">endif</span></u></td></tr>
+<tr><th id="490">490</th><td></td></tr>
+<tr><th id="491">491</th><td><i>/* Atomically *mem |= mask and return the old value of *mem.  */</i></td></tr>
+<tr><th id="492">492</th><td><u>#<span data-ppcond="492">ifndef</span> <span class="macro" data-ref="_M/atomic_or_val">atomic_or_val</span></u></td></tr>
+<tr><th id="493">493</th><td><u># define <dfn class="macro" id="_M/atomic_or_val" data-ref="_M/atomic_or_val">atomic_or_val</dfn>(mem, mask) \</u></td></tr>
+<tr><th id="494">494</th><td><u>  ({ __typeof (*(mem)) __atg19_old;					      \</u></td></tr>
+<tr><th id="495">495</th><td><u>     __typeof (mem) __atg19_memp = (mem);				      \</u></td></tr>
+<tr><th id="496">496</th><td><u>     __typeof (*(mem)) __atg19_mask = (mask);				      \</u></td></tr>
+<tr><th id="497">497</th><td><u>									      \</u></td></tr>
+<tr><th id="498">498</th><td><u>     do									      \</u></td></tr>
+<tr><th id="499">499</th><td><u>       __atg19_old = (*__atg19_memp);					      \</u></td></tr>
+<tr><th id="500">500</th><td><u>     while (__builtin_expect						      \</u></td></tr>
+<tr><th id="501">501</th><td><u>	    (atomic_compare_and_exchange_bool_acq (__atg19_memp,	      \</u></td></tr>
+<tr><th id="502">502</th><td><u>						   __atg19_old | __atg19_mask,\</u></td></tr>
+<tr><th id="503">503</th><td><u>						   __atg19_old), 0));	      \</u></td></tr>
+<tr><th id="504">504</th><td><u>									      \</u></td></tr>
+<tr><th id="505">505</th><td><u>     __atg19_old; })</u></td></tr>
+<tr><th id="506">506</th><td><u>#<span data-ppcond="492">endif</span></u></td></tr>
+<tr><th id="507">507</th><td></td></tr>
+<tr><th id="508">508</th><td><u>#<span data-ppcond="508">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#564" data-ref="_M/atomic_full_barrier">atomic_full_barrier</a></u></td></tr>
+<tr><th id="509">509</th><td><u># define atomic_full_barrier() __asm ("" ::: "memory")</u></td></tr>
+<tr><th id="510">510</th><td><u>#<span data-ppcond="508">endif</span></u></td></tr>
+<tr><th id="511">511</th><td></td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td><u>#<span data-ppcond="513">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#566" data-ref="_M/atomic_read_barrier">atomic_read_barrier</a></u></td></tr>
+<tr><th id="514">514</th><td><u># define atomic_read_barrier() atomic_full_barrier ()</u></td></tr>
+<tr><th id="515">515</th><td><u>#<span data-ppcond="513">endif</span></u></td></tr>
+<tr><th id="516">516</th><td></td></tr>
+<tr><th id="517">517</th><td></td></tr>
+<tr><th id="518">518</th><td><u>#<span data-ppcond="518">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#567" data-ref="_M/atomic_write_barrier">atomic_write_barrier</a></u></td></tr>
+<tr><th id="519">519</th><td><u># define atomic_write_barrier() atomic_full_barrier ()</u></td></tr>
+<tr><th id="520">520</th><td><u>#<span data-ppcond="518">endif</span></u></td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td><u>#<span data-ppcond="523">ifndef</span> <span class="macro" data-ref="_M/atomic_forced_read">atomic_forced_read</span></u></td></tr>
+<tr><th id="524">524</th><td><u># define <dfn class="macro" id="_M/atomic_forced_read" data-ref="_M/atomic_forced_read">atomic_forced_read</dfn>(x) \</u></td></tr>
+<tr><th id="525">525</th><td><u>  ({ __typeof (x) __x; __asm ("" : "=r" (__x) : "0" (x)); __x; })</u></td></tr>
+<tr><th id="526">526</th><td><u>#<span data-ppcond="523">endif</span></u></td></tr>
+<tr><th id="527">527</th><td></td></tr>
+<tr><th id="528">528</th><td><i>/* This is equal to 1 iff the architecture supports 64b atomic operations.  */</i></td></tr>
+<tr><th id="529">529</th><td><u>#<span data-ppcond="529">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#63" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="530">530</th><td><u>#error Unable to determine if 64-bit atomics are present.</u></td></tr>
+<tr><th id="531">531</th><td><u>#<span data-ppcond="529">endif</span></u></td></tr>
+<tr><th id="532">532</th><td></td></tr>
+<tr><th id="533">533</th><td><i>/* The following functions are a subset of the atomic operations provided by</i></td></tr>
+<tr><th id="534">534</th><td><i>   C11.  Usually, a function named atomic_OP_MO(args) is equivalent to C11's</i></td></tr>
+<tr><th id="535">535</th><td><i>   atomic_OP_explicit(args, memory_order_MO); exceptions noted below.  */</i></td></tr>
+<tr><th id="536">536</th><td></td></tr>
+<tr><th id="537">537</th><td><i>/* Each arch can request to use compiler built-ins for C11 atomics.  If it</i></td></tr>
+<tr><th id="538">538</th><td><i>   does, all atomics will be based on these.  */</i></td></tr>
+<tr><th id="539">539</th><td><u>#<span data-ppcond="539">if</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#60" title="1" data-ref="_M/USE_ATOMIC_COMPILER_BUILTINS">USE_ATOMIC_COMPILER_BUILTINS</a></u></td></tr>
+<tr><th id="540">540</th><td></td></tr>
+<tr><th id="541">541</th><td><i>/* We require 32b atomic operations; some archs also support 64b atomic</i></td></tr>
+<tr><th id="542">542</th><td><i>   operations.  */</i></td></tr>
+<tr><th id="543">543</th><td><em>void</em> <dfn class="decl fn" id="__atomic_link_error" title='__atomic_link_error' data-ref="__atomic_link_error" data-ref-filename="__atomic_link_error">__atomic_link_error</dfn> (<em>void</em>);</td></tr>
+<tr><th id="544">544</th><td><u># <span data-ppcond="544">if</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#63" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a> == 1</u></td></tr>
+<tr><th id="545">545</th><td><u>#  define <dfn class="macro" id="_M/__atomic_check_size" data-ref="_M/__atomic_check_size">__atomic_check_size</dfn>(mem) \</u></td></tr>
+<tr><th id="546">546</th><td><u>   if ((sizeof (*mem) != 4) &amp;&amp; (sizeof (*mem) != 8))			      \</u></td></tr>
+<tr><th id="547">547</th><td><u>     __atomic_link_error ();</u></td></tr>
+<tr><th id="548">548</th><td><u># <span data-ppcond="544">else</span></u></td></tr>
+<tr><th id="549">549</th><td><u>#  define __atomic_check_size(mem) \</u></td></tr>
+<tr><th id="550">550</th><td><u>   if (sizeof (*mem) != 4)						      \</u></td></tr>
+<tr><th id="551">551</th><td><u>     __atomic_link_error ();</u></td></tr>
+<tr><th id="552">552</th><td><u># <span data-ppcond="544">endif</span></u></td></tr>
+<tr><th id="553">553</th><td><i>/* We additionally provide 8b and 16b atomic loads and stores; we do not yet</i></td></tr>
+<tr><th id="554">554</th><td><i>   need other atomic operations of such sizes, and restricting the support to</i></td></tr>
+<tr><th id="555">555</th><td><i>   loads and stores makes this easier for archs that do not have native</i></td></tr>
+<tr><th id="556">556</th><td><i>   support for atomic operations to less-than-word-sized data.  */</i></td></tr>
+<tr><th id="557">557</th><td><u># <span data-ppcond="557">if</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#63" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a> == 1</u></td></tr>
+<tr><th id="558">558</th><td><u>#  define <dfn class="macro" id="_M/__atomic_check_size_ls" data-ref="_M/__atomic_check_size_ls">__atomic_check_size_ls</dfn>(mem) \</u></td></tr>
+<tr><th id="559">559</th><td><u>   if ((sizeof (*mem) != 1) &amp;&amp; (sizeof (*mem) != 2) &amp;&amp; (sizeof (*mem) != 4)   \</u></td></tr>
+<tr><th id="560">560</th><td><u>       &amp;&amp; (sizeof (*mem) != 8))						      \</u></td></tr>
+<tr><th id="561">561</th><td><u>     __atomic_link_error ();</u></td></tr>
+<tr><th id="562">562</th><td><u># <span data-ppcond="557">else</span></u></td></tr>
+<tr><th id="563">563</th><td><u>#  define __atomic_check_size_ls(mem) \</u></td></tr>
+<tr><th id="564">564</th><td><u>   if ((sizeof (*mem) != 1) &amp;&amp; (sizeof (*mem) != 2) &amp;&amp; sizeof (*mem) != 4)    \</u></td></tr>
+<tr><th id="565">565</th><td><u>     __atomic_link_error ();</u></td></tr>
+<tr><th id="566">566</th><td><u># <span data-ppcond="557">endif</span></u></td></tr>
+<tr><th id="567">567</th><td></td></tr>
+<tr><th id="568">568</th><td><u># define <dfn class="macro" id="_M/atomic_thread_fence_acquire" data-ref="_M/atomic_thread_fence_acquire">atomic_thread_fence_acquire</dfn>() \</u></td></tr>
+<tr><th id="569">569</th><td><u>  __atomic_thread_fence (__ATOMIC_ACQUIRE)</u></td></tr>
+<tr><th id="570">570</th><td><u># define <dfn class="macro" id="_M/atomic_thread_fence_release" data-ref="_M/atomic_thread_fence_release">atomic_thread_fence_release</dfn>() \</u></td></tr>
+<tr><th id="571">571</th><td><u>  __atomic_thread_fence (__ATOMIC_RELEASE)</u></td></tr>
+<tr><th id="572">572</th><td><u># define <dfn class="macro" id="_M/atomic_thread_fence_seq_cst" data-ref="_M/atomic_thread_fence_seq_cst">atomic_thread_fence_seq_cst</dfn>() \</u></td></tr>
+<tr><th id="573">573</th><td><u>  __atomic_thread_fence (__ATOMIC_SEQ_CST)</u></td></tr>
+<tr><th id="574">574</th><td></td></tr>
+<tr><th id="575">575</th><td><u># define <dfn class="macro" id="_M/atomic_load_relaxed" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</dfn>(mem) \</u></td></tr>
+<tr><th id="576">576</th><td><u>  ({ __atomic_check_size_ls((mem));					      \</u></td></tr>
+<tr><th id="577">577</th><td><u>     __atomic_load_n ((mem), __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="578">578</th><td><u># define <dfn class="macro" id="_M/atomic_load_acquire" data-ref="_M/atomic_load_acquire">atomic_load_acquire</dfn>(mem) \</u></td></tr>
+<tr><th id="579">579</th><td><u>  ({ __atomic_check_size_ls((mem));					      \</u></td></tr>
+<tr><th id="580">580</th><td><u>     __atomic_load_n ((mem), __ATOMIC_ACQUIRE); })</u></td></tr>
+<tr><th id="581">581</th><td></td></tr>
+<tr><th id="582">582</th><td><u># define <dfn class="macro" id="_M/atomic_store_relaxed" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</dfn>(mem, val) \</u></td></tr>
+<tr><th id="583">583</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="584">584</th><td><u>    __atomic_check_size_ls((mem));					      \</u></td></tr>
+<tr><th id="585">585</th><td><u>    __atomic_store_n ((mem), (val), __ATOMIC_RELAXED);			      \</u></td></tr>
+<tr><th id="586">586</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="587">587</th><td><u># define <dfn class="macro" id="_M/atomic_store_release" data-ref="_M/atomic_store_release">atomic_store_release</dfn>(mem, val) \</u></td></tr>
+<tr><th id="588">588</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="589">589</th><td><u>    __atomic_check_size_ls((mem));					      \</u></td></tr>
+<tr><th id="590">590</th><td><u>    __atomic_store_n ((mem), (val), __ATOMIC_RELEASE);			      \</u></td></tr>
+<tr><th id="591">591</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="592">592</th><td></td></tr>
+<tr><th id="593">593</th><td><i>/* On failure, this CAS has memory_order_relaxed semantics.  */</i></td></tr>
+<tr><th id="594">594</th><td><u># define <dfn class="macro" id="_M/atomic_compare_exchange_weak_relaxed" data-ref="_M/atomic_compare_exchange_weak_relaxed">atomic_compare_exchange_weak_relaxed</dfn>(mem, expected, desired) \</u></td></tr>
+<tr><th id="595">595</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="596">596</th><td><u>  __atomic_compare_exchange_n ((mem), (expected), (desired), 1,		      \</u></td></tr>
+<tr><th id="597">597</th><td><u>    __ATOMIC_RELAXED, __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="598">598</th><td><u># define <dfn class="macro" id="_M/atomic_compare_exchange_weak_acquire" data-ref="_M/atomic_compare_exchange_weak_acquire">atomic_compare_exchange_weak_acquire</dfn>(mem, expected, desired) \</u></td></tr>
+<tr><th id="599">599</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="600">600</th><td><u>  __atomic_compare_exchange_n ((mem), (expected), (desired), 1,		      \</u></td></tr>
+<tr><th id="601">601</th><td><u>    __ATOMIC_ACQUIRE, __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="602">602</th><td><u># define <dfn class="macro" id="_M/atomic_compare_exchange_weak_release" data-ref="_M/atomic_compare_exchange_weak_release">atomic_compare_exchange_weak_release</dfn>(mem, expected, desired) \</u></td></tr>
+<tr><th id="603">603</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="604">604</th><td><u>  __atomic_compare_exchange_n ((mem), (expected), (desired), 1,		      \</u></td></tr>
+<tr><th id="605">605</th><td><u>    __ATOMIC_RELEASE, __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="606">606</th><td></td></tr>
+<tr><th id="607">607</th><td><u># define <dfn class="macro" id="_M/atomic_exchange_relaxed" data-ref="_M/atomic_exchange_relaxed">atomic_exchange_relaxed</dfn>(mem, desired) \</u></td></tr>
+<tr><th id="608">608</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="609">609</th><td><u>  __atomic_exchange_n ((mem), (desired), __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="610">610</th><td><u># define <dfn class="macro" id="_M/atomic_exchange_acquire" data-ref="_M/atomic_exchange_acquire">atomic_exchange_acquire</dfn>(mem, desired) \</u></td></tr>
+<tr><th id="611">611</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="612">612</th><td><u>  __atomic_exchange_n ((mem), (desired), __ATOMIC_ACQUIRE); })</u></td></tr>
+<tr><th id="613">613</th><td><u># define <dfn class="macro" id="_M/atomic_exchange_release" data-ref="_M/atomic_exchange_release">atomic_exchange_release</dfn>(mem, desired) \</u></td></tr>
+<tr><th id="614">614</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="615">615</th><td><u>  __atomic_exchange_n ((mem), (desired), __ATOMIC_RELEASE); })</u></td></tr>
+<tr><th id="616">616</th><td></td></tr>
+<tr><th id="617">617</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_add_relaxed" data-ref="_M/atomic_fetch_add_relaxed">atomic_fetch_add_relaxed</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="618">618</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="619">619</th><td><u>  __atomic_fetch_add ((mem), (operand), __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="620">620</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_add_acquire" data-ref="_M/atomic_fetch_add_acquire">atomic_fetch_add_acquire</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="621">621</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="622">622</th><td><u>  __atomic_fetch_add ((mem), (operand), __ATOMIC_ACQUIRE); })</u></td></tr>
+<tr><th id="623">623</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_add_release" data-ref="_M/atomic_fetch_add_release">atomic_fetch_add_release</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="624">624</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="625">625</th><td><u>  __atomic_fetch_add ((mem), (operand), __ATOMIC_RELEASE); })</u></td></tr>
+<tr><th id="626">626</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_add_acq_rel" data-ref="_M/atomic_fetch_add_acq_rel">atomic_fetch_add_acq_rel</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="627">627</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="628">628</th><td><u>  __atomic_fetch_add ((mem), (operand), __ATOMIC_ACQ_REL); })</u></td></tr>
+<tr><th id="629">629</th><td></td></tr>
+<tr><th id="630">630</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_and_relaxed" data-ref="_M/atomic_fetch_and_relaxed">atomic_fetch_and_relaxed</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="631">631</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="632">632</th><td><u>  __atomic_fetch_and ((mem), (operand), __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="633">633</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_and_acquire" data-ref="_M/atomic_fetch_and_acquire">atomic_fetch_and_acquire</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="634">634</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="635">635</th><td><u>  __atomic_fetch_and ((mem), (operand), __ATOMIC_ACQUIRE); })</u></td></tr>
+<tr><th id="636">636</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_and_release" data-ref="_M/atomic_fetch_and_release">atomic_fetch_and_release</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="637">637</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="638">638</th><td><u>  __atomic_fetch_and ((mem), (operand), __ATOMIC_RELEASE); })</u></td></tr>
+<tr><th id="639">639</th><td></td></tr>
+<tr><th id="640">640</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_or_relaxed" data-ref="_M/atomic_fetch_or_relaxed">atomic_fetch_or_relaxed</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="641">641</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="642">642</th><td><u>  __atomic_fetch_or ((mem), (operand), __ATOMIC_RELAXED); })</u></td></tr>
+<tr><th id="643">643</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_or_acquire" data-ref="_M/atomic_fetch_or_acquire">atomic_fetch_or_acquire</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="644">644</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="645">645</th><td><u>  __atomic_fetch_or ((mem), (operand), __ATOMIC_ACQUIRE); })</u></td></tr>
+<tr><th id="646">646</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_or_release" data-ref="_M/atomic_fetch_or_release">atomic_fetch_or_release</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="647">647</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="648">648</th><td><u>  __atomic_fetch_or ((mem), (operand), __ATOMIC_RELEASE); })</u></td></tr>
+<tr><th id="649">649</th><td></td></tr>
+<tr><th id="650">650</th><td><u># define <dfn class="macro" id="_M/atomic_fetch_xor_release" data-ref="_M/atomic_fetch_xor_release">atomic_fetch_xor_release</dfn>(mem, operand) \</u></td></tr>
+<tr><th id="651">651</th><td><u>  ({ __atomic_check_size((mem));					      \</u></td></tr>
+<tr><th id="652">652</th><td><u>  __atomic_fetch_xor ((mem), (operand), __ATOMIC_RELEASE); })</u></td></tr>
+<tr><th id="653">653</th><td></td></tr>
+<tr><th id="654">654</th><td><u>#<span data-ppcond="539">else</span> /* !USE_ATOMIC_COMPILER_BUILTINS  */</u></td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td><i>/* By default, we assume that read, write, and full barriers are equivalent</i></td></tr>
+<tr><th id="657">657</th><td><i>   to acquire, release, and seq_cst barriers.  Archs for which this does not</i></td></tr>
+<tr><th id="658">658</th><td><i>   hold have to provide custom definitions of the fences.  */</i></td></tr>
+<tr><th id="659">659</th><td><u># ifndef atomic_thread_fence_acquire</u></td></tr>
+<tr><th id="660">660</th><td><u>#  define atomic_thread_fence_acquire() atomic_read_barrier ()</u></td></tr>
+<tr><th id="661">661</th><td><u># endif</u></td></tr>
+<tr><th id="662">662</th><td><u># ifndef atomic_thread_fence_release</u></td></tr>
+<tr><th id="663">663</th><td><u>#  define atomic_thread_fence_release() atomic_write_barrier ()</u></td></tr>
+<tr><th id="664">664</th><td><u># endif</u></td></tr>
+<tr><th id="665">665</th><td><u># ifndef atomic_thread_fence_seq_cst</u></td></tr>
+<tr><th id="666">666</th><td><u>#  define atomic_thread_fence_seq_cst() atomic_full_barrier ()</u></td></tr>
+<tr><th id="667">667</th><td><u># endif</u></td></tr>
+<tr><th id="668">668</th><td></td></tr>
+<tr><th id="669">669</th><td><u># ifndef atomic_load_relaxed</u></td></tr>
+<tr><th id="670">670</th><td><u>#  define atomic_load_relaxed(mem) \</u></td></tr>
+<tr><th id="671">671</th><td><u>   ({ __typeof ((__typeof (*(mem))) *(mem)) __atg100_val;		      \</u></td></tr>
+<tr><th id="672">672</th><td><u>   __asm ("" : "=r" (__atg100_val) : "0" (*(mem)));			      \</u></td></tr>
+<tr><th id="673">673</th><td><u>   __atg100_val; })</u></td></tr>
+<tr><th id="674">674</th><td><u># endif</u></td></tr>
+<tr><th id="675">675</th><td><u># ifndef atomic_load_acquire</u></td></tr>
+<tr><th id="676">676</th><td><u>#  define atomic_load_acquire(mem) \</u></td></tr>
+<tr><th id="677">677</th><td><u>   ({ __typeof (*(mem)) __atg101_val = atomic_load_relaxed (mem);	      \</u></td></tr>
+<tr><th id="678">678</th><td><u>   atomic_thread_fence_acquire ();					      \</u></td></tr>
+<tr><th id="679">679</th><td><u>   __atg101_val; })</u></td></tr>
+<tr><th id="680">680</th><td><u># endif</u></td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td><u># ifndef atomic_store_relaxed</u></td></tr>
+<tr><th id="683">683</th><td><i>/* XXX Use inline asm here?  */</i></td></tr>
+<tr><th id="684">684</th><td><u>#  define atomic_store_relaxed(mem, val) do { *(mem) = (val); } while (0)</u></td></tr>
+<tr><th id="685">685</th><td><u># endif</u></td></tr>
+<tr><th id="686">686</th><td><u># ifndef atomic_store_release</u></td></tr>
+<tr><th id="687">687</th><td><u>#  define atomic_store_release(mem, val) \</u></td></tr>
+<tr><th id="688">688</th><td><u>   do {									      \</u></td></tr>
+<tr><th id="689">689</th><td><u>     atomic_thread_fence_release ();					      \</u></td></tr>
+<tr><th id="690">690</th><td><u>     atomic_store_relaxed ((mem), (val));				      \</u></td></tr>
+<tr><th id="691">691</th><td><u>   } while (0)</u></td></tr>
+<tr><th id="692">692</th><td><u># endif</u></td></tr>
+<tr><th id="693">693</th><td></td></tr>
+<tr><th id="694">694</th><td><i>/* On failure, this CAS has memory_order_relaxed semantics.  */</i></td></tr>
+<tr><th id="695">695</th><td><i>/* XXX This potentially has one branch more than necessary, but archs</i></td></tr>
+<tr><th id="696">696</th><td><i>   currently do not define a CAS that returns both the previous value and</i></td></tr>
+<tr><th id="697">697</th><td><i>   the success flag.  */</i></td></tr>
+<tr><th id="698">698</th><td><u># ifndef atomic_compare_exchange_weak_acquire</u></td></tr>
+<tr><th id="699">699</th><td><u>#  define atomic_compare_exchange_weak_acquire(mem, expected, desired) \</u></td></tr>
+<tr><th id="700">700</th><td><u>   ({ typeof (*(expected)) __atg102_expected = *(expected);		      \</u></td></tr>
+<tr><th id="701">701</th><td><u>   *(expected) =							      \</u></td></tr>
+<tr><th id="702">702</th><td><u>     atomic_compare_and_exchange_val_acq ((mem), (desired), *(expected));     \</u></td></tr>
+<tr><th id="703">703</th><td><u>   *(expected) == __atg102_expected; })</u></td></tr>
+<tr><th id="704">704</th><td><u># endif</u></td></tr>
+<tr><th id="705">705</th><td><u># ifndef atomic_compare_exchange_weak_relaxed</u></td></tr>
+<tr><th id="706">706</th><td><i>/* XXX Fall back to CAS with acquire MO because archs do not define a weaker</i></td></tr>
+<tr><th id="707">707</th><td><i>   CAS.  */</i></td></tr>
+<tr><th id="708">708</th><td><u>#  define atomic_compare_exchange_weak_relaxed(mem, expected, desired) \</u></td></tr>
+<tr><th id="709">709</th><td><u>   atomic_compare_exchange_weak_acquire ((mem), (expected), (desired))</u></td></tr>
+<tr><th id="710">710</th><td><u># endif</u></td></tr>
+<tr><th id="711">711</th><td><u># ifndef atomic_compare_exchange_weak_release</u></td></tr>
+<tr><th id="712">712</th><td><u>#  define atomic_compare_exchange_weak_release(mem, expected, desired) \</u></td></tr>
+<tr><th id="713">713</th><td><u>   ({ typeof (*(expected)) __atg103_expected = *(expected);		      \</u></td></tr>
+<tr><th id="714">714</th><td><u>   *(expected) =							      \</u></td></tr>
+<tr><th id="715">715</th><td><u>     atomic_compare_and_exchange_val_rel ((mem), (desired), *(expected));     \</u></td></tr>
+<tr><th id="716">716</th><td><u>   *(expected) == __atg103_expected; })</u></td></tr>
+<tr><th id="717">717</th><td><u># endif</u></td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td><i>/* XXX Fall back to acquire MO because archs do not define a weaker</i></td></tr>
+<tr><th id="720">720</th><td><i>   atomic_exchange.  */</i></td></tr>
+<tr><th id="721">721</th><td><u># ifndef atomic_exchange_relaxed</u></td></tr>
+<tr><th id="722">722</th><td><u>#  define atomic_exchange_relaxed(mem, val) \</u></td></tr>
+<tr><th id="723">723</th><td><u>   atomic_exchange_acq ((mem), (val))</u></td></tr>
+<tr><th id="724">724</th><td><u># endif</u></td></tr>
+<tr><th id="725">725</th><td><u># ifndef atomic_exchange_acquire</u></td></tr>
+<tr><th id="726">726</th><td><u>#  define atomic_exchange_acquire(mem, val) \</u></td></tr>
+<tr><th id="727">727</th><td><u>   atomic_exchange_acq ((mem), (val))</u></td></tr>
+<tr><th id="728">728</th><td><u># endif</u></td></tr>
+<tr><th id="729">729</th><td><u># ifndef atomic_exchange_release</u></td></tr>
+<tr><th id="730">730</th><td><u>#  define atomic_exchange_release(mem, val) \</u></td></tr>
+<tr><th id="731">731</th><td><u>   atomic_exchange_rel ((mem), (val))</u></td></tr>
+<tr><th id="732">732</th><td><u># endif</u></td></tr>
+<tr><th id="733">733</th><td></td></tr>
+<tr><th id="734">734</th><td><u># ifndef atomic_fetch_add_acquire</u></td></tr>
+<tr><th id="735">735</th><td><u>#  define atomic_fetch_add_acquire(mem, operand) \</u></td></tr>
+<tr><th id="736">736</th><td><u>   atomic_exchange_and_add_acq ((mem), (operand))</u></td></tr>
+<tr><th id="737">737</th><td><u># endif</u></td></tr>
+<tr><th id="738">738</th><td><u># ifndef atomic_fetch_add_relaxed</u></td></tr>
+<tr><th id="739">739</th><td><i>/* XXX Fall back to acquire MO because the MO semantics of</i></td></tr>
+<tr><th id="740">740</th><td><i>   atomic_exchange_and_add are not documented; the generic version falls back</i></td></tr>
+<tr><th id="741">741</th><td><i>   to atomic_exchange_and_add_acq if atomic_exchange_and_add is not defined,</i></td></tr>
+<tr><th id="742">742</th><td><i>   and vice versa.  */</i></td></tr>
+<tr><th id="743">743</th><td><u>#  define atomic_fetch_add_relaxed(mem, operand) \</u></td></tr>
+<tr><th id="744">744</th><td><u>   atomic_fetch_add_acquire ((mem), (operand))</u></td></tr>
+<tr><th id="745">745</th><td><u># endif</u></td></tr>
+<tr><th id="746">746</th><td><u># ifndef atomic_fetch_add_release</u></td></tr>
+<tr><th id="747">747</th><td><u>#  define atomic_fetch_add_release(mem, operand) \</u></td></tr>
+<tr><th id="748">748</th><td><u>   atomic_exchange_and_add_rel ((mem), (operand))</u></td></tr>
+<tr><th id="749">749</th><td><u># endif</u></td></tr>
+<tr><th id="750">750</th><td><u># ifndef atomic_fetch_add_acq_rel</u></td></tr>
+<tr><th id="751">751</th><td><u>#  define atomic_fetch_add_acq_rel(mem, operand) \</u></td></tr>
+<tr><th id="752">752</th><td><u>   ({ atomic_thread_fence_release ();					      \</u></td></tr>
+<tr><th id="753">753</th><td><u>   atomic_exchange_and_add_acq ((mem), (operand)); })</u></td></tr>
+<tr><th id="754">754</th><td><u># endif</u></td></tr>
+<tr><th id="755">755</th><td></td></tr>
+<tr><th id="756">756</th><td><i>/* XXX Fall back to acquire MO because archs do not define a weaker</i></td></tr>
+<tr><th id="757">757</th><td><i>   atomic_and_val.  */</i></td></tr>
+<tr><th id="758">758</th><td><u># ifndef atomic_fetch_and_relaxed</u></td></tr>
+<tr><th id="759">759</th><td><u>#  define atomic_fetch_and_relaxed(mem, operand) \</u></td></tr>
+<tr><th id="760">760</th><td><u>   atomic_fetch_and_acquire ((mem), (operand))</u></td></tr>
+<tr><th id="761">761</th><td><u># endif</u></td></tr>
+<tr><th id="762">762</th><td><i>/* XXX The default for atomic_and_val has acquire semantics, but this is not</i></td></tr>
+<tr><th id="763">763</th><td><i>   documented.  */</i></td></tr>
+<tr><th id="764">764</th><td><u># ifndef atomic_fetch_and_acquire</u></td></tr>
+<tr><th id="765">765</th><td><u>#  define atomic_fetch_and_acquire(mem, operand) \</u></td></tr>
+<tr><th id="766">766</th><td><u>   atomic_and_val ((mem), (operand))</u></td></tr>
+<tr><th id="767">767</th><td><u># endif</u></td></tr>
+<tr><th id="768">768</th><td><u># ifndef atomic_fetch_and_release</u></td></tr>
+<tr><th id="769">769</th><td><i>/* XXX This unnecessarily has acquire MO.  */</i></td></tr>
+<tr><th id="770">770</th><td><u>#  define atomic_fetch_and_release(mem, operand) \</u></td></tr>
+<tr><th id="771">771</th><td><u>   ({ atomic_thread_fence_release ();					      \</u></td></tr>
+<tr><th id="772">772</th><td><u>   atomic_and_val ((mem), (operand)); })</u></td></tr>
+<tr><th id="773">773</th><td><u># endif</u></td></tr>
+<tr><th id="774">774</th><td></td></tr>
+<tr><th id="775">775</th><td><i>/* XXX The default for atomic_or_val has acquire semantics, but this is not</i></td></tr>
+<tr><th id="776">776</th><td><i>   documented.  */</i></td></tr>
+<tr><th id="777">777</th><td><u># ifndef atomic_fetch_or_acquire</u></td></tr>
+<tr><th id="778">778</th><td><u>#  define atomic_fetch_or_acquire(mem, operand) \</u></td></tr>
+<tr><th id="779">779</th><td><u>   atomic_or_val ((mem), (operand))</u></td></tr>
+<tr><th id="780">780</th><td><u># endif</u></td></tr>
+<tr><th id="781">781</th><td><i>/* XXX Fall back to acquire MO because archs do not define a weaker</i></td></tr>
+<tr><th id="782">782</th><td><i>   atomic_or_val.  */</i></td></tr>
+<tr><th id="783">783</th><td><u># ifndef atomic_fetch_or_relaxed</u></td></tr>
+<tr><th id="784">784</th><td><u>#  define atomic_fetch_or_relaxed(mem, operand) \</u></td></tr>
+<tr><th id="785">785</th><td><u>   atomic_fetch_or_acquire ((mem), (operand))</u></td></tr>
+<tr><th id="786">786</th><td><u># endif</u></td></tr>
+<tr><th id="787">787</th><td><i>/* XXX Contains an unnecessary acquire MO because archs do not define a weaker</i></td></tr>
+<tr><th id="788">788</th><td><i>   atomic_or_val.  */</i></td></tr>
+<tr><th id="789">789</th><td><u># ifndef atomic_fetch_or_release</u></td></tr>
+<tr><th id="790">790</th><td><u>#  define atomic_fetch_or_release(mem, operand) \</u></td></tr>
+<tr><th id="791">791</th><td><u>   ({ atomic_thread_fence_release ();					      \</u></td></tr>
+<tr><th id="792">792</th><td><u>   atomic_fetch_or_acquire ((mem), (operand)); })</u></td></tr>
+<tr><th id="793">793</th><td><u># endif</u></td></tr>
+<tr><th id="794">794</th><td></td></tr>
+<tr><th id="795">795</th><td><u># ifndef atomic_fetch_xor_release</u></td></tr>
+<tr><th id="796">796</th><td><i>/* Failing the atomic_compare_exchange_weak_release reloads the value in</i></td></tr>
+<tr><th id="797">797</th><td><i>   __atg104_expected, so we need only do the XOR again and retry.  */</i></td></tr>
+<tr><th id="798">798</th><td><u># define atomic_fetch_xor_release(mem, operand) \</u></td></tr>
+<tr><th id="799">799</th><td><u>  ({ __typeof (mem) __atg104_memp = (mem);				      \</u></td></tr>
+<tr><th id="800">800</th><td><u>     __typeof (*(mem)) __atg104_expected = (*__atg104_memp);		      \</u></td></tr>
+<tr><th id="801">801</th><td><u>     __typeof (*(mem)) __atg104_desired;				      \</u></td></tr>
+<tr><th id="802">802</th><td><u>     __typeof (*(mem)) __atg104_op = (operand);				      \</u></td></tr>
+<tr><th id="803">803</th><td><u>									      \</u></td></tr>
+<tr><th id="804">804</th><td><u>     do									      \</u></td></tr>
+<tr><th id="805">805</th><td><u>       __atg104_desired = __atg104_expected ^ __atg104_op;		      \</u></td></tr>
+<tr><th id="806">806</th><td><u>     while (__glibc_unlikely						      \</u></td></tr>
+<tr><th id="807">807</th><td><u>	    (atomic_compare_exchange_weak_release (			      \</u></td></tr>
+<tr><th id="808">808</th><td><u>	       __atg104_memp, &amp;__atg104_expected, __atg104_desired)	      \</u></td></tr>
+<tr><th id="809">809</th><td><u>	     == 0));							      \</u></td></tr>
+<tr><th id="810">810</th><td><u>     __atg104_expected; })</u></td></tr>
+<tr><th id="811">811</th><td><u>#endif</u></td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td><u>#<span data-ppcond="539">endif</span> /* !USE_ATOMIC_COMPILER_BUILTINS  */</u></td></tr>
+<tr><th id="814">814</th><td></td></tr>
+<tr><th id="815">815</th><td><i>/* This operation does not affect synchronization semantics but can be used</i></td></tr>
+<tr><th id="816">816</th><td><i>   in the body of a spin loop to potentially improve its efficiency.  */</i></td></tr>
+<tr><th id="817">817</th><td><u>#<span data-ppcond="817">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#569" data-ref="_M/atomic_spin_nop">atomic_spin_nop</a></u></td></tr>
+<tr><th id="818">818</th><td><u># define atomic_spin_nop() do { /* nothing */ } while (0)</u></td></tr>
+<tr><th id="819">819</th><td><u>#<span data-ppcond="817">endif</span></u></td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td><i>/* ATOMIC_EXCHANGE_USES_CAS is non-zero if atomic_exchange operations</i></td></tr>
+<tr><th id="822">822</th><td><i>   are implemented based on a CAS loop; otherwise, this is zero and we assume</i></td></tr>
+<tr><th id="823">823</th><td><i>   that the atomic_exchange operations could provide better performance</i></td></tr>
+<tr><th id="824">824</th><td><i>   than a CAS loop.  */</i></td></tr>
+<tr><th id="825">825</th><td><u>#<span data-ppcond="825">ifndef</span> <a class="macro" href="../sysdeps/x86/atomic-machine.h.html#75" data-ref="_M/ATOMIC_EXCHANGE_USES_CAS">ATOMIC_EXCHANGE_USES_CAS</a></u></td></tr>
+<tr><th id="826">826</th><td><u># error ATOMIC_EXCHANGE_USES_CAS has to be defined.</u></td></tr>
+<tr><th id="827">827</th><td><u>#<span data-ppcond="825">endif</span></u></td></tr>
+<tr><th id="828">828</th><td></td></tr>
+<tr><th id="829">829</th><td><u>#<span data-ppcond="20">endif</span>	/* atomic.h */</u></td></tr>
+<tr><th id="830">830</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../argp/argp-fmtstream.c.html'>glibc_src_2.29/argp/argp-fmtstream.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

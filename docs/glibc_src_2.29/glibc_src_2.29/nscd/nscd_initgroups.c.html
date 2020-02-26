@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nscd_initgroups.c source code [glibc_src_2.29/nscd/nscd_initgroups.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/nscd/nscd_initgroups.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>nscd</a>/<a href='nscd_initgroups.c.html'>nscd_initgroups.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2004-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2004.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/grp.h.html">&lt;grp.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/not-cancel.h.html">&lt;not-cancel.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="nscd-client.h.html">"nscd-client.h"</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="nscd_proto.h.html">"nscd_proto.h"</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><i>/* We use the same mapping as in nscd_getgr.   */</i></td></tr>
+<tr><th id="32">32</th><td><a class="macro" href="nscd-client.h.html#366" title="extern struct locked_map_ptr __gr_map_handle" data-ref="_M/libc_locked_map_ptr">libc_locked_map_ptr</a> (<b>extern</b>, <dfn class="decl" id="__gr_map_handle" title='__gr_map_handle' data-ref="__gr_map_handle" data-ref-filename="__gr_map_handle">__gr_map_handle</dfn>) <a class="macro" href="../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><em>int</em></td></tr>
+<tr><th id="36">36</th><td><dfn class="decl def fn" id="__nscd_getgrouplist" title='__nscd_getgrouplist' data-ref="__nscd_getgrouplist" data-ref-filename="__nscd_getgrouplist">__nscd_getgrouplist</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1user" title='user' data-type='const char *' data-ref="1user" data-ref-filename="1user">user</dfn>, <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> <dfn class="local col2 decl" id="2group" title='group' data-type='gid_t' data-ref="2group" data-ref-filename="2group">group</dfn>, <em>long</em> <em>int</em> *<dfn class="local col3 decl" id="3size" title='size' data-type='long *' data-ref="3size" data-ref-filename="3size">size</dfn>,</td></tr>
+<tr><th id="37">37</th><td>		     <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> **<dfn class="local col4 decl" id="4groupsp" title='groupsp' data-type='gid_t **' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</dfn>, <em>long</em> <em>int</em> <dfn class="local col5 decl" id="5limit" title='limit' data-type='long' data-ref="5limit" data-ref-filename="5limit">limit</dfn>)</td></tr>
+<tr><th id="38">38</th><td>{</td></tr>
+<tr><th id="39">39</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="6userlen" title='userlen' data-type='size_t' data-ref="6userlen" data-ref-filename="6userlen">userlen</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col1 ref" href="#1user" title='user' data-ref="1user" data-ref-filename="1user">user</a>) + <var>1</var>;</td></tr>
+<tr><th id="40">40</th><td>  <em>int</em> <dfn class="local col7 decl" id="7gc_cycle" title='gc_cycle' data-type='int' data-ref="7gc_cycle" data-ref-filename="7gc_cycle">gc_cycle</dfn>;</td></tr>
+<tr><th id="41">41</th><td>  <em>int</em> <dfn class="local col8 decl" id="8nretries" title='nretries' data-type='int' data-ref="8nretries" data-ref-filename="8nretries">nretries</dfn> = <var>0</var>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td>  <i>/* If the mapping is available, try to search there instead of</i></td></tr>
+<tr><th id="44">44</th><td><i>     communicating with the nscd.  */</i></td></tr>
+<tr><th id="45">45</th><td>  <b>struct</b> <a class="type" href="nscd-client.h.html#mapped_database" title='mapped_database' data-ref="mapped_database" data-ref-filename="mapped_database">mapped_database</a> *<dfn class="local col9 decl" id="9mapped" title='mapped' data-type='struct mapped_database *' data-ref="9mapped" data-ref-filename="9mapped">mapped</dfn>;</td></tr>
+<tr><th id="46">46</th><td>  <a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a> = <a class="ref fn" href="nscd-client.h.html#__nscd_get_map_ref" title='__nscd_get_map_ref' data-ref="__nscd_get_map_ref" data-ref-filename="__nscd_get_map_ref">__nscd_get_map_ref</a> (<a class="enum" href="nscd-client.h.html#GETFDGR" title='GETFDGR' data-ref="GETFDGR" data-ref-filename="GETFDGR">GETFDGR</a>, <q>"group"</q>, &amp;<a class="ref" href="#32" title='__gr_map_handle' data-ref="__gr_map_handle" data-ref-filename="__gr_map_handle">__gr_map_handle</a>, &amp;<a class="local col7 ref" href="#7gc_cycle" title='gc_cycle' data-ref="7gc_cycle" data-ref-filename="7gc_cycle">gc_cycle</a>);</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td> <dfn class="lbl" id="10retry" data-ref="10retry" data-ref-filename="10retry">retry</dfn>:;</td></tr>
+<tr><th id="49">49</th><td>  <em>char</em> *<dfn class="local col1 decl" id="11respdata" title='respdata' data-type='char *' data-ref="11respdata" data-ref-filename="11respdata">respdata</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="50">50</th><td>  <em>int</em> <dfn class="local col2 decl" id="12retval" title='retval' data-type='int' data-ref="12retval" data-ref-filename="12retval">retval</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="51">51</th><td>  <em>int</em> <dfn class="local col3 decl" id="13sock" title='sock' data-type='int' data-ref="13sock" data-ref-filename="13sock">sock</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="52">52</th><td>  <a class="typedef" href="nscd-client.h.html#initgr_response_header" title='initgr_response_header' data-type='struct initgr_response_header' data-ref="initgr_response_header" data-ref-filename="initgr_response_header">initgr_response_header</a> <dfn class="local col4 decl" id="14initgr_resp" title='initgr_resp' data-type='initgr_response_header' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</dfn>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>  <b>if</b> (<a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a> != <a class="macro" href="nscd-client.h.html#359" title="((struct mapped_database *) -1l)" data-ref="_M/NO_MAPPING">NO_MAPPING</a>)</td></tr>
+<tr><th id="55">55</th><td>    {</td></tr>
+<tr><th id="56">56</th><td>      <b>struct</b> <a class="type" href="nscd-client.h.html#datahead" title='datahead' data-ref="datahead" data-ref-filename="datahead">datahead</a> *<dfn class="local col5 decl" id="15found" title='found' data-type='struct datahead *' data-ref="15found" data-ref-filename="15found">found</dfn> = <a class="ref fn" href="nscd-client.h.html#__nscd_cache_search" title='__nscd_cache_search' data-ref="__nscd_cache_search" data-ref-filename="__nscd_cache_search">__nscd_cache_search</a> (<a class="enum" href="nscd-client.h.html#INITGROUPS" title='INITGROUPS' data-ref="INITGROUPS" data-ref-filename="INITGROUPS">INITGROUPS</a>, <a class="local col1 ref" href="#1user" title='user' data-ref="1user" data-ref-filename="1user">user</a>,</td></tr>
+<tr><th id="57">57</th><td>						    <a class="local col6 ref" href="#6userlen" title='userlen' data-ref="6userlen" data-ref-filename="6userlen">userlen</a>, <a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a>,</td></tr>
+<tr><th id="58">58</th><td>						    <b>sizeof</b> <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>);</td></tr>
+<tr><th id="59">59</th><td>      <b>if</b> (<a class="local col5 ref" href="#15found" title='found' data-ref="15found" data-ref-filename="15found">found</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="60">60</th><td>	{</td></tr>
+<tr><th id="61">61</th><td>	  <a class="local col1 ref" href="#11respdata" title='respdata' data-ref="11respdata" data-ref-filename="11respdata">respdata</a> = (<em>char</em> *) (&amp;<a class="local col5 ref" href="#15found" title='found' data-ref="15found" data-ref-filename="15found">found</a>-&gt;<a class="ref field" href="nscd-client.h.html#datahead::data" title='datahead::data' data-ref="datahead::data" data-ref-filename="datahead..data">data</a>[<var>0</var>].<a class="ref field" href="nscd-client.h.html#datahead::(anonymous)::initgrdata" title='datahead::(anonymous union)::initgrdata' data-ref="datahead::(anonymous)::initgrdata" data-ref-filename="datahead..(anonymous)..initgrdata">initgrdata</a> + <var>1</var>);</td></tr>
+<tr><th id="62">62</th><td>	  <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a> = <a class="local col5 ref" href="#15found" title='found' data-ref="15found" data-ref-filename="15found">found</a>-&gt;<a class="ref field" href="nscd-client.h.html#datahead::data" title='datahead::data' data-ref="datahead::data" data-ref-filename="datahead..data">data</a>[<var>0</var>].<a class="ref field" href="nscd-client.h.html#datahead::(anonymous)::initgrdata" title='datahead::(anonymous union)::initgrdata' data-ref="datahead::(anonymous)::initgrdata" data-ref-filename="datahead..(anonymous)..initgrdata">initgrdata</a>;</td></tr>
+<tr><th id="63">63</th><td>	  <em>char</em> *<dfn class="local col6 decl" id="16recend" title='recend' data-type='char *' data-ref="16recend" data-ref-filename="16recend">recend</dfn> = (<em>char</em> *) <a class="local col5 ref" href="#15found" title='found' data-ref="15found" data-ref-filename="15found">found</a>-&gt;<a class="ref field" href="nscd-client.h.html#datahead::data" title='datahead::data' data-ref="datahead::data" data-ref-filename="datahead..data">data</a> + <a class="local col5 ref" href="#15found" title='found' data-ref="15found" data-ref-filename="15found">found</a>-&gt;<a class="ref field" href="nscd-client.h.html#datahead::recsize" title='datahead::recsize' data-ref="datahead::recsize" data-ref-filename="datahead..recsize">recsize</a>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	  <i>/* Now check if we can trust initgr_resp fields.  If GC is</i></td></tr>
+<tr><th id="66">66</th><td><i>	     in progress, it can contain anything.  */</i></td></tr>
+<tr><th id="67">67</th><td>	  <b>if</b> (<a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a>-&gt;<a class="ref field" href="nscd-client.h.html#mapped_database::head" title='mapped_database::head' data-ref="mapped_database::head" data-ref-filename="mapped_database..head">head</a>-&gt;<a class="ref field" href="nscd-client.h.html#database_pers_head::gc_cycle" title='database_pers_head::gc_cycle' data-ref="database_pers_head::gc_cycle" data-ref-filename="database_pers_head..gc_cycle">gc_cycle</a> != <a class="local col7 ref" href="#7gc_cycle" title='gc_cycle' data-ref="7gc_cycle" data-ref-filename="7gc_cycle">gc_cycle</a>)</td></tr>
+<tr><th id="68">68</th><td>	    {</td></tr>
+<tr><th id="69">69</th><td>	      <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> = -<var>2</var>;</td></tr>
+<tr><th id="70">70</th><td>	      <b>goto</b> <a class="lbl" href="#17out" data-ref="17out" data-ref-filename="17out">out</a>;</td></tr>
+<tr><th id="71">71</th><td>	    }</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>	  <b>if</b> (<a class="local col1 ref" href="#11respdata" title='respdata' data-ref="11respdata" data-ref-filename="11respdata">respdata</a> + <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> * <b>sizeof</b> (<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a>) &gt; <a class="local col6 ref" href="#16recend" title='recend' data-ref="16recend" data-ref-filename="16recend">recend</a>)</td></tr>
+<tr><th id="74">74</th><td>	    <b>goto</b> <a class="lbl" href="#17out" data-ref="17out" data-ref-filename="17out">out</a>;</td></tr>
+<tr><th id="75">75</th><td>	}</td></tr>
+<tr><th id="76">76</th><td>    }</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>  <i>/* If we do not have the cache mapped, try to get the data over the</i></td></tr>
+<tr><th id="79">79</th><td><i>     socket.  */</i></td></tr>
+<tr><th id="80">80</th><td>  <b>if</b> (<a class="local col1 ref" href="#11respdata" title='respdata' data-ref="11respdata" data-ref-filename="11respdata">respdata</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="81">81</th><td>    {</td></tr>
+<tr><th id="82">82</th><td>      <a class="local col3 ref" href="#13sock" title='sock' data-ref="13sock" data-ref-filename="13sock">sock</a> = <a class="ref fn" href="nscd-client.h.html#__nscd_open_socket" title='__nscd_open_socket' data-ref="__nscd_open_socket" data-ref-filename="__nscd_open_socket">__nscd_open_socket</a> (<a class="local col1 ref" href="#1user" title='user' data-ref="1user" data-ref-filename="1user">user</a>, <a class="local col6 ref" href="#6userlen" title='userlen' data-ref="6userlen" data-ref-filename="6userlen">userlen</a>, <a class="enum" href="nscd-client.h.html#INITGROUPS" title='INITGROUPS' data-ref="INITGROUPS" data-ref-filename="INITGROUPS">INITGROUPS</a>, &amp;<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>,</td></tr>
+<tr><th id="83">83</th><td>				 <b>sizeof</b> (<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>));</td></tr>
+<tr><th id="84">84</th><td>      <b>if</b> (<a class="local col3 ref" href="#13sock" title='sock' data-ref="13sock" data-ref-filename="13sock">sock</a> == -<var>1</var>)</td></tr>
+<tr><th id="85">85</th><td>	{</td></tr>
+<tr><th id="86">86</th><td>	  <i>/* nscd not running or wrong version.  */</i></td></tr>
+<tr><th id="87">87</th><td>	  <a class="ref" href="nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> = <var>1</var>;</td></tr>
+<tr><th id="88">88</th><td>	  <b>goto</b> <a class="lbl" href="#17out" data-ref="17out" data-ref-filename="17out">out</a>;</td></tr>
+<tr><th id="89">89</th><td>	}</td></tr>
+<tr><th id="90">90</th><td>    }</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>  <b>if</b> (<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::found" title='(anonymous struct)::found' data-ref="(anonymous)::found" data-ref-filename="(anonymous)..found">found</a> == <var>1</var>)</td></tr>
+<tr><th id="93">93</th><td>    {</td></tr>
+<tr><th id="94">94</th><td>      <i>/* The following code assumes that gid_t and int32_t are the</i></td></tr>
+<tr><th id="95">95</th><td><i>	 same size.  This is the case for al existing implementation.</i></td></tr>
+<tr><th id="96">96</th><td><i>	 If this should change some code needs to be added which</i></td></tr>
+<tr><th id="97">97</th><td><i>	 doesn't use memcpy but instead copies each array element one</i></td></tr>
+<tr><th id="98">98</th><td><i>	 by one.  */</i></td></tr>
+<tr><th id="99">99</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((sizeof (int32_t) == sizeof (gid_t)) ? 1 : 0), __extension__ ({ if (sizeof (int32_t) == sizeof (gid_t)) ; else __assert_fail (&quot;sizeof (int32_t) == sizeof (gid_t)&quot;, &quot;/home/fp/glibc/glibc_src/nscd/nscd_initgroups.c&quot;, 99, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<b>sizeof</b> (<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a>) == <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="100">100</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((initgr_resp.ngrps &gt;= 0) ? 1 : 0), __extension__ ({ if (initgr_resp.ngrps &gt;= 0) ; else __assert_fail (&quot;initgr_resp.ngrps &gt;= 0&quot;, &quot;/home/fp/glibc/glibc_src/nscd/nscd_initgroups.c&quot;, 100, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> &gt;= <var>0</var>);</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>      <i>/* Make sure we have enough room.  We always count GROUP in even</i></td></tr>
+<tr><th id="103">103</th><td><i>	 though we might not end up adding it.  */</i></td></tr>
+<tr><th id="104">104</th><td>      <b>if</b> (*<a class="local col3 ref" href="#3size" title='size' data-ref="3size" data-ref-filename="3size">size</a> &lt; <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> + <var>1</var>)</td></tr>
+<tr><th id="105">105</th><td>	{</td></tr>
+<tr><th id="106">106</th><td>	  <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col8 decl" id="18newp" title='newp' data-type='gid_t *' data-ref="18newp" data-ref-filename="18newp">newp</dfn> = <a class="ref fn" href="../stdlib/stdlib.h.html#realloc" title='realloc' data-ref="realloc" data-ref-filename="realloc">realloc</a> (*<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a>,</td></tr>
+<tr><th id="107">107</th><td>				 (<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> + <var>1</var>) * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="108">108</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18newp" title='newp' data-ref="18newp" data-ref-filename="18newp">newp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="109">109</th><td>	    <i>/* We cannot increase the buffer size.  */</i></td></tr>
+<tr><th id="110">110</th><td>	    <b>goto</b> <a class="lbl" href="#19out_close" data-ref="19out_close" data-ref-filename="19out_close">out_close</a>;</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	  *<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a> = <a class="local col8 ref" href="#18newp" title='newp' data-ref="18newp" data-ref-filename="18newp">newp</a>;</td></tr>
+<tr><th id="113">113</th><td>	  *<a class="local col3 ref" href="#3size" title='size' data-ref="3size" data-ref-filename="3size">size</a> = <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> + <var>1</var>;</td></tr>
+<tr><th id="114">114</th><td>	}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>      <b>if</b> (<a class="local col1 ref" href="#11respdata" title='respdata' data-ref="11respdata" data-ref-filename="11respdata">respdata</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="117">117</th><td>	{</td></tr>
+<tr><th id="118">118</th><td>	  <i>/* Read the data from the socket.  */</i></td></tr>
+<tr><th id="119">119</th><td>	  <b>if</b> ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="ref fn" href="nscd-client.h.html#__readall" title='__readall' data-ref="__readall" data-ref-filename="__readall">__readall</a> (<a class="local col3 ref" href="#13sock" title='sock' data-ref="13sock" data-ref-filename="13sock">sock</a>, *<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a>, <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a></td></tr>
+<tr><th id="120">120</th><td>						  * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>))</td></tr>
+<tr><th id="121">121</th><td>	      == <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a> * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>))</td></tr>
+<tr><th id="122">122</th><td>	    <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> = <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a>;</td></tr>
+<tr><th id="123">123</th><td>	}</td></tr>
+<tr><th id="124">124</th><td>      <b>else</b></td></tr>
+<tr><th id="125">125</th><td>	{</td></tr>
+<tr><th id="126">126</th><td>	  <i>/* Just copy the data.  */</i></td></tr>
+<tr><th id="127">127</th><td>	  <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> = <a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::ngrps" title='(anonymous struct)::ngrps' data-ref="(anonymous)::ngrps" data-ref-filename="(anonymous)..ngrps">ngrps</a>;</td></tr>
+<tr><th id="128">128</th><td>	  <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (*<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a>, <a class="local col1 ref" href="#11respdata" title='respdata' data-ref="11respdata" data-ref-filename="11respdata">respdata</a>, <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> * <b>sizeof</b> (<a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a>));</td></tr>
+<tr><th id="129">129</th><td>	}</td></tr>
+<tr><th id="130">130</th><td>    }</td></tr>
+<tr><th id="131">131</th><td>  <b>else</b></td></tr>
+<tr><th id="132">132</th><td>    {</td></tr>
+<tr><th id="133">133</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((initgr_resp.found == -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#14initgr_resp" title='initgr_resp' data-ref="14initgr_resp" data-ref-filename="14initgr_resp">initgr_resp</a>.<a class="ref field" href="nscd-client.h.html#(anonymous)::found" title='(anonymous struct)::found' data-ref="(anonymous)::found" data-ref-filename="(anonymous)..found">found</a> == -<var>1</var>))</td></tr>
+<tr><th id="134">134</th><td>	{</td></tr>
+<tr><th id="135">135</th><td>	  <i>/* The daemon does not cache this database.  */</i></td></tr>
+<tr><th id="136">136</th><td>	  <a class="ref" href="nscd_proto.h.html#__nss_not_use_nscd_group" title='__nss_not_use_nscd_group' data-ref="__nss_not_use_nscd_group" data-ref-filename="__nss_not_use_nscd_group">__nss_not_use_nscd_group</a> = <var>1</var>;</td></tr>
+<tr><th id="137">137</th><td>	  <b>goto</b> <a class="lbl" href="#19out_close" data-ref="19out_close" data-ref-filename="19out_close">out_close</a>;</td></tr>
+<tr><th id="138">138</th><td>	}</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>      <i>/* No group found yet.   */</i></td></tr>
+<tr><th id="141">141</th><td>      <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> = <var>0</var>;</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((*size &gt;= 1) ? 1 : 0), __extension__ ({ if (*size &gt;= 1) ; else __assert_fail (&quot;*size &gt;= 1&quot;, &quot;/home/fp/glibc/glibc_src/nscd/nscd_initgroups.c&quot;, 143, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (*<a class="local col3 ref" href="#3size" title='size' data-ref="3size" data-ref-filename="3size">size</a> &gt;= <var>1</var>);</td></tr>
+<tr><th id="144">144</th><td>    }</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>  <i>/* Check whether GROUP is part of the mix.  If not, add it.  */</i></td></tr>
+<tr><th id="147">147</th><td>  <b>if</b> (<a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> &gt;= <var>0</var>)</td></tr>
+<tr><th id="148">148</th><td>    {</td></tr>
+<tr><th id="149">149</th><td>      <em>int</em> <dfn class="local col0 decl" id="20cnt" title='cnt' data-type='int' data-ref="20cnt" data-ref-filename="20cnt">cnt</dfn>;</td></tr>
+<tr><th id="150">150</th><td>      <b>for</b> (<a class="local col0 ref" href="#20cnt" title='cnt' data-ref="20cnt" data-ref-filename="20cnt">cnt</a> = <var>0</var>; <a class="local col0 ref" href="#20cnt" title='cnt' data-ref="20cnt" data-ref-filename="20cnt">cnt</a> &lt; <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a>; ++<a class="local col0 ref" href="#20cnt" title='cnt' data-ref="20cnt" data-ref-filename="20cnt">cnt</a>)</td></tr>
+<tr><th id="151">151</th><td>	<b>if</b> ((*<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a>)[<a class="local col0 ref" href="#20cnt" title='cnt' data-ref="20cnt" data-ref-filename="20cnt">cnt</a>] == <a class="local col2 ref" href="#2group" title='group' data-ref="2group" data-ref-filename="2group">group</a>)</td></tr>
+<tr><th id="152">152</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td>      <b>if</b> (<a class="local col0 ref" href="#20cnt" title='cnt' data-ref="20cnt" data-ref-filename="20cnt">cnt</a> == <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a>)</td></tr>
+<tr><th id="155">155</th><td>	(*<a class="local col4 ref" href="#4groupsp" title='groupsp' data-ref="4groupsp" data-ref-filename="4groupsp">groupsp</a>)[<a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a>++] = <a class="local col2 ref" href="#2group" title='group' data-ref="2group" data-ref-filename="2group">group</a>;</td></tr>
+<tr><th id="156">156</th><td>    }</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td> <dfn class="lbl" id="19out_close" data-ref="19out_close" data-ref-filename="19out_close">out_close</dfn>:</td></tr>
+<tr><th id="159">159</th><td>  <b>if</b> (<a class="local col3 ref" href="#13sock" title='sock' data-ref="13sock" data-ref-filename="13sock">sock</a> != -<var>1</var>)</td></tr>
+<tr><th id="160">160</th><td>    <a class="ref fn" href="../sysdeps/unix/sysv/linux/not-cancel.h.html#__close_nocancel_nostatus" title='__close_nocancel_nostatus' data-ref="__close_nocancel_nostatus" data-ref-filename="__close_nocancel_nostatus">__close_nocancel_nostatus</a> (<a class="local col3 ref" href="#13sock" title='sock' data-ref="13sock" data-ref-filename="13sock">sock</a>);</td></tr>
+<tr><th id="161">161</th><td> <dfn class="lbl" id="17out" data-ref="17out" data-ref-filename="17out">out</dfn>:</td></tr>
+<tr><th id="162">162</th><td>  <b>if</b> (<a class="ref fn" href="nscd-client.h.html#__nscd_drop_map_ref" title='__nscd_drop_map_ref' data-ref="__nscd_drop_map_ref" data-ref-filename="__nscd_drop_map_ref">__nscd_drop_map_ref</a> (<a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a>, &amp;<a class="local col7 ref" href="#7gc_cycle" title='gc_cycle' data-ref="7gc_cycle" data-ref-filename="7gc_cycle">gc_cycle</a>) != <var>0</var>)</td></tr>
+<tr><th id="163">163</th><td>    {</td></tr>
+<tr><th id="164">164</th><td>      <i>/* When we come here this means there has been a GC cycle while we</i></td></tr>
+<tr><th id="165">165</th><td><i>	 were looking for the data.  This means the data might have been</i></td></tr>
+<tr><th id="166">166</th><td><i>	 inconsistent.  Retry if possible.  */</i></td></tr>
+<tr><th id="167">167</th><td>      <b>if</b> ((<a class="local col7 ref" href="#7gc_cycle" title='gc_cycle' data-ref="7gc_cycle" data-ref-filename="7gc_cycle">gc_cycle</a> &amp; <var>1</var>) != <var>0</var> || ++<a class="local col8 ref" href="#8nretries" title='nretries' data-ref="8nretries" data-ref-filename="8nretries">nretries</a> == <var>5</var> || <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> == -<var>1</var>)</td></tr>
+<tr><th id="168">168</th><td>	{</td></tr>
+<tr><th id="169">169</th><td>	  <i>/* nscd is just running gc now.  Disable using the mapping.  */</i></td></tr>
+<tr><th id="170">170</th><td>	  <b>if</b> (<a class="macro" href="../include/atomic.h.html#336" title="(__sync_fetch_and_add ((&amp;mapped-&gt;counter), -1) - 1)" data-ref="_M/atomic_decrement_val">atomic_decrement_val</a> (&amp;<a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a>-&gt;<a class="ref field" href="nscd-client.h.html#mapped_database::counter" title='mapped_database::counter' data-ref="mapped_database::counter" data-ref-filename="mapped_database..counter">counter</a>) == <var>0</var>)</td></tr>
+<tr><th id="171">171</th><td>	    <a class="ref fn" href="nscd-client.h.html#__nscd_unmap" title='__nscd_unmap' data-ref="__nscd_unmap" data-ref-filename="__nscd_unmap">__nscd_unmap</a> (<a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a>);</td></tr>
+<tr><th id="172">172</th><td>	  <a class="local col9 ref" href="#9mapped" title='mapped' data-ref="9mapped" data-ref-filename="9mapped">mapped</a> = <a class="macro" href="nscd-client.h.html#359" title="((struct mapped_database *) -1l)" data-ref="_M/NO_MAPPING">NO_MAPPING</a>;</td></tr>
+<tr><th id="173">173</th><td>	}</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>      <b>if</b> (<a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> != -<var>1</var>)</td></tr>
+<tr><th id="176">176</th><td>	<b>goto</b> <a class="lbl" href="#10retry" data-ref="10retry" data-ref-filename="10retry">retry</a>;</td></tr>
+<tr><th id="177">177</th><td>    }</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>  <b>return</b> <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a>;</td></tr>
+<tr><th id="180">180</th><td>}</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

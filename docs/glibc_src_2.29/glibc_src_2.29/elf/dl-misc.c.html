@@ -1,0 +1,460 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-misc.c source code [glibc_src_2.29/elf/dl-misc.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/elf/dl-misc.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>elf</a>/<a href='dl-misc.c.html'>dl-misc.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Miscellaneous support functions for dynamic linker</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1997-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/link.h.html">&lt;link.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/sys/mman.h.html">&lt;sys/mman.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/sys/uio.h.html">&lt;sys/uio.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../sysdeps/generic/_itoa.h.html">&lt;_itoa.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/dl-writev.h.html">&lt;dl-writev.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/not-cancel.h.html">&lt;not-cancel.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/* Read the whole contents of FILE into new mmap'd space with given</i></td></tr>
+<tr><th id="39">39</th><td><i>   protections.  *SIZEP gets the size of the file.  On error MAP_FAILED</i></td></tr>
+<tr><th id="40">40</th><td><i>   is returned.  */</i></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><em>void</em> *</td></tr>
+<tr><th id="43">43</th><td><dfn class="decl def fn" id="_dl_sysdep_read_whole_file" title='_dl_sysdep_read_whole_file' data-ref="_dl_sysdep_read_whole_file" data-ref-filename="_dl_sysdep_read_whole_file">_dl_sysdep_read_whole_file</dfn> (<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4file" title='file' data-type='const char *' data-ref="4file" data-ref-filename="4file">file</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col5 decl" id="5sizep" title='sizep' data-type='size_t *' data-ref="5sizep" data-ref-filename="5sizep">sizep</dfn>, <em>int</em> <dfn class="local col6 decl" id="6prot" title='prot' data-type='int' data-ref="6prot" data-ref-filename="6prot">prot</dfn>)</td></tr>
+<tr><th id="44">44</th><td>{</td></tr>
+<tr><th id="45">45</th><td>  <em>void</em> *<dfn class="local col7 decl" id="7result" title='result' data-type='void *' data-ref="7result" data-ref-filename="7result">result</dfn> = <a class="macro" href="../misc/sys/mman.h.html#44" title="((void *) -1)" data-ref="_M/MAP_FAILED">MAP_FAILED</a>;</td></tr>
+<tr><th id="46">46</th><td>  <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> <dfn class="local col8 decl" id="8st" title='st' data-type='struct stat64' data-ref="8st" data-ref-filename="8st">st</dfn>;</td></tr>
+<tr><th id="47">47</th><td>  <em>int</em> <dfn class="local col9 decl" id="9fd" title='fd' data-type='int' data-ref="9fd" data-ref-filename="9fd">fd</dfn> = <a class="ref fn" href="../sysdeps/unix/sysv/linux/not-cancel.h.html#__open64_nocancel" title='__open64_nocancel' data-ref="__open64_nocancel" data-ref-filename="__open64_nocancel">__open64_nocancel</a> (<a class="local col4 ref" href="#4file" title='file' data-ref="4file" data-ref-filename="4file">file</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#43" title="00" data-ref="_M/O_RDONLY">O_RDONLY</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#144" title="02000000" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a>);</td></tr>
+<tr><th id="48">48</th><td>  <b>if</b> (<a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a> &gt;= <var>0</var>)</td></tr>
+<tr><th id="49">49</th><td>    {</td></tr>
+<tr><th id="50">50</th><td>      <b>if</b> (<a class="ref fn" href="../io/sys/stat.h.html#__fxstat64" title='__fxstat64' data-ref="__fxstat64" data-ref-filename="__fxstat64">__fxstat64</a> (<a class="macro" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#44" title="1" data-ref="_M/_STAT_VER">_STAT_VER</a>, <a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a>, &amp;<a class="local col8 ref" href="#8st" title='st' data-ref="8st" data-ref-filename="8st">st</a>) &gt;= <var>0</var>)</td></tr>
+<tr><th id="51">51</th><td>	{</td></tr>
+<tr><th id="52">52</th><td>	  *<a class="local col5 ref" href="#5sizep" title='sizep' data-ref="5sizep" data-ref-filename="5sizep">sizep</a> = <a class="local col8 ref" href="#8st" title='st' data-ref="8st" data-ref-filename="8st">st</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	  <i>/* No need to map the file if it is empty.  */</i></td></tr>
+<tr><th id="55">55</th><td>	  <b>if</b> (*<a class="local col5 ref" href="#5sizep" title='sizep' data-ref="5sizep" data-ref-filename="5sizep">sizep</a> != <var>0</var>)</td></tr>
+<tr><th id="56">56</th><td>	    <i>/* Map a copy of the file contents.  */</i></td></tr>
+<tr><th id="57">57</th><td>	    <a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> = <a class="ref fn" href="../include/sys/mman.h.html#__mmap" title='__mmap' data-ref="__mmap" data-ref-filename="__mmap">__mmap</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, *<a class="local col5 ref" href="#5sizep" title='sizep' data-ref="5sizep" data-ref-filename="5sizep">sizep</a>, <a class="local col6 ref" href="#6prot" title='prot' data-ref="6prot" data-ref-filename="6prot">prot</a>,</td></tr>
+<tr><th id="58">58</th><td><u>#<span data-ppcond="58">ifdef</span> <span class="macro" data-ref="_M/MAP_COPY">MAP_COPY</span></u></td></tr>
+<tr><th id="59">59</th><td>			     MAP_COPY</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="58">else</span></u></td></tr>
+<tr><th id="61">61</th><td>			     <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#43" title="0x02" data-ref="_M/MAP_PRIVATE">MAP_PRIVATE</a></td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="58">endif</span></u></td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="63">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#53" data-ref="_M/MAP_FILE">MAP_FILE</a></u></td></tr>
+<tr><th id="64">64</th><td>			     | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#53" title="0" data-ref="_M/MAP_FILE">MAP_FILE</a></td></tr>
+<tr><th id="65">65</th><td><u>#<span data-ppcond="63">endif</span></u></td></tr>
+<tr><th id="66">66</th><td>			     , <a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a>, <var>0</var>);</td></tr>
+<tr><th id="67">67</th><td>	}</td></tr>
+<tr><th id="68">68</th><td>      <a class="ref fn" href="../sysdeps/unix/sysv/linux/not-cancel.h.html#__close_nocancel" title='__close_nocancel' data-ref="__close_nocancel" data-ref-filename="__close_nocancel">__close_nocancel</a> (<a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a>);</td></tr>
+<tr><th id="69">69</th><td>    }</td></tr>
+<tr><th id="70">70</th><td>  <b>return</b> <a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>;</td></tr>
+<tr><th id="71">71</th><td>}</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i  data-doc="_dl_debug_vdprintf">/* Bare-bones printf implementation.  This function only knows about</i></td></tr>
+<tr><th id="75">75</th><td><i  data-doc="_dl_debug_vdprintf">   the formats and flags needed and can handle only up to 64 stripes in</i></td></tr>
+<tr><th id="76">76</th><td><i  data-doc="_dl_debug_vdprintf">   the output.  */</i></td></tr>
+<tr><th id="77">77</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="78">78</th><td><dfn class="tu decl def fn" id="_dl_debug_vdprintf" title='_dl_debug_vdprintf' data-type='void _dl_debug_vdprintf(int fd, int tag_p, const char * fmt, struct __va_list_tag * arg)' data-ref="_dl_debug_vdprintf" data-ref-filename="_dl_debug_vdprintf">_dl_debug_vdprintf</dfn> (<em>int</em> <dfn class="local col0 decl" id="10fd" title='fd' data-type='int' data-ref="10fd" data-ref-filename="10fd">fd</dfn>, <em>int</em> <dfn class="local col1 decl" id="11tag_p" title='tag_p' data-type='int' data-ref="11tag_p" data-ref-filename="11tag_p">tag_p</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12fmt" title='fmt' data-type='const char *' data-ref="12fmt" data-ref-filename="12fmt">fmt</dfn>, <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col3 decl" id="13arg" title='arg' data-type='struct __va_list_tag *' data-ref="13arg" data-ref-filename="13arg">arg</dfn>)</td></tr>
+<tr><th id="79">79</th><td>{</td></tr>
+<tr><th id="80">80</th><td><u># define <dfn class="macro" id="_M/NIOVMAX" data-ref="_M/NIOVMAX">NIOVMAX</dfn> 64</u></td></tr>
+<tr><th id="81">81</th><td>  <b>struct</b> <a class="type" href="../misc/bits/types/struct_iovec.h.html#iovec" title='iovec' data-ref="iovec" data-ref-filename="iovec">iovec</a> <dfn class="local col4 decl" id="14iov" title='iov' data-type='struct iovec [64]' data-ref="14iov" data-ref-filename="14iov">iov</dfn>[<a class="macro" href="#80" title="64" data-ref="_M/NIOVMAX">NIOVMAX</a>];</td></tr>
+<tr><th id="82">82</th><td>  <em>int</em> <dfn class="local col5 decl" id="15niov" title='niov' data-type='int' data-ref="15niov" data-ref-filename="15niov">niov</dfn> = <var>0</var>;</td></tr>
+<tr><th id="83">83</th><td>  <a class="typedef" href="../io/fcntl.h.html#pid_t" title='pid_t' data-type='__pid_t' data-ref="pid_t" data-ref-filename="pid_t">pid_t</a> <dfn class="local col6 decl" id="16pid" title='pid' data-type='pid_t' data-ref="16pid" data-ref-filename="16pid">pid</dfn> = <var>0</var>;</td></tr>
+<tr><th id="84">84</th><td>  <em>char</em> <dfn class="local col7 decl" id="17pidbuf" title='pidbuf' data-type='char [12]' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</dfn>[<var>12</var>];</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <b>while</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="87">87</th><td>    {</td></tr>
+<tr><th id="88">88</th><td>      <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="18startp" title='startp' data-type='const char *' data-ref="18startp" data-ref-filename="18startp">startp</dfn> = <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>      <b>if</b> (<a class="local col1 ref" href="#11tag_p" title='tag_p' data-ref="11tag_p" data-ref-filename="11tag_p">tag_p</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="91">91</th><td>	{</td></tr>
+<tr><th id="92">92</th><td>	  <i>/* Generate the tag line once.  It consists of the PID and a</i></td></tr>
+<tr><th id="93">93</th><td><i>	     colon followed by a tab.  */</i></td></tr>
+<tr><th id="94">94</th><td>	  <b>if</b> (<a class="local col6 ref" href="#16pid" title='pid' data-ref="16pid" data-ref-filename="16pid">pid</a> == <var>0</var>)</td></tr>
+<tr><th id="95">95</th><td>	    {</td></tr>
+<tr><th id="96">96</th><td>	      <em>char</em> *<dfn class="local col9 decl" id="19p" title='p' data-type='char *' data-ref="19p" data-ref-filename="19p">p</dfn>;</td></tr>
+<tr><th id="97">97</th><td>	      <a class="local col6 ref" href="#16pid" title='pid' data-ref="16pid" data-ref-filename="16pid">pid</a> = <a class="ref fn" href="../include/unistd.h.html#__getpid" title='__getpid' data-ref="__getpid" data-ref-filename="__getpid">__getpid</a> ();</td></tr>
+<tr><th id="98">98</th><td>	      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((pid &gt;= 0 &amp;&amp; sizeof (pid_t) &lt;= 4) ? 1 : 0), __extension__ ({ if (pid &gt;= 0 &amp;&amp; sizeof (pid_t) &lt;= 4) ; else __assert_fail (&quot;pid &gt;= 0 &amp;&amp; sizeof (pid_t) &lt;= 4&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-misc.c&quot;, 98, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col6 ref" href="#16pid" title='pid' data-ref="16pid" data-ref-filename="16pid">pid</a> &gt;= <var>0</var> &amp;&amp; <b>sizeof</b> (<a class="typedef" href="../io/fcntl.h.html#pid_t" title='pid_t' data-type='__pid_t' data-ref="pid_t" data-ref-filename="pid_t">pid_t</a>) &lt;= <var>4</var>);</td></tr>
+<tr><th id="99">99</th><td>	      <a class="local col9 ref" href="#19p" title='p' data-ref="19p" data-ref-filename="19p">p</a> = <a class="macro" href="../sysdeps/generic/_itoa.h.html#99" title="_itoa_word (pid, &amp;pidbuf[10], 10, 0)" data-ref="_M/_itoa">_itoa</a> (<a class="local col6 ref" href="#16pid" title='pid' data-ref="16pid" data-ref-filename="16pid">pid</a>, &amp;<a class="local col7 ref" href="#17pidbuf" title='pidbuf' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</a>[<var>10</var>], <var>10</var>, <var>0</var>);</td></tr>
+<tr><th id="100">100</th><td>	      <b>while</b> (<a class="local col9 ref" href="#19p" title='p' data-ref="19p" data-ref-filename="19p">p</a> &gt; <a class="local col7 ref" href="#17pidbuf" title='pidbuf' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</a>)</td></tr>
+<tr><th id="101">101</th><td>		*--<a class="local col9 ref" href="#19p" title='p' data-ref="19p" data-ref-filename="19p">p</a> = <kbd>' '</kbd>;</td></tr>
+<tr><th id="102">102</th><td>	      <a class="local col7 ref" href="#17pidbuf" title='pidbuf' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</a>[<var>10</var>] = <kbd>':'</kbd>;</td></tr>
+<tr><th id="103">103</th><td>	      <a class="local col7 ref" href="#17pidbuf" title='pidbuf' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</a>[<var>11</var>] = <kbd>'\t'</kbd>;</td></tr>
+<tr><th id="104">104</th><td>	    }</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	  <i>/* Append to the output.  */</i></td></tr>
+<tr><th id="107">107</th><td>	  <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((niov &lt; 64) ? 1 : 0), __extension__ ({ if (niov &lt; 64) ; else __assert_fail (&quot;niov &lt; NIOVMAX&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-misc.c&quot;, 107, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a> &lt; <a class="macro" href="#80" title="64" data-ref="_M/NIOVMAX">NIOVMAX</a>);</td></tr>
+<tr><th id="108">108</th><td>	  <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <var>12</var>;</td></tr>
+<tr><th id="109">109</th><td>	  <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>++].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = <a class="local col7 ref" href="#17pidbuf" title='pidbuf' data-ref="17pidbuf" data-ref-filename="17pidbuf">pidbuf</a>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	  <i>/* No more tags until we see the next newline.  */</i></td></tr>
+<tr><th id="112">112</th><td>	  <a class="local col1 ref" href="#11tag_p" title='tag_p' data-ref="11tag_p" data-ref-filename="11tag_p">tag_p</a> = -<var>1</var>;</td></tr>
+<tr><th id="113">113</th><td>	}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>      <i>/* Skip everything except % and \n (if tags are needed).  */</i></td></tr>
+<tr><th id="116">116</th><td>      <b>while</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> != <kbd>'\0'</kbd> &amp;&amp; *<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> != <kbd>'%'</kbd> &amp;&amp; (! <a class="local col1 ref" href="#11tag_p" title='tag_p' data-ref="11tag_p" data-ref-filename="11tag_p">tag_p</a> || *<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> != <kbd>'\n'</kbd>))</td></tr>
+<tr><th id="117">117</th><td>	++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>      <i>/* Append constant string.  */</i></td></tr>
+<tr><th id="120">120</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((niov &lt; 64) ? 1 : 0), __extension__ ({ if (niov &lt; 64) ; else __assert_fail (&quot;niov &lt; NIOVMAX&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-misc.c&quot;, 120, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a> &lt; <a class="macro" href="#80" title="64" data-ref="_M/NIOVMAX">NIOVMAX</a>);</td></tr>
+<tr><th id="121">121</th><td>      <b>if</b> ((<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> - <a class="local col8 ref" href="#18startp" title='startp' data-ref="18startp" data-ref-filename="18startp">startp</a>) != <var>0</var>)</td></tr>
+<tr><th id="122">122</th><td>	<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>++].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = (<em>char</em> *) <a class="local col8 ref" href="#18startp" title='startp' data-ref="18startp" data-ref-filename="18startp">startp</a>;</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>      <b>if</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'%'</kbd>)</td></tr>
+<tr><th id="125">125</th><td>	{</td></tr>
+<tr><th id="126">126</th><td>	  <i>/* It is a format specifier.  */</i></td></tr>
+<tr><th id="127">127</th><td>	  <em>char</em> <dfn class="local col0 decl" id="20fill" title='fill' data-type='char' data-ref="20fill" data-ref-filename="20fill">fill</dfn> = <kbd>' '</kbd>;</td></tr>
+<tr><th id="128">128</th><td>	  <em>int</em> <dfn class="local col1 decl" id="21width" title='width' data-type='int' data-ref="21width" data-ref-filename="21width">width</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="129">129</th><td>	  <em>int</em> <dfn class="local col2 decl" id="22prec" title='prec' data-type='int' data-ref="22prec" data-ref-filename="22prec">prec</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="130">130</th><td><u>#<span data-ppcond="130">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span></u></td></tr>
+<tr><th id="131">131</th><td>	  <em>int</em> <dfn class="local col3 decl" id="23long_mod" title='long_mod' data-type='int' data-ref="23long_mod" data-ref-filename="23long_mod">long_mod</dfn> = <var>0</var>;</td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="130">endif</span></u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	  <i>/* Recognize zero-digit fill flag.  */</i></td></tr>
+<tr><th id="135">135</th><td>	  <b>if</b> (*++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'0'</kbd>)</td></tr>
+<tr><th id="136">136</th><td>	    {</td></tr>
+<tr><th id="137">137</th><td>	      <a class="local col0 ref" href="#20fill" title='fill' data-ref="20fill" data-ref-filename="20fill">fill</a> = <kbd>'0'</kbd>;</td></tr>
+<tr><th id="138">138</th><td>	      ++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="139">139</th><td>	    }</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	  <i>/* See whether with comes from a parameter.  Note that no other</i></td></tr>
+<tr><th id="142">142</th><td><i>	     way to specify the width is implemented.  */</i></td></tr>
+<tr><th id="143">143</th><td>	  <b>if</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'*'</kbd>)</td></tr>
+<tr><th id="144">144</th><td>	    {</td></tr>
+<tr><th id="145">145</th><td>	      <a class="local col1 ref" href="#21width" title='width' data-ref="21width" data-ref-filename="21width">width</a> = <span class="macro" title="__builtin_va_arg(arg, int)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13arg" title='arg' data-ref="13arg" data-ref-filename="13arg">arg</a>, <em>int</em>);</td></tr>
+<tr><th id="146">146</th><td>	      ++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="147">147</th><td>	    }</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>	  <i>/* Handle precision.  */</i></td></tr>
+<tr><th id="150">150</th><td>	  <b>if</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'.'</kbd> &amp;&amp; <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>[<var>1</var>] == <kbd>'*'</kbd>)</td></tr>
+<tr><th id="151">151</th><td>	    {</td></tr>
+<tr><th id="152">152</th><td>	      <a class="local col2 ref" href="#22prec" title='prec' data-ref="22prec" data-ref-filename="22prec">prec</a> = <span class="macro" title="__builtin_va_arg(arg, int)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13arg" title='arg' data-ref="13arg" data-ref-filename="13arg">arg</a>, <em>int</em>);</td></tr>
+<tr><th id="153">153</th><td>	      <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> += <var>2</var>;</td></tr>
+<tr><th id="154">154</th><td>	    }</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	  <i>/* Recognize the l modifier.  It is only important on some</i></td></tr>
+<tr><th id="157">157</th><td><i>	     platforms where long and int have a different size.  We</i></td></tr>
+<tr><th id="158">158</th><td><i>	     can use the same code for size_t.  */</i></td></tr>
+<tr><th id="159">159</th><td>	  <b>if</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'l'</kbd> || *<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'Z'</kbd>)</td></tr>
+<tr><th id="160">160</th><td>	    {</td></tr>
+<tr><th id="161">161</th><td><u>#<span data-ppcond="161">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span></u></td></tr>
+<tr><th id="162">162</th><td>	      <a class="local col3 ref" href="#23long_mod" title='long_mod' data-ref="23long_mod" data-ref-filename="23long_mod">long_mod</a> = <var>1</var>;</td></tr>
+<tr><th id="163">163</th><td><u>#<span data-ppcond="161">endif</span></u></td></tr>
+<tr><th id="164">164</th><td>	      ++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="165">165</th><td>	    }</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>	  <b>switch</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>)</td></tr>
+<tr><th id="168">168</th><td>	    {</td></tr>
+<tr><th id="169">169</th><td>	      <i>/* Integer formatting.  */</i></td></tr>
+<tr><th id="170">170</th><td>	    <b>case</b> <kbd>'u'</kbd>:</td></tr>
+<tr><th id="171">171</th><td>	    <b>case</b> <kbd>'x'</kbd>:</td></tr>
+<tr><th id="172">172</th><td>	      {</td></tr>
+<tr><th id="173">173</th><td>		<i>/* We have to make a difference if long and int have a</i></td></tr>
+<tr><th id="174">174</th><td><i>		   different size.  */</i></td></tr>
+<tr><th id="175">175</th><td><u>#<span data-ppcond="175">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span></u></td></tr>
+<tr><th id="176">176</th><td>		<em>unsigned</em> <em>long</em> <em>int</em> <dfn class="local col4 decl" id="24num" title='num' data-type='unsigned long' data-ref="24num" data-ref-filename="24num">num</dfn> = (<a class="local col3 ref" href="#23long_mod" title='long_mod' data-ref="23long_mod" data-ref-filename="23long_mod">long_mod</a></td></tr>
+<tr><th id="177">177</th><td>					 ? <span class="macro" title="__builtin_va_arg(arg, unsigned long int)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13arg" title='arg' data-ref="13arg" data-ref-filename="13arg">arg</a>, <em>unsigned</em> <em>long</em> <em>int</em>)</td></tr>
+<tr><th id="178">178</th><td>					 : <span class="macro" title="__builtin_va_arg(arg, unsigned int)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13arg" title='arg' data-ref="13arg" data-ref-filename="13arg">arg</a>, <em>unsigned</em> <em>int</em>));</td></tr>
+<tr><th id="179">179</th><td><u>#<span data-ppcond="175">else</span></u></td></tr>
+<tr><th id="180">180</th><td>		<em>unsigned</em> <em>long</em> <em>int</em> num = va_arg (arg, <em>unsigned</em> <em>int</em>);</td></tr>
+<tr><th id="181">181</th><td><u>#<span data-ppcond="175">endif</span></u></td></tr>
+<tr><th id="182">182</th><td>		<i>/* We use alloca() to allocate the buffer with the most</i></td></tr>
+<tr><th id="183">183</th><td><i>		   pessimistic guess for the size.  Using alloca() allows</i></td></tr>
+<tr><th id="184">184</th><td><i>		   having more than one integer formatting in a call.  */</i></td></tr>
+<tr><th id="185">185</th><td>		<em>char</em> *<dfn class="local col5 decl" id="25buf" title='buf' data-type='char *' data-ref="25buf" data-ref-filename="25buf">buf</dfn> = (<em>char</em> *) <a class="macro" href="../stdlib/alloca.h.html#35" title="__builtin_alloca (3 * sizeof (unsigned long int))" data-ref="_M/alloca">alloca</a> (<var>3</var> * <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="186">186</th><td>		<em>char</em> *<dfn class="local col6 decl" id="26endp" title='endp' data-type='char *' data-ref="26endp" data-ref-filename="26endp">endp</dfn> = &amp;<a class="local col5 ref" href="#25buf" title='buf' data-ref="25buf" data-ref-filename="25buf">buf</a>[<var>3</var> * <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>int</em>)];</td></tr>
+<tr><th id="187">187</th><td>		<em>char</em> *<dfn class="local col7 decl" id="27cp" title='cp' data-type='char *' data-ref="27cp" data-ref-filename="27cp">cp</dfn> = <a class="macro" href="../sysdeps/generic/_itoa.h.html#99" title="_itoa_word (num, endp, *fmt == &apos;x&apos; ? 16 : 10, 0)" data-ref="_M/_itoa">_itoa</a> (<a class="local col4 ref" href="#24num" title='num' data-ref="24num" data-ref-filename="24num">num</a>, <a class="local col6 ref" href="#26endp" title='endp' data-ref="26endp" data-ref-filename="26endp">endp</a>, *<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'x'</kbd> ? <var>16</var> : <var>10</var>, <var>0</var>);</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>		<i>/* Pad to the width the user specified.  */</i></td></tr>
+<tr><th id="190">190</th><td>		<b>if</b> (<a class="local col1 ref" href="#21width" title='width' data-ref="21width" data-ref-filename="21width">width</a> != -<var>1</var>)</td></tr>
+<tr><th id="191">191</th><td>		  <b>while</b> (<a class="local col6 ref" href="#26endp" title='endp' data-ref="26endp" data-ref-filename="26endp">endp</a> - <a class="local col7 ref" href="#27cp" title='cp' data-ref="27cp" data-ref-filename="27cp">cp</a> &lt; <a class="local col1 ref" href="#21width" title='width' data-ref="21width" data-ref-filename="21width">width</a>)</td></tr>
+<tr><th id="192">192</th><td>		    *--<a class="local col7 ref" href="#27cp" title='cp' data-ref="27cp" data-ref-filename="27cp">cp</a> = <a class="local col0 ref" href="#20fill" title='fill' data-ref="20fill" data-ref-filename="20fill">fill</a>;</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>		<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = <a class="local col7 ref" href="#27cp" title='cp' data-ref="27cp" data-ref-filename="27cp">cp</a>;</td></tr>
+<tr><th id="195">195</th><td>		<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <a class="local col6 ref" href="#26endp" title='endp' data-ref="26endp" data-ref-filename="26endp">endp</a> - <a class="local col7 ref" href="#27cp" title='cp' data-ref="27cp" data-ref-filename="27cp">cp</a>;</td></tr>
+<tr><th id="196">196</th><td>		++<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>;</td></tr>
+<tr><th id="197">197</th><td>	      }</td></tr>
+<tr><th id="198">198</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	    <b>case</b> <kbd>'s'</kbd>:</td></tr>
+<tr><th id="201">201</th><td>	      <i>/* Get the string argument.  */</i></td></tr>
+<tr><th id="202">202</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = <span class="macro" title="__builtin_va_arg(arg, char *)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13arg" title='arg' data-ref="13arg" data-ref-filename="13arg">arg</a>, <em>char</em> *);</td></tr>
+<tr><th id="203">203</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a>);</td></tr>
+<tr><th id="204">204</th><td>	      <b>if</b> (<a class="local col2 ref" href="#22prec" title='prec' data-ref="22prec" data-ref-filename="22prec">prec</a> != -<var>1</var>)</td></tr>
+<tr><th id="205">205</th><td>		<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <a class="macro" href="../misc/sys/param.h.html#102" title="((((size_t) prec)&lt;(iov[niov].iov_len))?((size_t) prec):(iov[niov].iov_len))" data-ref="_M/MIN">MIN</a> ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col2 ref" href="#22prec" title='prec' data-ref="22prec" data-ref-filename="22prec">prec</a>, <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a>);</td></tr>
+<tr><th id="206">206</th><td>	      ++<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>;</td></tr>
+<tr><th id="207">207</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	    <b>case</b> <kbd>'%'</kbd>:</td></tr>
+<tr><th id="210">210</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = (<em>void</em> *) <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="211">211</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <var>1</var>;</td></tr>
+<tr><th id="212">212</th><td>	      ++<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>;</td></tr>
+<tr><th id="213">213</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>	    <b>default</b>:</td></tr>
+<tr><th id="216">216</th><td>	      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((! &quot;invalid format specifier&quot;) ? 1 : 0), __extension__ ({ if (! &quot;invalid format specifier&quot;) ; else __assert_fail (&quot;! \&quot;invalid format specifier\&quot;&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-misc.c&quot;, 216, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (! <q>"invalid format specifier"</q>);</td></tr>
+<tr><th id="217">217</th><td>	    }</td></tr>
+<tr><th id="218">218</th><td>	  ++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="219">219</th><td>	}</td></tr>
+<tr><th id="220">220</th><td>      <b>else</b> <b>if</b> (*<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <kbd>'\n'</kbd>)</td></tr>
+<tr><th id="221">221</th><td>	{</td></tr>
+<tr><th id="222">222</th><td>	  <i>/* See whether we have to print a single newline character.  */</i></td></tr>
+<tr><th id="223">223</th><td>	  <b>if</b> (<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a> == <a class="local col8 ref" href="#18startp" title='startp' data-ref="18startp" data-ref-filename="18startp">startp</a>)</td></tr>
+<tr><th id="224">224</th><td>	    {</td></tr>
+<tr><th id="225">225</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_base" title='iovec::iov_base' data-ref="iovec::iov_base" data-ref-filename="iovec..iov_base">iov_base</a> = (<em>char</em> *) <a class="local col8 ref" href="#18startp" title='startp' data-ref="18startp" data-ref-filename="18startp">startp</a>;</td></tr>
+<tr><th id="226">226</th><td>	      <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>++].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a> = <var>1</var>;</td></tr>
+<tr><th id="227">227</th><td>	    }</td></tr>
+<tr><th id="228">228</th><td>	  <b>else</b></td></tr>
+<tr><th id="229">229</th><td>	    <i>/* No, just add it to the rest of the string.  */</i></td></tr>
+<tr><th id="230">230</th><td>	    ++<a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>[<a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a> - <var>1</var>].<a class="ref field" href="../misc/bits/types/struct_iovec.h.html#iovec::iov_len" title='iovec::iov_len' data-ref="iovec::iov_len" data-ref-filename="iovec..iov_len">iov_len</a>;</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	  <i>/* Next line, print a tag again.  */</i></td></tr>
+<tr><th id="233">233</th><td>	  <a class="local col1 ref" href="#11tag_p" title='tag_p' data-ref="11tag_p" data-ref-filename="11tag_p">tag_p</a> = <var>1</var>;</td></tr>
+<tr><th id="234">234</th><td>	  ++<a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>;</td></tr>
+<tr><th id="235">235</th><td>	}</td></tr>
+<tr><th id="236">236</th><td>    }</td></tr>
+<tr><th id="237">237</th><td></td></tr>
+<tr><th id="238">238</th><td>  <i>/* Finally write the result.  */</i></td></tr>
+<tr><th id="239">239</th><td>  <a class="ref fn" href="../sysdeps/unix/sysv/linux/dl-writev.h.html#_dl_writev" title='_dl_writev' data-ref="_dl_writev" data-ref-filename="_dl_writev">_dl_writev</a> (<a class="local col0 ref" href="#10fd" title='fd' data-ref="10fd" data-ref-filename="10fd">fd</a>, <a class="local col4 ref" href="#14iov" title='iov' data-ref="14iov" data-ref-filename="14iov">iov</a>, <a class="local col5 ref" href="#15niov" title='niov' data-ref="15niov" data-ref-filename="15niov">niov</a>);</td></tr>
+<tr><th id="240">240</th><td>}</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td><i>/* Write to debug file.  */</i></td></tr>
+<tr><th id="244">244</th><td><em>void</em></td></tr>
+<tr><th id="245">245</th><td><dfn class="decl def fn" id="_dl_debug_printf" title='_dl_debug_printf' data-ref="_dl_debug_printf" data-ref-filename="_dl_debug_printf">_dl_debug_printf</dfn> (<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="28fmt" title='fmt' data-type='const char *' data-ref="28fmt" data-ref-filename="28fmt">fmt</dfn>, ...)</td></tr>
+<tr><th id="246">246</th><td>{</td></tr>
+<tr><th id="247">247</th><td>  <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col9 decl" id="29arg" title='arg' data-type='va_list' data-ref="29arg" data-ref-filename="29arg">arg</dfn>;</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td>  <span class="macro" title="__builtin_va_start(arg, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col9 ref" href="#29arg" title='arg' data-ref="29arg" data-ref-filename="29arg">arg</a>, <a class="local col8 ref" href="#28fmt" title='fmt' data-ref="28fmt" data-ref-filename="28fmt">fmt</a>);</td></tr>
+<tr><th id="250">250</th><td>  <a class="tu ref fn" href="#_dl_debug_vdprintf" title='_dl_debug_vdprintf' data-use='c' data-ref="_dl_debug_vdprintf" data-ref-filename="_dl_debug_vdprintf">_dl_debug_vdprintf</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#468" title="_dl_debug_fd" data-ref="_M/GLRO">GLRO</a>(dl_debug_fd), <var>1</var>, <a class="local col8 ref" href="#28fmt" title='fmt' data-ref="28fmt" data-ref-filename="28fmt">fmt</a>, <a class="local col9 ref" href="#29arg" title='arg' data-ref="29arg" data-ref-filename="29arg">arg</a>);</td></tr>
+<tr><th id="251">251</th><td>  <span class="macro" title="__builtin_va_end(arg)" data-ref="_M/va_end">va_end</span> (<a class="local col9 ref" href="#29arg" title='arg' data-ref="29arg" data-ref-filename="29arg">arg</a>);</td></tr>
+<tr><th id="252">252</th><td>}</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td><i>/* Write to debug file but don't start with a tag.  */</i></td></tr>
+<tr><th id="256">256</th><td><em>void</em></td></tr>
+<tr><th id="257">257</th><td><dfn class="decl def fn" id="_dl_debug_printf_c" title='_dl_debug_printf_c' data-ref="_dl_debug_printf_c" data-ref-filename="_dl_debug_printf_c">_dl_debug_printf_c</dfn> (<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="30fmt" title='fmt' data-type='const char *' data-ref="30fmt" data-ref-filename="30fmt">fmt</dfn>, ...)</td></tr>
+<tr><th id="258">258</th><td>{</td></tr>
+<tr><th id="259">259</th><td>  <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col1 decl" id="31arg" title='arg' data-type='va_list' data-ref="31arg" data-ref-filename="31arg">arg</dfn>;</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>  <span class="macro" title="__builtin_va_start(arg, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col1 ref" href="#31arg" title='arg' data-ref="31arg" data-ref-filename="31arg">arg</a>, <a class="local col0 ref" href="#30fmt" title='fmt' data-ref="30fmt" data-ref-filename="30fmt">fmt</a>);</td></tr>
+<tr><th id="262">262</th><td>  <a class="tu ref fn" href="#_dl_debug_vdprintf" title='_dl_debug_vdprintf' data-use='c' data-ref="_dl_debug_vdprintf" data-ref-filename="_dl_debug_vdprintf">_dl_debug_vdprintf</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#468" title="_dl_debug_fd" data-ref="_M/GLRO">GLRO</a>(dl_debug_fd), -<var>1</var>, <a class="local col0 ref" href="#30fmt" title='fmt' data-ref="30fmt" data-ref-filename="30fmt">fmt</a>, <a class="local col1 ref" href="#31arg" title='arg' data-ref="31arg" data-ref-filename="31arg">arg</a>);</td></tr>
+<tr><th id="263">263</th><td>  <span class="macro" title="__builtin_va_end(arg)" data-ref="_M/va_end">va_end</span> (<a class="local col1 ref" href="#31arg" title='arg' data-ref="31arg" data-ref-filename="31arg">arg</a>);</td></tr>
+<tr><th id="264">264</th><td>}</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td><i>/* Write the given file descriptor.  */</i></td></tr>
+<tr><th id="268">268</th><td><em>void</em></td></tr>
+<tr><th id="269">269</th><td><dfn class="decl def fn" id="_dl_dprintf" title='_dl_dprintf' data-ref="_dl_dprintf" data-ref-filename="_dl_dprintf">_dl_dprintf</dfn> (<em>int</em> <dfn class="local col2 decl" id="32fd" title='fd' data-type='int' data-ref="32fd" data-ref-filename="32fd">fd</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="33fmt" title='fmt' data-type='const char *' data-ref="33fmt" data-ref-filename="33fmt">fmt</dfn>, ...)</td></tr>
+<tr><th id="270">270</th><td>{</td></tr>
+<tr><th id="271">271</th><td>  <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col4 decl" id="34arg" title='arg' data-type='va_list' data-ref="34arg" data-ref-filename="34arg">arg</dfn>;</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>  <span class="macro" title="__builtin_va_start(arg, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col4 ref" href="#34arg" title='arg' data-ref="34arg" data-ref-filename="34arg">arg</a>, <a class="local col3 ref" href="#33fmt" title='fmt' data-ref="33fmt" data-ref-filename="33fmt">fmt</a>);</td></tr>
+<tr><th id="274">274</th><td>  <a class="tu ref fn" href="#_dl_debug_vdprintf" title='_dl_debug_vdprintf' data-use='c' data-ref="_dl_debug_vdprintf" data-ref-filename="_dl_debug_vdprintf">_dl_debug_vdprintf</a> (<a class="local col2 ref" href="#32fd" title='fd' data-ref="32fd" data-ref-filename="32fd">fd</a>, <var>0</var>, <a class="local col3 ref" href="#33fmt" title='fmt' data-ref="33fmt" data-ref-filename="33fmt">fmt</a>, <a class="local col4 ref" href="#34arg" title='arg' data-ref="34arg" data-ref-filename="34arg">arg</a>);</td></tr>
+<tr><th id="275">275</th><td>  <span class="macro" title="__builtin_va_end(arg)" data-ref="_M/va_end">va_end</span> (<a class="local col4 ref" href="#34arg" title='arg' data-ref="34arg" data-ref-filename="34arg">arg</a>);</td></tr>
+<tr><th id="276">276</th><td>}</td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><i>/* Test whether given NAME matches any of the names of the given object.  */</i></td></tr>
+<tr><th id="280">280</th><td><em>int</em></td></tr>
+<tr><th id="281">281</th><td><dfn class="decl def fn" id="_dl_name_match_p" title='_dl_name_match_p' data-ref="_dl_name_match_p" data-ref-filename="_dl_name_match_p">_dl_name_match_p</dfn> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="35name" title='name' data-type='const char *' data-ref="35name" data-ref-filename="35name">name</dfn>, <em>const</em> <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col6 decl" id="36map" title='map' data-type='const struct link_map *' data-ref="36map" data-ref-filename="36map">map</dfn>)</td></tr>
+<tr><th id="282">282</th><td>{</td></tr>
+<tr><th id="283">283</th><td>  <b>if</b> (<a class="ref fn" href="../string/string.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a> (<a class="local col5 ref" href="#35name" title='name' data-ref="35name" data-ref-filename="35name">name</a>, <a class="local col6 ref" href="#36map" title='map' data-ref="36map" data-ref-filename="36map">map</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_name" title='link_map::l_name' data-ref="link_map::l_name" data-ref-filename="link_map..l_name">l_name</a>) == <var>0</var>)</td></tr>
+<tr><th id="284">284</th><td>    <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td>  <b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#libname_list" title='libname_list' data-ref="libname_list" data-ref-filename="libname_list">libname_list</a> *<dfn class="local col7 decl" id="37runp" title='runp' data-type='struct libname_list *' data-ref="37runp" data-ref-filename="37runp">runp</dfn> = <a class="local col6 ref" href="#36map" title='map' data-ref="36map" data-ref-filename="36map">map</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_libname" title='link_map::l_libname' data-ref="link_map::l_libname" data-ref-filename="link_map..l_libname">l_libname</a>;</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>  <b>while</b> (<a class="local col7 ref" href="#37runp" title='runp' data-ref="37runp" data-ref-filename="37runp">runp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="289">289</th><td>    <b>if</b> (<a class="ref fn" href="../string/string.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a> (<a class="local col5 ref" href="#35name" title='name' data-ref="35name" data-ref-filename="35name">name</a>, <a class="local col7 ref" href="#37runp" title='runp' data-ref="37runp" data-ref-filename="37runp">runp</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::name" title='libname_list::name' data-ref="libname_list::name" data-ref-filename="libname_list..name">name</a>) == <var>0</var>)</td></tr>
+<tr><th id="290">290</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="291">291</th><td>    <b>else</b></td></tr>
+<tr><th id="292">292</th><td>      <a class="local col7 ref" href="#37runp" title='runp' data-ref="37runp" data-ref-filename="37runp">runp</a> = <a class="local col7 ref" href="#37runp" title='runp' data-ref="37runp" data-ref-filename="37runp">runp</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::next" title='libname_list::next' data-ref="libname_list::next" data-ref-filename="libname_list..next">next</a>;</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="295">295</th><td>}</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><em>unsigned</em> <em>long</em> <em>int</em></td></tr>
+<tr><th id="299">299</th><td><dfn class="decl def fn" id="_dl_higher_prime_number" title='_dl_higher_prime_number' data-ref="_dl_higher_prime_number" data-ref-filename="_dl_higher_prime_number">_dl_higher_prime_number</dfn> (<em>unsigned</em> <em>long</em> <em>int</em> <dfn class="local col8 decl" id="38n" title='n' data-type='unsigned long' data-ref="38n" data-ref-filename="38n">n</dfn>)</td></tr>
+<tr><th id="300">300</th><td>{</td></tr>
+<tr><th id="301">301</th><td>  <i>/* These are primes that are near, but slightly smaller than, a</i></td></tr>
+<tr><th id="302">302</th><td><i>     power of two.  */</i></td></tr>
+<tr><th id="303">303</th><td>  <em>static</em> <em>const</em> <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col9 decl" id="39primes" title='primes' data-type='const uint32_t [30]' data-ref="39primes" data-ref-filename="39primes">primes</dfn>[] = {</td></tr>
+<tr><th id="304">304</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="7U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>7</var>),</td></tr>
+<tr><th id="305">305</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="13U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>13</var>),</td></tr>
+<tr><th id="306">306</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="31U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>31</var>),</td></tr>
+<tr><th id="307">307</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="61U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>61</var>),</td></tr>
+<tr><th id="308">308</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="127U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>127</var>),</td></tr>
+<tr><th id="309">309</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="251U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>251</var>),</td></tr>
+<tr><th id="310">310</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="509U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>509</var>),</td></tr>
+<tr><th id="311">311</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="1021U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>1021</var>),</td></tr>
+<tr><th id="312">312</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="2039U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>2039</var>),</td></tr>
+<tr><th id="313">313</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="4093U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>4093</var>),</td></tr>
+<tr><th id="314">314</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="8191U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>8191</var>),</td></tr>
+<tr><th id="315">315</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="16381U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>16381</var>),</td></tr>
+<tr><th id="316">316</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="32749U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>32749</var>),</td></tr>
+<tr><th id="317">317</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="65521U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>65521</var>),</td></tr>
+<tr><th id="318">318</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="131071U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>131071</var>),</td></tr>
+<tr><th id="319">319</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="262139U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>262139</var>),</td></tr>
+<tr><th id="320">320</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="524287U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>524287</var>),</td></tr>
+<tr><th id="321">321</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="1048573U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>1048573</var>),</td></tr>
+<tr><th id="322">322</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="2097143U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>2097143</var>),</td></tr>
+<tr><th id="323">323</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="4194301U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>4194301</var>),</td></tr>
+<tr><th id="324">324</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="8388593U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>8388593</var>),</td></tr>
+<tr><th id="325">325</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="16777213U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>16777213</var>),</td></tr>
+<tr><th id="326">326</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="33554393U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>33554393</var>),</td></tr>
+<tr><th id="327">327</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="67108859U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>67108859</var>),</td></tr>
+<tr><th id="328">328</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="134217689U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>134217689</var>),</td></tr>
+<tr><th id="329">329</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="268435399U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>268435399</var>),</td></tr>
+<tr><th id="330">330</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="536870909U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>536870909</var>),</td></tr>
+<tr><th id="331">331</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="1073741789U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>1073741789</var>),</td></tr>
+<tr><th id="332">332</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="2147483647U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>2147483647</var>),</td></tr>
+<tr><th id="333">333</th><td>				       <i>/* 4294967291L */</i></td></tr>
+<tr><th id="334">334</th><td>    <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="2147483647U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>2147483647</var>) + <a class="macro" href="../sysdeps/generic/stdint.h.html#260" title="2147483644U" data-ref="_M/UINT32_C">UINT32_C</a> (<var>2147483644</var>)</td></tr>
+<tr><th id="335">335</th><td>  };</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>  <em>const</em> <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="local col0 decl" id="40low" title='low' data-type='const uint32_t *' data-ref="40low" data-ref-filename="40low">low</dfn> = &amp;<a class="local col9 ref" href="#39primes" title='primes' data-ref="39primes" data-ref-filename="39primes">primes</a>[<var>0</var>];</td></tr>
+<tr><th id="338">338</th><td>  <em>const</em> <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="local col1 decl" id="41high" title='high' data-type='const uint32_t *' data-ref="41high" data-ref-filename="41high">high</dfn> = &amp;<a class="local col9 ref" href="#39primes" title='primes' data-ref="39primes" data-ref-filename="39primes">primes</a>[<b>sizeof</b> (<a class="local col9 ref" href="#39primes" title='primes' data-ref="39primes" data-ref-filename="39primes">primes</a>) / <b>sizeof</b> (<a class="local col9 ref" href="#39primes" title='primes' data-ref="39primes" data-ref-filename="39primes">primes</a>[<var>0</var>])];</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td>  <b>while</b> (<a class="local col0 ref" href="#40low" title='low' data-ref="40low" data-ref-filename="40low">low</a> != <a class="local col1 ref" href="#41high" title='high' data-ref="41high" data-ref-filename="41high">high</a>)</td></tr>
+<tr><th id="341">341</th><td>    {</td></tr>
+<tr><th id="342">342</th><td>      <em>const</em> <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="local col2 decl" id="42mid" title='mid' data-type='const uint32_t *' data-ref="42mid" data-ref-filename="42mid">mid</dfn> = <a class="local col0 ref" href="#40low" title='low' data-ref="40low" data-ref-filename="40low">low</a> + (<a class="local col1 ref" href="#41high" title='high' data-ref="41high" data-ref-filename="41high">high</a> - <a class="local col0 ref" href="#40low" title='low' data-ref="40low" data-ref-filename="40low">low</a>) / <var>2</var>;</td></tr>
+<tr><th id="343">343</th><td>      <b>if</b> (<a class="local col8 ref" href="#38n" title='n' data-ref="38n" data-ref-filename="38n">n</a> &gt; *<a class="local col2 ref" href="#42mid" title='mid' data-ref="42mid" data-ref-filename="42mid">mid</a>)</td></tr>
+<tr><th id="344">344</th><td>       <a class="local col0 ref" href="#40low" title='low' data-ref="40low" data-ref-filename="40low">low</a> = <a class="local col2 ref" href="#42mid" title='mid' data-ref="42mid" data-ref-filename="42mid">mid</a> + <var>1</var>;</td></tr>
+<tr><th id="345">345</th><td>      <b>else</b></td></tr>
+<tr><th id="346">346</th><td>       <a class="local col1 ref" href="#41high" title='high' data-ref="41high" data-ref-filename="41high">high</a> = <a class="local col2 ref" href="#42mid" title='mid' data-ref="42mid" data-ref-filename="42mid">mid</a>;</td></tr>
+<tr><th id="347">347</th><td>    }</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="349">if</span> 0</u></td></tr>
+<tr><th id="350">350</th><td>  <i>/* If we've run out of primes, abort.  */</i></td></tr>
+<tr><th id="351">351</th><td>  <b>if</b> (n &gt; *low)</td></tr>
+<tr><th id="352">352</th><td>    {</td></tr>
+<tr><th id="353">353</th><td>      fprintf (stderr, <q>"Cannot find prime bigger than %lu\n"</q>, n);</td></tr>
+<tr><th id="354">354</th><td>      abort ();</td></tr>
+<tr><th id="355">355</th><td>    }</td></tr>
+<tr><th id="356">356</th><td><u>#<span data-ppcond="349">endif</span></u></td></tr>
+<tr><th id="357">357</th><td></td></tr>
+<tr><th id="358">358</th><td>  <b>return</b> *<a class="local col0 ref" href="#40low" title='low' data-ref="40low" data-ref-filename="40low">low</a>;</td></tr>
+<tr><th id="359">359</th><td>}</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td><i>/* A stripped down strtoul-like implementation for very early use.  It</i></td></tr>
+<tr><th id="362">362</th><td><i>   does not set errno if the result is outside bounds because it may get</i></td></tr>
+<tr><th id="363">363</th><td><i>   called before errno may have been set up.  */</i></td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td><a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a></td></tr>
+<tr><th id="366">366</th><td><dfn class="decl def fn" id="_dl_strtoul" title='_dl_strtoul' data-ref="_dl_strtoul" data-ref-filename="_dl_strtoul">_dl_strtoul</dfn> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="43nptr" title='nptr' data-type='const char *' data-ref="43nptr" data-ref-filename="43nptr">nptr</dfn>, <em>char</em> **<dfn class="local col4 decl" id="44endptr" title='endptr' data-type='char **' data-ref="44endptr" data-ref-filename="44endptr">endptr</dfn>)</td></tr>
+<tr><th id="367">367</th><td>{</td></tr>
+<tr><th id="368">368</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="local col5 decl" id="45result" title='result' data-type='uint64_t' data-ref="45result" data-ref-filename="45result">result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="369">369</th><td>  <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col6 decl" id="46positive" title='positive' data-type='_Bool' data-ref="46positive" data-ref-filename="46positive">positive</dfn> = <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="370">370</th><td>  <em>unsigned</em> <dfn class="local col7 decl" id="47max_digit" title='max_digit' data-type='unsigned int' data-ref="47max_digit" data-ref-filename="47max_digit">max_digit</dfn>;</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>  <b>while</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> == <kbd>' '</kbd> || *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="373">373</th><td>    ++<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td>  <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> == <kbd>'-'</kbd>)</td></tr>
+<tr><th id="376">376</th><td>    {</td></tr>
+<tr><th id="377">377</th><td>      <a class="local col6 ref" href="#46positive" title='positive' data-ref="46positive" data-ref-filename="46positive">positive</a> = <span class="macro" title="0" data-ref="_M/false">false</span>;</td></tr>
+<tr><th id="378">378</th><td>      ++<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="379">379</th><td>    }</td></tr>
+<tr><th id="380">380</th><td>  <b>else</b> <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> == <kbd>'+'</kbd>)</td></tr>
+<tr><th id="381">381</th><td>    ++<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td>  <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &lt; <kbd>'0'</kbd> || *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &gt; <kbd>'9'</kbd>)</td></tr>
+<tr><th id="384">384</th><td>    {</td></tr>
+<tr><th id="385">385</th><td>      <b>if</b> (<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="386">386</th><td>	*<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> = (<em>char</em> *) <a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="387">387</th><td>      <b>return</b> <var>0UL</var>;</td></tr>
+<tr><th id="388">388</th><td>    }</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>  <em>int</em> <dfn class="local col8 decl" id="48base" title='base' data-type='int' data-ref="48base" data-ref-filename="48base">base</dfn> = <var>10</var>;</td></tr>
+<tr><th id="391">391</th><td>  <a class="local col7 ref" href="#47max_digit" title='max_digit' data-ref="47max_digit" data-ref-filename="47max_digit">max_digit</a> = <var>9</var>;</td></tr>
+<tr><th id="392">392</th><td>  <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> == <kbd>'0'</kbd>)</td></tr>
+<tr><th id="393">393</th><td>    {</td></tr>
+<tr><th id="394">394</th><td>      <b>if</b> (<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>[<var>1</var>] == <kbd>'x'</kbd> || <a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>[<var>1</var>] == <kbd>'X'</kbd>)</td></tr>
+<tr><th id="395">395</th><td>	{</td></tr>
+<tr><th id="396">396</th><td>	  <a class="local col8 ref" href="#48base" title='base' data-ref="48base" data-ref-filename="48base">base</a> = <var>16</var>;</td></tr>
+<tr><th id="397">397</th><td>	  <a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> += <var>2</var>;</td></tr>
+<tr><th id="398">398</th><td>	}</td></tr>
+<tr><th id="399">399</th><td>      <b>else</b></td></tr>
+<tr><th id="400">400</th><td>	{</td></tr>
+<tr><th id="401">401</th><td>	  <a class="local col8 ref" href="#48base" title='base' data-ref="48base" data-ref-filename="48base">base</a> = <var>8</var>;</td></tr>
+<tr><th id="402">402</th><td>	  <a class="local col7 ref" href="#47max_digit" title='max_digit' data-ref="47max_digit" data-ref-filename="47max_digit">max_digit</a> = <var>7</var>;</td></tr>
+<tr><th id="403">403</th><td>	}</td></tr>
+<tr><th id="404">404</th><td>    }</td></tr>
+<tr><th id="405">405</th><td></td></tr>
+<tr><th id="406">406</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="407">407</th><td>    {</td></tr>
+<tr><th id="408">408</th><td>      <em>int</em> <dfn class="local col9 decl" id="49digval" title='digval' data-type='int' data-ref="49digval" data-ref-filename="49digval">digval</dfn>;</td></tr>
+<tr><th id="409">409</th><td>      <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &gt;= <kbd>'0'</kbd> &amp;&amp; *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &lt;= <kbd>'0'</kbd> + <a class="local col7 ref" href="#47max_digit" title='max_digit' data-ref="47max_digit" data-ref-filename="47max_digit">max_digit</a>)</td></tr>
+<tr><th id="410">410</th><td>        <a class="local col9 ref" href="#49digval" title='digval' data-ref="49digval" data-ref-filename="49digval">digval</a> = *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> - <kbd>'0'</kbd>;</td></tr>
+<tr><th id="411">411</th><td>      <b>else</b> <b>if</b> (<a class="local col8 ref" href="#48base" title='base' data-ref="48base" data-ref-filename="48base">base</a> == <var>16</var>)</td></tr>
+<tr><th id="412">412</th><td>        {</td></tr>
+<tr><th id="413">413</th><td>	  <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &gt;= <kbd>'a'</kbd> &amp;&amp; *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &lt;= <kbd>'f'</kbd>)</td></tr>
+<tr><th id="414">414</th><td>	    <a class="local col9 ref" href="#49digval" title='digval' data-ref="49digval" data-ref-filename="49digval">digval</a> = *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> - <kbd>'a'</kbd> + <var>10</var>;</td></tr>
+<tr><th id="415">415</th><td>	  <b>else</b> <b>if</b> (*<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &gt;= <kbd>'A'</kbd> &amp;&amp; *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> &lt;= <kbd>'F'</kbd>)</td></tr>
+<tr><th id="416">416</th><td>	    <a class="local col9 ref" href="#49digval" title='digval' data-ref="49digval" data-ref-filename="49digval">digval</a> = *<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a> - <kbd>'A'</kbd> + <var>10</var>;</td></tr>
+<tr><th id="417">417</th><td>	  <b>else</b></td></tr>
+<tr><th id="418">418</th><td>	    <b>break</b>;</td></tr>
+<tr><th id="419">419</th><td>	}</td></tr>
+<tr><th id="420">420</th><td>      <b>else</b></td></tr>
+<tr><th id="421">421</th><td>        <b>break</b>;</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td>      <b>if</b> (<a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a> &gt;= (<a class="macro" href="../sysdeps/generic/stdint.h.html#130" title="(18446744073709551615UL)" data-ref="_M/UINT64_MAX">UINT64_MAX</a> - <a class="local col9 ref" href="#49digval" title='digval' data-ref="49digval" data-ref-filename="49digval">digval</a>) / <a class="local col8 ref" href="#48base" title='base' data-ref="48base" data-ref-filename="48base">base</a>)</td></tr>
+<tr><th id="424">424</th><td>	{</td></tr>
+<tr><th id="425">425</th><td>	  <b>if</b> (<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="426">426</th><td>	    *<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> = (<em>char</em> *) <a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="427">427</th><td>	  <b>return</b> <a class="macro" href="../sysdeps/generic/stdint.h.html#130" title="(18446744073709551615UL)" data-ref="_M/UINT64_MAX">UINT64_MAX</a>;</td></tr>
+<tr><th id="428">428</th><td>	}</td></tr>
+<tr><th id="429">429</th><td>      <a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a> *= <a class="local col8 ref" href="#48base" title='base' data-ref="48base" data-ref-filename="48base">base</a>;</td></tr>
+<tr><th id="430">430</th><td>      <a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a> += <a class="local col9 ref" href="#49digval" title='digval' data-ref="49digval" data-ref-filename="49digval">digval</a>;</td></tr>
+<tr><th id="431">431</th><td>      ++<a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="432">432</th><td>    }</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>  <b>if</b> (<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="435">435</th><td>    *<a class="local col4 ref" href="#44endptr" title='endptr' data-ref="44endptr" data-ref-filename="44endptr">endptr</a> = (<em>char</em> *) <a class="local col3 ref" href="#43nptr" title='nptr' data-ref="43nptr" data-ref-filename="43nptr">nptr</a>;</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td>  <i>/* Avoid 64-bit multiplication.  */</i></td></tr>
+<tr><th id="438">438</th><td>  <b>if</b> (!<a class="local col6 ref" href="#46positive" title='positive' data-ref="46positive" data-ref-filename="46positive">positive</a>)</td></tr>
+<tr><th id="439">439</th><td>    <a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a> = -<a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a>;</td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td>  <b>return</b> <a class="local col5 ref" href="#45result" title='result' data-ref="45result" data-ref-filename="45result">result</a>;</td></tr>
+<tr><th id="442">442</th><td>}</td></tr>
+<tr><th id="443">443</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

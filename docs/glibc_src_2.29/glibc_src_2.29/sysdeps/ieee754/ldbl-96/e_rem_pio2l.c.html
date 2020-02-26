@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>e_rem_pio2l.c source code [glibc_src_2.29/sysdeps/ieee754/ldbl-96/e_rem_pio2l.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/ieee754/ldbl-96/e_rem_pio2l.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.29</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-96</a>/<a href='e_rem_pio2l.c.html'>e_rem_pio2l.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Extended-precision floating point argument reduction.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1999-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Based on quad-precision code by Jakub Jelinek &lt;jj@ultra.linux.cz&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../x86/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i  data-doc="two_over_pi">/*  Table of constants for 2/pi, 5628 hexadecimal digits of 2/pi.  */</i></td></tr>
+<tr><th id="24">24</th><td><em>static</em> <em>const</em> <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="tu decl def" id="two_over_pi" title='two_over_pi' data-type='const int32_t [938]' data-ref="two_over_pi" data-ref-filename="two_over_pi">two_over_pi</dfn>[] = {</td></tr>
+<tr><th id="25">25</th><td><var>0xa2f983</var>, <var>0x6e4e44</var>, <var>0x1529fc</var>, <var>0x2757d1</var>, <var>0xf534dd</var>, <var>0xc0db62</var>,</td></tr>
+<tr><th id="26">26</th><td><var>0x95993c</var>, <var>0x439041</var>, <var>0xfe5163</var>, <var>0xabdebb</var>, <var>0xc561b7</var>, <var>0x246e3a</var>,</td></tr>
+<tr><th id="27">27</th><td><var>0x424dd2</var>, <var>0xe00649</var>, <var>0x2eea09</var>, <var>0xd1921c</var>, <var>0xfe1deb</var>, <var>0x1cb129</var>,</td></tr>
+<tr><th id="28">28</th><td><var>0xa73ee8</var>, <var>0x8235f5</var>, <var>0x2ebb44</var>, <var>0x84e99c</var>, <var>0x7026b4</var>, <var>0x5f7e41</var>,</td></tr>
+<tr><th id="29">29</th><td><var>0x3991d6</var>, <var>0x398353</var>, <var>0x39f49c</var>, <var>0x845f8b</var>, <var>0xbdf928</var>, <var>0x3b1ff8</var>,</td></tr>
+<tr><th id="30">30</th><td><var>0x97ffde</var>, <var>0x05980f</var>, <var>0xef2f11</var>, <var>0x8b5a0a</var>, <var>0x6d1f6d</var>, <var>0x367ecf</var>,</td></tr>
+<tr><th id="31">31</th><td><var>0x27cb09</var>, <var>0xb74f46</var>, <var>0x3f669e</var>, <var>0x5fea2d</var>, <var>0x7527ba</var>, <var>0xc7ebe5</var>,</td></tr>
+<tr><th id="32">32</th><td><var>0xf17b3d</var>, <var>0x0739f7</var>, <var>0x8a5292</var>, <var>0xea6bfb</var>, <var>0x5fb11f</var>, <var>0x8d5d08</var>,</td></tr>
+<tr><th id="33">33</th><td><var>0x560330</var>, <var>0x46fc7b</var>, <var>0x6babf0</var>, <var>0xcfbc20</var>, <var>0x9af436</var>, <var>0x1da9e3</var>,</td></tr>
+<tr><th id="34">34</th><td><var>0x91615e</var>, <var>0xe61b08</var>, <var>0x659985</var>, <var>0x5f14a0</var>, <var>0x68408d</var>, <var>0xffd880</var>,</td></tr>
+<tr><th id="35">35</th><td><var>0x4d7327</var>, <var>0x310606</var>, <var>0x1556ca</var>, <var>0x73a8c9</var>, <var>0x60e27b</var>, <var>0xc08c6b</var>,</td></tr>
+<tr><th id="36">36</th><td><var>0x47c419</var>, <var>0xc367cd</var>, <var>0xdce809</var>, <var>0x2a8359</var>, <var>0xc4768b</var>, <var>0x961ca6</var>,</td></tr>
+<tr><th id="37">37</th><td><var>0xddaf44</var>, <var>0xd15719</var>, <var>0x053ea5</var>, <var>0xff0705</var>, <var>0x3f7e33</var>, <var>0xe832c2</var>,</td></tr>
+<tr><th id="38">38</th><td><var>0xde4f98</var>, <var>0x327dbb</var>, <var>0xc33d26</var>, <var>0xef6b1e</var>, <var>0x5ef89f</var>, <var>0x3a1f35</var>,</td></tr>
+<tr><th id="39">39</th><td><var>0xcaf27f</var>, <var>0x1d87f1</var>, <var>0x21907c</var>, <var>0x7c246a</var>, <var>0xfa6ed5</var>, <var>0x772d30</var>,</td></tr>
+<tr><th id="40">40</th><td><var>0x433b15</var>, <var>0xc614b5</var>, <var>0x9d19c3</var>, <var>0xc2c4ad</var>, <var>0x414d2c</var>, <var>0x5d000c</var>,</td></tr>
+<tr><th id="41">41</th><td><var>0x467d86</var>, <var>0x2d71e3</var>, <var>0x9ac69b</var>, <var>0x006233</var>, <var>0x7cd2b4</var>, <var>0x97a7b4</var>,</td></tr>
+<tr><th id="42">42</th><td><var>0xd55537</var>, <var>0xf63ed7</var>, <var>0x1810a3</var>, <var>0xfc764d</var>, <var>0x2a9d64</var>, <var>0xabd770</var>,</td></tr>
+<tr><th id="43">43</th><td><var>0xf87c63</var>, <var>0x57b07a</var>, <var>0xe71517</var>, <var>0x5649c0</var>, <var>0xd9d63b</var>, <var>0x3884a7</var>,</td></tr>
+<tr><th id="44">44</th><td><var>0xcb2324</var>, <var>0x778ad6</var>, <var>0x23545a</var>, <var>0xb91f00</var>, <var>0x1b0af1</var>, <var>0xdfce19</var>,</td></tr>
+<tr><th id="45">45</th><td><var>0xff319f</var>, <var>0x6a1e66</var>, <var>0x615799</var>, <var>0x47fbac</var>, <var>0xd87f7e</var>, <var>0xb76522</var>,</td></tr>
+<tr><th id="46">46</th><td><var>0x89e832</var>, <var>0x60bfe6</var>, <var>0xcdc4ef</var>, <var>0x09366c</var>, <var>0xd43f5d</var>, <var>0xd7de16</var>,</td></tr>
+<tr><th id="47">47</th><td><var>0xde3b58</var>, <var>0x929bde</var>, <var>0x2822d2</var>, <var>0xe88628</var>, <var>0x4d58e2</var>, <var>0x32cac6</var>,</td></tr>
+<tr><th id="48">48</th><td><var>0x16e308</var>, <var>0xcb7de0</var>, <var>0x50c017</var>, <var>0xa71df3</var>, <var>0x5be018</var>, <var>0x34132e</var>,</td></tr>
+<tr><th id="49">49</th><td><var>0x621283</var>, <var>0x014883</var>, <var>0x5b8ef5</var>, <var>0x7fb0ad</var>, <var>0xf2e91e</var>, <var>0x434a48</var>,</td></tr>
+<tr><th id="50">50</th><td><var>0xd36710</var>, <var>0xd8ddaa</var>, <var>0x425fae</var>, <var>0xce616a</var>, <var>0xa4280a</var>, <var>0xb499d3</var>,</td></tr>
+<tr><th id="51">51</th><td><var>0xf2a606</var>, <var>0x7f775c</var>, <var>0x83c2a3</var>, <var>0x883c61</var>, <var>0x78738a</var>, <var>0x5a8caf</var>,</td></tr>
+<tr><th id="52">52</th><td><var>0xbdd76f</var>, <var>0x63a62d</var>, <var>0xcbbff4</var>, <var>0xef818d</var>, <var>0x67c126</var>, <var>0x45ca55</var>,</td></tr>
+<tr><th id="53">53</th><td><var>0x36d9ca</var>, <var>0xd2a828</var>, <var>0x8d61c2</var>, <var>0x77c912</var>, <var>0x142604</var>, <var>0x9b4612</var>,</td></tr>
+<tr><th id="54">54</th><td><var>0xc459c4</var>, <var>0x44c5c8</var>, <var>0x91b24d</var>, <var>0xf31700</var>, <var>0xad43d4</var>, <var>0xe54929</var>,</td></tr>
+<tr><th id="55">55</th><td><var>0x10d5fd</var>, <var>0xfcbe00</var>, <var>0xcc941e</var>, <var>0xeece70</var>, <var>0xf53e13</var>, <var>0x80f1ec</var>,</td></tr>
+<tr><th id="56">56</th><td><var>0xc3e7b3</var>, <var>0x28f8c7</var>, <var>0x940593</var>, <var>0x3e71c1</var>, <var>0xb3092e</var>, <var>0xf3450b</var>,</td></tr>
+<tr><th id="57">57</th><td><var>0x9c1288</var>, <var>0x7b20ab</var>, <var>0x9fb52e</var>, <var>0xc29247</var>, <var>0x2f327b</var>, <var>0x6d550c</var>,</td></tr>
+<tr><th id="58">58</th><td><var>0x90a772</var>, <var>0x1fe76b</var>, <var>0x96cb31</var>, <var>0x4a1679</var>, <var>0xe27941</var>, <var>0x89dff4</var>,</td></tr>
+<tr><th id="59">59</th><td><var>0x9794e8</var>, <var>0x84e6e2</var>, <var>0x973199</var>, <var>0x6bed88</var>, <var>0x365f5f</var>, <var>0x0efdbb</var>,</td></tr>
+<tr><th id="60">60</th><td><var>0xb49a48</var>, <var>0x6ca467</var>, <var>0x427271</var>, <var>0x325d8d</var>, <var>0xb8159f</var>, <var>0x09e5bc</var>,</td></tr>
+<tr><th id="61">61</th><td><var>0x25318d</var>, <var>0x3974f7</var>, <var>0x1c0530</var>, <var>0x010c0d</var>, <var>0x68084b</var>, <var>0x58ee2c</var>,</td></tr>
+<tr><th id="62">62</th><td><var>0x90aa47</var>, <var>0x02e774</var>, <var>0x24d6bd</var>, <var>0xa67df7</var>, <var>0x72486e</var>, <var>0xef169f</var>,</td></tr>
+<tr><th id="63">63</th><td><var>0xa6948e</var>, <var>0xf691b4</var>, <var>0x5153d1</var>, <var>0xf20acf</var>, <var>0x339820</var>, <var>0x7e4bf5</var>,</td></tr>
+<tr><th id="64">64</th><td><var>0x6863b2</var>, <var>0x5f3edd</var>, <var>0x035d40</var>, <var>0x7f8985</var>, <var>0x295255</var>, <var>0xc06437</var>,</td></tr>
+<tr><th id="65">65</th><td><var>0x10d86d</var>, <var>0x324832</var>, <var>0x754c5b</var>, <var>0xd4714e</var>, <var>0x6e5445</var>, <var>0xc1090b</var>,</td></tr>
+<tr><th id="66">66</th><td><var>0x69f52a</var>, <var>0xd56614</var>, <var>0x9d0727</var>, <var>0x50045d</var>, <var>0xdb3bb4</var>, <var>0xc576ea</var>,</td></tr>
+<tr><th id="67">67</th><td><var>0x17f987</var>, <var>0x7d6b49</var>, <var>0xba271d</var>, <var>0x296996</var>, <var>0xacccc6</var>, <var>0x5414ad</var>,</td></tr>
+<tr><th id="68">68</th><td><var>0x6ae290</var>, <var>0x89d988</var>, <var>0x50722c</var>, <var>0xbea404</var>, <var>0x940777</var>, <var>0x7030f3</var>,</td></tr>
+<tr><th id="69">69</th><td><var>0x27fc00</var>, <var>0xa871ea</var>, <var>0x49c266</var>, <var>0x3de064</var>, <var>0x83dd97</var>, <var>0x973fa3</var>,</td></tr>
+<tr><th id="70">70</th><td><var>0xfd9443</var>, <var>0x8c860d</var>, <var>0xde4131</var>, <var>0x9d3992</var>, <var>0x8c70dd</var>, <var>0xe7b717</var>,</td></tr>
+<tr><th id="71">71</th><td><var>0x3bdf08</var>, <var>0x2b3715</var>, <var>0xa0805c</var>, <var>0x93805a</var>, <var>0x921110</var>, <var>0xd8e80f</var>,</td></tr>
+<tr><th id="72">72</th><td><var>0xaf806c</var>, <var>0x4bffdb</var>, <var>0x0f9038</var>, <var>0x761859</var>, <var>0x15a562</var>, <var>0xbbcb61</var>,</td></tr>
+<tr><th id="73">73</th><td><var>0xb989c7</var>, <var>0xbd4010</var>, <var>0x04f2d2</var>, <var>0x277549</var>, <var>0xf6b6eb</var>, <var>0xbb22db</var>,</td></tr>
+<tr><th id="74">74</th><td><var>0xaa140a</var>, <var>0x2f2689</var>, <var>0x768364</var>, <var>0x333b09</var>, <var>0x1a940e</var>, <var>0xaa3a51</var>,</td></tr>
+<tr><th id="75">75</th><td><var>0xc2a31d</var>, <var>0xaeedaf</var>, <var>0x12265c</var>, <var>0x4dc26d</var>, <var>0x9c7a2d</var>, <var>0x9756c0</var>,</td></tr>
+<tr><th id="76">76</th><td><var>0x833f03</var>, <var>0xf6f009</var>, <var>0x8c402b</var>, <var>0x99316d</var>, <var>0x07b439</var>, <var>0x15200c</var>,</td></tr>
+<tr><th id="77">77</th><td><var>0x5bc3d8</var>, <var>0xc492f5</var>, <var>0x4badc6</var>, <var>0xa5ca4e</var>, <var>0xcd37a7</var>, <var>0x36a9e6</var>,</td></tr>
+<tr><th id="78">78</th><td><var>0x9492ab</var>, <var>0x6842dd</var>, <var>0xde6319</var>, <var>0xef8c76</var>, <var>0x528b68</var>, <var>0x37dbfc</var>,</td></tr>
+<tr><th id="79">79</th><td><var>0xaba1ae</var>, <var>0x3115df</var>, <var>0xa1ae00</var>, <var>0xdafb0c</var>, <var>0x664d64</var>, <var>0xb705ed</var>,</td></tr>
+<tr><th id="80">80</th><td><var>0x306529</var>, <var>0xbf5657</var>, <var>0x3aff47</var>, <var>0xb9f96a</var>, <var>0xf3be75</var>, <var>0xdf9328</var>,</td></tr>
+<tr><th id="81">81</th><td><var>0x3080ab</var>, <var>0xf68c66</var>, <var>0x15cb04</var>, <var>0x0622fa</var>, <var>0x1de4d9</var>, <var>0xa4b33d</var>,</td></tr>
+<tr><th id="82">82</th><td><var>0x8f1b57</var>, <var>0x09cd36</var>, <var>0xe9424e</var>, <var>0xa4be13</var>, <var>0xb52333</var>, <var>0x1aaaf0</var>,</td></tr>
+<tr><th id="83">83</th><td><var>0xa8654f</var>, <var>0xa5c1d2</var>, <var>0x0f3f0b</var>, <var>0xcd785b</var>, <var>0x76f923</var>, <var>0x048b7b</var>,</td></tr>
+<tr><th id="84">84</th><td><var>0x721789</var>, <var>0x53a6c6</var>, <var>0xe26e6f</var>, <var>0x00ebef</var>, <var>0x584a9b</var>, <var>0xb7dac4</var>,</td></tr>
+<tr><th id="85">85</th><td><var>0xba66aa</var>, <var>0xcfcf76</var>, <var>0x1d02d1</var>, <var>0x2df1b1</var>, <var>0xc1998c</var>, <var>0x77adc3</var>,</td></tr>
+<tr><th id="86">86</th><td><var>0xda4886</var>, <var>0xa05df7</var>, <var>0xf480c6</var>, <var>0x2ff0ac</var>, <var>0x9aecdd</var>, <var>0xbc5c3f</var>,</td></tr>
+<tr><th id="87">87</th><td><var>0x6dded0</var>, <var>0x1fc790</var>, <var>0xb6db2a</var>, <var>0x3a25a3</var>, <var>0x9aaf00</var>, <var>0x9353ad</var>,</td></tr>
+<tr><th id="88">88</th><td><var>0x0457b6</var>, <var>0xb42d29</var>, <var>0x7e804b</var>, <var>0xa707da</var>, <var>0x0eaa76</var>, <var>0xa1597b</var>,</td></tr>
+<tr><th id="89">89</th><td><var>0x2a1216</var>, <var>0x2db7dc</var>, <var>0xfde5fa</var>, <var>0xfedb89</var>, <var>0xfdbe89</var>, <var>0x6c76e4</var>,</td></tr>
+<tr><th id="90">90</th><td><var>0xfca906</var>, <var>0x70803e</var>, <var>0x156e85</var>, <var>0xff87fd</var>, <var>0x073e28</var>, <var>0x336761</var>,</td></tr>
+<tr><th id="91">91</th><td><var>0x86182a</var>, <var>0xeabd4d</var>, <var>0xafe7b3</var>, <var>0x6e6d8f</var>, <var>0x396795</var>, <var>0x5bbf31</var>,</td></tr>
+<tr><th id="92">92</th><td><var>0x48d784</var>, <var>0x16df30</var>, <var>0x432dc7</var>, <var>0x356125</var>, <var>0xce70c9</var>, <var>0xb8cb30</var>,</td></tr>
+<tr><th id="93">93</th><td><var>0xfd6cbf</var>, <var>0xa200a4</var>, <var>0xe46c05</var>, <var>0xa0dd5a</var>, <var>0x476f21</var>, <var>0xd21262</var>,</td></tr>
+<tr><th id="94">94</th><td><var>0x845cb9</var>, <var>0x496170</var>, <var>0xe0566b</var>, <var>0x015299</var>, <var>0x375550</var>, <var>0xb7d51e</var>,</td></tr>
+<tr><th id="95">95</th><td><var>0xc4f133</var>, <var>0x5f6e13</var>, <var>0xe4305d</var>, <var>0xa92e85</var>, <var>0xc3b21d</var>, <var>0x3632a1</var>,</td></tr>
+<tr><th id="96">96</th><td><var>0xa4b708</var>, <var>0xd4b1ea</var>, <var>0x21f716</var>, <var>0xe4698f</var>, <var>0x77ff27</var>, <var>0x80030c</var>,</td></tr>
+<tr><th id="97">97</th><td><var>0x2d408d</var>, <var>0xa0cd4f</var>, <var>0x99a520</var>, <var>0xd3a2b3</var>, <var>0x0a5d2f</var>, <var>0x42f9b4</var>,</td></tr>
+<tr><th id="98">98</th><td><var>0xcbda11</var>, <var>0xd0be7d</var>, <var>0xc1db9b</var>, <var>0xbd17ab</var>, <var>0x81a2ca</var>, <var>0x5c6a08</var>,</td></tr>
+<tr><th id="99">99</th><td><var>0x17552e</var>, <var>0x550027</var>, <var>0xf0147f</var>, <var>0x8607e1</var>, <var>0x640b14</var>, <var>0x8d4196</var>,</td></tr>
+<tr><th id="100">100</th><td><var>0xdebe87</var>, <var>0x2afdda</var>, <var>0xb6256b</var>, <var>0x34897b</var>, <var>0xfef305</var>, <var>0x9ebfb9</var>,</td></tr>
+<tr><th id="101">101</th><td><var>0x4f6a68</var>, <var>0xa82a4a</var>, <var>0x5ac44f</var>, <var>0xbcf82d</var>, <var>0x985ad7</var>, <var>0x95c7f4</var>,</td></tr>
+<tr><th id="102">102</th><td><var>0x8d4d0d</var>, <var>0xa63a20</var>, <var>0x5f57a4</var>, <var>0xb13f14</var>, <var>0x953880</var>, <var>0x0120cc</var>,</td></tr>
+<tr><th id="103">103</th><td><var>0x86dd71</var>, <var>0xb6dec9</var>, <var>0xf560bf</var>, <var>0x11654d</var>, <var>0x6b0701</var>, <var>0xacb08c</var>,</td></tr>
+<tr><th id="104">104</th><td><var>0xd0c0b2</var>, <var>0x485551</var>, <var>0x0efb1e</var>, <var>0xc37295</var>, <var>0x3b06a3</var>, <var>0x3540c0</var>,</td></tr>
+<tr><th id="105">105</th><td><var>0x7bdc06</var>, <var>0xcc45e0</var>, <var>0xfa294e</var>, <var>0xc8cad6</var>, <var>0x41f3e8</var>, <var>0xde647c</var>,</td></tr>
+<tr><th id="106">106</th><td><var>0xd8649b</var>, <var>0x31bed9</var>, <var>0xc397a4</var>, <var>0xd45877</var>, <var>0xc5e369</var>, <var>0x13daf0</var>,</td></tr>
+<tr><th id="107">107</th><td><var>0x3c3aba</var>, <var>0x461846</var>, <var>0x5f7555</var>, <var>0xf5bdd2</var>, <var>0xc6926e</var>, <var>0x5d2eac</var>,</td></tr>
+<tr><th id="108">108</th><td><var>0xed440e</var>, <var>0x423e1c</var>, <var>0x87c461</var>, <var>0xe9fd29</var>, <var>0xf3d6e7</var>, <var>0xca7c22</var>,</td></tr>
+<tr><th id="109">109</th><td><var>0x35916f</var>, <var>0xc5e008</var>, <var>0x8dd7ff</var>, <var>0xe26a6e</var>, <var>0xc6fdb0</var>, <var>0xc10893</var>,</td></tr>
+<tr><th id="110">110</th><td><var>0x745d7c</var>, <var>0xb2ad6b</var>, <var>0x9d6ecd</var>, <var>0x7b723e</var>, <var>0x6a11c6</var>, <var>0xa9cff7</var>,</td></tr>
+<tr><th id="111">111</th><td><var>0xdf7329</var>, <var>0xbac9b5</var>, <var>0x5100b7</var>, <var>0x0db2e2</var>, <var>0x24ba74</var>, <var>0x607de5</var>,</td></tr>
+<tr><th id="112">112</th><td><var>0x8ad874</var>, <var>0x2c150d</var>, <var>0x0c1881</var>, <var>0x94667e</var>, <var>0x162901</var>, <var>0x767a9f</var>,</td></tr>
+<tr><th id="113">113</th><td><var>0xbefdfd</var>, <var>0xef4556</var>, <var>0x367ed9</var>, <var>0x13d9ec</var>, <var>0xb9ba8b</var>, <var>0xfc97c4</var>,</td></tr>
+<tr><th id="114">114</th><td><var>0x27a831</var>, <var>0xc36ef1</var>, <var>0x36c594</var>, <var>0x56a8d8</var>, <var>0xb5a8b4</var>, <var>0x0ecccf</var>,</td></tr>
+<tr><th id="115">115</th><td><var>0x2d8912</var>, <var>0x34576f</var>, <var>0x89562c</var>, <var>0xe3ce99</var>, <var>0xb920d6</var>, <var>0xaa5e6b</var>,</td></tr>
+<tr><th id="116">116</th><td><var>0x9c2a3e</var>, <var>0xcc5f11</var>, <var>0x4a0bfd</var>, <var>0xfbf4e1</var>, <var>0x6d3b8e</var>, <var>0x2c86e2</var>,</td></tr>
+<tr><th id="117">117</th><td><var>0x84d4e9</var>, <var>0xa9b4fc</var>, <var>0xd1eeef</var>, <var>0xc9352e</var>, <var>0x61392f</var>, <var>0x442138</var>,</td></tr>
+<tr><th id="118">118</th><td><var>0xc8d91b</var>, <var>0x0afc81</var>, <var>0x6a4afb</var>, <var>0xd81c2f</var>, <var>0x84b453</var>, <var>0x8c994e</var>,</td></tr>
+<tr><th id="119">119</th><td><var>0xcc2254</var>, <var>0xdc552a</var>, <var>0xd6c6c0</var>, <var>0x96190b</var>, <var>0xb8701a</var>, <var>0x649569</var>,</td></tr>
+<tr><th id="120">120</th><td><var>0x605a26</var>, <var>0xee523f</var>, <var>0x0f117f</var>, <var>0x11b5f4</var>, <var>0xf5cbfc</var>, <var>0x2dbc34</var>,</td></tr>
+<tr><th id="121">121</th><td><var>0xeebc34</var>, <var>0xcc5de8</var>, <var>0x605edd</var>, <var>0x9b8e67</var>, <var>0xef3392</var>, <var>0xb817c9</var>,</td></tr>
+<tr><th id="122">122</th><td><var>0x9b5861</var>, <var>0xbc57e1</var>, <var>0xc68351</var>, <var>0x103ed8</var>, <var>0x4871dd</var>, <var>0xdd1c2d</var>,</td></tr>
+<tr><th id="123">123</th><td><var>0xa118af</var>, <var>0x462c21</var>, <var>0xd7f359</var>, <var>0x987ad9</var>, <var>0xc0549e</var>, <var>0xfa864f</var>,</td></tr>
+<tr><th id="124">124</th><td><var>0xfc0656</var>, <var>0xae79e5</var>, <var>0x362289</var>, <var>0x22ad38</var>, <var>0xdc9367</var>, <var>0xaae855</var>,</td></tr>
+<tr><th id="125">125</th><td><var>0x382682</var>, <var>0x9be7ca</var>, <var>0xa40d51</var>, <var>0xb13399</var>, <var>0x0ed7a9</var>, <var>0x480569</var>,</td></tr>
+<tr><th id="126">126</th><td><var>0xf0b265</var>, <var>0xa7887f</var>, <var>0x974c88</var>, <var>0x36d1f9</var>, <var>0xb39221</var>, <var>0x4a827b</var>,</td></tr>
+<tr><th id="127">127</th><td><var>0x21cf98</var>, <var>0xdc9f40</var>, <var>0x5547dc</var>, <var>0x3a74e1</var>, <var>0x42eb67</var>, <var>0xdf9dfe</var>,</td></tr>
+<tr><th id="128">128</th><td><var>0x5fd45e</var>, <var>0xa4677b</var>, <var>0x7aacba</var>, <var>0xa2f655</var>, <var>0x23882b</var>, <var>0x55ba41</var>,</td></tr>
+<tr><th id="129">129</th><td><var>0x086e59</var>, <var>0x862a21</var>, <var>0x834739</var>, <var>0xe6e389</var>, <var>0xd49ee5</var>, <var>0x40fb49</var>,</td></tr>
+<tr><th id="130">130</th><td><var>0xe956ff</var>, <var>0xca0f1c</var>, <var>0x8a59c5</var>, <var>0x2bfa94</var>, <var>0xc5c1d3</var>, <var>0xcfc50f</var>,</td></tr>
+<tr><th id="131">131</th><td><var>0xae5adb</var>, <var>0x86c547</var>, <var>0x624385</var>, <var>0x3b8621</var>, <var>0x94792c</var>, <var>0x876110</var>,</td></tr>
+<tr><th id="132">132</th><td><var>0x7b4c2a</var>, <var>0x1a2c80</var>, <var>0x12bf43</var>, <var>0x902688</var>, <var>0x893c78</var>, <var>0xe4c4a8</var>,</td></tr>
+<tr><th id="133">133</th><td><var>0x7bdbe5</var>, <var>0xc23ac4</var>, <var>0xeaf426</var>, <var>0x8a67f7</var>, <var>0xbf920d</var>, <var>0x2ba365</var>,</td></tr>
+<tr><th id="134">134</th><td><var>0xb1933d</var>, <var>0x0b7cbd</var>, <var>0xdc51a4</var>, <var>0x63dd27</var>, <var>0xdde169</var>, <var>0x19949a</var>,</td></tr>
+<tr><th id="135">135</th><td><var>0x9529a8</var>, <var>0x28ce68</var>, <var>0xb4ed09</var>, <var>0x209f44</var>, <var>0xca984e</var>, <var>0x638270</var>,</td></tr>
+<tr><th id="136">136</th><td><var>0x237c7e</var>, <var>0x32b90f</var>, <var>0x8ef5a7</var>, <var>0xe75614</var>, <var>0x08f121</var>, <var>0x2a9db5</var>,</td></tr>
+<tr><th id="137">137</th><td><var>0x4d7e6f</var>, <var>0x5119a5</var>, <var>0xabf9b5</var>, <var>0xd6df82</var>, <var>0x61dd96</var>, <var>0x023616</var>,</td></tr>
+<tr><th id="138">138</th><td><var>0x9f3ac4</var>, <var>0xa1a283</var>, <var>0x6ded72</var>, <var>0x7a8d39</var>, <var>0xa9b882</var>, <var>0x5c326b</var>,</td></tr>
+<tr><th id="139">139</th><td><var>0x5b2746</var>, <var>0xed3400</var>, <var>0x7700d2</var>, <var>0x55f4fc</var>, <var>0x4d5901</var>, <var>0x8071e0</var>,</td></tr>
+<tr><th id="140">140</th><td><var>0xe13f89</var>, <var>0xb295f3</var>, <var>0x64a8f1</var>, <var>0xaea74b</var>, <var>0x38fc4c</var>, <var>0xeab2bb</var>,</td></tr>
+<tr><th id="141">141</th><td><var>0x47270b</var>, <var>0xabc3a7</var>, <var>0x34ba60</var>, <var>0x52dd34</var>, <var>0xf8563a</var>, <var>0xeb7e8a</var>,</td></tr>
+<tr><th id="142">142</th><td><var>0x31bb36</var>, <var>0x5895b7</var>, <var>0x47f7a9</var>, <var>0x94c3aa</var>, <var>0xd39225</var>, <var>0x1e7f3e</var>,</td></tr>
+<tr><th id="143">143</th><td><var>0xd8974e</var>, <var>0xbba94f</var>, <var>0xd8ae01</var>, <var>0xe661b4</var>, <var>0x393d8e</var>, <var>0xa523aa</var>,</td></tr>
+<tr><th id="144">144</th><td><var>0x33068e</var>, <var>0x1633b5</var>, <var>0x3bb188</var>, <var>0x1d3a9d</var>, <var>0x4013d0</var>, <var>0xcc1be5</var>,</td></tr>
+<tr><th id="145">145</th><td><var>0xf862e7</var>, <var>0x3bf28f</var>, <var>0x39b5bf</var>, <var>0x0bc235</var>, <var>0x22747e</var>, <var>0xa247c0</var>,</td></tr>
+<tr><th id="146">146</th><td><var>0xd52d1f</var>, <var>0x19add3</var>, <var>0x9094df</var>, <var>0x9311d0</var>, <var>0xb42b25</var>, <var>0x496db2</var>,</td></tr>
+<tr><th id="147">147</th><td><var>0xe264b2</var>, <var>0x5ef135</var>, <var>0x3bc6a4</var>, <var>0x1a4ad0</var>, <var>0xaac92e</var>, <var>0x64e886</var>,</td></tr>
+<tr><th id="148">148</th><td><var>0x573091</var>, <var>0x982cfb</var>, <var>0x311b1a</var>, <var>0x08728b</var>, <var>0xbdcee1</var>, <var>0x60e142</var>,</td></tr>
+<tr><th id="149">149</th><td><var>0xeb641d</var>, <var>0xd0bba3</var>, <var>0xe559d4</var>, <var>0x597b8c</var>, <var>0x2a4483</var>, <var>0xf332ba</var>,</td></tr>
+<tr><th id="150">150</th><td><var>0xf84867</var>, <var>0x2c8d1b</var>, <var>0x2fa9b0</var>, <var>0x50f3dd</var>, <var>0xf9f573</var>, <var>0xdb61b4</var>,</td></tr>
+<tr><th id="151">151</th><td><var>0xfe233e</var>, <var>0x6c41a6</var>, <var>0xeea318</var>, <var>0x775a26</var>, <var>0xbc5e5c</var>, <var>0xcea708</var>,</td></tr>
+<tr><th id="152">152</th><td><var>0x94dc57</var>, <var>0xe20196</var>, <var>0xf1e839</var>, <var>0xbe4851</var>, <var>0x5d2d2f</var>, <var>0x4e9555</var>,</td></tr>
+<tr><th id="153">153</th><td><var>0xd96ec2</var>, <var>0xe7d755</var>, <var>0x6304e0</var>, <var>0xc02e0e</var>, <var>0xfc40a0</var>, <var>0xbbf9b3</var>,</td></tr>
+<tr><th id="154">154</th><td><var>0x7125a7</var>, <var>0x222dfb</var>, <var>0xf619d8</var>, <var>0x838c1c</var>, <var>0x6619e6</var>, <var>0xb20d55</var>,</td></tr>
+<tr><th id="155">155</th><td><var>0xbb5137</var>, <var>0x79e809</var>, <var>0xaf9149</var>, <var>0x0d73de</var>, <var>0x0b0da5</var>, <var>0xce7f58</var>,</td></tr>
+<tr><th id="156">156</th><td><var>0xac1934</var>, <var>0x724667</var>, <var>0x7a1a13</var>, <var>0x9e26bc</var>, <var>0x4555e7</var>, <var>0x585cb5</var>,</td></tr>
+<tr><th id="157">157</th><td><var>0x711d14</var>, <var>0x486991</var>, <var>0x480d60</var>, <var>0x56adab</var>, <var>0xd62f64</var>, <var>0x96ee0c</var>,</td></tr>
+<tr><th id="158">158</th><td><var>0x212ff3</var>, <var>0x5d6d88</var>, <var>0xa67684</var>, <var>0x95651e</var>, <var>0xab9e0a</var>, <var>0x4ddefe</var>,</td></tr>
+<tr><th id="159">159</th><td><var>0x571010</var>, <var>0x836a39</var>, <var>0xf8ea31</var>, <var>0x9e381d</var>, <var>0xeac8b1</var>, <var>0xcac96b</var>,</td></tr>
+<tr><th id="160">160</th><td><var>0x37f21e</var>, <var>0xd505e9</var>, <var>0x984743</var>, <var>0x9fc56c</var>, <var>0x0331b7</var>, <var>0x3b8bf8</var>,</td></tr>
+<tr><th id="161">161</th><td><var>0x86e56a</var>, <var>0x8dc343</var>, <var>0x6230e7</var>, <var>0x93cfd5</var>, <var>0x6a8f2d</var>, <var>0x733005</var>,</td></tr>
+<tr><th id="162">162</th><td><var>0x1af021</var>, <var>0xa09fcb</var>, <var>0x7415a1</var>, <var>0xd56b23</var>, <var>0x6ff725</var>, <var>0x2f4bc7</var>,</td></tr>
+<tr><th id="163">163</th><td><var>0xb8a591</var>, <var>0x7fac59</var>, <var>0x5c55de</var>, <var>0x212c38</var>, <var>0xb13296</var>, <var>0x5cff50</var>,</td></tr>
+<tr><th id="164">164</th><td><var>0x366262</var>, <var>0xfa7b16</var>, <var>0xf4d9a6</var>, <var>0x2acfe7</var>, <var>0xf07403</var>, <var>0xd4d604</var>,</td></tr>
+<tr><th id="165">165</th><td><var>0x6fd916</var>, <var>0x31b1bf</var>, <var>0xcbb450</var>, <var>0x5bd7c8</var>, <var>0x0ce194</var>, <var>0x6bd643</var>,</td></tr>
+<tr><th id="166">166</th><td><var>0x4fd91c</var>, <var>0xdf4543</var>, <var>0x5f3453</var>, <var>0xe2b5aa</var>, <var>0xc9aec8</var>, <var>0x131485</var>,</td></tr>
+<tr><th id="167">167</th><td><var>0xf9d2bf</var>, <var>0xbadb9e</var>, <var>0x76f5b9</var>, <var>0xaf15cf</var>, <var>0xca3182</var>, <var>0x14b56d</var>,</td></tr>
+<tr><th id="168">168</th><td><var>0xe9fe4d</var>, <var>0x50fc35</var>, <var>0xf5aed5</var>, <var>0xa2d0c1</var>, <var>0xc96057</var>, <var>0x192eb6</var>,</td></tr>
+<tr><th id="169">169</th><td><var>0xe91d92</var>, <var>0x07d144</var>, <var>0xaea3c6</var>, <var>0x343566</var>, <var>0x26d5b4</var>, <var>0x3161e2</var>,</td></tr>
+<tr><th id="170">170</th><td><var>0x37f1a2</var>, <var>0x209eff</var>, <var>0x958e23</var>, <var>0x493798</var>, <var>0x35f4a6</var>, <var>0x4bdc02</var>,</td></tr>
+<tr><th id="171">171</th><td><var>0xc2be13</var>, <var>0xbe80a0</var>, <var>0x0b72a3</var>, <var>0x115c5f</var>, <var>0x1e1bd1</var>, <var>0x0db4d3</var>,</td></tr>
+<tr><th id="172">172</th><td><var>0x869e85</var>, <var>0x96976b</var>, <var>0x2ac91f</var>, <var>0x8a26c2</var>, <var>0x3070f0</var>, <var>0x041412</var>,</td></tr>
+<tr><th id="173">173</th><td><var>0xfc9fa5</var>, <var>0xf72a38</var>, <var>0x9c6878</var>, <var>0xe2aa76</var>, <var>0x50cfe1</var>, <var>0x559274</var>,</td></tr>
+<tr><th id="174">174</th><td><var>0x934e38</var>, <var>0x0a92f7</var>, <var>0x5533f0</var>, <var>0xa63db4</var>, <var>0x399971</var>, <var>0xe2b755</var>,</td></tr>
+<tr><th id="175">175</th><td><var>0xa98a7c</var>, <var>0x008f19</var>, <var>0xac54d2</var>, <var>0x2ea0b4</var>, <var>0xf5f3e0</var>, <var>0x60c849</var>,</td></tr>
+<tr><th id="176">176</th><td><var>0xffd269</var>, <var>0xae52ce</var>, <var>0x7a5fdd</var>, <var>0xe9ce06</var>, <var>0xfb0ae8</var>, <var>0xa50cce</var>,</td></tr>
+<tr><th id="177">177</th><td><var>0xea9d3e</var>, <var>0x3766dd</var>, <var>0xb834f5</var>, <var>0x0da090</var>, <var>0x846f88</var>, <var>0x4ae3d5</var>,</td></tr>
+<tr><th id="178">178</th><td><var>0x099a03</var>, <var>0x2eae2d</var>, <var>0xfcb40a</var>, <var>0xfb9b33</var>, <var>0xe281dd</var>, <var>0x1b16ba</var>,</td></tr>
+<tr><th id="179">179</th><td><var>0xd8c0af</var>, <var>0xd96b97</var>, <var>0xb52dc9</var>, <var>0x9c277f</var>, <var>0x5951d5</var>, <var>0x21ccd6</var>,</td></tr>
+<tr><th id="180">180</th><td><var>0xb6496b</var>, <var>0x584562</var>, <var>0xb3baf2</var>, <var>0xa1a5c4</var>, <var>0x7ca2cf</var>, <var>0xa9b93d</var>,</td></tr>
+<tr><th id="181">181</th><td><var>0x7b7b89</var>, <var>0x483d38</var>,</td></tr>
+<tr><th id="182">182</th><td>};</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a></td></tr>
+<tr><th id="185">185</th><td><dfn class="decl def fn" id="__ieee754_rem_pio2l" title='__ieee754_rem_pio2l' data-ref="__ieee754_rem_pio2l" data-ref-filename="__ieee754_rem_pio2l">__ieee754_rem_pio2l</dfn> (<em>long</em> <em>double</em> <dfn class="local col1 decl" id="1x" title='x' data-type='long double' data-ref="1x" data-ref-filename="1x">x</dfn>, <em>long</em> <em>double</em> *<dfn class="local col2 decl" id="2y" title='y' data-type='long double *' data-ref="2y" data-ref-filename="2y">y</dfn>)</td></tr>
+<tr><th id="186">186</th><td>{</td></tr>
+<tr><th id="187">187</th><td>  <em>double</em> <dfn class="local col3 decl" id="3tx" title='tx' data-type='double [3]' data-ref="3tx" data-ref-filename="3tx">tx</dfn>[<var>3</var>], <dfn class="local col4 decl" id="4ty" title='ty' data-type='double [3]' data-ref="4ty" data-ref-filename="4ty">ty</dfn>[<var>3</var>];</td></tr>
+<tr><th id="188">188</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col5 decl" id="5se" title='se' data-type='int32_t' data-ref="5se" data-ref-filename="5se">se</dfn>, <dfn class="local col6 decl" id="6j0" title='j0' data-type='int32_t' data-ref="6j0" data-ref-filename="6j0">j0</dfn>;</td></tr>
+<tr><th id="189">189</th><td>  <a class="typedef" href="../../../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col7 decl" id="7i0" title='i0' data-type='uint32_t' data-ref="7i0" data-ref-filename="7i0">i0</dfn>, <dfn class="local col8 decl" id="8i1" title='i1' data-type='uint32_t' data-ref="8i1" data-ref-filename="8i1">i1</dfn>;</td></tr>
+<tr><th id="190">190</th><td>  <em>int</em> <dfn class="local col9 decl" id="9sx" title='sx' data-type='int' data-ref="9sx" data-ref-filename="9sx">sx</dfn>;</td></tr>
+<tr><th id="191">191</th><td>  <em>int</em> <dfn class="local col0 decl" id="10n" title='n' data-type='int' data-ref="10n" data-ref-filename="10n">n</dfn>, <dfn class="local col1 decl" id="11exp" title='exp' data-type='int' data-ref="11exp" data-ref-filename="11exp">exp</dfn>;</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>  <a class="macro" href="../../x86_64/fpu/math_ldbl.h.html#42" title="do { ieee_long_double_shape_type ew_u; ew_u.value = (x); (se) = ew_u.parts.sign_exponent; (i0) = ew_u.parts.msw; (i1) = ew_u.parts.lsw; } while (0)" data-ref="_M/GET_LDOUBLE_WORDS">GET_LDOUBLE_WORDS</a> (<a class="local col5 ref" href="#5se" title='se' data-ref="5se" data-ref-filename="5se">se</a>, <a class="local col7 ref" href="#7i0" title='i0' data-ref="7i0" data-ref-filename="7i0">i0</a>, <a class="local col8 ref" href="#8i1" title='i1' data-ref="8i1" data-ref-filename="8i1">i1</a>, <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="194">194</th><td>  <a class="local col9 ref" href="#9sx" title='sx' data-ref="9sx" data-ref-filename="9sx">sx</a> = (<a class="local col5 ref" href="#5se" title='se' data-ref="5se" data-ref-filename="5se">se</a> &gt;&gt; <var>15</var>) &amp; <var>1</var>;</td></tr>
+<tr><th id="195">195</th><td>  <a class="local col6 ref" href="#6j0" title='j0' data-ref="6j0" data-ref-filename="6j0">j0</a> = (<a class="local col5 ref" href="#5se" title='se' data-ref="5se" data-ref-filename="5se">se</a> &amp; <var>0x7fff</var>) - <var>0x3fff</var>;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>  <b>if</b> (<a class="local col6 ref" href="#6j0" title='j0' data-ref="6j0" data-ref-filename="6j0">j0</a> &lt; -<var>1</var>)</td></tr>
+<tr><th id="198">198</th><td>    {</td></tr>
+<tr><th id="199">199</th><td>      <i>/* |x| &lt; pi/4.  */</i></td></tr>
+<tr><th id="200">200</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="201">201</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>1</var>] = <var>0</var>;</td></tr>
+<tr><th id="202">202</th><td>      <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="203">203</th><td>    }</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>  <b>if</b> (<a class="local col6 ref" href="#6j0" title='j0' data-ref="6j0" data-ref-filename="6j0">j0</a> &gt;= <var>0x8000</var>)</td></tr>
+<tr><th id="206">206</th><td>    {</td></tr>
+<tr><th id="207">207</th><td>      <i>/* x is infinite or NaN.  */</i></td></tr>
+<tr><th id="208">208</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> - <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="209">209</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>1</var>] = <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>];</td></tr>
+<tr><th id="210">210</th><td>      <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="211">211</th><td>    }</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>  <i>/* Split the 64 bits of the mantissa into three 24-bit integers</i></td></tr>
+<tr><th id="214">214</th><td><i>     stored in a double array.  */</i></td></tr>
+<tr><th id="215">215</th><td>  <a class="local col1 ref" href="#11exp" title='exp' data-ref="11exp" data-ref-filename="11exp">exp</a> = <a class="local col6 ref" href="#6j0" title='j0' data-ref="6j0" data-ref-filename="6j0">j0</a> - <var>23</var>;</td></tr>
+<tr><th id="216">216</th><td>  <a class="local col3 ref" href="#3tx" title='tx' data-ref="3tx" data-ref-filename="3tx">tx</a>[<var>0</var>] = (<em>double</em>) (<a class="local col7 ref" href="#7i0" title='i0' data-ref="7i0" data-ref-filename="7i0">i0</a> &gt;&gt; <var>8</var>);</td></tr>
+<tr><th id="217">217</th><td>  <a class="local col3 ref" href="#3tx" title='tx' data-ref="3tx" data-ref-filename="3tx">tx</a>[<var>1</var>] = (<em>double</em>) (((<a class="local col7 ref" href="#7i0" title='i0' data-ref="7i0" data-ref-filename="7i0">i0</a> &lt;&lt; <var>16</var>) | (<a class="local col8 ref" href="#8i1" title='i1' data-ref="8i1" data-ref-filename="8i1">i1</a> &gt;&gt; <var>16</var>)) &amp; <var>0xffffff</var>);</td></tr>
+<tr><th id="218">218</th><td>  <a class="local col3 ref" href="#3tx" title='tx' data-ref="3tx" data-ref-filename="3tx">tx</a>[<var>2</var>] = (<em>double</em>) ((<a class="local col8 ref" href="#8i1" title='i1' data-ref="8i1" data-ref-filename="8i1">i1</a> &lt;&lt; <var>8</var>) &amp; <var>0xffffff</var>);</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>  <a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a> = <a class="ref fn" href="../../generic/math_private_calls.h.html#73" title='__kernel_rem_pio2' data-ref="__kernel_rem_pio2" data-ref-filename="__kernel_rem_pio2">__kernel_rem_pio2</a> (<a class="local col3 ref" href="#3tx" title='tx' data-ref="3tx" data-ref-filename="3tx">tx</a>, <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>, <a class="local col1 ref" href="#11exp" title='exp' data-ref="11exp" data-ref-filename="11exp">exp</a>, <var>3</var>, <var>2</var>, <a class="tu ref" href="#two_over_pi" title='two_over_pi' data-use='r' data-ref="two_over_pi" data-ref-filename="two_over_pi">two_over_pi</a>);</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>  <i>/* The result is now stored in two double values, we need to convert</i></td></tr>
+<tr><th id="223">223</th><td><i>     it into two long double values.  */</i></td></tr>
+<tr><th id="224">224</th><td>  <b>if</b> (<a class="local col9 ref" href="#9sx" title='sx' data-ref="9sx" data-ref-filename="9sx">sx</a> == <var>0</var>)</td></tr>
+<tr><th id="225">225</th><td>    {</td></tr>
+<tr><th id="226">226</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] = (<em>long</em> <em>double</em>) <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>0</var>] + (<em>long</em> <em>double</em>) <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>1</var>];</td></tr>
+<tr><th id="227">227</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>1</var>] = <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>1</var>] - (<a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] - <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>0</var>]);</td></tr>
+<tr><th id="228">228</th><td>      <b>return</b> <a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a>;</td></tr>
+<tr><th id="229">229</th><td>    }</td></tr>
+<tr><th id="230">230</th><td>  <b>else</b></td></tr>
+<tr><th id="231">231</th><td>    {</td></tr>
+<tr><th id="232">232</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] = -((<em>long</em> <em>double</em>) <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>0</var>] + (<em>long</em> <em>double</em>) <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>1</var>]);</td></tr>
+<tr><th id="233">233</th><td>      <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>1</var>] = -<a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>1</var>] - (<a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>[<var>0</var>] + <a class="local col4 ref" href="#4ty" title='ty' data-ref="4ty" data-ref-filename="4ty">ty</a>[<var>0</var>]);</td></tr>
+<tr><th id="234">234</th><td>      <b>return</b> -<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a>;</td></tr>
+<tr><th id="235">235</th><td>    }</td></tr>
+<tr><th id="236">236</th><td>}</td></tr>
+<tr><th id="237">237</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

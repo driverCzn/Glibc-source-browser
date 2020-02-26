@@ -1,0 +1,421 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-tunables.c source code [glibc_src_2.29/elf/dl-tunables.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/elf/dl-tunables.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.29</a>/<a href='./'>elf</a>/<a href='dl-tunables.c.html'>dl-tunables.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* The tunable framework.  See the README.tunables to know how to use the</i></td></tr>
+<tr><th id="2">2</th><td><i>   tunable in a glibc module.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   Copyright (C) 2016-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="5">5</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="6">6</th><td><i></i></td></tr>
+<tr><th id="7">7</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="8">8</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="9">9</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="10">10</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="11">11</th><td><i></i></td></tr>
+<tr><th id="12">12</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="13">13</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="14">14</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="15">15</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="16">16</th><td><i></i></td></tr>
+<tr><th id="17">17</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="18">18</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="19">19</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/generic/startup.h.html">&lt;startup.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/TUNABLES_INTERNAL" data-ref="_M/TUNABLES_INTERNAL">TUNABLES_INTERNAL</dfn> 1</u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="dl-tunables.h.html">"dl-tunables.h"</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/not-errno.h.html">&lt;not-errno.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><u>#<span data-ppcond="35">if</span> <span class="macro" title="1" data-ref="_M/TUNABLES_FRONTEND">TUNABLES_FRONTEND</span> == <a class="macro" href="dl-tunables.h.html#111" title="1" data-ref="_M/TUNABLES_FRONTEND_valstring">TUNABLES_FRONTEND_valstring</a></u></td></tr>
+<tr><th id="36">36</th><td><u># define <dfn class="macro" id="_M/GLIBC_TUNABLES" data-ref="_M/GLIBC_TUNABLES">GLIBC_TUNABLES</dfn> "GLIBC_TUNABLES"</u></td></tr>
+<tr><th id="37">37</th><td><u>#<span data-ppcond="35">endif</span></u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="39">if</span> <span class="macro" title="1" data-ref="_M/TUNABLES_FRONTEND">TUNABLES_FRONTEND</span> == <a class="macro" href="dl-tunables.h.html#111" title="1" data-ref="_M/TUNABLES_FRONTEND_valstring">TUNABLES_FRONTEND_valstring</a></u></td></tr>
+<tr><th id="40">40</th><td><em>static</em> <em>char</em> *</td></tr>
+<tr><th id="41">41</th><td><dfn class="tu decl def fn" id="tunables_strdup" title='tunables_strdup' data-type='char * tunables_strdup(const char * in)' data-ref="tunables_strdup" data-ref-filename="tunables_strdup">tunables_strdup</dfn> (<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="7in" title='in' data-type='const char *' data-ref="7in" data-ref-filename="7in">in</dfn>)</td></tr>
+<tr><th id="42">42</th><td>{</td></tr>
+<tr><th id="43">43</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8i" title='i' data-type='size_t' data-ref="8i" data-ref-filename="8i">i</dfn> = <var>0</var>;</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>  <b>while</b> (<a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>[<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>++] != <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="46">46</th><td>  <em>char</em> *<dfn class="local col9 decl" id="9out" title='out' data-type='char *' data-ref="9out" data-ref-filename="9out">out</dfn> = <a class="ref fn" href="../include/unistd.h.html#__sbrk" title='__sbrk' data-ref="__sbrk" data-ref-filename="__sbrk">__sbrk</a> (<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>);</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>  <i>/* FIXME: In reality if the allocation fails, __sbrk will crash attempting to</i></td></tr>
+<tr><th id="49">49</th><td><i>     set the thread-local errno since the TCB has not yet been set up.  This</i></td></tr>
+<tr><th id="50">50</th><td><i>     needs to be fixed with an __sbrk implementation that does not set</i></td></tr>
+<tr><th id="51">51</th><td><i>     errno.  */</i></td></tr>
+<tr><th id="52">52</th><td>  <b>if</b> (<a class="local col9 ref" href="#9out" title='out' data-ref="9out" data-ref-filename="9out">out</a> == (<em>void</em> *)-<var>1</var>)</td></tr>
+<tr><th id="53">53</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>  <a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>--;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>  <b>while</b> (<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>-- &gt; <var>0</var>)</td></tr>
+<tr><th id="58">58</th><td>    <a class="local col9 ref" href="#9out" title='out' data-ref="9out" data-ref-filename="9out">out</a>[<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>] = <a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>[<a class="local col8 ref" href="#8i" title='i' data-ref="8i" data-ref-filename="8i">i</a>];</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <b>return</b> <a class="local col9 ref" href="#9out" title='out' data-ref="9out" data-ref-filename="9out">out</a>;</td></tr>
+<tr><th id="61">61</th><td>}</td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="39">endif</span></u></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><em>static</em> <em>char</em> **</td></tr>
+<tr><th id="65">65</th><td><dfn class="tu decl def fn" id="get_next_env" title='get_next_env' data-type='char ** get_next_env(char ** envp, char ** name, size_t * namelen, char ** val, char *** prev_envp)' data-ref="get_next_env" data-ref-filename="get_next_env">get_next_env</dfn> (<em>char</em> **<dfn class="local col0 decl" id="10envp" title='envp' data-type='char **' data-ref="10envp" data-ref-filename="10envp">envp</dfn>, <em>char</em> **<dfn class="local col1 decl" id="11name" title='name' data-type='char **' data-ref="11name" data-ref-filename="11name">name</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col2 decl" id="12namelen" title='namelen' data-type='size_t *' data-ref="12namelen" data-ref-filename="12namelen">namelen</dfn>, <em>char</em> **<dfn class="local col3 decl" id="13val" title='val' data-type='char **' data-ref="13val" data-ref-filename="13val">val</dfn>,</td></tr>
+<tr><th id="66">66</th><td>	      <em>char</em> ***<dfn class="local col4 decl" id="14prev_envp" title='prev_envp' data-type='char ***' data-ref="14prev_envp" data-ref-filename="14prev_envp">prev_envp</dfn>)</td></tr>
+<tr><th id="67">67</th><td>{</td></tr>
+<tr><th id="68">68</th><td>  <b>while</b> (<a class="local col0 ref" href="#10envp" title='envp' data-ref="10envp" data-ref-filename="10envp">envp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; *<a class="local col0 ref" href="#10envp" title='envp' data-ref="10envp" data-ref-filename="10envp">envp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="69">69</th><td>    {</td></tr>
+<tr><th id="70">70</th><td>      <em>char</em> **<dfn class="local col5 decl" id="15prev" title='prev' data-type='char **' data-ref="15prev" data-ref-filename="15prev">prev</dfn> = <a class="local col0 ref" href="#10envp" title='envp' data-ref="10envp" data-ref-filename="10envp">envp</a>;</td></tr>
+<tr><th id="71">71</th><td>      <em>char</em> *<dfn class="local col6 decl" id="16envline" title='envline' data-type='char *' data-ref="16envline" data-ref-filename="16envline">envline</dfn> = *<a class="local col0 ref" href="#10envp" title='envp' data-ref="10envp" data-ref-filename="10envp">envp</a>++;</td></tr>
+<tr><th id="72">72</th><td>      <em>int</em> <dfn class="local col7 decl" id="17len" title='len' data-type='int' data-ref="17len" data-ref-filename="17len">len</dfn> = <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>      <b>while</b> (<a class="local col6 ref" href="#16envline" title='envline' data-ref="16envline" data-ref-filename="16envline">envline</a>[<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>] != <kbd>'\0'</kbd> &amp;&amp; <a class="local col6 ref" href="#16envline" title='envline' data-ref="16envline" data-ref-filename="16envline">envline</a>[<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>] != <kbd>'='</kbd>)</td></tr>
+<tr><th id="75">75</th><td>	<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>++;</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>      <i>/* Just the name and no value, go to the next one.  */</i></td></tr>
+<tr><th id="78">78</th><td>      <b>if</b> (<a class="local col6 ref" href="#16envline" title='envline' data-ref="16envline" data-ref-filename="16envline">envline</a>[<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="79">79</th><td>	<b>continue</b>;</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>      *<a class="local col1 ref" href="#11name" title='name' data-ref="11name" data-ref-filename="11name">name</a> = <a class="local col6 ref" href="#16envline" title='envline' data-ref="16envline" data-ref-filename="16envline">envline</a>;</td></tr>
+<tr><th id="82">82</th><td>      *<a class="local col2 ref" href="#12namelen" title='namelen' data-ref="12namelen" data-ref-filename="12namelen">namelen</a> = <a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>;</td></tr>
+<tr><th id="83">83</th><td>      *<a class="local col3 ref" href="#13val" title='val' data-ref="13val" data-ref-filename="13val">val</a> = &amp;<a class="local col6 ref" href="#16envline" title='envline' data-ref="16envline" data-ref-filename="16envline">envline</a>[<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a> + <var>1</var>];</td></tr>
+<tr><th id="84">84</th><td>      *<a class="local col4 ref" href="#14prev_envp" title='prev_envp' data-ref="14prev_envp" data-ref-filename="14prev_envp">prev_envp</a> = <a class="local col5 ref" href="#15prev" title='prev' data-ref="15prev" data-ref-filename="15prev">prev</a>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>      <b>return</b> <a class="local col0 ref" href="#10envp" title='envp' data-ref="10envp" data-ref-filename="10envp">envp</a>;</td></tr>
+<tr><th id="87">87</th><td>    }</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="90">90</th><td>}</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><u>#define <dfn class="macro" id="_M/TUNABLE_SET_VAL_IF_VALID_RANGE" data-ref="_M/TUNABLE_SET_VAL_IF_VALID_RANGE">TUNABLE_SET_VAL_IF_VALID_RANGE</dfn>(__cur, __val, __type)		      \</u></td></tr>
+<tr><th id="93">93</th><td><u>({									      \</u></td></tr>
+<tr><th id="94">94</th><td><u>  __type <dfn class="local col1 decl" id="21min" title='min' data-type='int64_t' data-ref="21min" data-ref-filename="21min"><dfn class="local col3 decl" id="23min" title='min' data-type='uint64_t' data-ref="23min" data-ref-filename="23min"><dfn class="local col5 decl" id="25min" title='min' data-type='uint64_t' data-ref="25min" data-ref-filename="25min">min</dfn></dfn></dfn> = (__cur)-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::min" title='(anonymous struct)::min' data-ref="(anonymous)::min" data-ref-filename="(anonymous)..min">min</a>;					      \</u></td></tr>
+<tr><th id="95">95</th><td><u>  __type <dfn class="local col2 decl" id="22max" title='max' data-type='int64_t' data-ref="22max" data-ref-filename="22max"><dfn class="local col4 decl" id="24max" title='max' data-type='uint64_t' data-ref="24max" data-ref-filename="24max"><dfn class="local col6 decl" id="26max" title='max' data-type='uint64_t' data-ref="26max" data-ref-filename="26max">max</dfn></dfn></dfn> = (__cur)-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::max" title='(anonymous struct)::max' data-ref="(anonymous)::max" data-ref-filename="(anonymous)..max">max</a>;					      \</u></td></tr>
+<tr><th id="96">96</th><td><u>									      \</u></td></tr>
+<tr><th id="97">97</th><td><u>  if ((__type) (__val) &gt;= <a class="local col1 ref" href="#116" title='min' data-ref="21min" data-ref-filename="21min"><a class="local col3 ref" href="#121" title='min' data-ref="23min" data-ref-filename="23min"><a class="local col5 ref" href="#126" title='min' data-ref="25min" data-ref-filename="25min">min</a></a></a> &amp;&amp; (__type) (<a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a>) &lt;= <a class="local col2 ref" href="#116" title='max' data-ref="22max" data-ref-filename="22max"><a class="local col4 ref" href="#121" title='max' data-ref="24max" data-ref-filename="24max"><a class="local col6 ref" href="#126" title='max' data-ref="26max" data-ref-filename="26max">max</a></a></a>)			      \</u></td></tr>
+<tr><th id="98">98</th><td><u>    {									      \</u></td></tr>
+<tr><th id="99">99</th><td><u>      (__cur)-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::numval" title='(anonymous union)::numval' data-ref="(anonymous)::numval" data-ref-filename="(anonymous)..numval">numval</a> = <a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a>;					      \</u></td></tr>
+<tr><th id="100">100</th><td><u>      (__cur)-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::initialized" title='_tunable::initialized' data-ref="_tunable::initialized" data-ref-filename="_tunable..initialized">initialized</a> = true;					      \</u></td></tr>
+<tr><th id="101">101</th><td><u>    }									      \</u></td></tr>
+<tr><th id="102">102</th><td><u>})</u></td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="105">105</th><td><dfn class="tu decl def fn" id="do_tunable_update_val" title='do_tunable_update_val' data-type='void do_tunable_update_val(tunable_t * cur, const void * valp)' data-ref="do_tunable_update_val" data-ref-filename="do_tunable_update_val">do_tunable_update_val</dfn> (<a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col8 decl" id="18cur" title='cur' data-type='tunable_t *' data-ref="18cur" data-ref-filename="18cur">cur</dfn>, <em>const</em> <em>void</em> *<dfn class="local col9 decl" id="19valp" title='valp' data-type='const void *' data-ref="19valp" data-ref-filename="19valp">valp</dfn>)</td></tr>
+<tr><th id="106">106</th><td>{</td></tr>
+<tr><th id="107">107</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="local col0 decl" id="20val" title='val' data-type='uint64_t' data-ref="20val" data-ref-filename="20val">val</dfn>;</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>  <b>if</b> (<a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::type_code" title='(anonymous struct)::type_code' data-ref="(anonymous)::type_code" data-ref-filename="(anonymous)..type_code">type_code</a> != <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_STRING" title='TUNABLE_TYPE_STRING' data-ref="TUNABLE_TYPE_STRING" data-ref-filename="TUNABLE_TYPE_STRING">TUNABLE_TYPE_STRING</a>)</td></tr>
+<tr><th id="110">110</th><td>    <a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a> = *((<a class="typedef" href="../bits/stdint-intn.h.html#int64_t" title='int64_t' data-type='__int64_t' data-ref="int64_t" data-ref-filename="int64_t">int64_t</a> *) <a class="local col9 ref" href="#19valp" title='valp' data-ref="19valp" data-ref-filename="19valp">valp</a>);</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>  <b>switch</b> (<a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::type_code" title='(anonymous struct)::type_code' data-ref="(anonymous)::type_code" data-ref-filename="(anonymous)..type_code">type_code</a>)</td></tr>
+<tr><th id="113">113</th><td>    {</td></tr>
+<tr><th id="114">114</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_INT_32" title='TUNABLE_TYPE_INT_32' data-ref="TUNABLE_TYPE_INT_32" data-ref-filename="TUNABLE_TYPE_INT_32">TUNABLE_TYPE_INT_32</a>:</td></tr>
+<tr><th id="115">115</th><td>	{</td></tr>
+<tr><th id="116">116</th><td>	  <a class="macro" href="#92" title="({ int64_t min = (cur)-&gt;type.min; int64_t max = (cur)-&gt;type.max; if ((int64_t) (val) &gt;= min &amp;&amp; (int64_t) (val) &lt;= max) { (cur)-&gt;val.numval = val; (cur)-&gt;initialized = 1; } })" data-ref="_M/TUNABLE_SET_VAL_IF_VALID_RANGE">TUNABLE_SET_VAL_IF_VALID_RANGE</a> (<a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>, <a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a>, <a class="typedef" href="../bits/stdint-intn.h.html#int64_t" title='int64_t' data-type='__int64_t' data-ref="int64_t" data-ref-filename="int64_t">int64_t</a>);</td></tr>
+<tr><th id="117">117</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="118">118</th><td>	}</td></tr>
+<tr><th id="119">119</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_UINT_64" title='TUNABLE_TYPE_UINT_64' data-ref="TUNABLE_TYPE_UINT_64" data-ref-filename="TUNABLE_TYPE_UINT_64">TUNABLE_TYPE_UINT_64</a>:</td></tr>
+<tr><th id="120">120</th><td>	{</td></tr>
+<tr><th id="121">121</th><td>	  <a class="macro" href="#92" title="({ uint64_t min = (cur)-&gt;type.min; uint64_t max = (cur)-&gt;type.max; if ((uint64_t) (val) &gt;= min &amp;&amp; (uint64_t) (val) &lt;= max) { (cur)-&gt;val.numval = val; (cur)-&gt;initialized = 1; } })" data-ref="_M/TUNABLE_SET_VAL_IF_VALID_RANGE">TUNABLE_SET_VAL_IF_VALID_RANGE</a> (<a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>, <a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a>, <a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>);</td></tr>
+<tr><th id="122">122</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="123">123</th><td>	}</td></tr>
+<tr><th id="124">124</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_SIZE_T" title='TUNABLE_TYPE_SIZE_T' data-ref="TUNABLE_TYPE_SIZE_T" data-ref-filename="TUNABLE_TYPE_SIZE_T">TUNABLE_TYPE_SIZE_T</a>:</td></tr>
+<tr><th id="125">125</th><td>	{</td></tr>
+<tr><th id="126">126</th><td>	  <a class="macro" href="#92" title="({ uint64_t min = (cur)-&gt;type.min; uint64_t max = (cur)-&gt;type.max; if ((uint64_t) (val) &gt;= min &amp;&amp; (uint64_t) (val) &lt;= max) { (cur)-&gt;val.numval = val; (cur)-&gt;initialized = 1; } })" data-ref="_M/TUNABLE_SET_VAL_IF_VALID_RANGE">TUNABLE_SET_VAL_IF_VALID_RANGE</a> (<a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>, <a class="local col0 ref" href="#20val" title='val' data-ref="20val" data-ref-filename="20val">val</a>, <a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>);</td></tr>
+<tr><th id="127">127</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="128">128</th><td>	}</td></tr>
+<tr><th id="129">129</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_STRING" title='TUNABLE_TYPE_STRING' data-ref="TUNABLE_TYPE_STRING" data-ref-filename="TUNABLE_TYPE_STRING">TUNABLE_TYPE_STRING</a>:</td></tr>
+<tr><th id="130">130</th><td>	{</td></tr>
+<tr><th id="131">131</th><td>	  <a class="local col8 ref" href="#18cur" title='cur' data-ref="18cur" data-ref-filename="18cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::strval" title='(anonymous union)::strval' data-ref="(anonymous)::strval" data-ref-filename="(anonymous)..strval">strval</a> = <a class="local col9 ref" href="#19valp" title='valp' data-ref="19valp" data-ref-filename="19valp">valp</a>;</td></tr>
+<tr><th id="132">132</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="133">133</th><td>	}</td></tr>
+<tr><th id="134">134</th><td>    <b>default</b>:</td></tr>
+<tr><th id="135">135</th><td>      <a class="ref fn" href="#135" title='__builtin_unreachable' data-ref="__builtin_unreachable" data-ref-filename="__builtin_unreachable">__builtin_unreachable</a> ();</td></tr>
+<tr><th id="136">136</th><td>    }</td></tr>
+<tr><th id="137">137</th><td>}</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><i  data-doc="tunable_initialize">/* Validate range of the input value and initialize the tunable CUR if it looks</i></td></tr>
+<tr><th id="140">140</th><td><i  data-doc="tunable_initialize">   good.  */</i></td></tr>
+<tr><th id="141">141</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="142">142</th><td><dfn class="tu decl def fn" id="tunable_initialize" title='tunable_initialize' data-type='void tunable_initialize(tunable_t * cur, const char * strval)' data-ref="tunable_initialize" data-ref-filename="tunable_initialize">tunable_initialize</dfn> (<a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col7 decl" id="27cur" title='cur' data-type='tunable_t *' data-ref="27cur" data-ref-filename="27cur">cur</dfn>, <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="28strval" title='strval' data-type='const char *' data-ref="28strval" data-ref-filename="28strval">strval</dfn>)</td></tr>
+<tr><th id="143">143</th><td>{</td></tr>
+<tr><th id="144">144</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="local col9 decl" id="29val" title='val' data-type='uint64_t' data-ref="29val" data-ref-filename="29val">val</dfn>;</td></tr>
+<tr><th id="145">145</th><td>  <em>const</em> <em>void</em> *<dfn class="local col0 decl" id="30valp" title='valp' data-type='const void *' data-ref="30valp" data-ref-filename="30valp">valp</dfn>;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>  <b>if</b> (<a class="local col7 ref" href="#27cur" title='cur' data-ref="27cur" data-ref-filename="27cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::type_code" title='(anonymous struct)::type_code' data-ref="(anonymous)::type_code" data-ref-filename="(anonymous)..type_code">type_code</a> != <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_STRING" title='TUNABLE_TYPE_STRING' data-ref="TUNABLE_TYPE_STRING" data-ref-filename="TUNABLE_TYPE_STRING">TUNABLE_TYPE_STRING</a>)</td></tr>
+<tr><th id="148">148</th><td>    {</td></tr>
+<tr><th id="149">149</th><td>      <a class="local col9 ref" href="#29val" title='val' data-ref="29val" data-ref-filename="29val">val</a> = <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_strtoul" title='_dl_strtoul' data-ref="_dl_strtoul" data-ref-filename="_dl_strtoul">_dl_strtoul</a> (<a class="local col8 ref" href="#28strval" title='strval' data-ref="28strval" data-ref-filename="28strval">strval</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="150">150</th><td>      <a class="local col0 ref" href="#30valp" title='valp' data-ref="30valp" data-ref-filename="30valp">valp</a> = &amp;<a class="local col9 ref" href="#29val" title='val' data-ref="29val" data-ref-filename="29val">val</a>;</td></tr>
+<tr><th id="151">151</th><td>    }</td></tr>
+<tr><th id="152">152</th><td>  <b>else</b></td></tr>
+<tr><th id="153">153</th><td>    {</td></tr>
+<tr><th id="154">154</th><td>      <a class="local col7 ref" href="#27cur" title='cur' data-ref="27cur" data-ref-filename="27cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::initialized" title='_tunable::initialized' data-ref="_tunable::initialized" data-ref-filename="_tunable..initialized">initialized</a> = <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="155">155</th><td>      <a class="local col0 ref" href="#30valp" title='valp' data-ref="30valp" data-ref-filename="30valp">valp</a> = <a class="local col8 ref" href="#28strval" title='strval' data-ref="28strval" data-ref-filename="28strval">strval</a>;</td></tr>
+<tr><th id="156">156</th><td>    }</td></tr>
+<tr><th id="157">157</th><td>  <a class="tu ref fn" href="#do_tunable_update_val" title='do_tunable_update_val' data-use='c' data-ref="do_tunable_update_val" data-ref-filename="do_tunable_update_val">do_tunable_update_val</a> (<a class="local col7 ref" href="#27cur" title='cur' data-ref="27cur" data-ref-filename="27cur">cur</a>, <a class="local col0 ref" href="#30valp" title='valp' data-ref="30valp" data-ref-filename="30valp">valp</a>);</td></tr>
+<tr><th id="158">158</th><td>}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><em>void</em></td></tr>
+<tr><th id="161">161</th><td><dfn class="decl def fn" id="__tunable_set_val" title='__tunable_set_val' data-ref="__tunable_set_val" data-ref-filename="__tunable_set_val">__tunable_set_val</dfn> (<span class='typedef' title='tunable_id_t' data-type='enum tunable_id_t' data-ref="tunable_id_t" data-ref-filename="tunable_id_t">tunable_id_t</span> <dfn class="local col1 decl" id="31id" title='id' data-type='tunable_id_t' data-ref="31id" data-ref-filename="31id">id</dfn>, <em>void</em> *<dfn class="local col2 decl" id="32valp" title='valp' data-type='void *' data-ref="32valp" data-ref-filename="32valp">valp</dfn>)</td></tr>
+<tr><th id="162">162</th><td>{</td></tr>
+<tr><th id="163">163</th><td>  <a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col3 decl" id="33cur" title='cur' data-type='tunable_t *' data-ref="33cur" data-ref-filename="33cur">cur</dfn> = &amp;<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>[<a class="local col1 ref" href="#31id" title='id' data-ref="31id" data-ref-filename="31id">id</a>];</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td>  <a class="tu ref fn" href="#do_tunable_update_val" title='do_tunable_update_val' data-use='c' data-ref="do_tunable_update_val" data-ref-filename="do_tunable_update_val">do_tunable_update_val</a> (<a class="local col3 ref" href="#33cur" title='cur' data-ref="33cur" data-ref-filename="33cur">cur</a>, <a class="local col2 ref" href="#32valp" title='valp' data-ref="32valp" data-ref-filename="32valp">valp</a>);</td></tr>
+<tr><th id="166">166</th><td>}</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><u>#<span data-ppcond="168">if</span> <span class="macro" title="1" data-ref="_M/TUNABLES_FRONTEND">TUNABLES_FRONTEND</span> == <a class="macro" href="dl-tunables.h.html#111" title="1" data-ref="_M/TUNABLES_FRONTEND_valstring">TUNABLES_FRONTEND_valstring</a></u></td></tr>
+<tr><th id="169">169</th><td><i  data-doc="parse_tunables">/* Parse the tunable string TUNESTR and adjust it to drop any tunables that may</i></td></tr>
+<tr><th id="170">170</th><td><i  data-doc="parse_tunables">   be unsafe for AT_SECURE processes so that it can be used as the new</i></td></tr>
+<tr><th id="171">171</th><td><i  data-doc="parse_tunables">   environment variable value for GLIBC_TUNABLES.  VALSTRING is the original</i></td></tr>
+<tr><th id="172">172</th><td><i  data-doc="parse_tunables">   environment variable string which we use to make NULL terminated values so</i></td></tr>
+<tr><th id="173">173</th><td><i  data-doc="parse_tunables">   that we don't have to allocate memory again for it.  */</i></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="175">175</th><td><dfn class="tu decl def fn" id="parse_tunables" title='parse_tunables' data-type='void parse_tunables(char * tunestr, char * valstring)' data-ref="parse_tunables" data-ref-filename="parse_tunables">parse_tunables</dfn> (<em>char</em> *<dfn class="local col4 decl" id="34tunestr" title='tunestr' data-type='char *' data-ref="34tunestr" data-ref-filename="34tunestr">tunestr</dfn>, <em>char</em> *<dfn class="local col5 decl" id="35valstring" title='valstring' data-type='char *' data-ref="35valstring" data-ref-filename="35valstring">valstring</dfn>)</td></tr>
+<tr><th id="176">176</th><td>{</td></tr>
+<tr><th id="177">177</th><td>  <b>if</b> (<a class="local col4 ref" href="#34tunestr" title='tunestr' data-ref="34tunestr" data-ref-filename="34tunestr">tunestr</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || *<a class="local col4 ref" href="#34tunestr" title='tunestr' data-ref="34tunestr" data-ref-filename="34tunestr">tunestr</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="178">178</th><td>    <b>return</b>;</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>  <em>char</em> *<dfn class="local col6 decl" id="36p" title='p' data-type='char *' data-ref="36p" data-ref-filename="36p">p</dfn> = <a class="local col4 ref" href="#34tunestr" title='tunestr' data-ref="34tunestr" data-ref-filename="34tunestr">tunestr</a>;</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>  <b>while</b> (<span class="macro" title="1" data-ref="_M/true">true</span>)</td></tr>
+<tr><th id="183">183</th><td>    {</td></tr>
+<tr><th id="184">184</th><td>      <em>char</em> *<dfn class="local col7 decl" id="37name" title='name' data-type='char *' data-ref="37name" data-ref-filename="37name">name</dfn> = <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>;</td></tr>
+<tr><th id="185">185</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="38len" title='len' data-type='size_t' data-ref="38len" data-ref-filename="38len">len</dfn> = <var>0</var>;</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>      <i>/* First, find where the name ends.  */</i></td></tr>
+<tr><th id="188">188</th><td>      <b>while</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] != <kbd>'='</kbd> &amp;&amp; <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] != <kbd>':'</kbd> &amp;&amp; <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="189">189</th><td>	<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>++;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>      <i>/* If we reach the end of the string before getting a valid name-value</i></td></tr>
+<tr><th id="192">192</th><td><i>	 pair, bail out.  */</i></td></tr>
+<tr><th id="193">193</th><td>      <b>if</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="194">194</th><td>	<b>return</b>;</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>      <i>/* We did not find a valid name-value pair before encountering the</i></td></tr>
+<tr><th id="197">197</th><td><i>	 colon.  */</i></td></tr>
+<tr><th id="198">198</th><td>      <b>if</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>]== <kbd>':'</kbd>)</td></tr>
+<tr><th id="199">199</th><td>	{</td></tr>
+<tr><th id="200">200</th><td>	  <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a> += <a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> + <var>1</var>;</td></tr>
+<tr><th id="201">201</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="202">202</th><td>	}</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>      <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a> += <a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> + <var>1</var>;</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>      <i>/* Take the value from the valstring since we need to NULL terminate it.  */</i></td></tr>
+<tr><th id="207">207</th><td>      <em>char</em> *<dfn class="local col9 decl" id="39value" title='value' data-type='char *' data-ref="39value" data-ref-filename="39value">value</dfn> = &amp;<a class="local col5 ref" href="#35valstring" title='valstring' data-ref="35valstring" data-ref-filename="35valstring">valstring</a>[<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a> - <a class="local col4 ref" href="#34tunestr" title='tunestr' data-ref="34tunestr" data-ref-filename="34tunestr">tunestr</a>];</td></tr>
+<tr><th id="208">208</th><td>      <a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> = <var>0</var>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>      <b>while</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] != <kbd>':'</kbd> &amp;&amp; <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="211">211</th><td>	<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>++;</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>      <i>/* Add the tunable if it exists.  */</i></td></tr>
+<tr><th id="214">214</th><td>      <b>for</b> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="40i" title='i' data-type='size_t' data-ref="40i" data-ref-filename="40i">i</dfn> = <var>0</var>; <a class="local col0 ref" href="#40i" title='i' data-ref="40i" data-ref-filename="40i">i</a> &lt; <b>sizeof</b> (<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>) / <b>sizeof</b> (<a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a>); <a class="local col0 ref" href="#40i" title='i' data-ref="40i" data-ref-filename="40i">i</a>++)</td></tr>
+<tr><th id="215">215</th><td>	{</td></tr>
+<tr><th id="216">216</th><td>	  <a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col1 decl" id="41cur" title='cur' data-type='tunable_t *' data-ref="41cur" data-ref-filename="41cur">cur</dfn> = &amp;<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>[<a class="local col0 ref" href="#40i" title='i' data-ref="40i" data-ref-filename="40i">i</a>];</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	  <b>if</b> (<a class="ref fn" href="dl-tunables.h.html#tunable_is_name" title='tunable_is_name' data-ref="tunable_is_name" data-ref-filename="tunable_is_name">tunable_is_name</a> (<a class="local col1 ref" href="#41cur" title='cur' data-ref="41cur" data-ref-filename="41cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::name" title='_tunable::name' data-ref="_tunable::name" data-ref-filename="_tunable..name">name</a>, <a class="local col7 ref" href="#37name" title='name' data-ref="37name" data-ref-filename="37name">name</a>))</td></tr>
+<tr><th id="219">219</th><td>	    {</td></tr>
+<tr><th id="220">220</th><td>	      <i>/* If we are in a secure context (AT_SECURE) then ignore the tunable</i></td></tr>
+<tr><th id="221">221</th><td><i>		 unless it is explicitly marked as secure.  Tunable values take</i></td></tr>
+<tr><th id="222">222</th><td><i>		 precendence over their envvar aliases.  */</i></td></tr>
+<tr><th id="223">223</th><td>	      <b>if</b> (<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a>)</td></tr>
+<tr><th id="224">224</th><td>		{</td></tr>
+<tr><th id="225">225</th><td>		  <b>if</b> (<a class="local col1 ref" href="#41cur" title='cur' data-ref="41cur" data-ref-filename="41cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::security_level" title='_tunable::security_level' data-ref="_tunable::security_level" data-ref-filename="_tunable..security_level">security_level</a> == <a class="enum" href="dl-tunable-types.h.html#TUNABLE_SECLEVEL_SXID_ERASE" title='TUNABLE_SECLEVEL_SXID_ERASE' data-ref="TUNABLE_SECLEVEL_SXID_ERASE" data-ref-filename="TUNABLE_SECLEVEL_SXID_ERASE">TUNABLE_SECLEVEL_SXID_ERASE</a>)</td></tr>
+<tr><th id="226">226</th><td>		    {</td></tr>
+<tr><th id="227">227</th><td>		      <b>if</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="228">228</th><td>			{</td></tr>
+<tr><th id="229">229</th><td>			  <i>/* Last tunable in the valstring.  Null-terminate and</i></td></tr>
+<tr><th id="230">230</th><td><i>			     return.  */</i></td></tr>
+<tr><th id="231">231</th><td>			  *<a class="local col7 ref" href="#37name" title='name' data-ref="37name" data-ref-filename="37name">name</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="232">232</th><td>			  <b>return</b>;</td></tr>
+<tr><th id="233">233</th><td>			}</td></tr>
+<tr><th id="234">234</th><td>		      <b>else</b></td></tr>
+<tr><th id="235">235</th><td>			{</td></tr>
+<tr><th id="236">236</th><td>			  <i>/* Remove the current tunable from the string.  We do</i></td></tr>
+<tr><th id="237">237</th><td><i>			     this by overwriting the string starting from NAME</i></td></tr>
+<tr><th id="238">238</th><td><i>			     (which is where the current tunable begins) with</i></td></tr>
+<tr><th id="239">239</th><td><i>			     the remainder of the string.  We then have P point</i></td></tr>
+<tr><th id="240">240</th><td><i>			     to NAME so that we continue in the correct</i></td></tr>
+<tr><th id="241">241</th><td><i>			     position in the valstring.  */</i></td></tr>
+<tr><th id="242">242</th><td>			  <em>char</em> *<dfn class="local col2 decl" id="42q" title='q' data-type='char *' data-ref="42q" data-ref-filename="42q">q</dfn> = &amp;<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> + <var>1</var>];</td></tr>
+<tr><th id="243">243</th><td>			  <a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a> = <a class="local col7 ref" href="#37name" title='name' data-ref="37name" data-ref-filename="37name">name</a>;</td></tr>
+<tr><th id="244">244</th><td>			  <b>while</b> (*<a class="local col2 ref" href="#42q" title='q' data-ref="42q" data-ref-filename="42q">q</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="245">245</th><td>			    *<a class="local col7 ref" href="#37name" title='name' data-ref="37name" data-ref-filename="37name">name</a>++ = *<a class="local col2 ref" href="#42q" title='q' data-ref="42q" data-ref-filename="42q">q</a>++;</td></tr>
+<tr><th id="246">246</th><td>			  <a class="local col7 ref" href="#37name" title='name' data-ref="37name" data-ref-filename="37name">name</a>[<var>0</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="247">247</th><td>			  <a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> = <var>0</var>;</td></tr>
+<tr><th id="248">248</th><td>			}</td></tr>
+<tr><th id="249">249</th><td>		    }</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td>		  <b>if</b> (<a class="local col1 ref" href="#41cur" title='cur' data-ref="41cur" data-ref-filename="41cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::security_level" title='_tunable::security_level' data-ref="_tunable::security_level" data-ref-filename="_tunable..security_level">security_level</a> != <a class="enum" href="dl-tunable-types.h.html#TUNABLE_SECLEVEL_NONE" title='TUNABLE_SECLEVEL_NONE' data-ref="TUNABLE_SECLEVEL_NONE" data-ref-filename="TUNABLE_SECLEVEL_NONE">TUNABLE_SECLEVEL_NONE</a>)</td></tr>
+<tr><th id="252">252</th><td>		    <b>break</b>;</td></tr>
+<tr><th id="253">253</th><td>		}</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	      <a class="local col9 ref" href="#39value" title='value' data-ref="39value" data-ref-filename="39value">value</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="256">256</th><td>	      <a class="tu ref fn" href="#tunable_initialize" title='tunable_initialize' data-use='c' data-ref="tunable_initialize" data-ref-filename="tunable_initialize">tunable_initialize</a> (<a class="local col1 ref" href="#41cur" title='cur' data-ref="41cur" data-ref-filename="41cur">cur</a>, <a class="local col9 ref" href="#39value" title='value' data-ref="39value" data-ref-filename="39value">value</a>);</td></tr>
+<tr><th id="257">257</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="258">258</th><td>	    }</td></tr>
+<tr><th id="259">259</th><td>	}</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>      <b>if</b> (<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a>[<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="262">262</th><td>	<b>return</b>;</td></tr>
+<tr><th id="263">263</th><td>      <b>else</b></td></tr>
+<tr><th id="264">264</th><td>	<a class="local col6 ref" href="#36p" title='p' data-ref="36p" data-ref-filename="36p">p</a> += <a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> + <var>1</var>;</td></tr>
+<tr><th id="265">265</th><td>    }</td></tr>
+<tr><th id="266">266</th><td>}</td></tr>
+<tr><th id="267">267</th><td><u>#<span data-ppcond="168">endif</span></u></td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><i  data-doc="maybe_enable_malloc_check">/* Enable the glibc.malloc.check tunable in SETUID/SETGID programs only when</i></td></tr>
+<tr><th id="270">270</th><td><i  data-doc="maybe_enable_malloc_check">   the system administrator has created the /etc/suid-debug file.  This is a</i></td></tr>
+<tr><th id="271">271</th><td><i  data-doc="maybe_enable_malloc_check">   special case where we want to conditionally enable/disable a tunable even</i></td></tr>
+<tr><th id="272">272</th><td><i  data-doc="maybe_enable_malloc_check">   for setuid binaries.  We use the special version of access() to avoid</i></td></tr>
+<tr><th id="273">273</th><td><i  data-doc="maybe_enable_malloc_check">   setting ERRNO, which is a TLS variable since TLS has not yet been set</i></td></tr>
+<tr><th id="274">274</th><td><i  data-doc="maybe_enable_malloc_check">   up.  */</i></td></tr>
+<tr><th id="275">275</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="276">276</th><td><a class="macro" href="../misc/sys/cdefs.h.html#319" title="__inline __attribute__ ((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a></td></tr>
+<tr><th id="277">277</th><td><dfn class="tu decl def fn" id="maybe_enable_malloc_check" title='maybe_enable_malloc_check' data-type='void maybe_enable_malloc_check()' data-ref="maybe_enable_malloc_check" data-ref-filename="maybe_enable_malloc_check">maybe_enable_malloc_check</dfn> (<em>void</em>)</td></tr>
+<tr><th id="278">278</th><td>{</td></tr>
+<tr><th id="279">279</th><td>  <span class='typedef' title='tunable_id_t' data-type='enum tunable_id_t' data-ref="tunable_id_t" data-ref-filename="tunable_id_t">tunable_id_t</span> <dfn class="local col3 decl" id="43id" title='id' data-type='tunable_id_t' data-ref="43id" data-ref-filename="43id">id</dfn> = <a class="macro" href="dl-tunables.h.html#64" title="glibc_malloc_check" data-ref="_M/TUNABLE_ENUM_NAME">TUNABLE_ENUM_NAME</a> (glibc, malloc, check);</td></tr>
+<tr><th id="280">280</th><td>  <b>if</b> (<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a> &amp;&amp; <a class="ref fn" href="../sysdeps/unix/sysv/linux/not-errno.h.html#__access_noerrno" title='__access_noerrno' data-ref="__access_noerrno" data-ref-filename="__access_noerrno">__access_noerrno</a> (<q>"/etc/suid-debug"</q>, <a class="macro" href="../posix/unistd.h.html#284" title="0" data-ref="_M/F_OK">F_OK</a>) == <var>0</var>)</td></tr>
+<tr><th id="281">281</th><td>    <span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>[<a class="local col3 ref" href="#43id" title='id' data-ref="43id" data-ref-filename="43id">id</a>].<a class="ref field" href="dl-tunables.h.html#_tunable::security_level" title='_tunable::security_level' data-ref="_tunable::security_level" data-ref-filename="_tunable..security_level">security_level</a> = <a class="enum" href="dl-tunable-types.h.html#TUNABLE_SECLEVEL_NONE" title='TUNABLE_SECLEVEL_NONE' data-ref="TUNABLE_SECLEVEL_NONE" data-ref-filename="TUNABLE_SECLEVEL_NONE">TUNABLE_SECLEVEL_NONE</a>;</td></tr>
+<tr><th id="282">282</th><td>}</td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td><i>/* Initialize the tunables list from the environment.  For now we only use the</i></td></tr>
+<tr><th id="285">285</th><td><i>   ENV_ALIAS to find values.  Later we will also use the tunable names to find</i></td></tr>
+<tr><th id="286">286</th><td><i>   values.  */</i></td></tr>
+<tr><th id="287">287</th><td><em>void</em></td></tr>
+<tr><th id="288">288</th><td><dfn class="decl def fn" id="__tunables_init" title='__tunables_init' data-ref="__tunables_init" data-ref-filename="__tunables_init">__tunables_init</dfn> (<em>char</em> **<dfn class="local col4 decl" id="44envp" title='envp' data-type='char **' data-ref="44envp" data-ref-filename="44envp">envp</dfn>)</td></tr>
+<tr><th id="289">289</th><td>{</td></tr>
+<tr><th id="290">290</th><td>  <em>char</em> *<dfn class="local col5 decl" id="45envname" title='envname' data-type='char *' data-ref="45envname" data-ref-filename="45envname">envname</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="291">291</th><td>  <em>char</em> *<dfn class="local col6 decl" id="46envval" title='envval' data-type='char *' data-ref="46envval" data-ref-filename="46envval">envval</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="292">292</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="47len" title='len' data-type='size_t' data-ref="47len" data-ref-filename="47len">len</dfn> = <var>0</var>;</td></tr>
+<tr><th id="293">293</th><td>  <em>char</em> **<dfn class="local col8 decl" id="48prev_envp" title='prev_envp' data-type='char **' data-ref="48prev_envp" data-ref-filename="48prev_envp">prev_envp</dfn> = <a class="local col4 ref" href="#44envp" title='envp' data-ref="44envp" data-ref-filename="44envp">envp</a>;</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>  <a class="tu ref fn" href="#maybe_enable_malloc_check" title='maybe_enable_malloc_check' data-use='c' data-ref="maybe_enable_malloc_check" data-ref-filename="maybe_enable_malloc_check">maybe_enable_malloc_check</a> ();</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td>  <b>while</b> ((<a class="local col4 ref" href="#44envp" title='envp' data-ref="44envp" data-ref-filename="44envp">envp</a> = <a class="tu ref fn" href="#get_next_env" title='get_next_env' data-use='c' data-ref="get_next_env" data-ref-filename="get_next_env">get_next_env</a> (<a class="local col4 ref" href="#44envp" title='envp' data-ref="44envp" data-ref-filename="44envp">envp</a>, &amp;<a class="local col5 ref" href="#45envname" title='envname' data-ref="45envname" data-ref-filename="45envname">envname</a>, &amp;<a class="local col7 ref" href="#47len" title='len' data-ref="47len" data-ref-filename="47len">len</a>, &amp;<a class="local col6 ref" href="#46envval" title='envval' data-ref="46envval" data-ref-filename="46envval">envval</a>,</td></tr>
+<tr><th id="298">298</th><td>			       &amp;<a class="local col8 ref" href="#48prev_envp" title='prev_envp' data-ref="48prev_envp" data-ref-filename="48prev_envp">prev_envp</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="299">299</th><td>    {</td></tr>
+<tr><th id="300">300</th><td><u>#<span data-ppcond="300">if</span> <span class="macro" title="1" data-ref="_M/TUNABLES_FRONTEND">TUNABLES_FRONTEND</span> == <a class="macro" href="dl-tunables.h.html#111" title="1" data-ref="_M/TUNABLES_FRONTEND_valstring">TUNABLES_FRONTEND_valstring</a></u></td></tr>
+<tr><th id="301">301</th><td>      <b>if</b> (<a class="ref fn" href="dl-tunables.h.html#tunable_is_name" title='tunable_is_name' data-ref="tunable_is_name" data-ref-filename="tunable_is_name">tunable_is_name</a> (<a class="macro" href="#36" title="&quot;GLIBC_TUNABLES&quot;" data-ref="_M/GLIBC_TUNABLES">GLIBC_TUNABLES</a>, <a class="local col5 ref" href="#45envname" title='envname' data-ref="45envname" data-ref-filename="45envname">envname</a>))</td></tr>
+<tr><th id="302">302</th><td>	{</td></tr>
+<tr><th id="303">303</th><td>	  <em>char</em> *<dfn class="local col9 decl" id="49new_env" title='new_env' data-type='char *' data-ref="49new_env" data-ref-filename="49new_env">new_env</dfn> = <a class="tu ref fn" href="#tunables_strdup" title='tunables_strdup' data-use='c' data-ref="tunables_strdup" data-ref-filename="tunables_strdup">tunables_strdup</a> (<a class="local col5 ref" href="#45envname" title='envname' data-ref="45envname" data-ref-filename="45envname">envname</a>);</td></tr>
+<tr><th id="304">304</th><td>	  <b>if</b> (<a class="local col9 ref" href="#49new_env" title='new_env' data-ref="49new_env" data-ref-filename="49new_env">new_env</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="305">305</th><td>	    <a class="tu ref fn" href="#parse_tunables" title='parse_tunables' data-use='c' data-ref="parse_tunables" data-ref-filename="parse_tunables">parse_tunables</a> (<a class="local col9 ref" href="#49new_env" title='new_env' data-ref="49new_env" data-ref-filename="49new_env">new_env</a> + <a class="local col7 ref" href="#47len" title='len' data-ref="47len" data-ref-filename="47len">len</a> + <var>1</var>, <a class="local col6 ref" href="#46envval" title='envval' data-ref="46envval" data-ref-filename="46envval">envval</a>);</td></tr>
+<tr><th id="306">306</th><td>	  <i>/* Put in the updated envval.  */</i></td></tr>
+<tr><th id="307">307</th><td>	  *<a class="local col8 ref" href="#48prev_envp" title='prev_envp' data-ref="48prev_envp" data-ref-filename="48prev_envp">prev_envp</a> = <a class="local col9 ref" href="#49new_env" title='new_env' data-ref="49new_env" data-ref-filename="49new_env">new_env</a>;</td></tr>
+<tr><th id="308">308</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="309">309</th><td>	}</td></tr>
+<tr><th id="310">310</th><td><u>#<span data-ppcond="300">endif</span></u></td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td>      <b>for</b> (<em>int</em> <dfn class="local col0 decl" id="50i" title='i' data-type='int' data-ref="50i" data-ref-filename="50i">i</dfn> = <var>0</var>; <a class="local col0 ref" href="#50i" title='i' data-ref="50i" data-ref-filename="50i">i</a> &lt; <b>sizeof</b> (<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>) / <b>sizeof</b> (<a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a>); <a class="local col0 ref" href="#50i" title='i' data-ref="50i" data-ref-filename="50i">i</a>++)</td></tr>
+<tr><th id="313">313</th><td>	{</td></tr>
+<tr><th id="314">314</th><td>	  <a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col1 decl" id="51cur" title='cur' data-type='tunable_t *' data-ref="51cur" data-ref-filename="51cur">cur</dfn> = &amp;<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>[<a class="local col0 ref" href="#50i" title='i' data-ref="50i" data-ref-filename="50i">i</a>];</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>	  <i>/* Skip over tunables that have either been set already or should be</i></td></tr>
+<tr><th id="317">317</th><td><i>	     skipped.  */</i></td></tr>
+<tr><th id="318">318</th><td>	  <b>if</b> (<a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::initialized" title='_tunable::initialized' data-ref="_tunable::initialized" data-ref-filename="_tunable..initialized">initialized</a> || <a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::env_alias" title='_tunable::env_alias' data-ref="_tunable::env_alias" data-ref-filename="_tunable..env_alias">env_alias</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="319">319</th><td>	    <b>continue</b>;</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>	  <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="52name" title='name' data-type='const char *' data-ref="52name" data-ref-filename="52name">name</dfn> = <a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::env_alias" title='_tunable::env_alias' data-ref="_tunable::env_alias" data-ref-filename="_tunable..env_alias">env_alias</a>;</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td>	  <i>/* We have a match.  Initialize and move on to the next line.  */</i></td></tr>
+<tr><th id="324">324</th><td>	  <b>if</b> (<a class="ref fn" href="dl-tunables.h.html#tunable_is_name" title='tunable_is_name' data-ref="tunable_is_name" data-ref-filename="tunable_is_name">tunable_is_name</a> (<a class="local col2 ref" href="#52name" title='name' data-ref="52name" data-ref-filename="52name">name</a>, <a class="local col5 ref" href="#45envname" title='envname' data-ref="45envname" data-ref-filename="45envname">envname</a>))</td></tr>
+<tr><th id="325">325</th><td>	    {</td></tr>
+<tr><th id="326">326</th><td>	      <i>/* For AT_SECURE binaries, we need to check the security settings of</i></td></tr>
+<tr><th id="327">327</th><td><i>		 the tunable and decide whether we read the value and also whether</i></td></tr>
+<tr><th id="328">328</th><td><i>		 we erase the value so that child processes don't inherit them in</i></td></tr>
+<tr><th id="329">329</th><td><i>		 the environment.  */</i></td></tr>
+<tr><th id="330">330</th><td>	      <b>if</b> (<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a>)</td></tr>
+<tr><th id="331">331</th><td>		{</td></tr>
+<tr><th id="332">332</th><td>		  <b>if</b> (<a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::security_level" title='_tunable::security_level' data-ref="_tunable::security_level" data-ref-filename="_tunable..security_level">security_level</a> == <a class="enum" href="dl-tunable-types.h.html#TUNABLE_SECLEVEL_SXID_ERASE" title='TUNABLE_SECLEVEL_SXID_ERASE' data-ref="TUNABLE_SECLEVEL_SXID_ERASE" data-ref-filename="TUNABLE_SECLEVEL_SXID_ERASE">TUNABLE_SECLEVEL_SXID_ERASE</a>)</td></tr>
+<tr><th id="333">333</th><td>		    {</td></tr>
+<tr><th id="334">334</th><td>		      <i>/* Erase the environment variable.  */</i></td></tr>
+<tr><th id="335">335</th><td>		      <em>char</em> **<dfn class="local col3 decl" id="53ep" title='ep' data-type='char **' data-ref="53ep" data-ref-filename="53ep">ep</dfn> = <a class="local col8 ref" href="#48prev_envp" title='prev_envp' data-ref="48prev_envp" data-ref-filename="48prev_envp">prev_envp</a>;</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>		      <b>while</b> (*<a class="local col3 ref" href="#53ep" title='ep' data-ref="53ep" data-ref-filename="53ep">ep</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="338">338</th><td>			{</td></tr>
+<tr><th id="339">339</th><td>			  <b>if</b> (<a class="ref fn" href="dl-tunables.h.html#tunable_is_name" title='tunable_is_name' data-ref="tunable_is_name" data-ref-filename="tunable_is_name">tunable_is_name</a> (<a class="local col2 ref" href="#52name" title='name' data-ref="52name" data-ref-filename="52name">name</a>, *<a class="local col3 ref" href="#53ep" title='ep' data-ref="53ep" data-ref-filename="53ep">ep</a>))</td></tr>
+<tr><th id="340">340</th><td>			    {</td></tr>
+<tr><th id="341">341</th><td>			      <em>char</em> **<dfn class="local col4 decl" id="54dp" title='dp' data-type='char **' data-ref="54dp" data-ref-filename="54dp">dp</dfn> = <a class="local col3 ref" href="#53ep" title='ep' data-ref="53ep" data-ref-filename="53ep">ep</a>;</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>			      <b>do</b></td></tr>
+<tr><th id="344">344</th><td>				<a class="local col4 ref" href="#54dp" title='dp' data-ref="54dp" data-ref-filename="54dp">dp</a>[<var>0</var>] = <a class="local col4 ref" href="#54dp" title='dp' data-ref="54dp" data-ref-filename="54dp">dp</a>[<var>1</var>];</td></tr>
+<tr><th id="345">345</th><td>			      <b>while</b> (*<a class="local col4 ref" href="#54dp" title='dp' data-ref="54dp" data-ref-filename="54dp">dp</a>++);</td></tr>
+<tr><th id="346">346</th><td>			    }</td></tr>
+<tr><th id="347">347</th><td>			  <b>else</b></td></tr>
+<tr><th id="348">348</th><td>			    ++<a class="local col3 ref" href="#53ep" title='ep' data-ref="53ep" data-ref-filename="53ep">ep</a>;</td></tr>
+<tr><th id="349">349</th><td>			}</td></tr>
+<tr><th id="350">350</th><td>		      <i>/* Reset the iterator so that we read the environment again</i></td></tr>
+<tr><th id="351">351</th><td><i>			 from the point we erased.  */</i></td></tr>
+<tr><th id="352">352</th><td>		      <a class="local col4 ref" href="#44envp" title='envp' data-ref="44envp" data-ref-filename="44envp">envp</a> = <a class="local col8 ref" href="#48prev_envp" title='prev_envp' data-ref="48prev_envp" data-ref-filename="48prev_envp">prev_envp</a>;</td></tr>
+<tr><th id="353">353</th><td>		    }</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td>		  <b>if</b> (<a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::security_level" title='_tunable::security_level' data-ref="_tunable::security_level" data-ref-filename="_tunable..security_level">security_level</a> != <a class="enum" href="dl-tunable-types.h.html#TUNABLE_SECLEVEL_NONE" title='TUNABLE_SECLEVEL_NONE' data-ref="TUNABLE_SECLEVEL_NONE" data-ref-filename="TUNABLE_SECLEVEL_NONE">TUNABLE_SECLEVEL_NONE</a>)</td></tr>
+<tr><th id="356">356</th><td>		    <b>continue</b>;</td></tr>
+<tr><th id="357">357</th><td>		}</td></tr>
+<tr><th id="358">358</th><td></td></tr>
+<tr><th id="359">359</th><td>	      <a class="tu ref fn" href="#tunable_initialize" title='tunable_initialize' data-use='c' data-ref="tunable_initialize" data-ref-filename="tunable_initialize">tunable_initialize</a> (<a class="local col1 ref" href="#51cur" title='cur' data-ref="51cur" data-ref-filename="51cur">cur</a>, <a class="local col6 ref" href="#46envval" title='envval' data-ref="46envval" data-ref-filename="46envval">envval</a>);</td></tr>
+<tr><th id="360">360</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="361">361</th><td>	    }</td></tr>
+<tr><th id="362">362</th><td>	}</td></tr>
+<tr><th id="363">363</th><td>    }</td></tr>
+<tr><th id="364">364</th><td>}</td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td><i>/* Set the tunable value.  This is called by the module that the tunable exists</i></td></tr>
+<tr><th id="367">367</th><td><i>   in. */</i></td></tr>
+<tr><th id="368">368</th><td><em>void</em></td></tr>
+<tr><th id="369">369</th><td><dfn class="decl def fn" id="__tunable_get_val" title='__tunable_get_val' data-ref="__tunable_get_val" data-ref-filename="__tunable_get_val">__tunable_get_val</dfn> (<span class='typedef' title='tunable_id_t' data-type='enum tunable_id_t' data-ref="tunable_id_t" data-ref-filename="tunable_id_t">tunable_id_t</span> <dfn class="local col5 decl" id="55id" title='id' data-type='tunable_id_t' data-ref="55id" data-ref-filename="55id">id</dfn>, <em>void</em> *<dfn class="local col6 decl" id="56valp" title='valp' data-type='void *' data-ref="56valp" data-ref-filename="56valp">valp</dfn>, <a class="typedef" href="dl-tunable-types.h.html#tunable_callback_t" title='tunable_callback_t' data-type='void (*)(tunable_val_t *)' data-ref="tunable_callback_t" data-ref-filename="tunable_callback_t">tunable_callback_t</a> <dfn class="local col7 decl" id="57callback" title='callback' data-type='tunable_callback_t' data-ref="57callback" data-ref-filename="57callback">callback</dfn>)</td></tr>
+<tr><th id="370">370</th><td>{</td></tr>
+<tr><th id="371">371</th><td>  <a class="typedef" href="dl-tunables.h.html#tunable_t" title='tunable_t' data-type='struct _tunable' data-ref="tunable_t" data-ref-filename="tunable_t">tunable_t</a> *<dfn class="local col8 decl" id="58cur" title='cur' data-type='tunable_t *' data-ref="58cur" data-ref-filename="58cur">cur</dfn> = &amp;<span class='ref' title='tunable_list' data-ref="tunable_list" data-ref-filename="tunable_list">tunable_list</span>[<a class="local col5 ref" href="#55id" title='id' data-ref="55id" data-ref-filename="55id">id</a>];</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>  <b>switch</b> (<a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::type" title='_tunable::type' data-ref="_tunable::type" data-ref-filename="_tunable..type">type</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::type_code" title='(anonymous struct)::type_code' data-ref="(anonymous)::type_code" data-ref-filename="(anonymous)..type_code">type_code</a>)</td></tr>
+<tr><th id="374">374</th><td>    {</td></tr>
+<tr><th id="375">375</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_UINT_64" title='TUNABLE_TYPE_UINT_64' data-ref="TUNABLE_TYPE_UINT_64" data-ref-filename="TUNABLE_TYPE_UINT_64">TUNABLE_TYPE_UINT_64</a>:</td></tr>
+<tr><th id="376">376</th><td>	{</td></tr>
+<tr><th id="377">377</th><td>	  *((<a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> *) <a class="local col6 ref" href="#56valp" title='valp' data-ref="56valp" data-ref-filename="56valp">valp</a>) = (<a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>) <a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::numval" title='(anonymous union)::numval' data-ref="(anonymous)::numval" data-ref-filename="(anonymous)..numval">numval</a>;</td></tr>
+<tr><th id="378">378</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="379">379</th><td>	}</td></tr>
+<tr><th id="380">380</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_INT_32" title='TUNABLE_TYPE_INT_32' data-ref="TUNABLE_TYPE_INT_32" data-ref-filename="TUNABLE_TYPE_INT_32">TUNABLE_TYPE_INT_32</a>:</td></tr>
+<tr><th id="381">381</th><td>	{</td></tr>
+<tr><th id="382">382</th><td>	  *((<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *) <a class="local col6 ref" href="#56valp" title='valp' data-ref="56valp" data-ref-filename="56valp">valp</a>) = (<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a>) <a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::numval" title='(anonymous union)::numval' data-ref="(anonymous)::numval" data-ref-filename="(anonymous)..numval">numval</a>;</td></tr>
+<tr><th id="383">383</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="384">384</th><td>	}</td></tr>
+<tr><th id="385">385</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_SIZE_T" title='TUNABLE_TYPE_SIZE_T' data-ref="TUNABLE_TYPE_SIZE_T" data-ref-filename="TUNABLE_TYPE_SIZE_T">TUNABLE_TYPE_SIZE_T</a>:</td></tr>
+<tr><th id="386">386</th><td>	{</td></tr>
+<tr><th id="387">387</th><td>	  *((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *) <a class="local col6 ref" href="#56valp" title='valp' data-ref="56valp" data-ref-filename="56valp">valp</a>) = (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::numval" title='(anonymous union)::numval' data-ref="(anonymous)::numval" data-ref-filename="(anonymous)..numval">numval</a>;</td></tr>
+<tr><th id="388">388</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="389">389</th><td>	}</td></tr>
+<tr><th id="390">390</th><td>    <b>case</b> <a class="enum" href="dl-tunable-types.h.html#TUNABLE_TYPE_STRING" title='TUNABLE_TYPE_STRING' data-ref="TUNABLE_TYPE_STRING" data-ref-filename="TUNABLE_TYPE_STRING">TUNABLE_TYPE_STRING</a>:</td></tr>
+<tr><th id="391">391</th><td>	{</td></tr>
+<tr><th id="392">392</th><td>	  *((<em>const</em> <em>char</em> **)<a class="local col6 ref" href="#56valp" title='valp' data-ref="56valp" data-ref-filename="56valp">valp</a>) = <a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>.<a class="ref field" href="dl-tunable-types.h.html#(anonymous)::strval" title='(anonymous union)::strval' data-ref="(anonymous)::strval" data-ref-filename="(anonymous)..strval">strval</a>;</td></tr>
+<tr><th id="393">393</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="394">394</th><td>	}</td></tr>
+<tr><th id="395">395</th><td>    <b>default</b>:</td></tr>
+<tr><th id="396">396</th><td>      <a class="ref fn" href="#135" title='__builtin_unreachable' data-ref="__builtin_unreachable" data-ref-filename="__builtin_unreachable">__builtin_unreachable</a> ();</td></tr>
+<tr><th id="397">397</th><td>    }</td></tr>
+<tr><th id="398">398</th><td></td></tr>
+<tr><th id="399">399</th><td>  <b>if</b> (<a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::initialized" title='_tunable::initialized' data-ref="_tunable::initialized" data-ref-filename="_tunable..initialized">initialized</a> &amp;&amp; <a class="local col7 ref" href="#57callback" title='callback' data-ref="57callback" data-ref-filename="57callback">callback</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="400">400</th><td>    <a class="local col7 ref" href="#57callback" title='callback' data-ref="57callback" data-ref-filename="57callback">callback</a> (&amp;<a class="local col8 ref" href="#58cur" title='cur' data-ref="58cur" data-ref-filename="58cur">cur</a>-&gt;<a class="ref field" href="dl-tunables.h.html#_tunable::val" title='_tunable::val' data-ref="_tunable::val" data-ref-filename="_tunable..val">val</a>);</td></tr>
+<tr><th id="401">401</th><td>}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td><a class="macro" href="../include/libc-symbols.h.html#647" title="extern __typeof (__tunable_get_val) __EI___tunable_get_val __asm__(&quot;&quot; &quot;__tunable_get_val&quot;); extern __typeof (__tunable_get_val) __EI___tunable_get_val __attribute__((alias (&quot;&quot; &quot;__GI___tunable_get_val&quot;))) ;" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__tunable_get_val" title='__tunable_get_val' data-ref="__tunable_get_val" data-ref-filename="__tunable_get_val">__tunable_get_val</a>)</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

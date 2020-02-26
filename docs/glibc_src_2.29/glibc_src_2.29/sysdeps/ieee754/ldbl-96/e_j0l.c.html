@@ -1,0 +1,550 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>e_j0l.c source code [glibc_src_2.29/sysdeps/ieee754/ldbl-96/e_j0l.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.29/sysdeps/ieee754/ldbl-96/e_j0l.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.29</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-96</a>/<a href='e_j0l.c.html'>e_j0l.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Developed at SunPro, a Sun Microsystems, Inc. business.</i></td></tr>
+<tr><th id="6">6</th><td><i> * Permission to use, copy, modify, and distribute this</i></td></tr>
+<tr><th id="7">7</th><td><i> * software is freely granted, provided that this notice</i></td></tr>
+<tr><th id="8">8</th><td><i> * is preserved.</i></td></tr>
+<tr><th id="9">9</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="10">10</th><td><i> */</i></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><i>/* Long double expansions are</i></td></tr>
+<tr><th id="13">13</th><td><i>  Copyright (C) 2001 Stephen L. Moshier &lt;moshier@na-net.ornl.gov&gt;</i></td></tr>
+<tr><th id="14">14</th><td><i>  and are incorporated herein by permission of the author.  The author</i></td></tr>
+<tr><th id="15">15</th><td><i>  reserves the right to distribute this material elsewhere under different</i></td></tr>
+<tr><th id="16">16</th><td><i>  copying permissions.  These modifications are distributed here under</i></td></tr>
+<tr><th id="17">17</th><td><i>  the following terms:</i></td></tr>
+<tr><th id="18">18</th><td><i></i></td></tr>
+<tr><th id="19">19</th><td><i>    This library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="20">20</th><td><i>    modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="21">21</th><td><i>    License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="22">22</th><td><i>    version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="23">23</th><td><i></i></td></tr>
+<tr><th id="24">24</th><td><i>    This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="25">25</th><td><i>    but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="26">26</th><td><i>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="27">27</th><td><i>    Lesser General Public License for more details.</i></td></tr>
+<tr><th id="28">28</th><td><i></i></td></tr>
+<tr><th id="29">29</th><td><i>    You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="30">30</th><td><i>    License along with this library; if not, see</i></td></tr>
+<tr><th id="31">31</th><td><i>    &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* __ieee754_j0(x), __ieee754_y0(x)</i></td></tr>
+<tr><th id="34">34</th><td><i> * Bessel function of the first and second kinds of order zero.</i></td></tr>
+<tr><th id="35">35</th><td><i> * Method -- j0(x):</i></td></tr>
+<tr><th id="36">36</th><td><i> *	1. For tiny x, we use j0(x) = 1 - x^2/4 + x^4/64 - ...</i></td></tr>
+<tr><th id="37">37</th><td><i> *	2. Reduce x to |x| since j0(x)=j0(-x),  and</i></td></tr>
+<tr><th id="38">38</th><td><i> *	   for x in (0,2)</i></td></tr>
+<tr><th id="39">39</th><td><i> *		j0(x) = 1 - z/4 + z^2*R0/S0,  where z = x*x;</i></td></tr>
+<tr><th id="40">40</th><td><i> *	   for x in (2,inf)</i></td></tr>
+<tr><th id="41">41</th><td><i> *		j0(x) = sqrt(2/(pi*x))*(p0(x)*cos(x0)-q0(x)*sin(x0))</i></td></tr>
+<tr><th id="42">42</th><td><i> *	   where x0 = x-pi/4. It is better to compute sin(x0),cos(x0)</i></td></tr>
+<tr><th id="43">43</th><td><i> *	   as follow:</i></td></tr>
+<tr><th id="44">44</th><td><i> *		cos(x0) = cos(x)cos(pi/4)+sin(x)sin(pi/4)</i></td></tr>
+<tr><th id="45">45</th><td><i> *			= 1/sqrt(2) * (cos(x) + sin(x))</i></td></tr>
+<tr><th id="46">46</th><td><i> *		sin(x0) = sin(x)cos(pi/4)-cos(x)sin(pi/4)</i></td></tr>
+<tr><th id="47">47</th><td><i> *			= 1/sqrt(2) * (sin(x) - cos(x))</i></td></tr>
+<tr><th id="48">48</th><td><i> *	   (To avoid cancellation, use</i></td></tr>
+<tr><th id="49">49</th><td><i> *		sin(x) +- cos(x) = -cos(2x)/(sin(x) -+ cos(x))</i></td></tr>
+<tr><th id="50">50</th><td><i> *	    to compute the worse one.)</i></td></tr>
+<tr><th id="51">51</th><td><i> *</i></td></tr>
+<tr><th id="52">52</th><td><i> *	3 Special cases</i></td></tr>
+<tr><th id="53">53</th><td><i> *		j0(nan)= nan</i></td></tr>
+<tr><th id="54">54</th><td><i> *		j0(0) = 1</i></td></tr>
+<tr><th id="55">55</th><td><i> *		j0(inf) = 0</i></td></tr>
+<tr><th id="56">56</th><td><i> *</i></td></tr>
+<tr><th id="57">57</th><td><i> * Method -- y0(x):</i></td></tr>
+<tr><th id="58">58</th><td><i> *	1. For x&lt;2.</i></td></tr>
+<tr><th id="59">59</th><td><i> *	   Since</i></td></tr>
+<tr><th id="60">60</th><td><i> *		y0(x) = 2/pi*(j0(x)*(ln(x/2)+Euler) + x^2/4 - ...)</i></td></tr>
+<tr><th id="61">61</th><td><i> *	   therefore y0(x)-2/pi*j0(x)*ln(x) is an even function.</i></td></tr>
+<tr><th id="62">62</th><td><i> *	   We use the following function to approximate y0,</i></td></tr>
+<tr><th id="63">63</th><td><i> *		y0(x) = U(z)/V(z) + (2/pi)*(j0(x)*ln(x)), z= x^2</i></td></tr>
+<tr><th id="64">64</th><td><i> *</i></td></tr>
+<tr><th id="65">65</th><td><i> *	   Note: For tiny x, U/V = u0 and j0(x)~1, hence</i></td></tr>
+<tr><th id="66">66</th><td><i> *		y0(tiny) = u0 + (2/pi)*ln(tiny), (choose tiny&lt;2**-27)</i></td></tr>
+<tr><th id="67">67</th><td><i> *	2. For x&gt;=2.</i></td></tr>
+<tr><th id="68">68</th><td><i> *		y0(x) = sqrt(2/(pi*x))*(p0(x)*cos(x0)+q0(x)*sin(x0))</i></td></tr>
+<tr><th id="69">69</th><td><i> *	   where x0 = x-pi/4. It is better to compute sin(x0),cos(x0)</i></td></tr>
+<tr><th id="70">70</th><td><i> *	   by the method mentioned above.</i></td></tr>
+<tr><th id="71">71</th><td><i> *	3. Special cases: y0(0)=-inf, y0(x&lt;0)=NaN, y0(inf)=0.</i></td></tr>
+<tr><th id="72">72</th><td><i> */</i></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="75">75</th><td><u>#include <a href="../../x86/fpu/math-barriers.h.html">&lt;math-barriers.h&gt;</a></u></td></tr>
+<tr><th id="76">76</th><td><u>#include <a href="../../x86/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><em>static</em> <em>long</em> <em>double</em> <a class="tu decl fn" href="#pzero" title='pzero' data-type='long double pzero(long double )' data-ref="pzero" data-ref-filename="pzero">pzero</a> (<em>long</em> <em>double</em>), <a class="tu decl fn" href="#qzero" title='qzero' data-type='long double qzero(long double )' data-ref="qzero" data-ref-filename="qzero">qzero</a> (<em>long</em> <em>double</em>);</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em></td></tr>
+<tr><th id="81">81</th><td>  <dfn class="tu decl def" id="huge" title='huge' data-type='const long double' data-ref="huge" data-ref-filename="huge">huge</dfn> = <var>1e4930L</var>,</td></tr>
+<tr><th id="82">82</th><td>  <dfn class="tu decl def" id="one" title='one' data-type='const long double' data-ref="one" data-ref-filename="one">one</dfn> = <var>1.0L</var>,</td></tr>
+<tr><th id="83">83</th><td>  <dfn class="tu decl def" id="invsqrtpi" title='invsqrtpi' data-type='const long double' data-ref="invsqrtpi" data-ref-filename="invsqrtpi">invsqrtpi</dfn> = <var>5.6418958354775628694807945156077258584405e-1L</var>,</td></tr>
+<tr><th id="84">84</th><td>  <dfn class="tu decl def" id="tpi" title='tpi' data-type='const long double' data-ref="tpi" data-ref-filename="tpi">tpi</dfn> = <var>6.3661977236758134307553505349005744813784e-1L</var>,</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <i>/* J0(x) = 1 - x^2 / 4 + x^4 R0(x^2) / S0(x^2)</i></td></tr>
+<tr><th id="87">87</th><td><i>     0 &lt;= x &lt;= 2</i></td></tr>
+<tr><th id="88">88</th><td><i>     peak relative error 1.41e-22 */</i></td></tr>
+<tr><th id="89">89</th><td>  <dfn class="tu decl def" id="R" title='R' data-type='const long double [5]' data-ref="R" data-ref-filename="R">R</dfn>[<var>5</var>] = {</td></tr>
+<tr><th id="90">90</th><td>  <var>4.287176872744686992880841716723478740566E7L</var>,</td></tr>
+<tr><th id="91">91</th><td>  -<var>6.652058897474241627570911531740907185772E5L</var>,</td></tr>
+<tr><th id="92">92</th><td>  <var>7.011848381719789863458364584613651091175E3L</var>,</td></tr>
+<tr><th id="93">93</th><td>  -<var>3.168040850193372408702135490809516253693E1L</var>,</td></tr>
+<tr><th id="94">94</th><td>  <var>6.030778552661102450545394348845599300939E-2L</var>,</td></tr>
+<tr><th id="95">95</th><td>},</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td> <dfn class="tu decl def" id="S" title='S' data-type='const long double [4]' data-ref="S" data-ref-filename="S">S</dfn>[<var>4</var>] = {</td></tr>
+<tr><th id="98">98</th><td>   <var>2.743793198556599677955266341699130654342E9L</var>,</td></tr>
+<tr><th id="99">99</th><td>   <var>3.364330079384816249840086842058954076201E7L</var>,</td></tr>
+<tr><th id="100">100</th><td>   <var>1.924119649412510777584684927494642526573E5L</var>,</td></tr>
+<tr><th id="101">101</th><td>   <var>6.239282256012734914211715620088714856494E2L</var>,</td></tr>
+<tr><th id="102">102</th><td>   <i>/*   1.000000000000000000000000000000000000000E0L,*/</i></td></tr>
+<tr><th id="103">103</th><td>};</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="zero" title='zero' data-type='const long double' data-ref="zero" data-ref-filename="zero">zero</dfn> = <var>0.0</var>;</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><em>long</em> <em>double</em></td></tr>
+<tr><th id="108">108</th><td><dfn class="decl def fn" id="__ieee754_j0l" title='__ieee754_j0l' data-ref="__ieee754_j0l" data-ref-filename="__ieee754_j0l">__ieee754_j0l</dfn> (<em>long</em> <em>double</em> <dfn class="local col1 decl" id="1x" title='x' data-type='long double' data-ref="1x" data-ref-filename="1x">x</dfn>)</td></tr>
+<tr><th id="109">109</th><td>{</td></tr>
+<tr><th id="110">110</th><td>  <em>long</em> <em>double</em> <dfn class="local col2 decl" id="2z" title='z' data-type='long double' data-ref="2z" data-ref-filename="2z">z</dfn>, <dfn class="local col3 decl" id="3s" title='s' data-type='long double' data-ref="3s" data-ref-filename="3s">s</dfn>, <dfn class="local col4 decl" id="4c" title='c' data-type='long double' data-ref="4c" data-ref-filename="4c">c</dfn>, <dfn class="local col5 decl" id="5ss" title='ss' data-type='long double' data-ref="5ss" data-ref-filename="5ss">ss</dfn>, <dfn class="local col6 decl" id="6cc" title='cc' data-type='long double' data-ref="6cc" data-ref-filename="6cc">cc</dfn>, <dfn class="local col7 decl" id="7r" title='r' data-type='long double' data-ref="7r" data-ref-filename="7r">r</dfn>, <dfn class="local col8 decl" id="8u" title='u' data-type='long double' data-ref="8u" data-ref-filename="8u">u</dfn>, <dfn class="local col9 decl" id="9v" title='v' data-type='long double' data-ref="9v" data-ref-filename="9v">v</dfn>;</td></tr>
+<tr><th id="111">111</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col0 decl" id="10ix" title='ix' data-type='int32_t' data-ref="10ix" data-ref-filename="10ix">ix</dfn>;</td></tr>
+<tr><th id="112">112</th><td>  <a class="typedef" href="../../../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col1 decl" id="11se" title='se' data-type='uint32_t' data-ref="11se" data-ref-filename="11se">se</dfn>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <a class="macro" href="../../x86_64/fpu/math_ldbl.h.html#83" title="do { ieee_long_double_shape_type ge_u; ge_u.value = (x); (se) = ge_u.parts.sign_exponent; } while (0)" data-ref="_M/GET_LDOUBLE_EXP">GET_LDOUBLE_EXP</a> (<a class="local col1 ref" href="#11se" title='se' data-ref="11se" data-ref-filename="11se">se</a>, <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="115">115</th><td>  <a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> = <a class="local col1 ref" href="#11se" title='se' data-ref="11se" data-ref-filename="11se">se</a> &amp; <var>0x7fff</var>;</td></tr>
+<tr><th id="116">116</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &gt;= 0x7fff), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &gt;= <var>0x7fff</var>))</td></tr>
+<tr><th id="117">117</th><td>    <b>return</b> <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> / (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="118">118</th><td>  <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> = <a class="ref fn" href="../../../math/bits/mathcalls.h.html#162" title='fabsl' data-ref="fabsl" data-ref-filename="fabsl">fabsl</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="119">119</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &gt;= <var>0x4000</var>)		<i>/* |x| &gt;= 2.0 */</i></td></tr>
+<tr><th id="120">120</th><td>    {</td></tr>
+<tr><th id="121">121</th><td>      <a class="ref fn" href="../../../math/bits/mathcalls.h.html#79" title='__sincosl' data-ref="__sincosl" data-ref-filename="__sincosl">__sincosl</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>, &amp;<a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a>, &amp;<a class="local col4 ref" href="#4c" title='c' data-ref="4c" data-ref-filename="4c">c</a>);</td></tr>
+<tr><th id="122">122</th><td>      <a class="local col5 ref" href="#5ss" title='ss' data-ref="5ss" data-ref-filename="5ss">ss</a> = <a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a> - <a class="local col4 ref" href="#4c" title='c' data-ref="4c" data-ref-filename="4c">c</a>;</td></tr>
+<tr><th id="123">123</th><td>      <a class="local col6 ref" href="#6cc" title='cc' data-ref="6cc" data-ref-filename="6cc">cc</a> = <a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a> + <a class="local col4 ref" href="#4c" title='c' data-ref="4c" data-ref-filename="4c">c</a>;</td></tr>
+<tr><th id="124">124</th><td>      <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x7ffe</var>)</td></tr>
+<tr><th id="125">125</th><td>	{			<i>/* make sure x+x not overflow */</i></td></tr>
+<tr><th id="126">126</th><td>	  <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> = -<a class="ref fn" href="../../../math/bits/mathcalls.h.html#62" title='__cosl' data-ref="__cosl" data-ref-filename="__cosl">__cosl</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> + <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="127">127</th><td>	  <b>if</b> ((<a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a> * <a class="local col4 ref" href="#4c" title='c' data-ref="4c" data-ref-filename="4c">c</a>) &lt; <a class="tu ref" href="#zero" title='zero' data-use='r' data-ref="zero" data-ref-filename="zero">zero</a>)</td></tr>
+<tr><th id="128">128</th><td>	    <a class="local col6 ref" href="#6cc" title='cc' data-ref="6cc" data-ref-filename="6cc">cc</a> = <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> / <a class="local col5 ref" href="#5ss" title='ss' data-ref="5ss" data-ref-filename="5ss">ss</a>;</td></tr>
+<tr><th id="129">129</th><td>	  <b>else</b></td></tr>
+<tr><th id="130">130</th><td>	    <a class="local col5 ref" href="#5ss" title='ss' data-ref="5ss" data-ref-filename="5ss">ss</a> = <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> / <a class="local col6 ref" href="#6cc" title='cc' data-ref="6cc" data-ref-filename="6cc">cc</a>;</td></tr>
+<tr><th id="131">131</th><td>	}</td></tr>
+<tr><th id="132">132</th><td>      <i>/*</i></td></tr>
+<tr><th id="133">133</th><td><i>       * j0(x) = 1/sqrt(pi) * (P(0,x)*cc - Q(0,x)*ss) / sqrt(x)</i></td></tr>
+<tr><th id="134">134</th><td><i>       * y0(x) = 1/sqrt(pi) * (P(0,x)*ss + Q(0,x)*cc) / sqrt(x)</i></td></tr>
+<tr><th id="135">135</th><td><i>       */</i></td></tr>
+<tr><th id="136">136</th><td>      <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &gt; 0x4080), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &gt; <var>0x4080</var>))      	<i>/* 2^129 */</i></td></tr>
+<tr><th id="137">137</th><td>	<a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> = (<a class="tu ref" href="#invsqrtpi" title='invsqrtpi' data-use='r' data-ref="invsqrtpi" data-ref-filename="invsqrtpi">invsqrtpi</a> * <a class="local col6 ref" href="#6cc" title='cc' data-ref="6cc" data-ref-filename="6cc">cc</a>) / <a class="ref fn" href="../../../math/bits/mathcalls.h.html#143" title='sqrtl' data-ref="__ieee754_sqrtl" data-ref-filename="__ieee754_sqrtl">sqrtl</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="138">138</th><td>      <b>else</b></td></tr>
+<tr><th id="139">139</th><td>	{</td></tr>
+<tr><th id="140">140</th><td>	  <a class="local col8 ref" href="#8u" title='u' data-ref="8u" data-ref-filename="8u">u</a> = <a class="tu ref fn" href="#pzero" title='pzero' data-use='c' data-ref="pzero" data-ref-filename="pzero">pzero</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="141">141</th><td>	  <a class="local col9 ref" href="#9v" title='v' data-ref="9v" data-ref-filename="9v">v</a> = <a class="tu ref fn" href="#qzero" title='qzero' data-use='c' data-ref="qzero" data-ref-filename="qzero">qzero</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="142">142</th><td>	  <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> = <a class="tu ref" href="#invsqrtpi" title='invsqrtpi' data-use='r' data-ref="invsqrtpi" data-ref-filename="invsqrtpi">invsqrtpi</a> * (<a class="local col8 ref" href="#8u" title='u' data-ref="8u" data-ref-filename="8u">u</a> * <a class="local col6 ref" href="#6cc" title='cc' data-ref="6cc" data-ref-filename="6cc">cc</a> - <a class="local col9 ref" href="#9v" title='v' data-ref="9v" data-ref-filename="9v">v</a> * <a class="local col5 ref" href="#5ss" title='ss' data-ref="5ss" data-ref-filename="5ss">ss</a>) / <a class="ref fn" href="../../../math/bits/mathcalls.h.html#143" title='sqrtl' data-ref="__ieee754_sqrtl" data-ref-filename="__ieee754_sqrtl">sqrtl</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="143">143</th><td>	}</td></tr>
+<tr><th id="144">144</th><td>      <b>return</b> <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a>;</td></tr>
+<tr><th id="145">145</th><td>    }</td></tr>
+<tr><th id="146">146</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &lt; 0x3fef), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x3fef</var>))       <i>/* |x| &lt; 2**-16 */</i></td></tr>
+<tr><th id="147">147</th><td>    {</td></tr>
+<tr><th id="148">148</th><td>      <i>/* raise inexact if x != 0 */</i></td></tr>
+<tr><th id="149">149</th><td>      <a class="macro" href="../../x86/fpu/math-barriers.h.html#31" title="do { if (sizeof (huge + x) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (huge + x), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (huge + x)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (huge + x)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (<a class="tu ref" href="#huge" title='huge' data-use='r' data-ref="huge" data-ref-filename="huge">huge</a> + <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="150">150</th><td>      <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x3fde</var>) <i>/* |x| &lt; 2^-33 */</i></td></tr>
+<tr><th id="151">151</th><td>	<b>return</b> <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a>;</td></tr>
+<tr><th id="152">152</th><td>      <b>else</b></td></tr>
+<tr><th id="153">153</th><td>	<b>return</b> <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> - <var>0.25</var> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="154">154</th><td>    }</td></tr>
+<tr><th id="155">155</th><td>  <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="156">156</th><td>  <a class="local col7 ref" href="#7r" title='r' data-ref="7r" data-ref-filename="7r">r</a> = <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#R" title='R' data-use='r' data-ref="R" data-ref-filename="R">R</a>[<var>0</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#R" title='R' data-use='r' data-ref="R" data-ref-filename="R">R</a>[<var>1</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#R" title='R' data-use='r' data-ref="R" data-ref-filename="R">R</a>[<var>2</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#R" title='R' data-use='r' data-ref="R" data-ref-filename="R">R</a>[<var>3</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * <a class="tu ref" href="#R" title='R' data-use='r' data-ref="R" data-ref-filename="R">R</a>[<var>4</var>]))));</td></tr>
+<tr><th id="157">157</th><td>  <a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a> = <a class="tu ref" href="#S" title='S' data-use='r' data-ref="S" data-ref-filename="S">S</a>[<var>0</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#S" title='S' data-use='r' data-ref="S" data-ref-filename="S">S</a>[<var>1</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#S" title='S' data-use='r' data-ref="S" data-ref-filename="S">S</a>[<var>2</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="tu ref" href="#S" title='S' data-use='r' data-ref="S" data-ref-filename="S">S</a>[<var>3</var>] + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a>)));</td></tr>
+<tr><th id="158">158</th><td>  <b>if</b> (<a class="local col0 ref" href="#10ix" title='ix' data-ref="10ix" data-ref-filename="10ix">ix</a> &lt; <var>0x3fff</var>)</td></tr>
+<tr><th id="159">159</th><td>    {				<i>/* |x| &lt; 1.00 */</i></td></tr>
+<tr><th id="160">160</th><td>      <b>return</b> (<a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> - <var>0.25</var> * <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="local col7 ref" href="#7r" title='r' data-ref="7r" data-ref-filename="7r">r</a> / <a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a>));</td></tr>
+<tr><th id="161">161</th><td>    }</td></tr>
+<tr><th id="162">162</th><td>  <b>else</b></td></tr>
+<tr><th id="163">163</th><td>    {</td></tr>
+<tr><th id="164">164</th><td>      <a class="local col8 ref" href="#8u" title='u' data-ref="8u" data-ref-filename="8u">u</a> = <var>0.5</var> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="165">165</th><td>      <b>return</b> ((<a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> + <a class="local col8 ref" href="#8u" title='u' data-ref="8u" data-ref-filename="8u">u</a>) * (<a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> - <a class="local col8 ref" href="#8u" title='u' data-ref="8u" data-ref-filename="8u">u</a>) + <a class="local col2 ref" href="#2z" title='z' data-ref="2z" data-ref-filename="2z">z</a> * (<a class="local col7 ref" href="#7r" title='r' data-ref="7r" data-ref-filename="7r">r</a> / <a class="local col3 ref" href="#3s" title='s' data-ref="3s" data-ref-filename="3s">s</a>));</td></tr>
+<tr><th id="166">166</th><td>    }</td></tr>
+<tr><th id="167">167</th><td>}</td></tr>
+<tr><th id="168">168</th><td><a class="macro" href="../../../include/libc-symbols.h.html#138" title="extern __typeof (__ieee754_j0l) __j0l_finite __attribute__ ((alias (&quot;__ieee754_j0l&quot;))) ;" data-ref="_M/strong_alias">strong_alias</a> (<a class="ref fn" href="#__ieee754_j0l" title='__ieee754_j0l' data-ref="__ieee754_j0l" data-ref-filename="__ieee754_j0l">__ieee754_j0l</a>, <dfn class="decl def fn" id="__j0l_finite" title='__j0l_finite' data-ref="__j0l_finite" data-ref-filename="__j0l_finite">__j0l_finite</dfn>)</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td><i  data-doc="U">/* y0(x) = 2/pi ln(x) J0(x) + U(x^2)/V(x^2)</i></td></tr>
+<tr><th id="172">172</th><td><i  data-doc="U">   0 &lt; x &lt;= 2</i></td></tr>
+<tr><th id="173">173</th><td><i  data-doc="U">   peak relative error 1.7e-21 */</i></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em></td></tr>
+<tr><th id="175">175</th><td><dfn class="tu decl def" id="U" title='U' data-type='const long double [6]' data-ref="U" data-ref-filename="U">U</dfn>[<var>6</var>] = {</td></tr>
+<tr><th id="176">176</th><td>  -<var>1.054912306975785573710813351985351350861E10L</var>,</td></tr>
+<tr><th id="177">177</th><td>  <var>2.520192609749295139432773849576523636127E10L</var>,</td></tr>
+<tr><th id="178">178</th><td>  -<var>1.856426071075602001239955451329519093395E9L</var>,</td></tr>
+<tr><th id="179">179</th><td>  <var>4.079209129698891442683267466276785956784E7L</var>,</td></tr>
+<tr><th id="180">180</th><td>  -<var>3.440684087134286610316661166492641011539E5L</var>,</td></tr>
+<tr><th id="181">181</th><td>  <var>1.005524356159130626192144663414848383774E3L</var>,</td></tr>
+<tr><th id="182">182</th><td>};</td></tr>
+<tr><th id="183">183</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em></td></tr>
+<tr><th id="184">184</th><td><dfn class="tu decl def" id="V" title='V' data-type='const long double [5]' data-ref="V" data-ref-filename="V">V</dfn>[<var>5</var>] = {</td></tr>
+<tr><th id="185">185</th><td>  <var>1.429337283720789610137291929228082613676E11L</var>,</td></tr>
+<tr><th id="186">186</th><td>  <var>2.492593075325119157558811370165695013002E9L</var>,</td></tr>
+<tr><th id="187">187</th><td>  <var>2.186077620785925464237324417623665138376E7L</var>,</td></tr>
+<tr><th id="188">188</th><td>  <var>1.238407896366385175196515057064384929222E5L</var>,</td></tr>
+<tr><th id="189">189</th><td>  <var>4.693924035211032457494368947123233101664E2L</var>,</td></tr>
+<tr><th id="190">190</th><td>  <i>/*  1.000000000000000000000000000000000000000E0L */</i></td></tr>
+<tr><th id="191">191</th><td>};</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><em>long</em> <em>double</em></td></tr>
+<tr><th id="194">194</th><td><dfn class="decl def fn" id="__ieee754_y0l" title='__ieee754_y0l' data-ref="__ieee754_y0l" data-ref-filename="__ieee754_y0l">__ieee754_y0l</dfn> (<em>long</em> <em>double</em> <dfn class="local col2 decl" id="12x" title='x' data-type='long double' data-ref="12x" data-ref-filename="12x">x</dfn>)</td></tr>
+<tr><th id="195">195</th><td>{</td></tr>
+<tr><th id="196">196</th><td>  <em>long</em> <em>double</em> <dfn class="local col3 decl" id="13z" title='z' data-type='long double' data-ref="13z" data-ref-filename="13z">z</dfn>, <dfn class="local col4 decl" id="14s" title='s' data-type='long double' data-ref="14s" data-ref-filename="14s">s</dfn>, <dfn class="local col5 decl" id="15c" title='c' data-type='long double' data-ref="15c" data-ref-filename="15c">c</dfn>, <dfn class="local col6 decl" id="16ss" title='ss' data-type='long double' data-ref="16ss" data-ref-filename="16ss">ss</dfn>, <dfn class="local col7 decl" id="17cc" title='cc' data-type='long double' data-ref="17cc" data-ref-filename="17cc">cc</dfn>, <dfn class="local col8 decl" id="18u" title='u' data-type='long double' data-ref="18u" data-ref-filename="18u">u</dfn>, <dfn class="local col9 decl" id="19v" title='v' data-type='long double' data-ref="19v" data-ref-filename="19v">v</dfn>;</td></tr>
+<tr><th id="197">197</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col0 decl" id="20ix" title='ix' data-type='int32_t' data-ref="20ix" data-ref-filename="20ix">ix</dfn>;</td></tr>
+<tr><th id="198">198</th><td>  <a class="typedef" href="../../../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col1 decl" id="21se" title='se' data-type='uint32_t' data-ref="21se" data-ref-filename="21se">se</dfn>, <dfn class="local col2 decl" id="22i0" title='i0' data-type='uint32_t' data-ref="22i0" data-ref-filename="22i0">i0</dfn>, <dfn class="local col3 decl" id="23i1" title='i1' data-type='uint32_t' data-ref="23i1" data-ref-filename="23i1">i1</dfn>;</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>  <a class="macro" href="../../x86_64/fpu/math_ldbl.h.html#42" title="do { ieee_long_double_shape_type ew_u; ew_u.value = (x); (se) = ew_u.parts.sign_exponent; (i0) = ew_u.parts.msw; (i1) = ew_u.parts.lsw; } while (0)" data-ref="_M/GET_LDOUBLE_WORDS">GET_LDOUBLE_WORDS</a> (<a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a>, <a class="local col2 ref" href="#22i0" title='i0' data-ref="22i0" data-ref-filename="22i0">i0</a>, <a class="local col3 ref" href="#23i1" title='i1' data-ref="23i1" data-ref-filename="23i1">i1</a>, <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="201">201</th><td>  <a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> = <a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a> &amp; <var>0x7fff</var>;</td></tr>
+<tr><th id="202">202</th><td>  <i>/* Y0(NaN) is NaN, y0(-inf) is Nan, y0(inf) is 0  */</i></td></tr>
+<tr><th id="203">203</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((se &amp; 0x8000), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a> &amp; <var>0x8000</var>))</td></tr>
+<tr><th id="204">204</th><td>    <b>return</b> <a class="tu ref" href="#zero" title='zero' data-use='r' data-ref="zero" data-ref-filename="zero">zero</a> / (<a class="tu ref" href="#zero" title='zero' data-use='r' data-ref="zero" data-ref-filename="zero">zero</a> * <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="205">205</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &gt;= 0x7fff), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> &gt;= <var>0x7fff</var>))</td></tr>
+<tr><th id="206">206</th><td>    <b>return</b> <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> / (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a> + <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a> * <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="207">207</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect (((i0 | i1) == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> ((<a class="local col2 ref" href="#22i0" title='i0' data-ref="22i0" data-ref-filename="22i0">i0</a> | <a class="local col3 ref" href="#23i1" title='i1' data-ref="23i1" data-ref-filename="23i1">i1</a>) == <var>0</var>))</td></tr>
+<tr><th id="208">208</th><td>    <b>return</b> -<a class="macro" href="../../../math/math.h.html#60" title="(__builtin_huge_vall ())" data-ref="_M/HUGE_VALL">HUGE_VALL</a> + <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>;  <i>/* -inf and overflow exception.  */</i></td></tr>
+<tr><th id="209">209</th><td>  <b>if</b> (<a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> &gt;= <var>0x4000</var>)</td></tr>
+<tr><th id="210">210</th><td>    {				<i>/* |x| &gt;= 2.0 */</i></td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>      <i>/* y0(x) = sqrt(2/(pi*x))*(p0(x)*sin(x0)+q0(x)*cos(x0))</i></td></tr>
+<tr><th id="213">213</th><td><i>       * where x0 = x-pi/4</i></td></tr>
+<tr><th id="214">214</th><td><i>       *      Better formula:</i></td></tr>
+<tr><th id="215">215</th><td><i>       *              cos(x0) = cos(x)cos(pi/4)+sin(x)sin(pi/4)</i></td></tr>
+<tr><th id="216">216</th><td><i>       *                      =  1/sqrt(2) * (sin(x) + cos(x))</i></td></tr>
+<tr><th id="217">217</th><td><i>       *              sin(x0) = sin(x)cos(3pi/4)-cos(x)sin(3pi/4)</i></td></tr>
+<tr><th id="218">218</th><td><i>       *                      =  1/sqrt(2) * (sin(x) - cos(x))</i></td></tr>
+<tr><th id="219">219</th><td><i>       * To avoid cancellation, use</i></td></tr>
+<tr><th id="220">220</th><td><i>       *              sin(x) +- cos(x) = -cos(2x)/(sin(x) -+ cos(x))</i></td></tr>
+<tr><th id="221">221</th><td><i>       * to compute the worse one.</i></td></tr>
+<tr><th id="222">222</th><td><i>       */</i></td></tr>
+<tr><th id="223">223</th><td>      <a class="ref fn" href="../../../math/bits/mathcalls.h.html#79" title='__sincosl' data-ref="__sincosl" data-ref-filename="__sincosl">__sincosl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>, &amp;<a class="local col4 ref" href="#14s" title='s' data-ref="14s" data-ref-filename="14s">s</a>, &amp;<a class="local col5 ref" href="#15c" title='c' data-ref="15c" data-ref-filename="15c">c</a>);</td></tr>
+<tr><th id="224">224</th><td>      <a class="local col6 ref" href="#16ss" title='ss' data-ref="16ss" data-ref-filename="16ss">ss</a> = <a class="local col4 ref" href="#14s" title='s' data-ref="14s" data-ref-filename="14s">s</a> - <a class="local col5 ref" href="#15c" title='c' data-ref="15c" data-ref-filename="15c">c</a>;</td></tr>
+<tr><th id="225">225</th><td>      <a class="local col7 ref" href="#17cc" title='cc' data-ref="17cc" data-ref-filename="17cc">cc</a> = <a class="local col4 ref" href="#14s" title='s' data-ref="14s" data-ref-filename="14s">s</a> + <a class="local col5 ref" href="#15c" title='c' data-ref="15c" data-ref-filename="15c">c</a>;</td></tr>
+<tr><th id="226">226</th><td>      <i>/*</i></td></tr>
+<tr><th id="227">227</th><td><i>       * j0(x) = 1/sqrt(pi) * (P(0,x)*cc - Q(0,x)*ss) / sqrt(x)</i></td></tr>
+<tr><th id="228">228</th><td><i>       * y0(x) = 1/sqrt(pi) * (P(0,x)*ss + Q(0,x)*cc) / sqrt(x)</i></td></tr>
+<tr><th id="229">229</th><td><i>       */</i></td></tr>
+<tr><th id="230">230</th><td>      <b>if</b> (<a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> &lt; <var>0x7ffe</var>)</td></tr>
+<tr><th id="231">231</th><td>	{			<i>/* make sure x+x not overflow */</i></td></tr>
+<tr><th id="232">232</th><td>	  <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> = -<a class="ref fn" href="../../../math/bits/mathcalls.h.html#62" title='__cosl' data-ref="__cosl" data-ref-filename="__cosl">__cosl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a> + <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="233">233</th><td>	  <b>if</b> ((<a class="local col4 ref" href="#14s" title='s' data-ref="14s" data-ref-filename="14s">s</a> * <a class="local col5 ref" href="#15c" title='c' data-ref="15c" data-ref-filename="15c">c</a>) &lt; <a class="tu ref" href="#zero" title='zero' data-use='r' data-ref="zero" data-ref-filename="zero">zero</a>)</td></tr>
+<tr><th id="234">234</th><td>	    <a class="local col7 ref" href="#17cc" title='cc' data-ref="17cc" data-ref-filename="17cc">cc</a> = <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> / <a class="local col6 ref" href="#16ss" title='ss' data-ref="16ss" data-ref-filename="16ss">ss</a>;</td></tr>
+<tr><th id="235">235</th><td>	  <b>else</b></td></tr>
+<tr><th id="236">236</th><td>	    <a class="local col6 ref" href="#16ss" title='ss' data-ref="16ss" data-ref-filename="16ss">ss</a> = <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> / <a class="local col7 ref" href="#17cc" title='cc' data-ref="17cc" data-ref-filename="17cc">cc</a>;</td></tr>
+<tr><th id="237">237</th><td>	}</td></tr>
+<tr><th id="238">238</th><td>      <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &gt; 0x4080), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> &gt; <var>0x4080</var>))      	<i>/* 1e39 */</i></td></tr>
+<tr><th id="239">239</th><td>	<a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> = (<a class="tu ref" href="#invsqrtpi" title='invsqrtpi' data-use='r' data-ref="invsqrtpi" data-ref-filename="invsqrtpi">invsqrtpi</a> * <a class="local col6 ref" href="#16ss" title='ss' data-ref="16ss" data-ref-filename="16ss">ss</a>) / <a class="ref fn" href="../../../math/bits/mathcalls.h.html#143" title='sqrtl' data-ref="__ieee754_sqrtl" data-ref-filename="__ieee754_sqrtl">sqrtl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="240">240</th><td>      <b>else</b></td></tr>
+<tr><th id="241">241</th><td>	{</td></tr>
+<tr><th id="242">242</th><td>	  <a class="local col8 ref" href="#18u" title='u' data-ref="18u" data-ref-filename="18u">u</a> = <a class="tu ref fn" href="#pzero" title='pzero' data-use='c' data-ref="pzero" data-ref-filename="pzero">pzero</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="243">243</th><td>	  <a class="local col9 ref" href="#19v" title='v' data-ref="19v" data-ref-filename="19v">v</a> = <a class="tu ref fn" href="#qzero" title='qzero' data-use='c' data-ref="qzero" data-ref-filename="qzero">qzero</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="244">244</th><td>	  <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> = <a class="tu ref" href="#invsqrtpi" title='invsqrtpi' data-use='r' data-ref="invsqrtpi" data-ref-filename="invsqrtpi">invsqrtpi</a> * (<a class="local col8 ref" href="#18u" title='u' data-ref="18u" data-ref-filename="18u">u</a> * <a class="local col6 ref" href="#16ss" title='ss' data-ref="16ss" data-ref-filename="16ss">ss</a> + <a class="local col9 ref" href="#19v" title='v' data-ref="19v" data-ref-filename="19v">v</a> * <a class="local col7 ref" href="#17cc" title='cc' data-ref="17cc" data-ref-filename="17cc">cc</a>) / <a class="ref fn" href="../../../math/bits/mathcalls.h.html#143" title='sqrtl' data-ref="__ieee754_sqrtl" data-ref-filename="__ieee754_sqrtl">sqrtl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="245">245</th><td>	}</td></tr>
+<tr><th id="246">246</th><td>      <b>return</b> <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a>;</td></tr>
+<tr><th id="247">247</th><td>    }</td></tr>
+<tr><th id="248">248</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((ix &lt;= 0x3fde), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col0 ref" href="#20ix" title='ix' data-ref="20ix" data-ref-filename="20ix">ix</a> &lt;= <var>0x3fde</var>))       <i>/* x &lt; 2^-33 */</i></td></tr>
+<tr><th id="249">249</th><td>    {</td></tr>
+<tr><th id="250">250</th><td>      <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> = -<var>7.380429510868722527629822444004602747322E-2L</var></td></tr>
+<tr><th id="251">251</th><td>	+ <a class="tu ref" href="#tpi" title='tpi' data-use='r' data-ref="tpi" data-ref-filename="tpi">tpi</a> * <a class="ref fn" href="../../generic/math_private_calls.h.html#46" title='__ieee754_logl' data-ref="__ieee754_logl" data-ref-filename="__ieee754_logl">__ieee754_logl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>);</td></tr>
+<tr><th id="252">252</th><td>      <b>return</b> <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a>;</td></tr>
+<tr><th id="253">253</th><td>    }</td></tr>
+<tr><th id="254">254</th><td>  <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> = <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a> * <a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>;</td></tr>
+<tr><th id="255">255</th><td>  <a class="local col8 ref" href="#18u" title='u' data-ref="18u" data-ref-filename="18u">u</a> = <a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>0</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>1</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>2</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>3</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>4</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * <a class="tu ref" href="#U" title='U' data-use='r' data-ref="U" data-ref-filename="U">U</a>[<var>5</var>]))));</td></tr>
+<tr><th id="256">256</th><td>  <a class="local col9 ref" href="#19v" title='v' data-ref="19v" data-ref-filename="19v">v</a> = <a class="tu ref" href="#V" title='V' data-use='r' data-ref="V" data-ref-filename="V">V</a>[<var>0</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#V" title='V' data-use='r' data-ref="V" data-ref-filename="V">V</a>[<var>1</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#V" title='V' data-use='r' data-ref="V" data-ref-filename="V">V</a>[<var>2</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#V" title='V' data-use='r' data-ref="V" data-ref-filename="V">V</a>[<var>3</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a> * (<a class="tu ref" href="#V" title='V' data-use='r' data-ref="V" data-ref-filename="V">V</a>[<var>4</var>] + <a class="local col3 ref" href="#13z" title='z' data-ref="13z" data-ref-filename="13z">z</a>))));</td></tr>
+<tr><th id="257">257</th><td>  <b>return</b> (<a class="local col8 ref" href="#18u" title='u' data-ref="18u" data-ref-filename="18u">u</a> / <a class="local col9 ref" href="#19v" title='v' data-ref="19v" data-ref-filename="19v">v</a> + <a class="tu ref" href="#tpi" title='tpi' data-use='r' data-ref="tpi" data-ref-filename="tpi">tpi</a> * (<a class="ref fn" href="#__ieee754_j0l" title='__ieee754_j0l' data-ref="__ieee754_j0l" data-ref-filename="__ieee754_j0l">__ieee754_j0l</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>) * <a class="ref fn" href="../../generic/math_private_calls.h.html#46" title='__ieee754_logl' data-ref="__ieee754_logl" data-ref-filename="__ieee754_logl">__ieee754_logl</a> (<a class="local col2 ref" href="#12x" title='x' data-ref="12x" data-ref-filename="12x">x</a>)));</td></tr>
+<tr><th id="258">258</th><td>}</td></tr>
+<tr><th id="259">259</th><td><a class="macro" href="../../../include/libc-symbols.h.html#138" title="extern __typeof (__ieee754_y0l) __y0l_finite __attribute__ ((alias (&quot;__ieee754_y0l&quot;))) ;" data-ref="_M/strong_alias">strong_alias</a> (<a class="ref fn" href="#__ieee754_y0l" title='__ieee754_y0l' data-ref="__ieee754_y0l" data-ref-filename="__ieee754_y0l">__ieee754_y0l</a>, <dfn class="decl def fn" id="__y0l_finite" title='__y0l_finite' data-ref="__y0l_finite" data-ref-filename="__y0l_finite">__y0l_finite</dfn>)</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td><i  data-doc="pR8">/* The asymptotic expansions of pzero is</i></td></tr>
+<tr><th id="262">262</th><td><i  data-doc="pR8"> *	1 - 9/128 s^2 + 11025/98304 s^4 - ...,	where s = 1/x.</i></td></tr>
+<tr><th id="263">263</th><td><i  data-doc="pR8"> * For x &gt;= 2, We approximate pzero by</i></td></tr>
+<tr><th id="264">264</th><td><i  data-doc="pR8"> *	pzero(x) = 1 + s^2 R(s^2) / S(s^2)</i></td></tr>
+<tr><th id="265">265</th><td><i  data-doc="pR8"> */</i></td></tr>
+<tr><th id="266">266</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pR8" title='pR8' data-type='const long double [7]' data-ref="pR8" data-ref-filename="pR8">pR8</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="267">267</th><td>  <i>/* 8 &lt;= x &lt;= inf</i></td></tr>
+<tr><th id="268">268</th><td><i>     Peak relative error 4.62 */</i></td></tr>
+<tr><th id="269">269</th><td>  -<var>4.094398895124198016684337960227780260127E-9L</var>,</td></tr>
+<tr><th id="270">270</th><td>  -<var>8.929643669432412640061946338524096893089E-7L</var>,</td></tr>
+<tr><th id="271">271</th><td>  -<var>6.281267456906136703868258380673108109256E-5L</var>,</td></tr>
+<tr><th id="272">272</th><td>  -<var>1.736902783620362966354814353559382399665E-3L</var>,</td></tr>
+<tr><th id="273">273</th><td>  -<var>1.831506216290984960532230842266070146847E-2L</var>,</td></tr>
+<tr><th id="274">274</th><td>  -<var>5.827178869301452892963280214772398135283E-2L</var>,</td></tr>
+<tr><th id="275">275</th><td>  -<var>2.087563267939546435460286895807046616992E-2L</var>,</td></tr>
+<tr><th id="276">276</th><td>};</td></tr>
+<tr><th id="277">277</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pS8" title='pS8' data-type='const long double [6]' data-ref="pS8" data-ref-filename="pS8">pS8</dfn>[<var>6</var>] = {</td></tr>
+<tr><th id="278">278</th><td>  <var>5.823145095287749230197031108839653988393E-8L</var>,</td></tr>
+<tr><th id="279">279</th><td>  <var>1.279281986035060320477759999428992730280E-5L</var>,</td></tr>
+<tr><th id="280">280</th><td>  <var>9.132668954726626677174825517150228961304E-4L</var>,</td></tr>
+<tr><th id="281">281</th><td>  <var>2.606019379433060585351880541545146252534E-2L</var>,</td></tr>
+<tr><th id="282">282</th><td>  <var>2.956262215119520464228467583516287175244E-1L</var>,</td></tr>
+<tr><th id="283">283</th><td>  <var>1.149498145388256448535563278632697465675E0L</var>,</td></tr>
+<tr><th id="284">284</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="285">285</th><td>};</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pR5" title='pR5' data-type='const long double [7]' data-ref="pR5" data-ref-filename="pR5">pR5</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="288">288</th><td>  <i>/* 4.54541015625 &lt;= x &lt;= 8</i></td></tr>
+<tr><th id="289">289</th><td><i>     Peak relative error 6.51E-22 */</i></td></tr>
+<tr><th id="290">290</th><td>  -<var>2.041226787870240954326915847282179737987E-7L</var>,</td></tr>
+<tr><th id="291">291</th><td>  -<var>2.255373879859413325570636768224534428156E-5L</var>,</td></tr>
+<tr><th id="292">292</th><td>  -<var>7.957485746440825353553537274569102059990E-4L</var>,</td></tr>
+<tr><th id="293">293</th><td>  -<var>1.093205102486816696940149222095559439425E-2L</var>,</td></tr>
+<tr><th id="294">294</th><td>  -<var>5.657957849316537477657603125260701114646E-2L</var>,</td></tr>
+<tr><th id="295">295</th><td>  -<var>8.641175552716402616180994954177818461588E-2L</var>,</td></tr>
+<tr><th id="296">296</th><td>  -<var>1.354654710097134007437166939230619726157E-2L</var>,</td></tr>
+<tr><th id="297">297</th><td>};</td></tr>
+<tr><th id="298">298</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pS5" title='pS5' data-type='const long double [6]' data-ref="pS5" data-ref-filename="pS5">pS5</dfn>[<var>6</var>] = {</td></tr>
+<tr><th id="299">299</th><td>  <var>2.903078099681108697057258628212823545290E-6L</var>,</td></tr>
+<tr><th id="300">300</th><td>  <var>3.253948449946735405975737677123673867321E-4L</var>,</td></tr>
+<tr><th id="301">301</th><td>  <var>1.181269751723085006534147920481582279979E-2L</var>,</td></tr>
+<tr><th id="302">302</th><td>  <var>1.719212057790143888884745200257619469363E-1L</var>,</td></tr>
+<tr><th id="303">303</th><td>  <var>1.006306498779212467670654535430694221924E0L</var>,</td></tr>
+<tr><th id="304">304</th><td>  <var>2.069568808688074324555596301126375951502E0L</var>,</td></tr>
+<tr><th id="305">305</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="306">306</th><td>};</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pR3" title='pR3' data-type='const long double [7]' data-ref="pR3" data-ref-filename="pR3">pR3</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="309">309</th><td>  <i>/* 2.85711669921875 &lt;= x &lt;= 4.54541015625</i></td></tr>
+<tr><th id="310">310</th><td><i>     peak relative error 5.25e-21 */</i></td></tr>
+<tr><th id="311">311</th><td>  -<var>5.755732156848468345557663552240816066802E-6L</var>,</td></tr>
+<tr><th id="312">312</th><td>  -<var>3.703675625855715998827966962258113034767E-4L</var>,</td></tr>
+<tr><th id="313">313</th><td>  -<var>7.390893350679637611641350096842846433236E-3L</var>,</td></tr>
+<tr><th id="314">314</th><td>  -<var>5.571922144490038765024591058478043873253E-2L</var>,</td></tr>
+<tr><th id="315">315</th><td>  -<var>1.531290690378157869291151002472627396088E-1L</var>,</td></tr>
+<tr><th id="316">316</th><td>  -<var>1.193350853469302941921647487062620011042E-1L</var>,</td></tr>
+<tr><th id="317">317</th><td>  -<var>8.567802507331578894302991505331963782905E-3L</var>,</td></tr>
+<tr><th id="318">318</th><td>};</td></tr>
+<tr><th id="319">319</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pS3" title='pS3' data-type='const long double [6]' data-ref="pS3" data-ref-filename="pS3">pS3</dfn>[<var>6</var>] = {</td></tr>
+<tr><th id="320">320</th><td>  <var>8.185931139070086158103309281525036712419E-5L</var>,</td></tr>
+<tr><th id="321">321</th><td>  <var>5.398016943778891093520574483111255476787E-3L</var>,</td></tr>
+<tr><th id="322">322</th><td>  <var>1.130589193590489566669164765853409621081E-1L</var>,</td></tr>
+<tr><th id="323">323</th><td>  <var>9.358652328786413274673192987670237145071E-1L</var>,</td></tr>
+<tr><th id="324">324</th><td>  <var>3.091711512598349056276917907005098085273E0L</var>,</td></tr>
+<tr><th id="325">325</th><td>  <var>3.594602474737921977972586821673124231111E0L</var>,</td></tr>
+<tr><th id="326">326</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="327">327</th><td>};</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pR2" title='pR2' data-type='const long double [7]' data-ref="pR2" data-ref-filename="pR2">pR2</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="330">330</th><td>  <i>/* 2 &lt;= x &lt;= 2.85711669921875</i></td></tr>
+<tr><th id="331">331</th><td><i>     peak relative error 2.64e-21 */</i></td></tr>
+<tr><th id="332">332</th><td>  -<var>1.219525235804532014243621104365384992623E-4L</var>,</td></tr>
+<tr><th id="333">333</th><td>  -<var>4.838597135805578919601088680065298763049E-3L</var>,</td></tr>
+<tr><th id="334">334</th><td>  -<var>5.732223181683569266223306197751407418301E-2L</var>,</td></tr>
+<tr><th id="335">335</th><td>  -<var>2.472947430526425064982909699406646503758E-1L</var>,</td></tr>
+<tr><th id="336">336</th><td>  -<var>3.753373645974077960207588073975976327695E-1L</var>,</td></tr>
+<tr><th id="337">337</th><td>  -<var>1.556241316844728872406672349347137975495E-1L</var>,</td></tr>
+<tr><th id="338">338</th><td>  -<var>5.355423239526452209595316733635519506958E-3L</var>,</td></tr>
+<tr><th id="339">339</th><td>};</td></tr>
+<tr><th id="340">340</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="pS2" title='pS2' data-type='const long double [6]' data-ref="pS2" data-ref-filename="pS2">pS2</dfn>[<var>6</var>] = {</td></tr>
+<tr><th id="341">341</th><td>  <var>1.734442793664291412489066256138894953823E-3L</var>,</td></tr>
+<tr><th id="342">342</th><td>  <var>7.158111826468626405416300895617986926008E-2L</var>,</td></tr>
+<tr><th id="343">343</th><td>  <var>9.153839713992138340197264669867993552641E-1L</var>,</td></tr>
+<tr><th id="344">344</th><td>  <var>4.539209519433011393525841956702487797582E0L</var>,</td></tr>
+<tr><th id="345">345</th><td>  <var>8.868932430625331650266067101752626253644E0L</var>,</td></tr>
+<tr><th id="346">346</th><td>  <var>6.067161890196324146320763844772857713502E0L</var>,</td></tr>
+<tr><th id="347">347</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="348">348</th><td>};</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><em>static</em> <em>long</em> <em>double</em></td></tr>
+<tr><th id="351">351</th><td><dfn class="tu decl def fn" id="pzero" title='pzero' data-type='long double pzero(long double x)' data-ref="pzero" data-ref-filename="pzero">pzero</dfn> (<em>long</em> <em>double</em> <dfn class="local col4 decl" id="24x" title='x' data-type='long double' data-ref="24x" data-ref-filename="24x">x</dfn>)</td></tr>
+<tr><th id="352">352</th><td>{</td></tr>
+<tr><th id="353">353</th><td>  <em>const</em> <em>long</em> <em>double</em> *<dfn class="local col5 decl" id="25p" title='p' data-type='const long double *' data-ref="25p" data-ref-filename="25p">p</dfn>, *<dfn class="local col6 decl" id="26q" title='q' data-type='const long double *' data-ref="26q" data-ref-filename="26q">q</dfn>;</td></tr>
+<tr><th id="354">354</th><td>  <em>long</em> <em>double</em> <dfn class="local col7 decl" id="27z" title='z' data-type='long double' data-ref="27z" data-ref-filename="27z">z</dfn>, <dfn class="local col8 decl" id="28r" title='r' data-type='long double' data-ref="28r" data-ref-filename="28r">r</dfn>, <dfn class="local col9 decl" id="29s" title='s' data-type='long double' data-ref="29s" data-ref-filename="29s">s</dfn>;</td></tr>
+<tr><th id="355">355</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col0 decl" id="30ix" title='ix' data-type='int32_t' data-ref="30ix" data-ref-filename="30ix">ix</dfn>;</td></tr>
+<tr><th id="356">356</th><td>  <a class="typedef" href="../../../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col1 decl" id="31se" title='se' data-type='uint32_t' data-ref="31se" data-ref-filename="31se">se</dfn>, <dfn class="local col2 decl" id="32i0" title='i0' data-type='uint32_t' data-ref="32i0" data-ref-filename="32i0">i0</dfn>, <dfn class="local col3 decl" id="33i1" title='i1' data-type='uint32_t' data-ref="33i1" data-ref-filename="33i1">i1</dfn>;</td></tr>
+<tr><th id="357">357</th><td></td></tr>
+<tr><th id="358">358</th><td>  <a class="macro" href="../../x86_64/fpu/math_ldbl.h.html#42" title="do { ieee_long_double_shape_type ew_u; ew_u.value = (x); (se) = ew_u.parts.sign_exponent; (i0) = ew_u.parts.msw; (i1) = ew_u.parts.lsw; } while (0)" data-ref="_M/GET_LDOUBLE_WORDS">GET_LDOUBLE_WORDS</a> (<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>, <a class="local col2 ref" href="#32i0" title='i0' data-ref="32i0" data-ref-filename="32i0">i0</a>, <a class="local col3 ref" href="#33i1" title='i1' data-ref="33i1" data-ref-filename="33i1">i1</a>, <a class="local col4 ref" href="#24x" title='x' data-ref="24x" data-ref-filename="24x">x</a>);</td></tr>
+<tr><th id="359">359</th><td>  <a class="local col0 ref" href="#30ix" title='ix' data-ref="30ix" data-ref-filename="30ix">ix</a> = <a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a> &amp; <var>0x7fff</var>;</td></tr>
+<tr><th id="360">360</th><td>  <i>/* ix &gt;= 0x4000 for all calls to this function.  */</i></td></tr>
+<tr><th id="361">361</th><td>  <b>if</b> (<a class="local col0 ref" href="#30ix" title='ix' data-ref="30ix" data-ref-filename="30ix">ix</a> &gt;= <var>0x4002</var>)</td></tr>
+<tr><th id="362">362</th><td>    {</td></tr>
+<tr><th id="363">363</th><td>      <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a> = <a class="tu ref" href="#pR8" title='pR8' data-use='r' data-ref="pR8" data-ref-filename="pR8">pR8</a>;</td></tr>
+<tr><th id="364">364</th><td>      <a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a> = <a class="tu ref" href="#pS8" title='pS8' data-use='r' data-ref="pS8" data-ref-filename="pS8">pS8</a>;</td></tr>
+<tr><th id="365">365</th><td>    }				<i>/* x &gt;= 8 */</i></td></tr>
+<tr><th id="366">366</th><td>  <b>else</b></td></tr>
+<tr><th id="367">367</th><td>    {</td></tr>
+<tr><th id="368">368</th><td>      <a class="local col3 ref" href="#33i1" title='i1' data-ref="33i1" data-ref-filename="33i1">i1</a> = (<a class="local col0 ref" href="#30ix" title='ix' data-ref="30ix" data-ref-filename="30ix">ix</a> &lt;&lt; <var>16</var>) | (<a class="local col2 ref" href="#32i0" title='i0' data-ref="32i0" data-ref-filename="32i0">i0</a> &gt;&gt; <var>16</var>);</td></tr>
+<tr><th id="369">369</th><td>      <b>if</b> (<a class="local col3 ref" href="#33i1" title='i1' data-ref="33i1" data-ref-filename="33i1">i1</a> &gt;= <var>0x40019174</var>)	<i>/* x &gt;= 4.54541015625 */</i></td></tr>
+<tr><th id="370">370</th><td>	{</td></tr>
+<tr><th id="371">371</th><td>	  <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a> = <a class="tu ref" href="#pR5" title='pR5' data-use='r' data-ref="pR5" data-ref-filename="pR5">pR5</a>;</td></tr>
+<tr><th id="372">372</th><td>	  <a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a> = <a class="tu ref" href="#pS5" title='pS5' data-use='r' data-ref="pS5" data-ref-filename="pS5">pS5</a>;</td></tr>
+<tr><th id="373">373</th><td>	}</td></tr>
+<tr><th id="374">374</th><td>      <b>else</b> <b>if</b> (<a class="local col3 ref" href="#33i1" title='i1' data-ref="33i1" data-ref-filename="33i1">i1</a> &gt;= <var>0x4000b6db</var>)	<i>/* x &gt;= 2.85711669921875 */</i></td></tr>
+<tr><th id="375">375</th><td>	{</td></tr>
+<tr><th id="376">376</th><td>	  <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a> = <a class="tu ref" href="#pR3" title='pR3' data-use='r' data-ref="pR3" data-ref-filename="pR3">pR3</a>;</td></tr>
+<tr><th id="377">377</th><td>	  <a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a> = <a class="tu ref" href="#pS3" title='pS3' data-use='r' data-ref="pS3" data-ref-filename="pS3">pS3</a>;</td></tr>
+<tr><th id="378">378</th><td>	}</td></tr>
+<tr><th id="379">379</th><td>      <b>else</b>	<i>/* x &gt;= 2 */</i></td></tr>
+<tr><th id="380">380</th><td>	{</td></tr>
+<tr><th id="381">381</th><td>	  <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a> = <a class="tu ref" href="#pR2" title='pR2' data-use='r' data-ref="pR2" data-ref-filename="pR2">pR2</a>;</td></tr>
+<tr><th id="382">382</th><td>	  <a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a> = <a class="tu ref" href="#pS2" title='pS2' data-use='r' data-ref="pS2" data-ref-filename="pS2">pS2</a>;</td></tr>
+<tr><th id="383">383</th><td>	}</td></tr>
+<tr><th id="384">384</th><td>    }</td></tr>
+<tr><th id="385">385</th><td>  <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> = <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> / (<a class="local col4 ref" href="#24x" title='x' data-ref="24x" data-ref-filename="24x">x</a> * <a class="local col4 ref" href="#24x" title='x' data-ref="24x" data-ref-filename="24x">x</a>);</td></tr>
+<tr><th id="386">386</th><td>  <a class="local col8 ref" href="#28r" title='r' data-ref="28r" data-ref-filename="28r">r</a> =</td></tr>
+<tr><th id="387">387</th><td>    <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>0</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>1</var>] +</td></tr>
+<tr><th id="388">388</th><td>		<a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>2</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>3</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>4</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>5</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * <a class="local col5 ref" href="#25p" title='p' data-ref="25p" data-ref-filename="25p">p</a>[<var>6</var>])))));</td></tr>
+<tr><th id="389">389</th><td>  <a class="local col9 ref" href="#29s" title='s' data-ref="29s" data-ref-filename="29s">s</a> =</td></tr>
+<tr><th id="390">390</th><td>    <a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>0</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>1</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>2</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>3</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>4</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * (<a class="local col6 ref" href="#26q" title='q' data-ref="26q" data-ref-filename="26q">q</a>[<var>5</var>] + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>)))));</td></tr>
+<tr><th id="391">391</th><td>  <b>return</b> (<a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> + <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a> * <a class="local col8 ref" href="#28r" title='r' data-ref="28r" data-ref-filename="28r">r</a> / <a class="local col9 ref" href="#29s" title='s' data-ref="29s" data-ref-filename="29s">s</a>);</td></tr>
+<tr><th id="392">392</th><td>}</td></tr>
+<tr><th id="393">393</th><td></td></tr>
+<tr><th id="394">394</th><td></td></tr>
+<tr><th id="395">395</th><td><i  data-doc="qR8">/* For x &gt;= 8, the asymptotic expansions of qzero is</i></td></tr>
+<tr><th id="396">396</th><td><i  data-doc="qR8"> *	-1/8 s + 75/1024 s^3 - ..., where s = 1/x.</i></td></tr>
+<tr><th id="397">397</th><td><i  data-doc="qR8"> * We approximate qzero by</i></td></tr>
+<tr><th id="398">398</th><td><i  data-doc="qR8"> *	qzero(x) = s*(-.125 + R(s^2) / S(s^2))</i></td></tr>
+<tr><th id="399">399</th><td><i  data-doc="qR8"> */</i></td></tr>
+<tr><th id="400">400</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qR8" title='qR8' data-type='const long double [7]' data-ref="qR8" data-ref-filename="qR8">qR8</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="401">401</th><td>  <i>/* 8 &lt;= x &lt;= inf</i></td></tr>
+<tr><th id="402">402</th><td><i>     peak relative error 2.23e-21 */</i></td></tr>
+<tr><th id="403">403</th><td>  <var>3.001267180483191397885272640777189348008E-10L</var>,</td></tr>
+<tr><th id="404">404</th><td>  <var>8.693186311430836495238494289942413810121E-8L</var>,</td></tr>
+<tr><th id="405">405</th><td>  <var>8.496875536711266039522937037850596580686E-6L</var>,</td></tr>
+<tr><th id="406">406</th><td>  <var>3.482702869915288984296602449543513958409E-4L</var>,</td></tr>
+<tr><th id="407">407</th><td>  <var>6.036378380706107692863811938221290851352E-3L</var>,</td></tr>
+<tr><th id="408">408</th><td>  <var>3.881970028476167836382607922840452192636E-2L</var>,</td></tr>
+<tr><th id="409">409</th><td>  <var>6.132191514516237371140841765561219149638E-2L</var>,</td></tr>
+<tr><th id="410">410</th><td>};</td></tr>
+<tr><th id="411">411</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qS8" title='qS8' data-type='const long double [7]' data-ref="qS8" data-ref-filename="qS8">qS8</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="412">412</th><td>  <var>4.097730123753051126914971174076227600212E-9L</var>,</td></tr>
+<tr><th id="413">413</th><td>  <var>1.199615869122646109596153392152131139306E-6L</var>,</td></tr>
+<tr><th id="414">414</th><td>  <var>1.196337580514532207793107149088168946451E-4L</var>,</td></tr>
+<tr><th id="415">415</th><td>  <var>5.099074440112045094341500497767181211104E-3L</var>,</td></tr>
+<tr><th id="416">416</th><td>  <var>9.577420799632372483249761659674764460583E-2L</var>,</td></tr>
+<tr><th id="417">417</th><td>  <var>7.385243015344292267061953461563695918646E-1L</var>,</td></tr>
+<tr><th id="418">418</th><td>  <var>1.917266424391428937962682301561699055943E0L</var>,</td></tr>
+<tr><th id="419">419</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="420">420</th><td>};</td></tr>
+<tr><th id="421">421</th><td></td></tr>
+<tr><th id="422">422</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qR5" title='qR5' data-type='const long double [7]' data-ref="qR5" data-ref-filename="qR5">qR5</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="423">423</th><td>  <i>/* 4.54541015625 &lt;= x &lt;= 8</i></td></tr>
+<tr><th id="424">424</th><td><i>     peak relative error 1.03e-21 */</i></td></tr>
+<tr><th id="425">425</th><td>  <var>3.406256556438974327309660241748106352137E-8L</var>,</td></tr>
+<tr><th id="426">426</th><td>  <var>4.855492710552705436943630087976121021980E-6L</var>,</td></tr>
+<tr><th id="427">427</th><td>  <var>2.301011739663737780613356017352912281980E-4L</var>,</td></tr>
+<tr><th id="428">428</th><td>  <var>4.500470249273129953870234803596619899226E-3L</var>,</td></tr>
+<tr><th id="429">429</th><td>  <var>3.651376459725695502726921248173637054828E-2L</var>,</td></tr>
+<tr><th id="430">430</th><td>  <var>1.071578819056574524416060138514508609805E-1L</var>,</td></tr>
+<tr><th id="431">431</th><td>  <var>7.458950172851611673015774675225656063757E-2L</var>,</td></tr>
+<tr><th id="432">432</th><td>};</td></tr>
+<tr><th id="433">433</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qS5" title='qS5' data-type='const long double [7]' data-ref="qS5" data-ref-filename="qS5">qS5</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="434">434</th><td>  <var>4.650675622764245276538207123618745150785E-7L</var>,</td></tr>
+<tr><th id="435">435</th><td>  <var>6.773573292521412265840260065635377164455E-5L</var>,</td></tr>
+<tr><th id="436">436</th><td>  <var>3.340711249876192721980146877577806687714E-3L</var>,</td></tr>
+<tr><th id="437">437</th><td>  <var>7.036218046856839214741678375536970613501E-2L</var>,</td></tr>
+<tr><th id="438">438</th><td>  <var>6.569599559163872573895171876511377891143E-1L</var>,</td></tr>
+<tr><th id="439">439</th><td>  <var>2.557525022583599204591036677199171155186E0L</var>,</td></tr>
+<tr><th id="440">440</th><td>  <var>3.457237396120935674982927714210361269133E0L</var>,</td></tr>
+<tr><th id="441">441</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L,*/</i></td></tr>
+<tr><th id="442">442</th><td>};</td></tr>
+<tr><th id="443">443</th><td></td></tr>
+<tr><th id="444">444</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qR3" title='qR3' data-type='const long double [7]' data-ref="qR3" data-ref-filename="qR3">qR3</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="445">445</th><td>  <i>/* 2.85711669921875 &lt;= x &lt;= 4.54541015625</i></td></tr>
+<tr><th id="446">446</th><td><i>     peak relative error 5.24e-21 */</i></td></tr>
+<tr><th id="447">447</th><td>  <var>1.749459596550816915639829017724249805242E-6L</var>,</td></tr>
+<tr><th id="448">448</th><td>  <var>1.446252487543383683621692672078376929437E-4L</var>,</td></tr>
+<tr><th id="449">449</th><td>  <var>3.842084087362410664036704812125005761859E-3L</var>,</td></tr>
+<tr><th id="450">450</th><td>  <var>4.066369994699462547896426554180954233581E-2L</var>,</td></tr>
+<tr><th id="451">451</th><td>  <var>1.721093619117980251295234795188992722447E-1L</var>,</td></tr>
+<tr><th id="452">452</th><td>  <var>2.538595333972857367655146949093055405072E-1L</var>,</td></tr>
+<tr><th id="453">453</th><td>  <var>8.560591367256769038905328596020118877936E-2L</var>,</td></tr>
+<tr><th id="454">454</th><td>};</td></tr>
+<tr><th id="455">455</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qS3" title='qS3' data-type='const long double [7]' data-ref="qS3" data-ref-filename="qS3">qS3</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="456">456</th><td>  <var>2.388596091707517488372313710647510488042E-5L</var>,</td></tr>
+<tr><th id="457">457</th><td>  <var>2.048679968058758616370095132104333998147E-3L</var>,</td></tr>
+<tr><th id="458">458</th><td>  <var>5.824663198201417760864458765259945181513E-2L</var>,</td></tr>
+<tr><th id="459">459</th><td>  <var>6.953906394693328750931617748038994763958E-1L</var>,</td></tr>
+<tr><th id="460">460</th><td>  <var>3.638186936390881159685868764832961092476E0L</var>,</td></tr>
+<tr><th id="461">461</th><td>  <var>7.900169524705757837298990558459547842607E0L</var>,</td></tr>
+<tr><th id="462">462</th><td>  <var>5.992718532451026507552820701127504582907E0L</var>,</td></tr>
+<tr><th id="463">463</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="464">464</th><td>};</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qR2" title='qR2' data-type='const long double [7]' data-ref="qR2" data-ref-filename="qR2">qR2</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="467">467</th><td>  <i>/* 2 &lt;= x &lt;= 2.85711669921875</i></td></tr>
+<tr><th id="468">468</th><td><i>     peak relative error 1.58e-21  */</i></td></tr>
+<tr><th id="469">469</th><td>  <var>6.306524405520048545426928892276696949540E-5L</var>,</td></tr>
+<tr><th id="470">470</th><td>  <var>3.209606155709930950935893996591576624054E-3L</var>,</td></tr>
+<tr><th id="471">471</th><td>  <var>5.027828775702022732912321378866797059604E-2L</var>,</td></tr>
+<tr><th id="472">472</th><td>  <var>3.012705561838718956481911477587757845163E-1L</var>,</td></tr>
+<tr><th id="473">473</th><td>  <var>6.960544893905752937420734884995688523815E-1L</var>,</td></tr>
+<tr><th id="474">474</th><td>  <var>5.431871999743531634887107835372232030655E-1L</var>,</td></tr>
+<tr><th id="475">475</th><td>  <var>9.447736151202905471899259026430157211949E-2L</var>,</td></tr>
+<tr><th id="476">476</th><td>};</td></tr>
+<tr><th id="477">477</th><td><em>static</em> <em>const</em> <em>long</em> <em>double</em> <dfn class="tu decl def" id="qS2" title='qS2' data-type='const long double [7]' data-ref="qS2" data-ref-filename="qS2">qS2</dfn>[<var>7</var>] = {</td></tr>
+<tr><th id="478">478</th><td>  <var>8.610579901936193494609755345106129102676E-4L</var>,</td></tr>
+<tr><th id="479">479</th><td>  <var>4.649054352710496997203474853066665869047E-2L</var>,</td></tr>
+<tr><th id="480">480</th><td>  <var>8.104282924459837407218042945106320388339E-1L</var>,</td></tr>
+<tr><th id="481">481</th><td>  <var>5.807730930825886427048038146088828206852E0L</var>,</td></tr>
+<tr><th id="482">482</th><td>  <var>1.795310145936848873627710102199881642939E1L</var>,</td></tr>
+<tr><th id="483">483</th><td>  <var>2.281313316875375733663657188888110605044E1L</var>,</td></tr>
+<tr><th id="484">484</th><td>  <var>1.011242067883822301487154844458322200143E1L</var>,</td></tr>
+<tr><th id="485">485</th><td>  <i>/* 1.000000000000000000000000000000000000000E0L, */</i></td></tr>
+<tr><th id="486">486</th><td>};</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td><em>static</em> <em>long</em> <em>double</em></td></tr>
+<tr><th id="489">489</th><td><dfn class="tu decl def fn" id="qzero" title='qzero' data-type='long double qzero(long double x)' data-ref="qzero" data-ref-filename="qzero">qzero</dfn> (<em>long</em> <em>double</em> <dfn class="local col4 decl" id="34x" title='x' data-type='long double' data-ref="34x" data-ref-filename="34x">x</dfn>)</td></tr>
+<tr><th id="490">490</th><td>{</td></tr>
+<tr><th id="491">491</th><td>  <em>const</em> <em>long</em> <em>double</em> *<dfn class="local col5 decl" id="35p" title='p' data-type='const long double *' data-ref="35p" data-ref-filename="35p">p</dfn>, *<dfn class="local col6 decl" id="36q" title='q' data-type='const long double *' data-ref="36q" data-ref-filename="36q">q</dfn>;</td></tr>
+<tr><th id="492">492</th><td>  <em>long</em> <em>double</em> <dfn class="local col7 decl" id="37s" title='s' data-type='long double' data-ref="37s" data-ref-filename="37s">s</dfn>, <dfn class="local col8 decl" id="38r" title='r' data-type='long double' data-ref="38r" data-ref-filename="38r">r</dfn>, <dfn class="local col9 decl" id="39z" title='z' data-type='long double' data-ref="39z" data-ref-filename="39z">z</dfn>;</td></tr>
+<tr><th id="493">493</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col0 decl" id="40ix" title='ix' data-type='int32_t' data-ref="40ix" data-ref-filename="40ix">ix</dfn>;</td></tr>
+<tr><th id="494">494</th><td>  <a class="typedef" href="../../../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col1 decl" id="41se" title='se' data-type='uint32_t' data-ref="41se" data-ref-filename="41se">se</dfn>, <dfn class="local col2 decl" id="42i0" title='i0' data-type='uint32_t' data-ref="42i0" data-ref-filename="42i0">i0</dfn>, <dfn class="local col3 decl" id="43i1" title='i1' data-type='uint32_t' data-ref="43i1" data-ref-filename="43i1">i1</dfn>;</td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>  <a class="macro" href="../../x86_64/fpu/math_ldbl.h.html#42" title="do { ieee_long_double_shape_type ew_u; ew_u.value = (x); (se) = ew_u.parts.sign_exponent; (i0) = ew_u.parts.msw; (i1) = ew_u.parts.lsw; } while (0)" data-ref="_M/GET_LDOUBLE_WORDS">GET_LDOUBLE_WORDS</a> (<a class="local col1 ref" href="#41se" title='se' data-ref="41se" data-ref-filename="41se">se</a>, <a class="local col2 ref" href="#42i0" title='i0' data-ref="42i0" data-ref-filename="42i0">i0</a>, <a class="local col3 ref" href="#43i1" title='i1' data-ref="43i1" data-ref-filename="43i1">i1</a>, <a class="local col4 ref" href="#34x" title='x' data-ref="34x" data-ref-filename="34x">x</a>);</td></tr>
+<tr><th id="497">497</th><td>  <a class="local col0 ref" href="#40ix" title='ix' data-ref="40ix" data-ref-filename="40ix">ix</a> = <a class="local col1 ref" href="#41se" title='se' data-ref="41se" data-ref-filename="41se">se</a> &amp; <var>0x7fff</var>;</td></tr>
+<tr><th id="498">498</th><td>  <i>/* ix &gt;= 0x4000 for all calls to this function.  */</i></td></tr>
+<tr><th id="499">499</th><td>  <b>if</b> (<a class="local col0 ref" href="#40ix" title='ix' data-ref="40ix" data-ref-filename="40ix">ix</a> &gt;= <var>0x4002</var>)		<i>/* x &gt;= 8 */</i></td></tr>
+<tr><th id="500">500</th><td>    {</td></tr>
+<tr><th id="501">501</th><td>      <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a> = <a class="tu ref" href="#qR8" title='qR8' data-use='r' data-ref="qR8" data-ref-filename="qR8">qR8</a>;</td></tr>
+<tr><th id="502">502</th><td>      <a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a> = <a class="tu ref" href="#qS8" title='qS8' data-use='r' data-ref="qS8" data-ref-filename="qS8">qS8</a>;</td></tr>
+<tr><th id="503">503</th><td>    }</td></tr>
+<tr><th id="504">504</th><td>  <b>else</b></td></tr>
+<tr><th id="505">505</th><td>    {</td></tr>
+<tr><th id="506">506</th><td>      <a class="local col3 ref" href="#43i1" title='i1' data-ref="43i1" data-ref-filename="43i1">i1</a> = (<a class="local col0 ref" href="#40ix" title='ix' data-ref="40ix" data-ref-filename="40ix">ix</a> &lt;&lt; <var>16</var>) | (<a class="local col2 ref" href="#42i0" title='i0' data-ref="42i0" data-ref-filename="42i0">i0</a> &gt;&gt; <var>16</var>);</td></tr>
+<tr><th id="507">507</th><td>      <b>if</b> (<a class="local col3 ref" href="#43i1" title='i1' data-ref="43i1" data-ref-filename="43i1">i1</a> &gt;= <var>0x40019174</var>)	<i>/* x &gt;= 4.54541015625 */</i></td></tr>
+<tr><th id="508">508</th><td>	{</td></tr>
+<tr><th id="509">509</th><td>	  <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a> = <a class="tu ref" href="#qR5" title='qR5' data-use='r' data-ref="qR5" data-ref-filename="qR5">qR5</a>;</td></tr>
+<tr><th id="510">510</th><td>	  <a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a> = <a class="tu ref" href="#qS5" title='qS5' data-use='r' data-ref="qS5" data-ref-filename="qS5">qS5</a>;</td></tr>
+<tr><th id="511">511</th><td>	}</td></tr>
+<tr><th id="512">512</th><td>      <b>else</b> <b>if</b> (<a class="local col3 ref" href="#43i1" title='i1' data-ref="43i1" data-ref-filename="43i1">i1</a> &gt;= <var>0x4000b6db</var>)	<i>/* x &gt;= 2.85711669921875 */</i></td></tr>
+<tr><th id="513">513</th><td>	{</td></tr>
+<tr><th id="514">514</th><td>	  <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a> = <a class="tu ref" href="#qR3" title='qR3' data-use='r' data-ref="qR3" data-ref-filename="qR3">qR3</a>;</td></tr>
+<tr><th id="515">515</th><td>	  <a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a> = <a class="tu ref" href="#qS3" title='qS3' data-use='r' data-ref="qS3" data-ref-filename="qS3">qS3</a>;</td></tr>
+<tr><th id="516">516</th><td>	}</td></tr>
+<tr><th id="517">517</th><td>      <b>else</b>	<i>/* x &gt;= 2 */</i></td></tr>
+<tr><th id="518">518</th><td>	{</td></tr>
+<tr><th id="519">519</th><td>	  <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a> = <a class="tu ref" href="#qR2" title='qR2' data-use='r' data-ref="qR2" data-ref-filename="qR2">qR2</a>;</td></tr>
+<tr><th id="520">520</th><td>	  <a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a> = <a class="tu ref" href="#qS2" title='qS2' data-use='r' data-ref="qS2" data-ref-filename="qS2">qS2</a>;</td></tr>
+<tr><th id="521">521</th><td>	}</td></tr>
+<tr><th id="522">522</th><td>    }</td></tr>
+<tr><th id="523">523</th><td>  <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> = <a class="tu ref" href="#one" title='one' data-use='r' data-ref="one" data-ref-filename="one">one</a> / (<a class="local col4 ref" href="#34x" title='x' data-ref="34x" data-ref-filename="34x">x</a> * <a class="local col4 ref" href="#34x" title='x' data-ref="34x" data-ref-filename="34x">x</a>);</td></tr>
+<tr><th id="524">524</th><td>  <a class="local col8 ref" href="#38r" title='r' data-ref="38r" data-ref-filename="38r">r</a> =</td></tr>
+<tr><th id="525">525</th><td>    <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>0</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>1</var>] +</td></tr>
+<tr><th id="526">526</th><td>		<a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>2</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>3</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>4</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>5</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * <a class="local col5 ref" href="#35p" title='p' data-ref="35p" data-ref-filename="35p">p</a>[<var>6</var>])))));</td></tr>
+<tr><th id="527">527</th><td>  <a class="local col7 ref" href="#37s" title='s' data-ref="37s" data-ref-filename="37s">s</a> =</td></tr>
+<tr><th id="528">528</th><td>    <a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>0</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>1</var>] +</td></tr>
+<tr><th id="529">529</th><td>		<a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>2</var>] +</td></tr>
+<tr><th id="530">530</th><td>		     <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>3</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>4</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>5</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * (<a class="local col6 ref" href="#36q" title='q' data-ref="36q" data-ref-filename="36q">q</a>[<var>6</var>] + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a>))))));</td></tr>
+<tr><th id="531">531</th><td>  <b>return</b> (-<var>.125</var> + <a class="local col9 ref" href="#39z" title='z' data-ref="39z" data-ref-filename="39z">z</a> * <a class="local col8 ref" href="#38r" title='r' data-ref="38r" data-ref-filename="38r">r</a> / <a class="local col7 ref" href="#37s" title='s' data-ref="37s" data-ref-filename="37s">s</a>) / <a class="local col4 ref" href="#34x" title='x' data-ref="34x" data-ref-filename="34x">x</a>;</td></tr>
+<tr><th id="532">532</th><td>}</td></tr>
+<tr><th id="533">533</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.29 revision <em>2.29</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
