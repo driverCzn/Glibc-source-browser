@@ -1,0 +1,62 @@
+<dec f='glibc_src_2.25/iconvdata/jisx0213.h' l='28' type='const int16_t [2715]'/>
+<use f='glibc_src_2.25/iconvdata/jisx0213.h' l='70' u='r' c='ucs4_to_jisx0213'/>
+<use f='glibc_src_2.25/iconvdata/jisx0213.h' l='70' u='r' c='ucs4_to_jisx0213'/>
+<use f='glibc_src_2.25/iconvdata/jisx0213.h' l='72' u='r' c='ucs4_to_jisx0213'/>
+<def f='glibc_src_2.25/iconvdata/jisx0213.c' l='1814' ll='2156' type='const int16_t [2715]'/>
+<doc f='glibc_src_2.25/iconvdata/jisx0213.c' l='1756'>/* Tables UCS-4 -&gt; JISX0213.  Generated through
+
+   clisp tab.lisp &lt; JISX0213.TXT
+
+   where tab.lisp is:
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   (locally (declare (compile))
+     (let ((table (make-array #x110000 :initial-element nil))
+           (pages (make-array #x4400 :initial-element nil))
+           (maxpage -1)
+           (combining-prefixes &apos;()))
+       (flet ((add-entry (ucs plane row col)
+                (assert (&lt;= 0 plane 1))
+                (assert (&lt;= 0 row #x7f))
+                (assert (&lt;= 0 col #x7f))
+                (setf (aref table ucs)
+                      (logior (ash plane 15) (ash row 8) col))
+                (setf (aref pages (ash ucs -6)) t)
+                (setf maxpage (max maxpage (ash ucs -6)))))
+         (loop
+           (let ((line (read-line nil nil nil)))
+             (unless line (return))
+             (let ((plane (1- (parse-integer line :start 2 :end 3 :radix 16)))
+                   (row (parse-integer line :start 3 :end 5 :radix 16))
+                   (col (parse-integer line :start 5 :end 7 :radix 16)))
+               (if (= (length line) 21)
+                 (let ((u1 (parse-integer line :start 10 :end 14 :radix 16))
+                       (u2 (parse-integer line :start 17 :end 21 :radix 16)))
+                   (assert (member u2 &apos;(#x02E5 #x02E9 #x0300 #x0301 #x309A)))
+                   (push u1 combining-prefixes))
+                 (let ((ucs (parse-integer line :start 10 :radix 16)))
+                   (add-entry ucs plane row col)))))))
+       (dolist (u1 combining-prefixes)
+         (assert (aref table u1))
+         (setf (aref table u1) (logior (aref table u1) #x80)))
+       (let ((index 0))
+         (dotimes (i (1+ maxpage))
+           (when (= (mod i 8) 0) (format t &quot; &quot;))
+           (if (aref pages i)
+             (progn
+               (format t &quot; ~3D,&quot; index)
+               (incf index))
+             (format t &quot; ~3D,&quot; -1))
+           (when (= (mod (1+ i) 8) 0) (format t &quot;~%&quot;))))
+       (format t &quot;~%&quot;)
+       (dotimes (i (1+ maxpage))
+         (when (aref pages i)
+           (format t &quot;  /\* 0x~4,&apos;0X *\/~%&quot; (ash i 6))
+           (do ((j 0)) ((&gt;= j #x40))
+             (let* ((ucs (+ (ash i 6) j))
+                    (value (or (aref table ucs) 0)))
+               (when (= (mod j 8) 0) (format t &quot; &quot;))
+               (format t &quot; ~(0x~4,&apos;0X~),&quot; value)
+               (incf j)
+               (when (= (mod j 8) 0) (format t &quot;~%&quot;))))))))
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+*/</doc>

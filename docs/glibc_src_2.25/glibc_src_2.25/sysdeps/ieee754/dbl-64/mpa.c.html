@@ -1,0 +1,924 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mpa.c source code [glibc_src_2.25/sysdeps/ieee754/dbl-64/mpa.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/sysdeps/ieee754/dbl-64/mpa.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.25</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>dbl-64</a>/<a href='mpa.c.html'>mpa.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * IBM Accurate Mathematical Library</i></td></tr>
+<tr><th id="3">3</th><td><i> * written by International Business Machines Corp.</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright (C) 2001-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * This program is free software; you can redistribute it and/or modify</i></td></tr>
+<tr><th id="7">7</th><td><i> * it under the terms of the GNU Lesser General Public License as published by</i></td></tr>
+<tr><th id="8">8</th><td><i> * the Free Software Foundation; either version 2.1 of the License, or</i></td></tr>
+<tr><th id="9">9</th><td><i> * (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * This program is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i> * but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</i></td></tr>
+<tr><th id="14">14</th><td><i> * GNU Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * You should have received a copy of the GNU Lesser General Public License</i></td></tr>
+<tr><th id="17">17</th><td><i> * along with this program; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="18">18</th><td><i> */</i></td></tr>
+<tr><th id="19">19</th><td><i>/************************************************************************/</i></td></tr>
+<tr><th id="20">20</th><td><i>/*  MODULE_NAME: mpa.c                                                  */</i></td></tr>
+<tr><th id="21">21</th><td><i>/*                                                                      */</i></td></tr>
+<tr><th id="22">22</th><td><i>/*  FUNCTIONS:                                                          */</i></td></tr>
+<tr><th id="23">23</th><td><i>/*               mcr                                                    */</i></td></tr>
+<tr><th id="24">24</th><td><i>/*               acr                                                    */</i></td></tr>
+<tr><th id="25">25</th><td><i>/*               cpy                                                    */</i></td></tr>
+<tr><th id="26">26</th><td><i>/*               norm                                                   */</i></td></tr>
+<tr><th id="27">27</th><td><i>/*               denorm                                                 */</i></td></tr>
+<tr><th id="28">28</th><td><i>/*               mp_dbl                                                 */</i></td></tr>
+<tr><th id="29">29</th><td><i>/*               dbl_mp                                                 */</i></td></tr>
+<tr><th id="30">30</th><td><i>/*               add_magnitudes                                         */</i></td></tr>
+<tr><th id="31">31</th><td><i>/*               sub_magnitudes                                         */</i></td></tr>
+<tr><th id="32">32</th><td><i>/*               add                                                    */</i></td></tr>
+<tr><th id="33">33</th><td><i>/*               sub                                                    */</i></td></tr>
+<tr><th id="34">34</th><td><i>/*               mul                                                    */</i></td></tr>
+<tr><th id="35">35</th><td><i>/*               inv                                                    */</i></td></tr>
+<tr><th id="36">36</th><td><i>/*               dvd                                                    */</i></td></tr>
+<tr><th id="37">37</th><td><i>/*                                                                      */</i></td></tr>
+<tr><th id="38">38</th><td><i>/* Arithmetic functions for multiple precision numbers.                 */</i></td></tr>
+<tr><th id="39">39</th><td><i>/* Relative errors are bounded                                          */</i></td></tr>
+<tr><th id="40">40</th><td><i>/************************************************************************/</i></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="../../../include/endian.h.html">"endian.h"</a></u></td></tr>
+<tr><th id="44">44</th><td><u>#include <a href="mpa.h.html">"mpa.h"</a></u></td></tr>
+<tr><th id="45">45</th><td><u>#include <a href="../../../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../../../include/alloca.h.html">&lt;alloca.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#<span data-ppcond="48">ifndef</span> <span class="macro" data-ref="_M/SECTION">SECTION</span></u></td></tr>
+<tr><th id="49">49</th><td><u># define <dfn class="macro" id="_M/SECTION" data-ref="_M/SECTION">SECTION</dfn></u></td></tr>
+<tr><th id="50">50</th><td><u>#<span data-ppcond="48">endif</span></u></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="52">ifndef</span> <span class="macro" data-ref="_M/NO__CONST">NO__CONST</span></u></td></tr>
+<tr><th id="53">53</th><td><em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> <dfn class="decl def" id="__mpone" title='__mpone' data-ref="__mpone" data-ref-filename="__mpone">__mpone</dfn> = { <var>1</var>, { <var>1.0</var>, <var>1.0</var> } };</td></tr>
+<tr><th id="54">54</th><td><em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> <dfn class="decl def" id="__mptwo" title='__mptwo' data-ref="__mptwo" data-ref-filename="__mptwo">__mptwo</dfn> = { <var>1</var>, { <var>1.0</var>, <var>2.0</var> } };</td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="52">endif</span></u></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="57">ifndef</span> <span class="macro" data-ref="_M/NO___ACR">NO___ACR</span></u></td></tr>
+<tr><th id="58">58</th><td><i  data-doc="mcr">/* Compare mantissa of two multiple precision numbers regardless of the sign</i></td></tr>
+<tr><th id="59">59</th><td><i  data-doc="mcr">   and exponent of the numbers.  */</i></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="61">61</th><td><dfn class="tu decl def fn" id="mcr" title='mcr' data-type='int mcr(const mp_no * x, const mp_no * y, int p)' data-ref="mcr" data-ref-filename="mcr">mcr</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="6x" title='x' data-type='const mp_no *' data-ref="6x" data-ref-filename="6x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="7y" title='y' data-type='const mp_no *' data-ref="7y" data-ref-filename="7y">y</dfn>, <em>int</em> <dfn class="local col8 decl" id="8p" title='p' data-type='int' data-ref="8p" data-ref-filename="8p">p</dfn>)</td></tr>
+<tr><th id="62">62</th><td>{</td></tr>
+<tr><th id="63">63</th><td>  <em>long</em> <dfn class="local col9 decl" id="9i" title='i' data-type='long' data-ref="9i" data-ref-filename="9i">i</dfn>;</td></tr>
+<tr><th id="64">64</th><td>  <em>long</em> <dfn class="local col0 decl" id="10p2" title='p2' data-type='long' data-ref="10p2" data-ref-filename="10p2">p2</dfn> = <a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a>;</td></tr>
+<tr><th id="65">65</th><td>  <b>for</b> (<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a> = <var>1</var>; <a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a> &lt;= <a class="local col0 ref" href="#10p2" title='p2' data-ref="10p2" data-ref-filename="10p2">p2</a>; <a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>++)</td></tr>
+<tr><th id="66">66</th><td>    {</td></tr>
+<tr><th id="67">67</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>] == <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>])</td></tr>
+<tr><th id="68">68</th><td>	<b>continue</b>;</td></tr>
+<tr><th id="69">69</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>] &gt; <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col9 ref" href="#9i" title='i' data-ref="9i" data-ref-filename="9i">i</a>])</td></tr>
+<tr><th id="70">70</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="71">71</th><td>      <b>else</b></td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="73">73</th><td>    }</td></tr>
+<tr><th id="74">74</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="75">75</th><td>}</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><i>/* Compare the absolute values of two multiple precision numbers.  */</i></td></tr>
+<tr><th id="78">78</th><td><em>int</em></td></tr>
+<tr><th id="79">79</th><td><dfn class="decl def fn" id="__acr" title='__acr' data-ref="__acr" data-ref-filename="__acr">__acr</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col1 decl" id="11x" title='x' data-type='const mp_no *' data-ref="11x" data-ref-filename="11x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col2 decl" id="12y" title='y' data-type='const mp_no *' data-ref="12y" data-ref-filename="12y">y</dfn>, <em>int</em> <dfn class="local col3 decl" id="13p" title='p' data-type='int' data-ref="13p" data-ref-filename="13p">p</dfn>)</td></tr>
+<tr><th id="80">80</th><td>{</td></tr>
+<tr><th id="81">81</th><td>  <em>long</em> <dfn class="local col4 decl" id="14i" title='i' data-type='long' data-ref="14i" data-ref-filename="14i">i</dfn>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="84">84</th><td>    {</td></tr>
+<tr><th id="85">85</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="86">86</th><td>	<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>0</var>;</td></tr>
+<tr><th id="87">87</th><td>      <b>else</b></td></tr>
+<tr><th id="88">88</th><td>	<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = -<var>1</var>;</td></tr>
+<tr><th id="89">89</th><td>    }</td></tr>
+<tr><th id="90">90</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="91">91</th><td>    <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>1</var>;</td></tr>
+<tr><th id="92">92</th><td>  <b>else</b></td></tr>
+<tr><th id="93">93</th><td>    {</td></tr>
+<tr><th id="94">94</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> &gt; <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a>)</td></tr>
+<tr><th id="95">95</th><td>	<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>1</var>;</td></tr>
+<tr><th id="96">96</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> &lt; <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a>)</td></tr>
+<tr><th id="97">97</th><td>	<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = -<var>1</var>;</td></tr>
+<tr><th id="98">98</th><td>      <b>else</b></td></tr>
+<tr><th id="99">99</th><td>	<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <a class="tu ref fn" href="#mcr" title='mcr' data-use='c' data-ref="mcr" data-ref-filename="mcr">mcr</a> (<a class="local col1 ref" href="#11x" title='x' data-ref="11x" data-ref-filename="11x">x</a>, <a class="local col2 ref" href="#12y" title='y' data-ref="12y" data-ref-filename="12y">y</a>, <a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>);</td></tr>
+<tr><th id="100">100</th><td>    }</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>  <b>return</b> <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>;</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="57">endif</span></u></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="106">ifndef</span> <span class="macro" data-ref="_M/NO___CPY">NO___CPY</span></u></td></tr>
+<tr><th id="107">107</th><td><i>/* Copy multiple precision number X into Y.  They could be the same</i></td></tr>
+<tr><th id="108">108</th><td><i>   number.  */</i></td></tr>
+<tr><th id="109">109</th><td><em>void</em></td></tr>
+<tr><th id="110">110</th><td><dfn class="decl def fn" id="__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col5 decl" id="15x" title='x' data-type='const mp_no *' data-ref="15x" data-ref-filename="15x">x</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="16y" title='y' data-type='mp_no *' data-ref="16y" data-ref-filename="16y">y</dfn>, <em>int</em> <dfn class="local col7 decl" id="17p" title='p' data-type='int' data-ref="17p" data-ref-filename="17p">p</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>  <em>long</em> <dfn class="local col8 decl" id="18i" title='i' data-type='long' data-ref="18i" data-ref-filename="18i">i</dfn>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> = <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="115">115</th><td>  <b>for</b> (<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> = <var>0</var>; <a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> &lt;= <a class="local col7 ref" href="#17p" title='p' data-ref="17p" data-ref-filename="17p">p</a>; <a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>++)</td></tr>
+<tr><th id="116">116</th><td>    <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>];</td></tr>
+<tr><th id="117">117</th><td>}</td></tr>
+<tr><th id="118">118</th><td><u>#<span data-ppcond="106">endif</span></u></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="120">ifndef</span> <span class="macro" data-ref="_M/NO___MP_DBL">NO___MP_DBL</span></u></td></tr>
+<tr><th id="121">121</th><td><i  data-doc="norm">/* Convert a multiple precision number *X into a double precision</i></td></tr>
+<tr><th id="122">122</th><td><i  data-doc="norm">   number *Y, normalized case (|x| &gt;= 2**(-1022))).  X has precision</i></td></tr>
+<tr><th id="123">123</th><td><i  data-doc="norm">   P, which is positive.  */</i></td></tr>
+<tr><th id="124">124</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="125">125</th><td><dfn class="tu decl def fn" id="norm" title='norm' data-type='void norm(const mp_no * x, double * y, int p)' data-ref="norm" data-ref-filename="norm">norm</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col9 decl" id="19x" title='x' data-type='const mp_no *' data-ref="19x" data-ref-filename="19x">x</dfn>, <em>double</em> *<dfn class="local col0 decl" id="20y" title='y' data-type='double *' data-ref="20y" data-ref-filename="20y">y</dfn>, <em>int</em> <dfn class="local col1 decl" id="21p" title='p' data-type='int' data-ref="21p" data-ref-filename="21p">p</dfn>)</td></tr>
+<tr><th id="126">126</th><td>{</td></tr>
+<tr><th id="127">127</th><td><u># define <dfn class="macro" id="_M/R" data-ref="_M/R">R</dfn> RADIXI</u></td></tr>
+<tr><th id="128">128</th><td>  <em>long</em> <dfn class="local col2 decl" id="22i" title='i' data-type='long' data-ref="22i" data-ref-filename="22i">i</dfn>;</td></tr>
+<tr><th id="129">129</th><td>  <em>double</em> <dfn class="local col3 decl" id="23c" title='c' data-type='double' data-ref="23c" data-ref-filename="23c">c</dfn>;</td></tr>
+<tr><th id="130">130</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_t" title='mantissa_t' data-type='long' data-ref="mantissa_t" data-ref-filename="mantissa_t">mantissa_t</a> <dfn class="local col4 decl" id="24a" title='a' data-type='mantissa_t' data-ref="24a" data-ref-filename="24a">a</dfn>, <dfn class="local col5 decl" id="25u" title='u' data-type='mantissa_t' data-ref="25u" data-ref-filename="25u">u</dfn>, <dfn class="local col6 decl" id="26v" title='v' data-type='mantissa_t' data-ref="26v" data-ref-filename="26v">v</dfn>, <dfn class="local col7 decl" id="27z" title='z' data-type='mantissa_t [5]' data-ref="27z" data-ref-filename="27z">z</dfn>[<var>5</var>];</td></tr>
+<tr><th id="131">131</th><td>  <b>if</b> (<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> &lt; <var>5</var>)</td></tr>
+<tr><th id="132">132</th><td>    {</td></tr>
+<tr><th id="133">133</th><td>      <b>if</b> (<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> == <var>1</var>)</td></tr>
+<tr><th id="134">134</th><td>	<a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="135">135</th><td>      <b>else</b> <b>if</b> (<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> == <var>2</var>)</td></tr>
+<tr><th id="136">136</th><td>	<a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>];</td></tr>
+<tr><th id="137">137</th><td>      <b>else</b> <b>if</b> (<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> == <var>3</var>)</td></tr>
+<tr><th id="138">138</th><td>	<a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>3</var>]);</td></tr>
+<tr><th id="139">139</th><td>      <b>else</b> <i>/* p == 4.  */</i></td></tr>
+<tr><th id="140">140</th><td>	<a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> = (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>]) + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>3</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>4</var>]);</td></tr>
+<tr><th id="141">141</th><td>    }</td></tr>
+<tr><th id="142">142</th><td>  <b>else</b></td></tr>
+<tr><th id="143">143</th><td>    {</td></tr>
+<tr><th id="144">144</th><td>      <b>for</b> (<a class="local col4 ref" href="#24a" title='a' data-ref="24a" data-ref-filename="24a">a</a> = <var>1</var>, <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>]; <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>1</var>] &lt; <a class="macro" href="mpa.h.html#97" title="(1L &lt;&lt; 23)" data-ref="_M/TWO23">TWO23</a>; )</td></tr>
+<tr><th id="145">145</th><td>	{</td></tr>
+<tr><th id="146">146</th><td>	  <a class="local col4 ref" href="#24a" title='a' data-ref="24a" data-ref-filename="24a">a</a> *= <var>2</var>;</td></tr>
+<tr><th id="147">147</th><td>	  <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>1</var>] *= <var>2</var>;</td></tr>
+<tr><th id="148">148</th><td>	}</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>      <b>for</b> (<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> = <var>2</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> &lt; <var>5</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>++)</td></tr>
+<tr><th id="151">151</th><td>	{</td></tr>
+<tr><th id="152">152</th><td>	  <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col8 decl" id="28d" title='d' data-type='mantissa_store_t' data-ref="28d" data-ref-filename="28d">d</dfn>, <dfn class="local col9 decl" id="29r" title='r' data-type='mantissa_store_t' data-ref="29r" data-ref-filename="29r">r</dfn>;</td></tr>
+<tr><th id="153">153</th><td>	  <a class="local col8 ref" href="#28d" title='d' data-ref="28d" data-ref-filename="28d">d</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="local col4 ref" href="#24a" title='a' data-ref="24a" data-ref-filename="24a">a</a>;</td></tr>
+<tr><th id="154">154</th><td>	  <a class="macro" href="mpa-arch.h.html#29" title="({ r = d &amp; ((1L &lt;&lt; 24) - 1); d &gt;&gt;= 24; })" data-ref="_M/DIV_RADIX">DIV_RADIX</a> (<a class="local col8 ref" href="#28d" title='d' data-ref="28d" data-ref-filename="28d">d</a>, <a class="local col9 ref" href="#29r" title='r' data-ref="29r" data-ref-filename="29r">r</a>);</td></tr>
+<tr><th id="155">155</th><td>	  <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>] = <a class="local col9 ref" href="#29r" title='r' data-ref="29r" data-ref-filename="29r">r</a>;</td></tr>
+<tr><th id="156">156</th><td>	  <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> - <var>1</var>] += <a class="local col8 ref" href="#28d" title='d' data-ref="28d" data-ref-filename="28d">d</a>;</td></tr>
+<tr><th id="157">157</th><td>	}</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>      <a class="local col5 ref" href="#25u" title='u' data-ref="25u" data-ref-filename="25u">u</a> = <a class="macro" href="mpa-arch.h.html#47" title="((z[3]) &amp; - ((1L &lt;&lt; 19)))" data-ref="_M/ALIGN_DOWN_TO">ALIGN_DOWN_TO</a> (<a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>3</var>], <a class="macro" href="mpa.h.html#96" title="(1L &lt;&lt; 19)" data-ref="_M/TWO19">TWO19</a>);</td></tr>
+<tr><th id="160">160</th><td>      <a class="local col6 ref" href="#26v" title='v' data-ref="26v" data-ref-filename="26v">v</a> = <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>3</var>] - <a class="local col5 ref" href="#25u" title='u' data-ref="25u" data-ref-filename="25u">u</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>      <b>if</b> (<a class="local col6 ref" href="#26v" title='v' data-ref="26v" data-ref-filename="26v">v</a> == <a class="macro" href="mpa.h.html#95" title="(1L &lt;&lt; 18)" data-ref="_M/TWO18">TWO18</a>)</td></tr>
+<tr><th id="163">163</th><td>	{</td></tr>
+<tr><th id="164">164</th><td>	  <b>if</b> (<a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>4</var>] == <var>0</var>)</td></tr>
+<tr><th id="165">165</th><td>	    {</td></tr>
+<tr><th id="166">166</th><td>	      <b>for</b> (<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> = <var>5</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> &lt;= <a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>++)</td></tr>
+<tr><th id="167">167</th><td>		{</td></tr>
+<tr><th id="168">168</th><td>		  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>] == <var>0</var>)</td></tr>
+<tr><th id="169">169</th><td>		    <b>continue</b>;</td></tr>
+<tr><th id="170">170</th><td>		  <b>else</b></td></tr>
+<tr><th id="171">171</th><td>		    {</td></tr>
+<tr><th id="172">172</th><td>		      <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>3</var>] += <var>1</var>;</td></tr>
+<tr><th id="173">173</th><td>		      <b>break</b>;</td></tr>
+<tr><th id="174">174</th><td>		    }</td></tr>
+<tr><th id="175">175</th><td>		}</td></tr>
+<tr><th id="176">176</th><td>	    }</td></tr>
+<tr><th id="177">177</th><td>	  <b>else</b></td></tr>
+<tr><th id="178">178</th><td>	    <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>3</var>] += <var>1</var>;</td></tr>
+<tr><th id="179">179</th><td>	}</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>      <a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> = (<a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>1</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * (<a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>2</var>] + <a class="macro" href="#127" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="local col7 ref" href="#27z" title='z' data-ref="27z" data-ref-filename="27z">z</a>[<var>3</var>])) / <a class="local col4 ref" href="#24a" title='a' data-ref="24a" data-ref-filename="24a">a</a>;</td></tr>
+<tr><th id="182">182</th><td>    }</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td>  <a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> *= <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>];</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>  <b>for</b> (<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> = <var>1</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> &lt; <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>++)</td></tr>
+<tr><th id="187">187</th><td>    <a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> *= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="188">188</th><td>  <b>for</b> (<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> = <var>1</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> &gt; <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>--)</td></tr>
+<tr><th id="189">189</th><td>    <a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a> *= <a class="macro" href="mpa.h.html#85" title="0x1.0p-24" data-ref="_M/RADIXI">RADIXI</a>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>  *<a class="local col0 ref" href="#20y" title='y' data-ref="20y" data-ref-filename="20y">y</a> = <a class="local col3 ref" href="#23c" title='c' data-ref="23c" data-ref-filename="23c">c</a>;</td></tr>
+<tr><th id="192">192</th><td><u># undef <a class="macro" href="#127" data-ref="_M/R">R</a></u></td></tr>
+<tr><th id="193">193</th><td>}</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><i  data-doc="denorm">/* Convert a multiple precision number *X into a double precision</i></td></tr>
+<tr><th id="196">196</th><td><i  data-doc="denorm">   number *Y, Denormal case  (|x| &lt; 2**(-1022))).  */</i></td></tr>
+<tr><th id="197">197</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="198">198</th><td><dfn class="tu decl def fn" id="denorm" title='denorm' data-type='void denorm(const mp_no * x, double * y, int p)' data-ref="denorm" data-ref-filename="denorm">denorm</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col0 decl" id="30x" title='x' data-type='const mp_no *' data-ref="30x" data-ref-filename="30x">x</dfn>, <em>double</em> *<dfn class="local col1 decl" id="31y" title='y' data-type='double *' data-ref="31y" data-ref-filename="31y">y</dfn>, <em>int</em> <dfn class="local col2 decl" id="32p" title='p' data-type='int' data-ref="32p" data-ref-filename="32p">p</dfn>)</td></tr>
+<tr><th id="199">199</th><td>{</td></tr>
+<tr><th id="200">200</th><td>  <em>long</em> <dfn class="local col3 decl" id="33i" title='i' data-type='long' data-ref="33i" data-ref-filename="33i">i</dfn>, <dfn class="local col4 decl" id="34k" title='k' data-type='long' data-ref="34k" data-ref-filename="34k">k</dfn>;</td></tr>
+<tr><th id="201">201</th><td>  <em>long</em> <dfn class="local col5 decl" id="35p2" title='p2' data-type='long' data-ref="35p2" data-ref-filename="35p2">p2</dfn> = <a class="local col2 ref" href="#32p" title='p' data-ref="32p" data-ref-filename="32p">p</a>;</td></tr>
+<tr><th id="202">202</th><td>  <em>double</em> <dfn class="local col6 decl" id="36c" title='c' data-type='double' data-ref="36c" data-ref-filename="36c">c</dfn>;</td></tr>
+<tr><th id="203">203</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_t" title='mantissa_t' data-type='long' data-ref="mantissa_t" data-ref-filename="mantissa_t">mantissa_t</a> <dfn class="local col7 decl" id="37u" title='u' data-type='mantissa_t' data-ref="37u" data-ref-filename="37u">u</dfn>, <dfn class="local col8 decl" id="38z" title='z' data-type='mantissa_t [5]' data-ref="38z" data-ref-filename="38z">z</dfn>[<var>5</var>];</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td><u># define <dfn class="macro" id="_M/R" data-ref="_M/R">R</dfn> RADIXI</u></td></tr>
+<tr><th id="206">206</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> &lt; -<var>44</var> || (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>44</var> &amp;&amp; <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] &lt; <a class="macro" href="mpa.h.html#92" title="(1L &lt;&lt; 5)" data-ref="_M/TWO5">TWO5</a>))</td></tr>
+<tr><th id="207">207</th><td>    {</td></tr>
+<tr><th id="208">208</th><td>      *<a class="local col1 ref" href="#31y" title='y' data-ref="31y" data-ref-filename="31y">y</a> = <var>0</var>;</td></tr>
+<tr><th id="209">209</th><td>      <b>return</b>;</td></tr>
+<tr><th id="210">210</th><td>    }</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>  <b>if</b> (<a class="local col5 ref" href="#35p2" title='p2' data-ref="35p2" data-ref-filename="35p2">p2</a> == <var>1</var>)</td></tr>
+<tr><th id="213">213</th><td>    {</td></tr>
+<tr><th id="214">214</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>42</var>)</td></tr>
+<tr><th id="215">215</th><td>	{</td></tr>
+<tr><th id="216">216</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="217">217</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <var>0</var>;</td></tr>
+<tr><th id="218">218</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <var>0</var>;</td></tr>
+<tr><th id="219">219</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>3</var>;</td></tr>
+<tr><th id="220">220</th><td>	}</td></tr>
+<tr><th id="221">221</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>43</var>)</td></tr>
+<tr><th id="222">222</th><td>	{</td></tr>
+<tr><th id="223">223</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="224">224</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="225">225</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <var>0</var>;</td></tr>
+<tr><th id="226">226</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>2</var>;</td></tr>
+<tr><th id="227">227</th><td>	}</td></tr>
+<tr><th id="228">228</th><td>      <b>else</b></td></tr>
+<tr><th id="229">229</th><td>	{</td></tr>
+<tr><th id="230">230</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="231">231</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <var>0</var>;</td></tr>
+<tr><th id="232">232</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="233">233</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>1</var>;</td></tr>
+<tr><th id="234">234</th><td>	}</td></tr>
+<tr><th id="235">235</th><td>    }</td></tr>
+<tr><th id="236">236</th><td>  <b>else</b> <b>if</b> (<a class="local col5 ref" href="#35p2" title='p2' data-ref="35p2" data-ref-filename="35p2">p2</a> == <var>2</var>)</td></tr>
+<tr><th id="237">237</th><td>    {</td></tr>
+<tr><th id="238">238</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>42</var>)</td></tr>
+<tr><th id="239">239</th><td>	{</td></tr>
+<tr><th id="240">240</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="241">241</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>];</td></tr>
+<tr><th id="242">242</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <var>0</var>;</td></tr>
+<tr><th id="243">243</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>3</var>;</td></tr>
+<tr><th id="244">244</th><td>	}</td></tr>
+<tr><th id="245">245</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>43</var>)</td></tr>
+<tr><th id="246">246</th><td>	{</td></tr>
+<tr><th id="247">247</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="248">248</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="249">249</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>];</td></tr>
+<tr><th id="250">250</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>2</var>;</td></tr>
+<tr><th id="251">251</th><td>	}</td></tr>
+<tr><th id="252">252</th><td>      <b>else</b></td></tr>
+<tr><th id="253">253</th><td>	{</td></tr>
+<tr><th id="254">254</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="255">255</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <var>0</var>;</td></tr>
+<tr><th id="256">256</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="257">257</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>1</var>;</td></tr>
+<tr><th id="258">258</th><td>	}</td></tr>
+<tr><th id="259">259</th><td>    }</td></tr>
+<tr><th id="260">260</th><td>  <b>else</b></td></tr>
+<tr><th id="261">261</th><td>    {</td></tr>
+<tr><th id="262">262</th><td>      <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>42</var>)</td></tr>
+<tr><th id="263">263</th><td>	{</td></tr>
+<tr><th id="264">264</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] + <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="265">265</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>2</var>];</td></tr>
+<tr><th id="266">266</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>3</var>;</td></tr>
+<tr><th id="267">267</th><td>	}</td></tr>
+<tr><th id="268">268</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>43</var>)</td></tr>
+<tr><th id="269">269</th><td>	{</td></tr>
+<tr><th id="270">270</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="271">271</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>];</td></tr>
+<tr><th id="272">272</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>2</var>;</td></tr>
+<tr><th id="273">273</th><td>	}</td></tr>
+<tr><th id="274">274</th><td>      <b>else</b></td></tr>
+<tr><th id="275">275</th><td>	{</td></tr>
+<tr><th id="276">276</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] = <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>;</td></tr>
+<tr><th id="277">277</th><td>	  <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] = <var>0</var>;</td></tr>
+<tr><th id="278">278</th><td>	  <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> = <var>1</var>;</td></tr>
+<tr><th id="279">279</th><td>	}</td></tr>
+<tr><th id="280">280</th><td>      <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a>];</td></tr>
+<tr><th id="281">281</th><td>    }</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>  <a class="local col7 ref" href="#37u" title='u' data-ref="37u" data-ref-filename="37u">u</a> = <a class="macro" href="mpa-arch.h.html#47" title="((z[3]) &amp; - ((1L &lt;&lt; 5)))" data-ref="_M/ALIGN_DOWN_TO">ALIGN_DOWN_TO</a> (<a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>], <a class="macro" href="mpa.h.html#92" title="(1L &lt;&lt; 5)" data-ref="_M/TWO5">TWO5</a>);</td></tr>
+<tr><th id="284">284</th><td></td></tr>
+<tr><th id="285">285</th><td>  <b>if</b> (<a class="local col7 ref" href="#37u" title='u' data-ref="37u" data-ref-filename="37u">u</a> == <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>])</td></tr>
+<tr><th id="286">286</th><td>    {</td></tr>
+<tr><th id="287">287</th><td>      <b>for</b> (<a class="local col3 ref" href="#33i" title='i' data-ref="33i" data-ref-filename="33i">i</a> = <a class="local col4 ref" href="#34k" title='k' data-ref="34k" data-ref-filename="34k">k</a> + <var>1</var>; <a class="local col3 ref" href="#33i" title='i' data-ref="33i" data-ref-filename="33i">i</a> &lt;= <a class="local col5 ref" href="#35p2" title='p2' data-ref="35p2" data-ref-filename="35p2">p2</a>; <a class="local col3 ref" href="#33i" title='i' data-ref="33i" data-ref-filename="33i">i</a>++)</td></tr>
+<tr><th id="288">288</th><td>	{</td></tr>
+<tr><th id="289">289</th><td>	  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col3 ref" href="#33i" title='i' data-ref="33i" data-ref-filename="33i">i</a>] == <var>0</var>)</td></tr>
+<tr><th id="290">290</th><td>	    <b>continue</b>;</td></tr>
+<tr><th id="291">291</th><td>	  <b>else</b></td></tr>
+<tr><th id="292">292</th><td>	    {</td></tr>
+<tr><th id="293">293</th><td>	      <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>] += <var>1</var>;</td></tr>
+<tr><th id="294">294</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="295">295</th><td>	    }</td></tr>
+<tr><th id="296">296</th><td>	}</td></tr>
+<tr><th id="297">297</th><td>    }</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>  <a class="local col6 ref" href="#36c" title='c' data-ref="36c" data-ref-filename="36c">c</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] * ((<a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>1</var>] + <a class="macro" href="#205" title="0x1.0p-24" data-ref="_M/R">R</a> * (<a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>2</var>] + <a class="macro" href="#205" title="0x1.0p-24" data-ref="_M/R">R</a> * <a class="local col8 ref" href="#38z" title='z' data-ref="38z" data-ref-filename="38z">z</a>[<var>3</var>])) - <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>);</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td>  *<a class="local col1 ref" href="#31y" title='y' data-ref="31y" data-ref-filename="31y">y</a> = <a class="local col6 ref" href="#36c" title='c' data-ref="36c" data-ref-filename="36c">c</a> * <a class="macro" href="mpa.h.html#103" title="0x1.0p-1032" data-ref="_M/TWOM1032">TWOM1032</a>;</td></tr>
+<tr><th id="302">302</th><td><u># undef <a class="macro" href="#205" data-ref="_M/R">R</a></u></td></tr>
+<tr><th id="303">303</th><td>}</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td><i>/* Convert multiple precision number *X into double precision number *Y.  The</i></td></tr>
+<tr><th id="306">306</th><td><i>   result is correctly rounded to the nearest/even.  */</i></td></tr>
+<tr><th id="307">307</th><td><em>void</em></td></tr>
+<tr><th id="308">308</th><td><dfn class="decl def fn" id="__mp_dbl" title='__mp_dbl' data-ref="__mp_dbl" data-ref-filename="__mp_dbl">__mp_dbl</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col9 decl" id="39x" title='x' data-type='const mp_no *' data-ref="39x" data-ref-filename="39x">x</dfn>, <em>double</em> *<dfn class="local col0 decl" id="40y" title='y' data-type='double *' data-ref="40y" data-ref-filename="40y">y</dfn>, <em>int</em> <dfn class="local col1 decl" id="41p" title='p' data-type='int' data-ref="41p" data-ref-filename="41p">p</dfn>)</td></tr>
+<tr><th id="309">309</th><td>{</td></tr>
+<tr><th id="310">310</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="311">311</th><td>    {</td></tr>
+<tr><th id="312">312</th><td>      *<a class="local col0 ref" href="#40y" title='y' data-ref="40y" data-ref-filename="40y">y</a> = <var>0</var>;</td></tr>
+<tr><th id="313">313</th><td>      <b>return</b>;</td></tr>
+<tr><th id="314">314</th><td>    }</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#417" title="__builtin_expect ((x-&gt;e &gt; -42 || (x-&gt;e == -42 &amp;&amp; x-&gt;d[1] &gt;= (1L &lt;&lt; 10))), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> &gt; -<var>42</var> || (<a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> == -<var>42</var> &amp;&amp; <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>1</var>] &gt;= <a class="macro" href="mpa.h.html#94" title="(1L &lt;&lt; 10)" data-ref="_M/TWO10">TWO10</a>)))</td></tr>
+<tr><th id="317">317</th><td>    <a class="tu ref fn" href="#norm" title='norm' data-use='c' data-ref="norm" data-ref-filename="norm">norm</a> (<a class="local col9 ref" href="#39x" title='x' data-ref="39x" data-ref-filename="39x">x</a>, <a class="local col0 ref" href="#40y" title='y' data-ref="40y" data-ref-filename="40y">y</a>, <a class="local col1 ref" href="#41p" title='p' data-ref="41p" data-ref-filename="41p">p</a>);</td></tr>
+<tr><th id="318">318</th><td>  <b>else</b></td></tr>
+<tr><th id="319">319</th><td>    <a class="tu ref fn" href="#denorm" title='denorm' data-use='c' data-ref="denorm" data-ref-filename="denorm">denorm</a> (<a class="local col9 ref" href="#39x" title='x' data-ref="39x" data-ref-filename="39x">x</a>, <a class="local col0 ref" href="#40y" title='y' data-ref="40y" data-ref-filename="40y">y</a>, <a class="local col1 ref" href="#41p" title='p' data-ref="41p" data-ref-filename="41p">p</a>);</td></tr>
+<tr><th id="320">320</th><td>}</td></tr>
+<tr><th id="321">321</th><td><u>#<span data-ppcond="120">endif</span></u></td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td><i>/* Get the multiple precision equivalent of X into *Y.  If the precision is too</i></td></tr>
+<tr><th id="324">324</th><td><i>   small, the result is truncated.  */</i></td></tr>
+<tr><th id="325">325</th><td><em>void</em></td></tr>
+<tr><th id="326">326</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="327">327</th><td><dfn class="decl def fn" id="__dbl_mp" title='__dbl_mp' data-ref="__dbl_mp" data-ref-filename="__dbl_mp">__dbl_mp</dfn> (<em>double</em> <dfn class="local col2 decl" id="42x" title='x' data-type='double' data-ref="42x" data-ref-filename="42x">x</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col3 decl" id="43y" title='y' data-type='mp_no *' data-ref="43y" data-ref-filename="43y">y</dfn>, <em>int</em> <dfn class="local col4 decl" id="44p" title='p' data-type='int' data-ref="44p" data-ref-filename="44p">p</dfn>)</td></tr>
+<tr><th id="328">328</th><td>{</td></tr>
+<tr><th id="329">329</th><td>  <em>long</em> <dfn class="local col5 decl" id="45i" title='i' data-type='long' data-ref="45i" data-ref-filename="45i">i</dfn>, <dfn class="local col6 decl" id="46n" title='n' data-type='long' data-ref="46n" data-ref-filename="46n">n</dfn>;</td></tr>
+<tr><th id="330">330</th><td>  <em>long</em> <dfn class="local col7 decl" id="47p2" title='p2' data-type='long' data-ref="47p2" data-ref-filename="47p2">p2</dfn> = <a class="local col4 ref" href="#44p" title='p' data-ref="44p" data-ref-filename="44p">p</a>;</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>  <i>/* Sign.  */</i></td></tr>
+<tr><th id="333">333</th><td>  <b>if</b> (<a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> == <var>0</var>)</td></tr>
+<tr><th id="334">334</th><td>    {</td></tr>
+<tr><th id="335">335</th><td>      <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="336">336</th><td>      <b>return</b>;</td></tr>
+<tr><th id="337">337</th><td>    }</td></tr>
+<tr><th id="338">338</th><td>  <b>else</b> <b>if</b> (<a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="339">339</th><td>    <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] = <var>1</var>;</td></tr>
+<tr><th id="340">340</th><td>  <b>else</b></td></tr>
+<tr><th id="341">341</th><td>    {</td></tr>
+<tr><th id="342">342</th><td>      <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] = -<var>1</var>;</td></tr>
+<tr><th id="343">343</th><td>      <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> = -<a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a>;</td></tr>
+<tr><th id="344">344</th><td>    }</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td>  <i>/* Exponent.  */</i></td></tr>
+<tr><th id="347">347</th><td>  <b>for</b> (<a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> = <var>1</var>; <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> &gt;= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>; <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> += <var>1</var>)</td></tr>
+<tr><th id="348">348</th><td>    <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> *= <a class="macro" href="mpa.h.html#85" title="0x1.0p-24" data-ref="_M/RADIXI">RADIXI</a>;</td></tr>
+<tr><th id="349">349</th><td>  <b>for</b> (; <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> &lt; <var>1</var>; <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> -= <var>1</var>)</td></tr>
+<tr><th id="350">350</th><td>    <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> *= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td>  <i>/* Digits.  */</i></td></tr>
+<tr><th id="353">353</th><td>  <a class="local col6 ref" href="#46n" title='n' data-ref="46n" data-ref-filename="46n">n</a> = <a class="macro" href="../../../misc/sys/param.h.html#102" title="(((p2)&lt;(4))?(p2):(4))" data-ref="_M/MIN">MIN</a> (<a class="local col7 ref" href="#47p2" title='p2' data-ref="47p2" data-ref-filename="47p2">p2</a>, <var>4</var>);</td></tr>
+<tr><th id="354">354</th><td>  <b>for</b> (<a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a> = <var>1</var>; <a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a> &lt;= <a class="local col6 ref" href="#46n" title='n' data-ref="46n" data-ref-filename="46n">n</a>; <a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a>++)</td></tr>
+<tr><th id="355">355</th><td>    {</td></tr>
+<tr><th id="356">356</th><td>      <a class="macro" href="mpa-arch.h.html#40" title="({ y-&gt;d[i] = (mantissa_t) x; x -= y-&gt;d[i]; })" data-ref="_M/INTEGER_OF">INTEGER_OF</a> (<a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a>, <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a>]);</td></tr>
+<tr><th id="357">357</th><td>      <a class="local col2 ref" href="#42x" title='x' data-ref="42x" data-ref-filename="42x">x</a> *= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="358">358</th><td>    }</td></tr>
+<tr><th id="359">359</th><td>  <b>for</b> (; <a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a> &lt;= <a class="local col7 ref" href="#47p2" title='p2' data-ref="47p2" data-ref-filename="47p2">p2</a>; <a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a>++)</td></tr>
+<tr><th id="360">360</th><td>    <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col5 ref" href="#45i" title='i' data-ref="45i" data-ref-filename="45i">i</a>] = <var>0</var>;</td></tr>
+<tr><th id="361">361</th><td>}</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><i  data-doc="add_magnitudes">/* Add magnitudes of *X and *Y assuming that abs (*X) &gt;= abs (*Y) &gt; 0.  The</i></td></tr>
+<tr><th id="364">364</th><td><i  data-doc="add_magnitudes">   sign of the sum *Z is not changed.  X and Y may overlap but not X and Z or</i></td></tr>
+<tr><th id="365">365</th><td><i  data-doc="add_magnitudes">   Y and Z.  No guard digit is used.  The result equals the exact sum,</i></td></tr>
+<tr><th id="366">366</th><td><i  data-doc="add_magnitudes">   truncated.  */</i></td></tr>
+<tr><th id="367">367</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="368">368</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="369">369</th><td><dfn class="tu decl def fn" id="add_magnitudes" title='add_magnitudes' data-type='void add_magnitudes(const mp_no * x, const mp_no * y, mp_no * z, int p)' data-ref="add_magnitudes" data-ref-filename="add_magnitudes">add_magnitudes</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col8 decl" id="48x" title='x' data-type='const mp_no *' data-ref="48x" data-ref-filename="48x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col9 decl" id="49y" title='y' data-type='const mp_no *' data-ref="49y" data-ref-filename="49y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col0 decl" id="50z" title='z' data-type='mp_no *' data-ref="50z" data-ref-filename="50z">z</dfn>, <em>int</em> <dfn class="local col1 decl" id="51p" title='p' data-type='int' data-ref="51p" data-ref-filename="51p">p</dfn>)</td></tr>
+<tr><th id="370">370</th><td>{</td></tr>
+<tr><th id="371">371</th><td>  <em>long</em> <dfn class="local col2 decl" id="52i" title='i' data-type='long' data-ref="52i" data-ref-filename="52i">i</dfn>, <dfn class="local col3 decl" id="53j" title='j' data-type='long' data-ref="53j" data-ref-filename="53j">j</dfn>, <dfn class="local col4 decl" id="54k" title='k' data-type='long' data-ref="54k" data-ref-filename="54k">k</dfn>;</td></tr>
+<tr><th id="372">372</th><td>  <em>long</em> <dfn class="local col5 decl" id="55p2" title='p2' data-type='long' data-ref="55p2" data-ref-filename="55p2">p2</dfn> = <a class="local col1 ref" href="#51p" title='p' data-ref="51p" data-ref-filename="51p">p</a>;</td></tr>
+<tr><th id="373">373</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_t" title='mantissa_t' data-type='long' data-ref="mantissa_t" data-ref-filename="mantissa_t">mantissa_t</a> <dfn class="local col6 decl" id="56zk" title='zk' data-type='mantissa_t' data-ref="56zk" data-ref-filename="56zk">zk</dfn>;</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td>  <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> = <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td>  <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> = <a class="local col5 ref" href="#55p2" title='p2' data-ref="55p2" data-ref-filename="55p2">p2</a>;</td></tr>
+<tr><th id="378">378</th><td>  <a class="local col3 ref" href="#53j" title='j' data-ref="53j" data-ref-filename="53j">j</a> = <a class="local col5 ref" href="#55p2" title='p2' data-ref="55p2" data-ref-filename="55p2">p2</a> + <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> - <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="379">379</th><td>  <a class="local col4 ref" href="#54k" title='k' data-ref="54k" data-ref-filename="54k">k</a> = <a class="local col5 ref" href="#55p2" title='p2' data-ref="55p2" data-ref-filename="55p2">p2</a> + <var>1</var>;</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((j &lt; 1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col3 ref" href="#53j" title='j' data-ref="53j" data-ref-filename="53j">j</a> &lt; <var>1</var>))</td></tr>
+<tr><th id="382">382</th><td>    {</td></tr>
+<tr><th id="383">383</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col8 ref" href="#48x" title='x' data-ref="48x" data-ref-filename="48x">x</a>, <a class="local col0 ref" href="#50z" title='z' data-ref="50z" data-ref-filename="50z">z</a>, <a class="local col1 ref" href="#51p" title='p' data-ref="51p" data-ref-filename="51p">p</a>);</td></tr>
+<tr><th id="384">384</th><td>      <b>return</b>;</td></tr>
+<tr><th id="385">385</th><td>    }</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>  <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>  <b>for</b> (; <a class="local col3 ref" href="#53j" title='j' data-ref="53j" data-ref-filename="53j">j</a> &gt; <var>0</var>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>--, <a class="local col3 ref" href="#53j" title='j' data-ref="53j" data-ref-filename="53j">j</a>--)</td></tr>
+<tr><th id="390">390</th><td>    {</td></tr>
+<tr><th id="391">391</th><td>      <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>] + <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col3 ref" href="#53j" title='j' data-ref="53j" data-ref-filename="53j">j</a>];</td></tr>
+<tr><th id="392">392</th><td>      <b>if</b> (<a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> &gt;= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>)</td></tr>
+<tr><th id="393">393</th><td>	{</td></tr>
+<tr><th id="394">394</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col4 ref" href="#54k" title='k' data-ref="54k" data-ref-filename="54k">k</a>--] = <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> - <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="395">395</th><td>	  <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> = <var>1</var>;</td></tr>
+<tr><th id="396">396</th><td>	}</td></tr>
+<tr><th id="397">397</th><td>      <b>else</b></td></tr>
+<tr><th id="398">398</th><td>	{</td></tr>
+<tr><th id="399">399</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col4 ref" href="#54k" title='k' data-ref="54k" data-ref-filename="54k">k</a>--] = <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a>;</td></tr>
+<tr><th id="400">400</th><td>	  <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="401">401</th><td>	}</td></tr>
+<tr><th id="402">402</th><td>    }</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td>  <b>for</b> (; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> &gt; <var>0</var>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>--)</td></tr>
+<tr><th id="405">405</th><td>    {</td></tr>
+<tr><th id="406">406</th><td>      <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>];</td></tr>
+<tr><th id="407">407</th><td>      <b>if</b> (<a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> &gt;= <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>)</td></tr>
+<tr><th id="408">408</th><td>	{</td></tr>
+<tr><th id="409">409</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col4 ref" href="#54k" title='k' data-ref="54k" data-ref-filename="54k">k</a>--] = <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> - <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="410">410</th><td>	  <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> = <var>1</var>;</td></tr>
+<tr><th id="411">411</th><td>	}</td></tr>
+<tr><th id="412">412</th><td>      <b>else</b></td></tr>
+<tr><th id="413">413</th><td>	{</td></tr>
+<tr><th id="414">414</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col4 ref" href="#54k" title='k' data-ref="54k" data-ref-filename="54k">k</a>--] = <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a>;</td></tr>
+<tr><th id="415">415</th><td>	  <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="416">416</th><td>	}</td></tr>
+<tr><th id="417">417</th><td>    }</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td>  <b>if</b> (<a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a> == <var>0</var>)</td></tr>
+<tr><th id="420">420</th><td>    {</td></tr>
+<tr><th id="421">421</th><td>      <b>for</b> (<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> = <var>1</var>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> &lt;= <a class="local col5 ref" href="#55p2" title='p2' data-ref="55p2" data-ref-filename="55p2">p2</a>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>++)</td></tr>
+<tr><th id="422">422</th><td>	<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>] = <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> + <var>1</var>];</td></tr>
+<tr><th id="423">423</th><td>    }</td></tr>
+<tr><th id="424">424</th><td>  <b>else</b></td></tr>
+<tr><th id="425">425</th><td>    {</td></tr>
+<tr><th id="426">426</th><td>      <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>1</var>] = <a class="local col6 ref" href="#56zk" title='zk' data-ref="56zk" data-ref-filename="56zk">zk</a>;</td></tr>
+<tr><th id="427">427</th><td>      <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> += <var>1</var>;</td></tr>
+<tr><th id="428">428</th><td>    }</td></tr>
+<tr><th id="429">429</th><td>}</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td><i  data-doc="sub_magnitudes">/* Subtract the magnitudes of *X and *Y assuming that abs (*x) &gt; abs (*y) &gt; 0.</i></td></tr>
+<tr><th id="432">432</th><td><i  data-doc="sub_magnitudes">   The sign of the difference *Z is not changed.  X and Y may overlap but not X</i></td></tr>
+<tr><th id="433">433</th><td><i  data-doc="sub_magnitudes">   and Z or Y and Z.  One guard digit is used.  The error is less than one</i></td></tr>
+<tr><th id="434">434</th><td><i  data-doc="sub_magnitudes">   ULP.  */</i></td></tr>
+<tr><th id="435">435</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="436">436</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="437">437</th><td><dfn class="tu decl def fn" id="sub_magnitudes" title='sub_magnitudes' data-type='void sub_magnitudes(const mp_no * x, const mp_no * y, mp_no * z, int p)' data-ref="sub_magnitudes" data-ref-filename="sub_magnitudes">sub_magnitudes</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="57x" title='x' data-type='const mp_no *' data-ref="57x" data-ref-filename="57x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col8 decl" id="58y" title='y' data-type='const mp_no *' data-ref="58y" data-ref-filename="58y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col9 decl" id="59z" title='z' data-type='mp_no *' data-ref="59z" data-ref-filename="59z">z</dfn>, <em>int</em> <dfn class="local col0 decl" id="60p" title='p' data-type='int' data-ref="60p" data-ref-filename="60p">p</dfn>)</td></tr>
+<tr><th id="438">438</th><td>{</td></tr>
+<tr><th id="439">439</th><td>  <em>long</em> <dfn class="local col1 decl" id="61i" title='i' data-type='long' data-ref="61i" data-ref-filename="61i">i</dfn>, <dfn class="local col2 decl" id="62j" title='j' data-type='long' data-ref="62j" data-ref-filename="62j">j</dfn>, <dfn class="local col3 decl" id="63k" title='k' data-type='long' data-ref="63k" data-ref-filename="63k">k</dfn>;</td></tr>
+<tr><th id="440">440</th><td>  <em>long</em> <dfn class="local col4 decl" id="64p2" title='p2' data-type='long' data-ref="64p2" data-ref-filename="64p2">p2</dfn> = <a class="local col0 ref" href="#60p" title='p' data-ref="60p" data-ref-filename="60p">p</a>;</td></tr>
+<tr><th id="441">441</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_t" title='mantissa_t' data-type='long' data-ref="mantissa_t" data-ref-filename="mantissa_t">mantissa_t</a> <dfn class="local col5 decl" id="65zk" title='zk' data-type='mantissa_t' data-ref="65zk" data-ref-filename="65zk">zk</dfn>;</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td>  <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> = <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="444">444</th><td>  <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a>;</td></tr>
+<tr><th id="445">445</th><td>  <a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> = <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a> + <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> - <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="446">446</th><td>  <a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a> = <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a>;</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td>  <i>/* Y is too small compared to X, copy X over to the result.  */</i></td></tr>
+<tr><th id="449">449</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((j &lt; 1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> &lt; <var>1</var>))</td></tr>
+<tr><th id="450">450</th><td>    {</td></tr>
+<tr><th id="451">451</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col7 ref" href="#57x" title='x' data-ref="57x" data-ref-filename="57x">x</a>, <a class="local col9 ref" href="#59z" title='z' data-ref="59z" data-ref-filename="59z">z</a>, <a class="local col0 ref" href="#60p" title='p' data-ref="60p" data-ref-filename="60p">p</a>);</td></tr>
+<tr><th id="452">452</th><td>      <b>return</b>;</td></tr>
+<tr><th id="453">453</th><td>    }</td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td>  <i>/* The relevant least significant digit in Y is non-zero, so we factor it in</i></td></tr>
+<tr><th id="456">456</th><td><i>     to enhance accuracy.  */</i></td></tr>
+<tr><th id="457">457</th><td>  <b>if</b> (<a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> &lt; <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a> &amp;&amp; <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> + <var>1</var>] &gt; <var>0</var>)</td></tr>
+<tr><th id="458">458</th><td>    {</td></tr>
+<tr><th id="459">459</th><td>      <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a> + <var>1</var>] = <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a> - <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> + <var>1</var>];</td></tr>
+<tr><th id="460">460</th><td>      <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = -<var>1</var>;</td></tr>
+<tr><th id="461">461</th><td>    }</td></tr>
+<tr><th id="462">462</th><td>  <b>else</b></td></tr>
+<tr><th id="463">463</th><td>    <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a> + <var>1</var>] = <var>0</var>;</td></tr>
+<tr><th id="464">464</th><td></td></tr>
+<tr><th id="465">465</th><td>  <i>/* Subtract and borrow.  */</i></td></tr>
+<tr><th id="466">466</th><td>  <b>for</b> (; <a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a> &gt; <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>--, <a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a>--)</td></tr>
+<tr><th id="467">467</th><td>    {</td></tr>
+<tr><th id="468">468</th><td>      <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> += (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>] - <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col2 ref" href="#62j" title='j' data-ref="62j" data-ref-filename="62j">j</a>]);</td></tr>
+<tr><th id="469">469</th><td>      <b>if</b> (<a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="470">470</th><td>	{</td></tr>
+<tr><th id="471">471</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>--] = <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> + <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="472">472</th><td>	  <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = -<var>1</var>;</td></tr>
+<tr><th id="473">473</th><td>	}</td></tr>
+<tr><th id="474">474</th><td>      <b>else</b></td></tr>
+<tr><th id="475">475</th><td>	{</td></tr>
+<tr><th id="476">476</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>--] = <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a>;</td></tr>
+<tr><th id="477">477</th><td>	  <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="478">478</th><td>	}</td></tr>
+<tr><th id="479">479</th><td>    }</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>  <i>/* We're done with digits from Y, so it's just digits in X.  */</i></td></tr>
+<tr><th id="482">482</th><td>  <b>for</b> (; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &gt; <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>--)</td></tr>
+<tr><th id="483">483</th><td>    {</td></tr>
+<tr><th id="484">484</th><td>      <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>];</td></tr>
+<tr><th id="485">485</th><td>      <b>if</b> (<a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="486">486</th><td>	{</td></tr>
+<tr><th id="487">487</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>--] = <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> + <a class="macro" href="mpa-arch.h.html#25" title="(1L &lt;&lt; 24)" data-ref="_M/RADIX">RADIX</a>;</td></tr>
+<tr><th id="488">488</th><td>	  <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = -<var>1</var>;</td></tr>
+<tr><th id="489">489</th><td>	}</td></tr>
+<tr><th id="490">490</th><td>      <b>else</b></td></tr>
+<tr><th id="491">491</th><td>	{</td></tr>
+<tr><th id="492">492</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>--] = <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a>;</td></tr>
+<tr><th id="493">493</th><td>	  <a class="local col5 ref" href="#65zk" title='zk' data-ref="65zk" data-ref-filename="65zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="494">494</th><td>	}</td></tr>
+<tr><th id="495">495</th><td>    }</td></tr>
+<tr><th id="496">496</th><td></td></tr>
+<tr><th id="497">497</th><td>  <i>/* Normalize.  */</i></td></tr>
+<tr><th id="498">498</th><td>  <b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>1</var>; <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>] == <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++)</td></tr>
+<tr><th id="499">499</th><td>    ;</td></tr>
+<tr><th id="500">500</th><td>  <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> = <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> - <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> + <var>1</var>;</td></tr>
+<tr><th id="501">501</th><td>  <b>for</b> (<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a> = <var>1</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt;= <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a> + <var>1</var>; )</td></tr>
+<tr><th id="502">502</th><td>    <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>++] = <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++];</td></tr>
+<tr><th id="503">503</th><td>  <b>for</b> (; <a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a> &lt;= <a class="local col4 ref" href="#64p2" title='p2' data-ref="64p2" data-ref-filename="64p2">p2</a>; )</td></tr>
+<tr><th id="504">504</th><td>    <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col3 ref" href="#63k" title='k' data-ref="63k" data-ref-filename="63k">k</a>++] = <var>0</var>;</td></tr>
+<tr><th id="505">505</th><td>}</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td><i>/* Add *X and *Y and store the result in *Z.  X and Y may overlap, but not X</i></td></tr>
+<tr><th id="508">508</th><td><i>   and Z or Y and Z.  One guard digit is used.  The error is less than one</i></td></tr>
+<tr><th id="509">509</th><td><i>   ULP.  */</i></td></tr>
+<tr><th id="510">510</th><td><em>void</em></td></tr>
+<tr><th id="511">511</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="512">512</th><td><dfn class="decl def fn" id="__add" title='__add' data-ref="__add" data-ref-filename="__add">__add</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="66x" title='x' data-type='const mp_no *' data-ref="66x" data-ref-filename="66x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="67y" title='y' data-type='const mp_no *' data-ref="67y" data-ref-filename="67y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col8 decl" id="68z" title='z' data-type='mp_no *' data-ref="68z" data-ref-filename="68z">z</dfn>, <em>int</em> <dfn class="local col9 decl" id="69p" title='p' data-type='int' data-ref="69p" data-ref-filename="69p">p</dfn>)</td></tr>
+<tr><th id="513">513</th><td>{</td></tr>
+<tr><th id="514">514</th><td>  <em>int</em> <dfn class="local col0 decl" id="70n" title='n' data-type='int' data-ref="70n" data-ref-filename="70n">n</dfn>;</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="517">517</th><td>    {</td></tr>
+<tr><th id="518">518</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="519">519</th><td>      <b>return</b>;</td></tr>
+<tr><th id="520">520</th><td>    }</td></tr>
+<tr><th id="521">521</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="522">522</th><td>    {</td></tr>
+<tr><th id="523">523</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="524">524</th><td>      <b>return</b>;</td></tr>
+<tr><th id="525">525</th><td>    }</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>])</td></tr>
+<tr><th id="528">528</th><td>    {</td></tr>
+<tr><th id="529">529</th><td>      <b>if</b> (<a class="ref fn" href="#__acr" title='__acr' data-ref="__acr" data-ref-filename="__acr">__acr</a> (<a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>) &gt; <var>0</var>)</td></tr>
+<tr><th id="530">530</th><td>	{</td></tr>
+<tr><th id="531">531</th><td>	  <a class="tu ref fn" href="#add_magnitudes" title='add_magnitudes' data-use='c' data-ref="add_magnitudes" data-ref-filename="add_magnitudes">add_magnitudes</a> (<a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="532">532</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>];</td></tr>
+<tr><th id="533">533</th><td>	}</td></tr>
+<tr><th id="534">534</th><td>      <b>else</b></td></tr>
+<tr><th id="535">535</th><td>	{</td></tr>
+<tr><th id="536">536</th><td>	  <a class="tu ref fn" href="#add_magnitudes" title='add_magnitudes' data-use='c' data-ref="add_magnitudes" data-ref-filename="add_magnitudes">add_magnitudes</a> (<a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="537">537</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>];</td></tr>
+<tr><th id="538">538</th><td>	}</td></tr>
+<tr><th id="539">539</th><td>    }</td></tr>
+<tr><th id="540">540</th><td>  <b>else</b></td></tr>
+<tr><th id="541">541</th><td>    {</td></tr>
+<tr><th id="542">542</th><td>      <b>if</b> ((<a class="local col0 ref" href="#70n" title='n' data-ref="70n" data-ref-filename="70n">n</a> = <a class="ref fn" href="#__acr" title='__acr' data-ref="__acr" data-ref-filename="__acr">__acr</a> (<a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>)) == <var>1</var>)</td></tr>
+<tr><th id="543">543</th><td>	{</td></tr>
+<tr><th id="544">544</th><td>	  <a class="tu ref fn" href="#sub_magnitudes" title='sub_magnitudes' data-use='c' data-ref="sub_magnitudes" data-ref-filename="sub_magnitudes">sub_magnitudes</a> (<a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="545">545</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>];</td></tr>
+<tr><th id="546">546</th><td>	}</td></tr>
+<tr><th id="547">547</th><td>      <b>else</b> <b>if</b> (<a class="local col0 ref" href="#70n" title='n' data-ref="70n" data-ref-filename="70n">n</a> == -<var>1</var>)</td></tr>
+<tr><th id="548">548</th><td>	{</td></tr>
+<tr><th id="549">549</th><td>	  <a class="tu ref fn" href="#sub_magnitudes" title='sub_magnitudes' data-use='c' data-ref="sub_magnitudes" data-ref-filename="sub_magnitudes">sub_magnitudes</a> (<a class="local col7 ref" href="#67y" title='y' data-ref="67y" data-ref-filename="67y">y</a>, <a class="local col6 ref" href="#66x" title='x' data-ref="66x" data-ref-filename="66x">x</a>, <a class="local col8 ref" href="#68z" title='z' data-ref="68z" data-ref-filename="68z">z</a>, <a class="local col9 ref" href="#69p" title='p' data-ref="69p" data-ref-filename="69p">p</a>);</td></tr>
+<tr><th id="550">550</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>];</td></tr>
+<tr><th id="551">551</th><td>	}</td></tr>
+<tr><th id="552">552</th><td>      <b>else</b></td></tr>
+<tr><th id="553">553</th><td>	<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="554">554</th><td>    }</td></tr>
+<tr><th id="555">555</th><td>}</td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td><i>/* Subtract *Y from *X and return the result in *Z.  X and Y may overlap but</i></td></tr>
+<tr><th id="558">558</th><td><i>   not X and Z or Y and Z.  One guard digit is used.  The error is less than</i></td></tr>
+<tr><th id="559">559</th><td><i>   one ULP.  */</i></td></tr>
+<tr><th id="560">560</th><td><em>void</em></td></tr>
+<tr><th id="561">561</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="562">562</th><td><dfn class="decl def fn" id="__sub" title='__sub' data-ref="__sub" data-ref-filename="__sub">__sub</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col1 decl" id="71x" title='x' data-type='const mp_no *' data-ref="71x" data-ref-filename="71x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col2 decl" id="72y" title='y' data-type='const mp_no *' data-ref="72y" data-ref-filename="72y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col3 decl" id="73z" title='z' data-type='mp_no *' data-ref="73z" data-ref-filename="73z">z</dfn>, <em>int</em> <dfn class="local col4 decl" id="74p" title='p' data-type='int' data-ref="74p" data-ref-filename="74p">p</dfn>)</td></tr>
+<tr><th id="563">563</th><td>{</td></tr>
+<tr><th id="564">564</th><td>  <em>int</em> <dfn class="local col5 decl" id="75n" title='n' data-type='int' data-ref="75n" data-ref-filename="75n">n</dfn>;</td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="567">567</th><td>    {</td></tr>
+<tr><th id="568">568</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="569">569</th><td>      <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = -<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>];</td></tr>
+<tr><th id="570">570</th><td>      <b>return</b>;</td></tr>
+<tr><th id="571">571</th><td>    }</td></tr>
+<tr><th id="572">572</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="573">573</th><td>    {</td></tr>
+<tr><th id="574">574</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="575">575</th><td>      <b>return</b>;</td></tr>
+<tr><th id="576">576</th><td>    }</td></tr>
+<tr><th id="577">577</th><td></td></tr>
+<tr><th id="578">578</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] != <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>])</td></tr>
+<tr><th id="579">579</th><td>    {</td></tr>
+<tr><th id="580">580</th><td>      <b>if</b> (<a class="ref fn" href="#__acr" title='__acr' data-ref="__acr" data-ref-filename="__acr">__acr</a> (<a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>) &gt; <var>0</var>)</td></tr>
+<tr><th id="581">581</th><td>	{</td></tr>
+<tr><th id="582">582</th><td>	  <a class="tu ref fn" href="#add_magnitudes" title='add_magnitudes' data-use='c' data-ref="add_magnitudes" data-ref-filename="add_magnitudes">add_magnitudes</a> (<a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="583">583</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>];</td></tr>
+<tr><th id="584">584</th><td>	}</td></tr>
+<tr><th id="585">585</th><td>      <b>else</b></td></tr>
+<tr><th id="586">586</th><td>	{</td></tr>
+<tr><th id="587">587</th><td>	  <a class="tu ref fn" href="#add_magnitudes" title='add_magnitudes' data-use='c' data-ref="add_magnitudes" data-ref-filename="add_magnitudes">add_magnitudes</a> (<a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="588">588</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = -<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>];</td></tr>
+<tr><th id="589">589</th><td>	}</td></tr>
+<tr><th id="590">590</th><td>    }</td></tr>
+<tr><th id="591">591</th><td>  <b>else</b></td></tr>
+<tr><th id="592">592</th><td>    {</td></tr>
+<tr><th id="593">593</th><td>      <b>if</b> ((<a class="local col5 ref" href="#75n" title='n' data-ref="75n" data-ref-filename="75n">n</a> = <a class="ref fn" href="#__acr" title='__acr' data-ref="__acr" data-ref-filename="__acr">__acr</a> (<a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>)) == <var>1</var>)</td></tr>
+<tr><th id="594">594</th><td>	{</td></tr>
+<tr><th id="595">595</th><td>	  <a class="tu ref fn" href="#sub_magnitudes" title='sub_magnitudes' data-use='c' data-ref="sub_magnitudes" data-ref-filename="sub_magnitudes">sub_magnitudes</a> (<a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="596">596</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>];</td></tr>
+<tr><th id="597">597</th><td>	}</td></tr>
+<tr><th id="598">598</th><td>      <b>else</b> <b>if</b> (<a class="local col5 ref" href="#75n" title='n' data-ref="75n" data-ref-filename="75n">n</a> == -<var>1</var>)</td></tr>
+<tr><th id="599">599</th><td>	{</td></tr>
+<tr><th id="600">600</th><td>	  <a class="tu ref fn" href="#sub_magnitudes" title='sub_magnitudes' data-use='c' data-ref="sub_magnitudes" data-ref-filename="sub_magnitudes">sub_magnitudes</a> (<a class="local col2 ref" href="#72y" title='y' data-ref="72y" data-ref-filename="72y">y</a>, <a class="local col1 ref" href="#71x" title='x' data-ref="71x" data-ref-filename="71x">x</a>, <a class="local col3 ref" href="#73z" title='z' data-ref="73z" data-ref-filename="73z">z</a>, <a class="local col4 ref" href="#74p" title='p' data-ref="74p" data-ref-filename="74p">p</a>);</td></tr>
+<tr><th id="601">601</th><td>	  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = -<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>];</td></tr>
+<tr><th id="602">602</th><td>	}</td></tr>
+<tr><th id="603">603</th><td>      <b>else</b></td></tr>
+<tr><th id="604">604</th><td>	<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="605">605</th><td>    }</td></tr>
+<tr><th id="606">606</th><td>}</td></tr>
+<tr><th id="607">607</th><td></td></tr>
+<tr><th id="608">608</th><td><u>#<span data-ppcond="608">ifndef</span> <span class="macro" data-ref="_M/NO__MUL">NO__MUL</span></u></td></tr>
+<tr><th id="609">609</th><td><i>/* Multiply *X and *Y and store result in *Z.  X and Y may overlap but not X</i></td></tr>
+<tr><th id="610">610</th><td><i>   and Z or Y and Z.  For P in [1, 2, 3], the exact result is truncated to P</i></td></tr>
+<tr><th id="611">611</th><td><i>   digits.  In case P &gt; 3 the error is bounded by 1.001 ULP.  */</i></td></tr>
+<tr><th id="612">612</th><td><em>void</em></td></tr>
+<tr><th id="613">613</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="614">614</th><td><dfn class="decl def fn" id="__mul" title='__mul' data-ref="__mul" data-ref-filename="__mul">__mul</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="76x" title='x' data-type='const mp_no *' data-ref="76x" data-ref-filename="76x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="77y" title='y' data-type='const mp_no *' data-ref="77y" data-ref-filename="77y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col8 decl" id="78z" title='z' data-type='mp_no *' data-ref="78z" data-ref-filename="78z">z</dfn>, <em>int</em> <dfn class="local col9 decl" id="79p" title='p' data-type='int' data-ref="79p" data-ref-filename="79p">p</dfn>)</td></tr>
+<tr><th id="615">615</th><td>{</td></tr>
+<tr><th id="616">616</th><td>  <em>long</em> <dfn class="local col0 decl" id="80i" title='i' data-type='long' data-ref="80i" data-ref-filename="80i">i</dfn>, <dfn class="local col1 decl" id="81j" title='j' data-type='long' data-ref="81j" data-ref-filename="81j">j</dfn>, <dfn class="local col2 decl" id="82k" title='k' data-type='long' data-ref="82k" data-ref-filename="82k">k</dfn>, <dfn class="local col3 decl" id="83ip" title='ip' data-type='long' data-ref="83ip" data-ref-filename="83ip">ip</dfn>, <dfn class="local col4 decl" id="84ip2" title='ip2' data-type='long' data-ref="84ip2" data-ref-filename="84ip2">ip2</dfn>;</td></tr>
+<tr><th id="617">617</th><td>  <em>long</em> <dfn class="local col5 decl" id="85p2" title='p2' data-type='long' data-ref="85p2" data-ref-filename="85p2">p2</dfn> = <a class="local col9 ref" href="#79p" title='p' data-ref="79p" data-ref-filename="79p">p</a>;</td></tr>
+<tr><th id="618">618</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col6 decl" id="86zk" title='zk' data-type='mantissa_store_t' data-ref="86zk" data-ref-filename="86zk">zk</dfn>;</td></tr>
+<tr><th id="619">619</th><td>  <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="87a" title='a' data-type='const mp_no *' data-ref="87a" data-ref-filename="87a">a</dfn>;</td></tr>
+<tr><th id="620">620</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> *<dfn class="local col8 decl" id="88diag" title='diag' data-type='mantissa_store_t *' data-ref="88diag" data-ref-filename="88diag">diag</dfn>;</td></tr>
+<tr><th id="621">621</th><td></td></tr>
+<tr><th id="622">622</th><td>  <i>/* Is z=0?  */</i></td></tr>
+<tr><th id="623">623</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((x-&gt;d[0] * y-&gt;d[0] == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] * <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] == <var>0</var>))</td></tr>
+<tr><th id="624">624</th><td>    {</td></tr>
+<tr><th id="625">625</th><td>      <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="626">626</th><td>      <b>return</b>;</td></tr>
+<tr><th id="627">627</th><td>    }</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td>  <i>/* We need not iterate through all X's and Y's since it's pointless to</i></td></tr>
+<tr><th id="630">630</th><td><i>     multiply zeroes.  Here, both are zero...  */</i></td></tr>
+<tr><th id="631">631</th><td>  <b>for</b> (<a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a> = <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a>; <a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a> &gt; <var>0</var>; <a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a>--)</td></tr>
+<tr><th id="632">632</th><td>    <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a>] != <var>0</var> || <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a>] != <var>0</var>)</td></tr>
+<tr><th id="633">633</th><td>      <b>break</b>;</td></tr>
+<tr><th id="634">634</th><td></td></tr>
+<tr><th id="635">635</th><td>  <a class="local col7 ref" href="#87a" title='a' data-ref="87a" data-ref-filename="87a">a</a> = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a>] != <var>0</var> ? <a class="local col7 ref" href="#77y" title='y' data-ref="77y" data-ref-filename="77y">y</a> : <a class="local col6 ref" href="#76x" title='x' data-ref="76x" data-ref-filename="76x">x</a>;</td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td>  <i>/* ... and here, at least one of them is still zero.  */</i></td></tr>
+<tr><th id="638">638</th><td>  <b>for</b> (<a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a> = <a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a>; <a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a> &gt; <var>0</var>; <a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a>--)</td></tr>
+<tr><th id="639">639</th><td>    <b>if</b> (<a class="local col7 ref" href="#87a" title='a' data-ref="87a" data-ref-filename="87a">a</a>-&gt;<a class="ref field" href="mpa.h.html#(anonymous)::d" title='(anonymous struct)::d' data-ref="(anonymous)::d" data-ref-filename="(anonymous)..d">d</a>[<a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a>] != <var>0</var>)</td></tr>
+<tr><th id="640">640</th><td>      <b>break</b>;</td></tr>
+<tr><th id="641">641</th><td></td></tr>
+<tr><th id="642">642</th><td>  <i>/* The product looks like this for p = 3 (as an example):</i></td></tr>
+<tr><th id="643">643</th><td><i></i></td></tr>
+<tr><th id="644">644</th><td><i></i></td></tr>
+<tr><th id="645">645</th><td><i>				a1    a2    a3</i></td></tr>
+<tr><th id="646">646</th><td><i>		 x		b1    b2    b3</i></td></tr>
+<tr><th id="647">647</th><td><i>		 -----------------------------</i></td></tr>
+<tr><th id="648">648</th><td><i>			     a1*b3 a2*b3 a3*b3</i></td></tr>
+<tr><th id="649">649</th><td><i>		       a1*b2 a2*b2 a3*b2</i></td></tr>
+<tr><th id="650">650</th><td><i>		 a1*b1 a2*b1 a3*b1</i></td></tr>
+<tr><th id="651">651</th><td><i></i></td></tr>
+<tr><th id="652">652</th><td><i>     So our K needs to ideally be P*2, but we're limiting ourselves to P + 3</i></td></tr>
+<tr><th id="653">653</th><td><i>     for P &gt;= 3.  We compute the above digits in two parts; the last P-1</i></td></tr>
+<tr><th id="654">654</th><td><i>     digits and then the first P digits.  The last P-1 digits are a sum of</i></td></tr>
+<tr><th id="655">655</th><td><i>     products of the input digits from P to P-k where K is 0 for the least</i></td></tr>
+<tr><th id="656">656</th><td><i>     significant digit and increases as we go towards the left.  The product</i></td></tr>
+<tr><th id="657">657</th><td><i>     term is of the form X[k]*X[P-k] as can be seen in the above example.</i></td></tr>
+<tr><th id="658">658</th><td><i></i></td></tr>
+<tr><th id="659">659</th><td><i>     The first P digits are also a sum of products with the same product term,</i></td></tr>
+<tr><th id="660">660</th><td><i>     except that the sum is from 1 to k.  This is also evident from the above</i></td></tr>
+<tr><th id="661">661</th><td><i>     example.</i></td></tr>
+<tr><th id="662">662</th><td><i></i></td></tr>
+<tr><th id="663">663</th><td><i>     Another thing that becomes evident is that only the most significant</i></td></tr>
+<tr><th id="664">664</th><td><i>     ip+ip2 digits of the result are non-zero, where ip and ip2 are the</i></td></tr>
+<tr><th id="665">665</th><td><i>     'internal precision' of the input numbers, i.e. digits after ip and ip2</i></td></tr>
+<tr><th id="666">666</th><td><i>     are all 0.  */</i></td></tr>
+<tr><th id="667">667</th><td></td></tr>
+<tr><th id="668">668</th><td>  <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> = (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((p2 &lt; 3), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a> &lt; <var>3</var>)) ? <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a> + <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a> : <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a> + <var>3</var>;</td></tr>
+<tr><th id="669">669</th><td></td></tr>
+<tr><th id="670">670</th><td>  <b>while</b> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> &gt; <a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a> + <a class="local col4 ref" href="#84ip2" title='ip2' data-ref="84ip2" data-ref-filename="84ip2">ip2</a> + <var>1</var>)</td></tr>
+<tr><th id="671">671</th><td>    <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>--] = <var>0</var>;</td></tr>
+<tr><th id="672">672</th><td></td></tr>
+<tr><th id="673">673</th><td>  <a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> = <var>0</var>;</td></tr>
+<tr><th id="674">674</th><td></td></tr>
+<tr><th id="675">675</th><td>  <i>/* Precompute sums of diagonal elements so that we can directly use them</i></td></tr>
+<tr><th id="676">676</th><td><i>     later.  See the next comment to know we why need them.  */</i></td></tr>
+<tr><th id="677">677</th><td>  <a class="local col8 ref" href="#88diag" title='diag' data-ref="88diag" data-ref-filename="88diag">diag</a> = <a class="macro" href="../../../stdlib/alloca.h.html#35" title="__builtin_alloca (k * sizeof (mantissa_store_t))" data-ref="_M/alloca">alloca</a> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> * <b>sizeof</b> (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>));</td></tr>
+<tr><th id="678">678</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col9 decl" id="89d" title='d' data-type='mantissa_store_t' data-ref="89d" data-ref-filename="89d">d</dfn> = <var>0</var>;</td></tr>
+<tr><th id="679">679</th><td>  <b>for</b> (<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> = <var>1</var>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> &lt;= <a class="local col3 ref" href="#83ip" title='ip' data-ref="83ip" data-ref-filename="83ip">ip</a>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>++)</td></tr>
+<tr><th id="680">680</th><td>    {</td></tr>
+<tr><th id="681">681</th><td>      <a class="local col9 ref" href="#89d" title='d' data-ref="89d" data-ref-filename="89d">d</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>];</td></tr>
+<tr><th id="682">682</th><td>      <a class="local col8 ref" href="#88diag" title='diag' data-ref="88diag" data-ref-filename="88diag">diag</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] = <a class="local col9 ref" href="#89d" title='d' data-ref="89d" data-ref-filename="89d">d</a>;</td></tr>
+<tr><th id="683">683</th><td>    }</td></tr>
+<tr><th id="684">684</th><td>  <b>while</b> (<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> &lt; <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>)</td></tr>
+<tr><th id="685">685</th><td>    <a class="local col8 ref" href="#88diag" title='diag' data-ref="88diag" data-ref-filename="88diag">diag</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>++] = <a class="local col9 ref" href="#89d" title='d' data-ref="89d" data-ref-filename="89d">d</a>;</td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td>  <b>while</b> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> &gt; <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a>)</td></tr>
+<tr><th id="688">688</th><td>    {</td></tr>
+<tr><th id="689">689</th><td>      <em>long</em> <dfn class="local col0 decl" id="90lim" title='lim' data-type='long' data-ref="90lim" data-ref-filename="90lim">lim</dfn> = <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> / <var>2</var>;</td></tr>
+<tr><th id="690">690</th><td></td></tr>
+<tr><th id="691">691</th><td>      <b>if</b> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> % <var>2</var> == <var>0</var>)</td></tr>
+<tr><th id="692">692</th><td>	<i>/* We want to add this only once, but since we subtract it in the sum</i></td></tr>
+<tr><th id="693">693</th><td><i>	   of products above, we add twice.  */</i></td></tr>
+<tr><th id="694">694</th><td>	<a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> += <var>2</var> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col0 ref" href="#90lim" title='lim' data-ref="90lim" data-ref-filename="90lim">lim</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col0 ref" href="#90lim" title='lim' data-ref="90lim" data-ref-filename="90lim">lim</a>];</td></tr>
+<tr><th id="695">695</th><td></td></tr>
+<tr><th id="696">696</th><td>      <b>for</b> (<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> = <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> - <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a>, <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a> = <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> &lt; <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>++, <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>--)</td></tr>
+<tr><th id="697">697</th><td>	<a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> += (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] + <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>]) * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] + <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>]);</td></tr>
+<tr><th id="698">698</th><td></td></tr>
+<tr><th id="699">699</th><td>      <a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> -= <a class="local col8 ref" href="#88diag" title='diag' data-ref="88diag" data-ref-filename="88diag">diag</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> - <var>1</var>];</td></tr>
+<tr><th id="700">700</th><td></td></tr>
+<tr><th id="701">701</th><td>      <a class="macro" href="mpa-arch.h.html#29" title="({ z-&gt;d[k] = zk &amp; ((1L &lt;&lt; 24) - 1); zk &gt;&gt;= 24; })" data-ref="_M/DIV_RADIX">DIV_RADIX</a> (<a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a>, <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>]);</td></tr>
+<tr><th id="702">702</th><td>      <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>--;</td></tr>
+<tr><th id="703">703</th><td>    }</td></tr>
+<tr><th id="704">704</th><td></td></tr>
+<tr><th id="705">705</th><td>  <i>/* The real deal.  Mantissa digit Z[k] is the sum of all X[i] * Y[j] where i</i></td></tr>
+<tr><th id="706">706</th><td><i>     goes from 1 -&gt; k - 1 and j goes the same range in reverse.  To reduce the</i></td></tr>
+<tr><th id="707">707</th><td><i>     number of multiplications, we halve the range and if k is an even number,</i></td></tr>
+<tr><th id="708">708</th><td><i>     add the diagonal element X[k/2]Y[k/2].  Through the half range, we compute</i></td></tr>
+<tr><th id="709">709</th><td><i>     X[i] * Y[j] as (X[i] + X[j]) * (Y[i] + Y[j]) - X[i] * Y[i] - X[j] * Y[j].</i></td></tr>
+<tr><th id="710">710</th><td><i></i></td></tr>
+<tr><th id="711">711</th><td><i>     This reduction tells us that we're summing two things, the first term</i></td></tr>
+<tr><th id="712">712</th><td><i>     through the half range and the negative of the sum of the product of all</i></td></tr>
+<tr><th id="713">713</th><td><i>     terms of X and Y in the full range.  i.e.</i></td></tr>
+<tr><th id="714">714</th><td><i></i></td></tr>
+<tr><th id="715">715</th><td><i>     SUM(X[i] * Y[i]) for k terms.  This is precalculated above for each k in</i></td></tr>
+<tr><th id="716">716</th><td><i>     a single loop so that it completes in O(n) time and can hence be directly</i></td></tr>
+<tr><th id="717">717</th><td><i>     used in the loop below.  */</i></td></tr>
+<tr><th id="718">718</th><td>  <b>while</b> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> &gt; <var>1</var>)</td></tr>
+<tr><th id="719">719</th><td>    {</td></tr>
+<tr><th id="720">720</th><td>      <em>long</em> <dfn class="local col1 decl" id="91lim" title='lim' data-type='long' data-ref="91lim" data-ref-filename="91lim">lim</dfn> = <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> / <var>2</var>;</td></tr>
+<tr><th id="721">721</th><td></td></tr>
+<tr><th id="722">722</th><td>      <b>if</b> (<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> % <var>2</var> == <var>0</var>)</td></tr>
+<tr><th id="723">723</th><td>	<i>/* We want to add this only once, but since we subtract it in the sum</i></td></tr>
+<tr><th id="724">724</th><td><i>	   of products above, we add twice.  */</i></td></tr>
+<tr><th id="725">725</th><td>        <a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> += <var>2</var> * <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col1 ref" href="#91lim" title='lim' data-ref="91lim" data-ref-filename="91lim">lim</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col1 ref" href="#91lim" title='lim' data-ref="91lim" data-ref-filename="91lim">lim</a>];</td></tr>
+<tr><th id="726">726</th><td></td></tr>
+<tr><th id="727">727</th><td>      <b>for</b> (<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> = <var>1</var>, <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a> = <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> - <var>1</var>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> &lt; <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>++, <a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>--)</td></tr>
+<tr><th id="728">728</th><td>	<a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> += (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] + <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>]) * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] + <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col1 ref" href="#81j" title='j' data-ref="81j" data-ref-filename="81j">j</a>]);</td></tr>
+<tr><th id="729">729</th><td></td></tr>
+<tr><th id="730">730</th><td>      <a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a> -= <a class="local col8 ref" href="#88diag" title='diag' data-ref="88diag" data-ref-filename="88diag">diag</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a> - <var>1</var>];</td></tr>
+<tr><th id="731">731</th><td></td></tr>
+<tr><th id="732">732</th><td>      <a class="macro" href="mpa-arch.h.html#29" title="({ z-&gt;d[k] = zk &amp; ((1L &lt;&lt; 24) - 1); zk &gt;&gt;= 24; })" data-ref="_M/DIV_RADIX">DIV_RADIX</a> (<a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a>, <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>]);</td></tr>
+<tr><th id="733">733</th><td>      <a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>--;</td></tr>
+<tr><th id="734">734</th><td>    }</td></tr>
+<tr><th id="735">735</th><td>  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col2 ref" href="#82k" title='k' data-ref="82k" data-ref-filename="82k">k</a>] = <a class="local col6 ref" href="#86zk" title='zk' data-ref="86zk" data-ref-filename="86zk">zk</a>;</td></tr>
+<tr><th id="736">736</th><td></td></tr>
+<tr><th id="737">737</th><td>  <i>/* Get the exponent sum into an intermediate variable.  This is a subtle</i></td></tr>
+<tr><th id="738">738</th><td><i>     optimization, where given enough registers, all operations on the exponent</i></td></tr>
+<tr><th id="739">739</th><td><i>     happen in registers and the result is written out only once into EZ.  */</i></td></tr>
+<tr><th id="740">740</th><td>  <em>int</em> <dfn class="local col2 decl" id="92e" title='e' data-type='int' data-ref="92e" data-ref-filename="92e">e</dfn> = <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> + <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a>;</td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td>  <i>/* Is there a carry beyond the most significant digit?  */</i></td></tr>
+<tr><th id="743">743</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((z-&gt;d[1] == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>1</var>] == <var>0</var>))</td></tr>
+<tr><th id="744">744</th><td>    {</td></tr>
+<tr><th id="745">745</th><td>      <b>for</b> (<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> = <var>1</var>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> &lt;= <a class="local col5 ref" href="#85p2" title='p2' data-ref="85p2" data-ref-filename="85p2">p2</a>; <a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>++)</td></tr>
+<tr><th id="746">746</th><td>	<a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a>] = <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<a class="local col0 ref" href="#80i" title='i' data-ref="80i" data-ref-filename="80i">i</a> + <var>1</var>];</td></tr>
+<tr><th id="747">747</th><td>      <a class="local col2 ref" href="#92e" title='e' data-ref="92e" data-ref-filename="92e">e</a>--;</td></tr>
+<tr><th id="748">748</th><td>    }</td></tr>
+<tr><th id="749">749</th><td></td></tr>
+<tr><th id="750">750</th><td>  <a class="macro" href="mpa.h.html#82" title="z-&gt;e" data-ref="_M/EZ">EZ</a> = <a class="local col2 ref" href="#92e" title='e' data-ref="92e" data-ref-filename="92e">e</a>;</td></tr>
+<tr><th id="751">751</th><td>  <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] * <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>];</td></tr>
+<tr><th id="752">752</th><td>}</td></tr>
+<tr><th id="753">753</th><td><u>#<span data-ppcond="608">endif</span></u></td></tr>
+<tr><th id="754">754</th><td></td></tr>
+<tr><th id="755">755</th><td><u>#<span data-ppcond="755">ifndef</span> <span class="macro" data-ref="_M/NO__SQR">NO__SQR</span></u></td></tr>
+<tr><th id="756">756</th><td><i>/* Square *X and store result in *Y.  X and Y may not overlap.  For P in</i></td></tr>
+<tr><th id="757">757</th><td><i>   [1, 2, 3], the exact result is truncated to P digits.  In case P &gt; 3 the</i></td></tr>
+<tr><th id="758">758</th><td><i>   error is bounded by 1.001 ULP.  This is a faster special case of</i></td></tr>
+<tr><th id="759">759</th><td><i>   multiplication.  */</i></td></tr>
+<tr><th id="760">760</th><td><em>void</em></td></tr>
+<tr><th id="761">761</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="762">762</th><td><dfn class="decl def fn" id="__sqr" title='__sqr' data-ref="__sqr" data-ref-filename="__sqr">__sqr</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col3 decl" id="93x" title='x' data-type='const mp_no *' data-ref="93x" data-ref-filename="93x">x</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col4 decl" id="94y" title='y' data-type='mp_no *' data-ref="94y" data-ref-filename="94y">y</dfn>, <em>int</em> <dfn class="local col5 decl" id="95p" title='p' data-type='int' data-ref="95p" data-ref-filename="95p">p</dfn>)</td></tr>
+<tr><th id="763">763</th><td>{</td></tr>
+<tr><th id="764">764</th><td>  <em>long</em> <dfn class="local col6 decl" id="96i" title='i' data-type='long' data-ref="96i" data-ref-filename="96i">i</dfn>, <dfn class="local col7 decl" id="97j" title='j' data-type='long' data-ref="97j" data-ref-filename="97j">j</dfn>, <dfn class="local col8 decl" id="98k" title='k' data-type='long' data-ref="98k" data-ref-filename="98k">k</dfn>, <dfn class="local col9 decl" id="99ip" title='ip' data-type='long' data-ref="99ip" data-ref-filename="99ip">ip</dfn>;</td></tr>
+<tr><th id="765">765</th><td>  <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col0 decl" id="100yk" title='yk' data-type='mantissa_store_t' data-ref="100yk" data-ref-filename="100yk">yk</dfn>;</td></tr>
+<tr><th id="766">766</th><td></td></tr>
+<tr><th id="767">767</th><td>  <i>/* Is z=0?  */</i></td></tr>
+<tr><th id="768">768</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((x-&gt;d[0] == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>))</td></tr>
+<tr><th id="769">769</th><td>    {</td></tr>
+<tr><th id="770">770</th><td>      <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="771">771</th><td>      <b>return</b>;</td></tr>
+<tr><th id="772">772</th><td>    }</td></tr>
+<tr><th id="773">773</th><td></td></tr>
+<tr><th id="774">774</th><td>  <i>/* We need not iterate through all X's since it's pointless to</i></td></tr>
+<tr><th id="775">775</th><td><i>     multiply zeroes.  */</i></td></tr>
+<tr><th id="776">776</th><td>  <b>for</b> (<a class="local col9 ref" href="#99ip" title='ip' data-ref="99ip" data-ref-filename="99ip">ip</a> = <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a>; <a class="local col9 ref" href="#99ip" title='ip' data-ref="99ip" data-ref-filename="99ip">ip</a> &gt; <var>0</var>; <a class="local col9 ref" href="#99ip" title='ip' data-ref="99ip" data-ref-filename="99ip">ip</a>--)</td></tr>
+<tr><th id="777">777</th><td>    <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col9 ref" href="#99ip" title='ip' data-ref="99ip" data-ref-filename="99ip">ip</a>] != <var>0</var>)</td></tr>
+<tr><th id="778">778</th><td>      <b>break</b>;</td></tr>
+<tr><th id="779">779</th><td></td></tr>
+<tr><th id="780">780</th><td>  <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> = (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((p &lt; 3), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a> &lt; <var>3</var>)) ? <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a> + <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a> : <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a> + <var>3</var>;</td></tr>
+<tr><th id="781">781</th><td></td></tr>
+<tr><th id="782">782</th><td>  <b>while</b> (<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> &gt; <var>2</var> * <a class="local col9 ref" href="#99ip" title='ip' data-ref="99ip" data-ref-filename="99ip">ip</a> + <var>1</var>)</td></tr>
+<tr><th id="783">783</th><td>    <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>--] = <var>0</var>;</td></tr>
+<tr><th id="784">784</th><td></td></tr>
+<tr><th id="785">785</th><td>  <a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a> = <var>0</var>;</td></tr>
+<tr><th id="786">786</th><td></td></tr>
+<tr><th id="787">787</th><td>  <b>while</b> (<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> &gt; <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a>)</td></tr>
+<tr><th id="788">788</th><td>    {</td></tr>
+<tr><th id="789">789</th><td>      <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col1 decl" id="101yk2" title='yk2' data-type='mantissa_store_t' data-ref="101yk2" data-ref-filename="101yk2">yk2</dfn> = <var>0</var>;</td></tr>
+<tr><th id="790">790</th><td>      <em>long</em> <dfn class="local col2 decl" id="102lim" title='lim' data-type='long' data-ref="102lim" data-ref-filename="102lim">lim</dfn> = <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> / <var>2</var>;</td></tr>
+<tr><th id="791">791</th><td></td></tr>
+<tr><th id="792">792</th><td>      <b>if</b> (<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> % <var>2</var> == <var>0</var>)</td></tr>
+<tr><th id="793">793</th><td>	<a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#102lim" title='lim' data-ref="102lim" data-ref-filename="102lim">lim</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col2 ref" href="#102lim" title='lim' data-ref="102lim" data-ref-filename="102lim">lim</a>];</td></tr>
+<tr><th id="794">794</th><td></td></tr>
+<tr><th id="795">795</th><td>      <i>/* In __mul, this loop (and the one within the next while loop) run</i></td></tr>
+<tr><th id="796">796</th><td><i>         between a range to calculate the mantissa as follows:</i></td></tr>
+<tr><th id="797">797</th><td><i></i></td></tr>
+<tr><th id="798">798</th><td><i>         Z[k] = X[k] * Y[n] + X[k+1] * Y[n-1] ... + X[n-1] * Y[k+1]</i></td></tr>
+<tr><th id="799">799</th><td><i>		+ X[n] * Y[k]</i></td></tr>
+<tr><th id="800">800</th><td><i></i></td></tr>
+<tr><th id="801">801</th><td><i>         For X == Y, we can get away with summing halfway and doubling the</i></td></tr>
+<tr><th id="802">802</th><td><i>	 result.  For cases where the range size is even, the mid-point needs</i></td></tr>
+<tr><th id="803">803</th><td><i>	 to be added separately (above).  */</i></td></tr>
+<tr><th id="804">804</th><td>      <b>for</b> (<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> = <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> - <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a>, <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a> = <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> &lt; <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>++, <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>--)</td></tr>
+<tr><th id="805">805</th><td>	<a class="local col1 ref" href="#101yk2" title='yk2' data-ref="101yk2" data-ref-filename="101yk2">yk2</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>];</td></tr>
+<tr><th id="806">806</th><td></td></tr>
+<tr><th id="807">807</th><td>      <a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a> += <var>2</var> * <a class="local col1 ref" href="#101yk2" title='yk2' data-ref="101yk2" data-ref-filename="101yk2">yk2</a>;</td></tr>
+<tr><th id="808">808</th><td></td></tr>
+<tr><th id="809">809</th><td>      <a class="macro" href="mpa-arch.h.html#29" title="({ y-&gt;d[k] = yk &amp; ((1L &lt;&lt; 24) - 1); yk &gt;&gt;= 24; })" data-ref="_M/DIV_RADIX">DIV_RADIX</a> (<a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a>, <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>]);</td></tr>
+<tr><th id="810">810</th><td>      <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>--;</td></tr>
+<tr><th id="811">811</th><td>    }</td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td>  <b>while</b> (<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> &gt; <var>1</var>)</td></tr>
+<tr><th id="814">814</th><td>    {</td></tr>
+<tr><th id="815">815</th><td>      <a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a> <dfn class="local col3 decl" id="103yk2" title='yk2' data-type='mantissa_store_t' data-ref="103yk2" data-ref-filename="103yk2">yk2</dfn> = <var>0</var>;</td></tr>
+<tr><th id="816">816</th><td>      <em>long</em> <dfn class="local col4 decl" id="104lim" title='lim' data-type='long' data-ref="104lim" data-ref-filename="104lim">lim</dfn> = <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> / <var>2</var>;</td></tr>
+<tr><th id="817">817</th><td></td></tr>
+<tr><th id="818">818</th><td>      <b>if</b> (<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> % <var>2</var> == <var>0</var>)</td></tr>
+<tr><th id="819">819</th><td>	<a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col4 ref" href="#104lim" title='lim' data-ref="104lim" data-ref-filename="104lim">lim</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col4 ref" href="#104lim" title='lim' data-ref="104lim" data-ref-filename="104lim">lim</a>];</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td>      <i>/* Likewise for this loop.  */</i></td></tr>
+<tr><th id="822">822</th><td>      <b>for</b> (<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> = <var>1</var>, <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a> = <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a> - <var>1</var>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> &lt; <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>++, <a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>--)</td></tr>
+<tr><th id="823">823</th><td>	<a class="local col3 ref" href="#103yk2" title='yk2' data-ref="103yk2" data-ref-filename="103yk2">yk2</a> += <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>] * (<a class="typedef" href="mpa-arch.h.html#mantissa_store_t" title='mantissa_store_t' data-type='int64_t' data-ref="mantissa_store_t" data-ref-filename="mantissa_store_t">mantissa_store_t</a>) <a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<a class="local col7 ref" href="#97j" title='j' data-ref="97j" data-ref-filename="97j">j</a>];</td></tr>
+<tr><th id="824">824</th><td></td></tr>
+<tr><th id="825">825</th><td>      <a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a> += <var>2</var> * <a class="local col3 ref" href="#103yk2" title='yk2' data-ref="103yk2" data-ref-filename="103yk2">yk2</a>;</td></tr>
+<tr><th id="826">826</th><td></td></tr>
+<tr><th id="827">827</th><td>      <a class="macro" href="mpa-arch.h.html#29" title="({ y-&gt;d[k] = yk &amp; ((1L &lt;&lt; 24) - 1); yk &gt;&gt;= 24; })" data-ref="_M/DIV_RADIX">DIV_RADIX</a> (<a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a>, <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>]);</td></tr>
+<tr><th id="828">828</th><td>      <a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>--;</td></tr>
+<tr><th id="829">829</th><td>    }</td></tr>
+<tr><th id="830">830</th><td>  <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col8 ref" href="#98k" title='k' data-ref="98k" data-ref-filename="98k">k</a>] = <a class="local col0 ref" href="#100yk" title='yk' data-ref="100yk" data-ref-filename="100yk">yk</a>;</td></tr>
+<tr><th id="831">831</th><td></td></tr>
+<tr><th id="832">832</th><td>  <i>/* Squares are always positive.  */</i></td></tr>
+<tr><th id="833">833</th><td>  <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>0</var>] = <var>1</var>;</td></tr>
+<tr><th id="834">834</th><td></td></tr>
+<tr><th id="835">835</th><td>  <i>/* Get the exponent sum into an intermediate variable.  This is a subtle</i></td></tr>
+<tr><th id="836">836</th><td><i>     optimization, where given enough registers, all operations on the exponent</i></td></tr>
+<tr><th id="837">837</th><td><i>     happen in registers and the result is written out only once into EZ.  */</i></td></tr>
+<tr><th id="838">838</th><td>  <em>int</em> <dfn class="local col5 decl" id="105e" title='e' data-type='int' data-ref="105e" data-ref-filename="105e">e</dfn> = <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a> * <var>2</var>;</td></tr>
+<tr><th id="839">839</th><td></td></tr>
+<tr><th id="840">840</th><td>  <i>/* Is there a carry beyond the most significant digit?  */</i></td></tr>
+<tr><th id="841">841</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#416" title="__builtin_expect ((y-&gt;d[1] == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<var>1</var>] == <var>0</var>))</td></tr>
+<tr><th id="842">842</th><td>    {</td></tr>
+<tr><th id="843">843</th><td>      <b>for</b> (<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> = <var>1</var>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> &lt;= <a class="local col5 ref" href="#95p" title='p' data-ref="95p" data-ref-filename="95p">p</a>; <a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>++)</td></tr>
+<tr><th id="844">844</th><td>	<a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a>] = <a class="macro" href="mpa.h.html#78" title="y-&gt;d" data-ref="_M/Y">Y</a>[<a class="local col6 ref" href="#96i" title='i' data-ref="96i" data-ref-filename="96i">i</a> + <var>1</var>];</td></tr>
+<tr><th id="845">845</th><td>      <a class="local col5 ref" href="#105e" title='e' data-ref="105e" data-ref-filename="105e">e</a>--;</td></tr>
+<tr><th id="846">846</th><td>    }</td></tr>
+<tr><th id="847">847</th><td></td></tr>
+<tr><th id="848">848</th><td>  <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> = <a class="local col5 ref" href="#105e" title='e' data-ref="105e" data-ref-filename="105e">e</a>;</td></tr>
+<tr><th id="849">849</th><td>}</td></tr>
+<tr><th id="850">850</th><td><u>#<span data-ppcond="755">endif</span></u></td></tr>
+<tr><th id="851">851</th><td></td></tr>
+<tr><th id="852">852</th><td><i  data-doc="__inv">/* Invert *X and store in *Y.  Relative error bound:</i></td></tr>
+<tr><th id="853">853</th><td><i  data-doc="__inv">   - For P = 2: 1.001 * R ^ (1 - P)</i></td></tr>
+<tr><th id="854">854</th><td><i  data-doc="__inv">   - For P = 3: 1.063 * R ^ (1 - P)</i></td></tr>
+<tr><th id="855">855</th><td><i  data-doc="__inv">   - For P &gt; 3: 2.001 * R ^ (1 - P)</i></td></tr>
+<tr><th id="856">856</th><td><i  data-doc="__inv"></i></td></tr>
+<tr><th id="857">857</th><td><i  data-doc="__inv">   *X = 0 is not permissible.  */</i></td></tr>
+<tr><th id="858">858</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="859">859</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="860">860</th><td><dfn class="tu decl def fn" id="__inv" title='__inv' data-type='void __inv(const mp_no * x, mp_no * y, int p)' data-ref="__inv" data-ref-filename="__inv">__inv</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="106x" title='x' data-type='const mp_no *' data-ref="106x" data-ref-filename="106x">x</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col7 decl" id="107y" title='y' data-type='mp_no *' data-ref="107y" data-ref-filename="107y">y</dfn>, <em>int</em> <dfn class="local col8 decl" id="108p" title='p' data-type='int' data-ref="108p" data-ref-filename="108p">p</dfn>)</td></tr>
+<tr><th id="861">861</th><td>{</td></tr>
+<tr><th id="862">862</th><td>  <em>long</em> <dfn class="local col9 decl" id="109i" title='i' data-type='long' data-ref="109i" data-ref-filename="109i">i</dfn>;</td></tr>
+<tr><th id="863">863</th><td>  <em>double</em> <dfn class="local col0 decl" id="110t" title='t' data-type='double' data-ref="110t" data-ref-filename="110t">t</dfn>;</td></tr>
+<tr><th id="864">864</th><td>  <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> <dfn class="local col1 decl" id="111z" title='z' data-type='mp_no' data-ref="111z" data-ref-filename="111z">z</dfn>, <dfn class="local col2 decl" id="112w" title='w' data-type='mp_no' data-ref="112w" data-ref-filename="112w">w</dfn>;</td></tr>
+<tr><th id="865">865</th><td>  <em>static</em> <em>const</em> <em>int</em> <dfn class="local col3 decl" id="113np1" title='np1' data-type='const int [33]' data-ref="113np1" data-ref-filename="113np1">np1</dfn>[] =</td></tr>
+<tr><th id="866">866</th><td>    { <var>0</var>, <var>0</var>, <var>0</var>, <var>0</var>, <var>1</var>, <var>2</var>, <var>2</var>, <var>2</var>, <var>2</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>, <var>3</var>,</td></tr>
+<tr><th id="867">867</th><td>    <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var>, <var>4</var></td></tr>
+<tr><th id="868">868</th><td>  };</td></tr>
+<tr><th id="869">869</th><td></td></tr>
+<tr><th id="870">870</th><td>  <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col6 ref" href="#106x" title='x' data-ref="106x" data-ref-filename="106x">x</a>, &amp;<a class="local col1 ref" href="#111z" title='z' data-ref="111z" data-ref-filename="111z">z</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="871">871</th><td>  <a class="local col1 ref" href="#111z" title='z' data-ref="111z" data-ref-filename="111z">z</a>.<a class="ref field" href="mpa.h.html#(anonymous)::e" title='(anonymous struct)::e' data-ref="(anonymous)::e" data-ref-filename="(anonymous)..e">e</a> = <var>0</var>;</td></tr>
+<tr><th id="872">872</th><td>  <a class="ref fn" href="#__mp_dbl" title='__mp_dbl' data-ref="__mp_dbl" data-ref-filename="__mp_dbl">__mp_dbl</a> (&amp;<a class="local col1 ref" href="#111z" title='z' data-ref="111z" data-ref-filename="111z">z</a>, &amp;<a class="local col0 ref" href="#110t" title='t' data-ref="110t" data-ref-filename="110t">t</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="873">873</th><td>  <a class="local col0 ref" href="#110t" title='t' data-ref="110t" data-ref-filename="110t">t</a> = <var>1</var> / <a class="local col0 ref" href="#110t" title='t' data-ref="110t" data-ref-filename="110t">t</a>;</td></tr>
+<tr><th id="874">874</th><td>  <a class="ref fn" href="#__dbl_mp" title='__dbl_mp' data-ref="__dbl_mp" data-ref-filename="__dbl_mp">__dbl_mp</a> (<a class="local col0 ref" href="#110t" title='t' data-ref="110t" data-ref-filename="110t">t</a>, <a class="local col7 ref" href="#107y" title='y' data-ref="107y" data-ref-filename="107y">y</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="875">875</th><td>  <a class="macro" href="mpa.h.html#81" title="y-&gt;e" data-ref="_M/EY">EY</a> -= <a class="macro" href="mpa.h.html#80" title="x-&gt;e" data-ref="_M/EX">EX</a>;</td></tr>
+<tr><th id="876">876</th><td></td></tr>
+<tr><th id="877">877</th><td>  <b>for</b> (<a class="local col9 ref" href="#109i" title='i' data-ref="109i" data-ref-filename="109i">i</a> = <var>0</var>; <a class="local col9 ref" href="#109i" title='i' data-ref="109i" data-ref-filename="109i">i</a> &lt; <a class="local col3 ref" href="#113np1" title='np1' data-ref="113np1" data-ref-filename="113np1">np1</a>[<a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>]; <a class="local col9 ref" href="#109i" title='i' data-ref="109i" data-ref-filename="109i">i</a>++)</td></tr>
+<tr><th id="878">878</th><td>    {</td></tr>
+<tr><th id="879">879</th><td>      <a class="ref fn" href="#__cpy" title='__cpy' data-ref="__cpy" data-ref-filename="__cpy">__cpy</a> (<a class="local col7 ref" href="#107y" title='y' data-ref="107y" data-ref-filename="107y">y</a>, &amp;<a class="local col2 ref" href="#112w" title='w' data-ref="112w" data-ref-filename="112w">w</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="880">880</th><td>      <a class="ref fn" href="#__mul" title='__mul' data-ref="__mul" data-ref-filename="__mul">__mul</a> (<a class="local col6 ref" href="#106x" title='x' data-ref="106x" data-ref-filename="106x">x</a>, &amp;<a class="local col2 ref" href="#112w" title='w' data-ref="112w" data-ref-filename="112w">w</a>, <a class="local col7 ref" href="#107y" title='y' data-ref="107y" data-ref-filename="107y">y</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="881">881</th><td>      <a class="ref fn" href="#__sub" title='__sub' data-ref="__sub" data-ref-filename="__sub">__sub</a> (&amp;<a class="ref" href="mpa.h.html#__mptwo" title='__mptwo' data-ref="__mptwo" data-ref-filename="__mptwo">__mptwo</a>, <a class="local col7 ref" href="#107y" title='y' data-ref="107y" data-ref-filename="107y">y</a>, &amp;<a class="local col1 ref" href="#111z" title='z' data-ref="111z" data-ref-filename="111z">z</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="882">882</th><td>      <a class="ref fn" href="#__mul" title='__mul' data-ref="__mul" data-ref-filename="__mul">__mul</a> (&amp;<a class="local col2 ref" href="#112w" title='w' data-ref="112w" data-ref-filename="112w">w</a>, &amp;<a class="local col1 ref" href="#111z" title='z' data-ref="111z" data-ref-filename="111z">z</a>, <a class="local col7 ref" href="#107y" title='y' data-ref="107y" data-ref-filename="107y">y</a>, <a class="local col8 ref" href="#108p" title='p' data-ref="108p" data-ref-filename="108p">p</a>);</td></tr>
+<tr><th id="883">883</th><td>    }</td></tr>
+<tr><th id="884">884</th><td>}</td></tr>
+<tr><th id="885">885</th><td></td></tr>
+<tr><th id="886">886</th><td><i>/* Divide *X by *Y and store result in *Z.  X and Y may overlap but not X and Z</i></td></tr>
+<tr><th id="887">887</th><td><i>   or Y and Z.  Relative error bound:</i></td></tr>
+<tr><th id="888">888</th><td><i>   - For P = 2: 2.001 * R ^ (1 - P)</i></td></tr>
+<tr><th id="889">889</th><td><i>   - For P = 3: 2.063 * R ^ (1 - P)</i></td></tr>
+<tr><th id="890">890</th><td><i>   - For P &gt; 3: 3.001 * R ^ (1 - P)</i></td></tr>
+<tr><th id="891">891</th><td><i></i></td></tr>
+<tr><th id="892">892</th><td><i>   *X = 0 is not permissible.  */</i></td></tr>
+<tr><th id="893">893</th><td><em>void</em></td></tr>
+<tr><th id="894">894</th><td><a class="macro" href="#49" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="895">895</th><td><dfn class="decl def fn" id="__dvd" title='__dvd' data-ref="__dvd" data-ref-filename="__dvd">__dvd</dfn> (<em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col4 decl" id="114x" title='x' data-type='const mp_no *' data-ref="114x" data-ref-filename="114x">x</dfn>, <em>const</em> <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col5 decl" id="115y" title='y' data-type='const mp_no *' data-ref="115y" data-ref-filename="115y">y</dfn>, <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> *<dfn class="local col6 decl" id="116z" title='z' data-type='mp_no *' data-ref="116z" data-ref-filename="116z">z</dfn>, <em>int</em> <dfn class="local col7 decl" id="117p" title='p' data-type='int' data-ref="117p" data-ref-filename="117p">p</dfn>)</td></tr>
+<tr><th id="896">896</th><td>{</td></tr>
+<tr><th id="897">897</th><td>  <a class="typedef" href="mpa.h.html#mp_no" title='mp_no' data-type='struct mp_no' data-ref="mp_no" data-ref-filename="mp_no">mp_no</a> <dfn class="local col8 decl" id="118w" title='w' data-type='mp_no' data-ref="118w" data-ref-filename="118w">w</dfn>;</td></tr>
+<tr><th id="898">898</th><td></td></tr>
+<tr><th id="899">899</th><td>  <b>if</b> (<a class="macro" href="mpa.h.html#77" title="x-&gt;d" data-ref="_M/X">X</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="900">900</th><td>    <a class="macro" href="mpa.h.html#79" title="z-&gt;d" data-ref="_M/Z">Z</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="901">901</th><td>  <b>else</b></td></tr>
+<tr><th id="902">902</th><td>    {</td></tr>
+<tr><th id="903">903</th><td>      <a class="tu ref fn" href="#__inv" title='__inv' data-use='c' data-ref="__inv" data-ref-filename="__inv">__inv</a> (<a class="local col5 ref" href="#115y" title='y' data-ref="115y" data-ref-filename="115y">y</a>, &amp;<a class="local col8 ref" href="#118w" title='w' data-ref="118w" data-ref-filename="118w">w</a>, <a class="local col7 ref" href="#117p" title='p' data-ref="117p" data-ref-filename="117p">p</a>);</td></tr>
+<tr><th id="904">904</th><td>      <a class="ref fn" href="#__mul" title='__mul' data-ref="__mul" data-ref-filename="__mul">__mul</a> (<a class="local col4 ref" href="#114x" title='x' data-ref="114x" data-ref-filename="114x">x</a>, &amp;<a class="local col8 ref" href="#118w" title='w' data-ref="118w" data-ref-filename="118w">w</a>, <a class="local col6 ref" href="#116z" title='z' data-ref="116z" data-ref-filename="116z">z</a>, <a class="local col7 ref" href="#117p" title='p' data-ref="117p" data-ref-filename="117p">p</a>);</td></tr>
+<tr><th id="905">905</th><td>    }</td></tr>
+<tr><th id="906">906</th><td>}</td></tr>
+<tr><th id="907">907</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>malloc-internal.h source code [glibc_src_2.25/malloc/malloc-internal.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/malloc/malloc-internal.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>malloc</a>/<a href='malloc-internal.h.html'>malloc-internal.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Internal declarations for malloc, for use within libc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2016-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public License as</i></td></tr>
+<tr><th id="7">7</th><td><i>   published by the Free Software Foundation; either version 2.1 of the</i></td></tr>
+<tr><th id="8">8</th><td><i>   License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; see the file COPYING.LIB.  If</i></td></tr>
+<tr><th id="17">17</th><td><i>   not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifndef</span> <span class="macro" data-ref="_M/_MALLOC_INTERNAL_H">_MALLOC_INTERNAL_H</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/_MALLOC_INTERNAL_H" data-ref="_M/_MALLOC_INTERNAL_H">_MALLOC_INTERNAL_H</dfn></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../sysdeps/nptl/malloc-machine.h.html">&lt;malloc-machine.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/malloc-sysdep.h.html">&lt;malloc-sysdep.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* INTERNAL_SIZE_T is the word-size used for internal bookkeeping of</i></td></tr>
+<tr><th id="26">26</th><td><i>   chunk sizes.</i></td></tr>
+<tr><th id="27">27</th><td><i></i></td></tr>
+<tr><th id="28">28</th><td><i>   The default version is the same as size_t.</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>   While not strictly necessary, it is best to define this as an</i></td></tr>
+<tr><th id="31">31</th><td><i>   unsigned type, even if size_t is a signed type. This may avoid some</i></td></tr>
+<tr><th id="32">32</th><td><i>   artificial size limitations on some systems.</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>   On a 64-bit machine, you may be able to reduce malloc overhead by</i></td></tr>
+<tr><th id="35">35</th><td><i>   defining INTERNAL_SIZE_T to be a 32 bit `unsigned int' at the</i></td></tr>
+<tr><th id="36">36</th><td><i>   expense of not being able to handle more than 2^32 of malloced</i></td></tr>
+<tr><th id="37">37</th><td><i>   space. If this limitation is acceptable, you are encouraged to set</i></td></tr>
+<tr><th id="38">38</th><td><i>   this unless you are on a platform requiring 16byte alignments. In</i></td></tr>
+<tr><th id="39">39</th><td><i>   this case the alignment requirements turn out to negate any</i></td></tr>
+<tr><th id="40">40</th><td><i>   potential advantages of decreasing size_t word size.</i></td></tr>
+<tr><th id="41">41</th><td><i></i></td></tr>
+<tr><th id="42">42</th><td><i>   Implementors: Beware of the possible combinations of:</i></td></tr>
+<tr><th id="43">43</th><td><i>     - INTERNAL_SIZE_T might be signed or unsigned, might be 32 or 64 bits,</i></td></tr>
+<tr><th id="44">44</th><td><i>       and might be the same width as int or as long</i></td></tr>
+<tr><th id="45">45</th><td><i>     - size_t might have different width and signedness as INTERNAL_SIZE_T</i></td></tr>
+<tr><th id="46">46</th><td><i>     - int and long might be 32 or 64 bits, and might be the same width</i></td></tr>
+<tr><th id="47">47</th><td><i></i></td></tr>
+<tr><th id="48">48</th><td><i>   To deal with this, most comparisons and difference computations</i></td></tr>
+<tr><th id="49">49</th><td><i>   among INTERNAL_SIZE_Ts should cast them to unsigned long, being</i></td></tr>
+<tr><th id="50">50</th><td><i>   aware of the fact that casting an unsigned int to a wider long does</i></td></tr>
+<tr><th id="51">51</th><td><i>   not sign-extend. (This also makes checking for negative numbers</i></td></tr>
+<tr><th id="52">52</th><td><i>   awkward.) Some of these casts result in harmless compiler warnings</i></td></tr>
+<tr><th id="53">53</th><td><i>   on some systems.  */</i></td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="54">ifndef</span> <span class="macro" data-ref="_M/INTERNAL_SIZE_T">INTERNAL_SIZE_T</span></u></td></tr>
+<tr><th id="55">55</th><td><u># define <dfn class="macro" id="_M/INTERNAL_SIZE_T" data-ref="_M/INTERNAL_SIZE_T">INTERNAL_SIZE_T</dfn> size_t</u></td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* The corresponding word size.  */</i></td></tr>
+<tr><th id="59">59</th><td><u>#define <dfn class="macro" id="_M/SIZE_SZ" data-ref="_M/SIZE_SZ">SIZE_SZ</dfn> (sizeof (INTERNAL_SIZE_T))</u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* MALLOC_ALIGNMENT is the minimum alignment for malloc'ed chunks.  It</i></td></tr>
+<tr><th id="62">62</th><td><i>   must be a power of two at least 2 * SIZE_SZ, even on machines for</i></td></tr>
+<tr><th id="63">63</th><td><i>   which smaller alignments would suffice. It may be defined as larger</i></td></tr>
+<tr><th id="64">64</th><td><i>   than this though. Note however that code and data structures are</i></td></tr>
+<tr><th id="65">65</th><td><i>   optimized for the case of 8-byte alignment.  */</i></td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="66">ifndef</span> <span class="macro" data-ref="_M/MALLOC_ALIGNMENT">MALLOC_ALIGNMENT</span></u></td></tr>
+<tr><th id="67">67</th><td><u># define <dfn class="macro" id="_M/MALLOC_ALIGNMENT" data-ref="_M/MALLOC_ALIGNMENT">MALLOC_ALIGNMENT</dfn> (2 * SIZE_SZ &lt; __alignof__ (long double) \</u></td></tr>
+<tr><th id="68">68</th><td><u>                           ? __alignof__ (long double) : 2 * SIZE_SZ)</u></td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="66">endif</span></u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* The corresponding bit mask value.  */</i></td></tr>
+<tr><th id="72">72</th><td><u>#define <dfn class="macro" id="_M/MALLOC_ALIGN_MASK" data-ref="_M/MALLOC_ALIGN_MASK">MALLOC_ALIGN_MASK</dfn> (MALLOC_ALIGNMENT - 1)</u></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i>/* Called in the parent process before a fork.  */</i></td></tr>
+<tr><th id="76">76</th><td><em>void</em> <dfn class="decl fn" id="__malloc_fork_lock_parent" title='__malloc_fork_lock_parent' data-ref="__malloc_fork_lock_parent" data-ref-filename="__malloc_fork_lock_parent">__malloc_fork_lock_parent</dfn> (<em>void</em>) <a class="macro" href="../include/libc-symbols.h.html#165" title="" data-ref="_M/internal_function">internal_function</a> <a class="macro" href="../include/libc-symbols.h.html#330" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><i>/* Called in the parent process after a fork.  */</i></td></tr>
+<tr><th id="79">79</th><td><em>void</em> <dfn class="decl fn" id="__malloc_fork_unlock_parent" title='__malloc_fork_unlock_parent' data-ref="__malloc_fork_unlock_parent" data-ref-filename="__malloc_fork_unlock_parent">__malloc_fork_unlock_parent</dfn> (<em>void</em>) <a class="macro" href="../include/libc-symbols.h.html#165" title="" data-ref="_M/internal_function">internal_function</a> <a class="macro" href="../include/libc-symbols.h.html#330" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><i>/* Called in the child process after a fork.  */</i></td></tr>
+<tr><th id="82">82</th><td><em>void</em> <dfn class="decl fn" id="__malloc_fork_unlock_child" title='__malloc_fork_unlock_child' data-ref="__malloc_fork_unlock_child" data-ref-filename="__malloc_fork_unlock_child">__malloc_fork_unlock_child</dfn> (<em>void</em>) <a class="macro" href="../include/libc-symbols.h.html#165" title="" data-ref="_M/internal_function">internal_function</a> <a class="macro" href="../include/libc-symbols.h.html#330" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i>/* Set *RESULT to LEFT * RIGHT.  Return true if the multiplication</i></td></tr>
+<tr><th id="85">85</th><td><i>   overflowed.  */</i></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <b>inline</b> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="87">87</th><td><dfn class="decl def fn" id="check_mul_overflow_size_t" title='check_mul_overflow_size_t' data-ref="check_mul_overflow_size_t" data-ref-filename="check_mul_overflow_size_t">check_mul_overflow_size_t</dfn> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="5left" title='left' data-type='size_t' data-ref="5left" data-ref-filename="5left">left</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="6right" title='right' data-type='size_t' data-ref="6right" data-ref-filename="6right">right</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col7 decl" id="7result" title='result' data-type='size_t *' data-ref="7result" data-ref-filename="7result">result</dfn>)</td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td><u>#<span data-ppcond="89">if</span> <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> &gt;= 5</u></td></tr>
+<tr><th id="90">90</th><td>  <b>return</b> __builtin_mul_overflow (left, right, result);</td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="89">else</span></u></td></tr>
+<tr><th id="92">92</th><td>  <i>/* size_t is unsigned so the behavior on overflow is defined.  */</i></td></tr>
+<tr><th id="93">93</th><td>  *<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> = <a class="local col5 ref" href="#5left" title='left' data-ref="5left" data-ref-filename="5left">left</a> * <a class="local col6 ref" href="#6right" title='right' data-ref="6right" data-ref-filename="6right">right</a>;</td></tr>
+<tr><th id="94">94</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8half_size_t" title='half_size_t' data-type='size_t' data-ref="8half_size_t" data-ref-filename="8half_size_t">half_size_t</dfn> = ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <var>1</var>) &lt;&lt; (<var>8</var> * <b>sizeof</b> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) / <var>2</var>);</td></tr>
+<tr><th id="95">95</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#416" title="__builtin_expect (((left | right) &gt;= half_size_t), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> ((<a class="local col5 ref" href="#5left" title='left' data-ref="5left" data-ref-filename="5left">left</a> | <a class="local col6 ref" href="#6right" title='right' data-ref="6right" data-ref-filename="6right">right</a>) &gt;= <a class="local col8 ref" href="#8half_size_t" title='half_size_t' data-ref="8half_size_t" data-ref-filename="8half_size_t">half_size_t</a>))</td></tr>
+<tr><th id="96">96</th><td>    {</td></tr>
+<tr><th id="97">97</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#416" title="__builtin_expect ((right != 0 &amp;&amp; *result / right != left), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col6 ref" href="#6right" title='right' data-ref="6right" data-ref-filename="6right">right</a> != <var>0</var> &amp;&amp; *<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> / <a class="local col6 ref" href="#6right" title='right' data-ref="6right" data-ref-filename="6right">right</a> != <a class="local col5 ref" href="#5left" title='left' data-ref="5left" data-ref-filename="5left">left</a>))</td></tr>
+<tr><th id="98">98</th><td>        <b>return</b> <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="99">99</th><td>    }</td></tr>
+<tr><th id="100">100</th><td>  <b>return</b> <span class="macro" title="0" data-ref="_M/false">false</span>;</td></tr>
+<tr><th id="101">101</th><td><u>#<span data-ppcond="89">endif</span></u></td></tr>
+<tr><th id="102">102</th><td>}</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="19">endif</span> /* _MALLOC_INTERNAL_H */</u></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../elf/dl-minimal.c.html'>glibc_src_2.25/elf/dl-minimal.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

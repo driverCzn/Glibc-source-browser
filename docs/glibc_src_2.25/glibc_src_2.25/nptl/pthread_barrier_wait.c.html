@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_barrier_wait.c source code [glibc_src_2.25/nptl/pthread_barrier_wait.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/nptl/pthread_barrier_wait.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>nptl</a>/<a href='pthread_barrier_wait.c.html'>pthread_barrier_wait.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2003-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Martin Schwidefsky &lt;schwidefsky@de.ibm.com&gt;, 2003.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/futex-internal.h.html">&lt;futex-internal.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="pthreadP.h.html">&lt;pthreadP.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* Wait on the barrier.</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>   In each round, we wait for a fixed number of threads to enter the barrier</i></td></tr>
+<tr><th id="28">28</th><td><i>   (COUNT).  Once that has happened, exactly these threads are allowed to</i></td></tr>
+<tr><th id="29">29</th><td><i>   leave the barrier.  Note that POSIX does not require that only COUNT</i></td></tr>
+<tr><th id="30">30</th><td><i>   threads can attempt to block using the barrier concurrently.</i></td></tr>
+<tr><th id="31">31</th><td><i></i></td></tr>
+<tr><th id="32">32</th><td><i>   We count the number of threads that have entered (IN).  Each thread</i></td></tr>
+<tr><th id="33">33</th><td><i>   increments IN when entering, thus getting a position in the sequence of</i></td></tr>
+<tr><th id="34">34</th><td><i>   threads that are or have been waiting (starting with 1, so the position</i></td></tr>
+<tr><th id="35">35</th><td><i>   is the number of threads that have entered so far including the current</i></td></tr>
+<tr><th id="36">36</th><td><i>   thread).</i></td></tr>
+<tr><th id="37">37</th><td><i>   CURRENT_ROUND designates the most recent thread whose round has been</i></td></tr>
+<tr><th id="38">38</th><td><i>   detected as complete.  When a thread detects that enough threads have</i></td></tr>
+<tr><th id="39">39</th><td><i>   entered to make a round complete, it finishes this round by effectively</i></td></tr>
+<tr><th id="40">40</th><td><i>   adding COUNT to CURRENT_ROUND atomically.  Threads that believe that their</i></td></tr>
+<tr><th id="41">41</th><td><i>   round is not complete yet wait until CURRENT_ROUND is not smaller than</i></td></tr>
+<tr><th id="42">42</th><td><i>   their position anymore.</i></td></tr>
+<tr><th id="43">43</th><td><i></i></td></tr>
+<tr><th id="44">44</th><td><i>   A barrier can be destroyed as soon as no threads are blocked on the</i></td></tr>
+<tr><th id="45">45</th><td><i>   barrier.  This is already the case if just one thread from the last round</i></td></tr>
+<tr><th id="46">46</th><td><i>   has stopped waiting and returned to the caller; the assumption is that</i></td></tr>
+<tr><th id="47">47</th><td><i>   all threads from the round are unblocked atomically, even though they may</i></td></tr>
+<tr><th id="48">48</th><td><i>   return at different times from the respective calls to</i></td></tr>
+<tr><th id="49">49</th><td><i>   pthread_barrier_wait).  Thus, a valid call to pthread_barrier_destroy can</i></td></tr>
+<tr><th id="50">50</th><td><i>   be concurrent with other threads still figuring out that their round has</i></td></tr>
+<tr><th id="51">51</th><td><i>   been completed.  Therefore, threads need to confirm that they have left</i></td></tr>
+<tr><th id="52">52</th><td><i>   the barrier by incrementing OUT, and pthread_barrier_destroy needs to wait</i></td></tr>
+<tr><th id="53">53</th><td><i>   until OUT equals IN.</i></td></tr>
+<tr><th id="54">54</th><td><i></i></td></tr>
+<tr><th id="55">55</th><td><i>   To avoid an ABA issue for futex_wait on CURRENT_ROUND and for archs with</i></td></tr>
+<tr><th id="56">56</th><td><i>   32b-only atomics, we additionally reset the barrier when IN reaches</i></td></tr>
+<tr><th id="57">57</th><td><i>   a threshold to avoid overflow.  We assume that the total number of threads</i></td></tr>
+<tr><th id="58">58</th><td><i>   is less than UINT_MAX/2, and set the threshold accordingly so that we can</i></td></tr>
+<tr><th id="59">59</th><td><i>   use a simple atomic_fetch_add on IN instead of a CAS when entering.  The</i></td></tr>
+<tr><th id="60">60</th><td><i>   threshold is always set to the end of a round, so all threads that have</i></td></tr>
+<tr><th id="61">61</th><td><i>   entered are either pre-reset threads or post-reset threads (i.e., have a</i></td></tr>
+<tr><th id="62">62</th><td><i>   position larger than the threshold).</i></td></tr>
+<tr><th id="63">63</th><td><i>   Pre-reset threads just run the algorithm explained above.  Post-reset</i></td></tr>
+<tr><th id="64">64</th><td><i>   threads wait until IN is reset to a pre-threshold value.</i></td></tr>
+<tr><th id="65">65</th><td><i>   When the last pre-reset thread leaves the barrier (i.e., OUT equals the</i></td></tr>
+<tr><th id="66">66</th><td><i>   threshold), it resets the barrier to its initial state.  Other (post-reset)</i></td></tr>
+<tr><th id="67">67</th><td><i>   threads wait for the reset to have finished by waiting until IN is less</i></td></tr>
+<tr><th id="68">68</th><td><i>   than the threshold and then restart by trying to enter the barrier again.</i></td></tr>
+<tr><th id="69">69</th><td><i></i></td></tr>
+<tr><th id="70">70</th><td><i>   We reuse the reset mechanism in pthread_barrier_destroy to get notified</i></td></tr>
+<tr><th id="71">71</th><td><i>   when all threads have left the barrier: We trigger an artificial reset and</i></td></tr>
+<tr><th id="72">72</th><td><i>   wait for the last pre-reset thread to finish reset, thus notifying the</i></td></tr>
+<tr><th id="73">73</th><td><i>   thread that is about to destroy the barrier.</i></td></tr>
+<tr><th id="74">74</th><td><i></i></td></tr>
+<tr><th id="75">75</th><td><i>   Blocking using futexes is straightforward: pre-reset threads wait for</i></td></tr>
+<tr><th id="76">76</th><td><i>   completion of their round using CURRENT_ROUND as futex word, and post-reset</i></td></tr>
+<tr><th id="77">77</th><td><i>   threads and pthread_barrier_destroy use IN as futex word.</i></td></tr>
+<tr><th id="78">78</th><td><i></i></td></tr>
+<tr><th id="79">79</th><td><i>   Further notes:</i></td></tr>
+<tr><th id="80">80</th><td><i>   * It is not simple to let some of the post-reset threads help with the</i></td></tr>
+<tr><th id="81">81</th><td><i>     reset because of the ABA issues that arise; therefore, we simply make</i></td></tr>
+<tr><th id="82">82</th><td><i>     the last thread to leave responsible for the reset.</i></td></tr>
+<tr><th id="83">83</th><td><i>   * POSIX leaves it unspecified whether a signal handler running in a thread</i></td></tr>
+<tr><th id="84">84</th><td><i>     that has been unblocked (because its round is complete) can stall all</i></td></tr>
+<tr><th id="85">85</th><td><i>     other threads and prevent them from returning from the barrier.  In this</i></td></tr>
+<tr><th id="86">86</th><td><i>     implementation, other threads will return.  However,</i></td></tr>
+<tr><th id="87">87</th><td><i>     pthread_barrier_destroy will of course wait for the signal handler thread</i></td></tr>
+<tr><th id="88">88</th><td><i>     to confirm that it left the barrier.</i></td></tr>
+<tr><th id="89">89</th><td><i></i></td></tr>
+<tr><th id="90">90</th><td><i>   TODO We should add spinning with back-off.  Once we do that, we could also</i></td></tr>
+<tr><th id="91">91</th><td><i>   try to avoid the futex_wake syscall when a round is detected as finished.</i></td></tr>
+<tr><th id="92">92</th><td><i>   If we do not spin, it is quite likely that at least some other threads will</i></td></tr>
+<tr><th id="93">93</th><td><i>   have called futex_wait already.  */</i></td></tr>
+<tr><th id="94">94</th><td><em>int</em></td></tr>
+<tr><th id="95">95</th><td><dfn class="decl def fn" id="__pthread_barrier_wait" title='__pthread_barrier_wait' data-ref="__pthread_barrier_wait" data-ref-filename="__pthread_barrier_wait">__pthread_barrier_wait</dfn> (<a class="typedef" href="../sysdeps/x86/bits/pthreadtypes.h.html#pthread_barrier_t" title='pthread_barrier_t' data-type='union pthread_barrier_t' data-ref="pthread_barrier_t" data-ref-filename="pthread_barrier_t">pthread_barrier_t</a> *<dfn class="local col1 decl" id="1barrier" title='barrier' data-type='pthread_barrier_t *' data-ref="1barrier" data-ref-filename="1barrier">barrier</dfn>)</td></tr>
+<tr><th id="96">96</th><td>{</td></tr>
+<tr><th id="97">97</th><td>  <b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier" title='pthread_barrier' data-ref="pthread_barrier" data-ref-filename="pthread_barrier">pthread_barrier</a> *<dfn class="local col2 decl" id="2bar" title='bar' data-type='struct pthread_barrier *' data-ref="2bar" data-ref-filename="2bar">bar</dfn> = (<b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier" title='pthread_barrier' data-ref="pthread_barrier" data-ref-filename="pthread_barrier">pthread_barrier</a> *) <a class="local col1 ref" href="#1barrier" title='barrier' data-ref="1barrier" data-ref-filename="1barrier">barrier</a>;</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>  <i>/* How many threads entered so far, including ourself.  */</i></td></tr>
+<tr><th id="100">100</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="3i" title='i' data-type='unsigned int' data-ref="3i" data-ref-filename="3i">i</dfn>;</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td> <dfn class="lbl" id="4reset_restart" data-ref="4reset_restart" data-ref-filename="4reset_restart">reset_restart</dfn>:</td></tr>
+<tr><th id="103">103</th><td>  <i>/* Try to enter the barrier.  We need acquire MO to (1) ensure that if we</i></td></tr>
+<tr><th id="104">104</th><td><i>     observe that our round can be completed (see below for our attempt to do</i></td></tr>
+<tr><th id="105">105</th><td><i>     so), all pre-barrier-entry effects of all threads in our round happen</i></td></tr>
+<tr><th id="106">106</th><td><i>     before us completing the round, and (2) to make our use of the barrier</i></td></tr>
+<tr><th id="107">107</th><td><i>     happen after a potential reset.  We need release MO to make sure that our</i></td></tr>
+<tr><th id="108">108</th><td><i>     pre-barrier-entry effects happen before threads in this round leaving the</i></td></tr>
+<tr><th id="109">109</th><td><i>     barrier.  */</i></td></tr>
+<tr><th id="110">110</th><td>  <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> = <a class="macro" href="../include/atomic.h.html#626" title="({ if ((sizeof (*(&amp;bar-&gt;in)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 8)) __atomic_link_error ();; __atomic_fetch_add ((&amp;bar-&gt;in), (1), 4); })" data-ref="_M/atomic_fetch_add_acq_rel">atomic_fetch_add_acq_rel</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::in" title='pthread_barrier::in' data-ref="pthread_barrier::in" data-ref-filename="pthread_barrier..in">in</a>, <var>1</var>) + <var>1</var>;</td></tr>
+<tr><th id="111">111</th><td>  <i>/* These loads are after the fetch_add so that we're less likely to first</i></td></tr>
+<tr><th id="112">112</th><td><i>     pull in the cache line as shared.  */</i></td></tr>
+<tr><th id="113">113</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="5count" title='count' data-type='unsigned int' data-ref="5count" data-ref-filename="5count">count</dfn> = <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::count" title='pthread_barrier::count' data-ref="pthread_barrier::count" data-ref-filename="pthread_barrier..count">count</a>;</td></tr>
+<tr><th id="114">114</th><td>  <i>/* This is the number of threads that can enter before we need to reset.</i></td></tr>
+<tr><th id="115">115</th><td><i>     Always at the end of a round.  */</i></td></tr>
+<tr><th id="116">116</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="6max_in_before_reset" title='max_in_before_reset' data-type='unsigned int' data-ref="6max_in_before_reset" data-ref-filename="6max_in_before_reset">max_in_before_reset</dfn> = <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#99" title="((2147483647 *2U +1U)/2)" data-ref="_M/BARRIER_IN_THRESHOLD">BARRIER_IN_THRESHOLD</a></td></tr>
+<tr><th id="117">117</th><td>				   - <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#99" title="((2147483647 *2U +1U)/2)" data-ref="_M/BARRIER_IN_THRESHOLD">BARRIER_IN_THRESHOLD</a> % <a class="local col5 ref" href="#5count" title='count' data-ref="5count" data-ref-filename="5count">count</a>;</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>  <b>if</b> (<a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> &gt; <a class="local col6 ref" href="#6max_in_before_reset" title='max_in_before_reset' data-ref="6max_in_before_reset" data-ref-filename="6max_in_before_reset">max_in_before_reset</a>)</td></tr>
+<tr><th id="120">120</th><td>    {</td></tr>
+<tr><th id="121">121</th><td>      <i>/* We're in a reset round.  Just wait for a reset to finish; do not</i></td></tr>
+<tr><th id="122">122</th><td><i>	 help finishing previous rounds because this could happen</i></td></tr>
+<tr><th id="123">123</th><td><i>	 concurrently with a reset.  */</i></td></tr>
+<tr><th id="124">124</th><td>      <b>while</b> (<a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> &gt; <a class="local col6 ref" href="#6max_in_before_reset" title='max_in_before_reset' data-ref="6max_in_before_reset" data-ref-filename="6max_in_before_reset">max_in_before_reset</a>)</td></tr>
+<tr><th id="125">125</th><td>	{</td></tr>
+<tr><th id="126">126</th><td>	  <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wait_simple" title='futex_wait_simple' data-ref="futex_wait_simple" data-ref-filename="futex_wait_simple">futex_wait_simple</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::in" title='pthread_barrier::in' data-ref="pthread_barrier::in" data-ref-filename="pthread_barrier..in">in</a>, <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a>, <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::shared" title='pthread_barrier::shared' data-ref="pthread_barrier::shared" data-ref-filename="pthread_barrier..shared">shared</a>);</td></tr>
+<tr><th id="127">127</th><td>	  <i>/* Relaxed MO is fine here because we just need an indication for</i></td></tr>
+<tr><th id="128">128</th><td><i>	     when we should retry to enter (which will use acquire MO, see</i></td></tr>
+<tr><th id="129">129</th><td><i>	     above).  */</i></td></tr>
+<tr><th id="130">130</th><td>	  <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> = <a class="macro" href="../include/atomic.h.html#575" title="({ if ((sizeof (*(&amp;bar-&gt;in)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;bar-&gt;in), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::in" title='pthread_barrier::in' data-ref="pthread_barrier::in" data-ref-filename="pthread_barrier..in">in</a>);</td></tr>
+<tr><th id="131">131</th><td>	}</td></tr>
+<tr><th id="132">132</th><td>      <b>goto</b> <a class="lbl" href="#4reset_restart" data-ref="4reset_restart" data-ref-filename="4reset_restart">reset_restart</a>;</td></tr>
+<tr><th id="133">133</th><td>    }</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>  <i>/* Look at the current round.  At this point, we are just interested in</i></td></tr>
+<tr><th id="136">136</th><td><i>     whether we can complete rounds, based on the information we obtained</i></td></tr>
+<tr><th id="137">137</th><td><i>     through our acquire-MO load of IN.  Nonetheless, if we notice that</i></td></tr>
+<tr><th id="138">138</th><td><i>     our round has been completed using this load, we use the acquire-MO</i></td></tr>
+<tr><th id="139">139</th><td><i>     fence below to make sure that all pre-barrier-entry effects of all</i></td></tr>
+<tr><th id="140">140</th><td><i>     threads in our round happen before us leaving the barrier.  Therefore,</i></td></tr>
+<tr><th id="141">141</th><td><i>     relaxed MO is sufficient.  */</i></td></tr>
+<tr><th id="142">142</th><td>  <em>unsigned</em> <dfn class="local col7 decl" id="7cr" title='cr' data-type='unsigned int' data-ref="7cr" data-ref-filename="7cr">cr</dfn> = <a class="macro" href="../include/atomic.h.html#575" title="({ if ((sizeof (*(&amp;bar-&gt;current_round)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;bar-&gt;current_round), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>);</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>  <i>/* Try to finish previous rounds and/or the current round.  We simply</i></td></tr>
+<tr><th id="145">145</th><td><i>     consider just our position here and do not try to do the work of threads</i></td></tr>
+<tr><th id="146">146</th><td><i>     that entered more recently.  */</i></td></tr>
+<tr><th id="147">147</th><td>  <b>while</b> (<a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a> + <a class="local col5 ref" href="#5count" title='count' data-ref="5count" data-ref-filename="5count">count</a> &lt;= <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a>)</td></tr>
+<tr><th id="148">148</th><td>    {</td></tr>
+<tr><th id="149">149</th><td>      <i>/* Calculate the new current round based on how many threads entered.</i></td></tr>
+<tr><th id="150">150</th><td><i>	 NEWCR must be larger than CR because CR+COUNT ends a round.  */</i></td></tr>
+<tr><th id="151">151</th><td>      <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="8newcr" title='newcr' data-type='unsigned int' data-ref="8newcr" data-ref-filename="8newcr">newcr</dfn> = <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> - <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> % <a class="local col5 ref" href="#5count" title='count' data-ref="5count" data-ref-filename="5count">count</a>;</td></tr>
+<tr><th id="152">152</th><td>      <i>/* Try to complete previous and/or the current round.  We need release</i></td></tr>
+<tr><th id="153">153</th><td><i>	 MO to propagate the happens-before that we observed through reading</i></td></tr>
+<tr><th id="154">154</th><td><i>	 with acquire MO from IN to other threads.  If the CAS fails, it</i></td></tr>
+<tr><th id="155">155</th><td><i>	 is like the relaxed-MO load of CURRENT_ROUND above.  */</i></td></tr>
+<tr><th id="156">156</th><td>      <b>if</b> (<a class="macro" href="../include/atomic.h.html#602" title="({ if ((sizeof (*(&amp;bar-&gt;current_round)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 8)) __atomic_link_error ();; __atomic_compare_exchange_n ((&amp;bar-&gt;current_round), (&amp;cr), (newcr), 1, 3, 0); })" data-ref="_M/atomic_compare_exchange_weak_release">atomic_compare_exchange_weak_release</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>, &amp;<a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a>,</td></tr>
+<tr><th id="157">157</th><td>						<a class="local col8 ref" href="#8newcr" title='newcr' data-ref="8newcr" data-ref-filename="8newcr">newcr</a>))</td></tr>
+<tr><th id="158">158</th><td>	{</td></tr>
+<tr><th id="159">159</th><td>	  <i>/* Update CR with the modification we just did.  */</i></td></tr>
+<tr><th id="160">160</th><td>	  <a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a> = <a class="local col8 ref" href="#8newcr" title='newcr' data-ref="8newcr" data-ref-filename="8newcr">newcr</a>;</td></tr>
+<tr><th id="161">161</th><td>	  <i>/* Wake threads belonging to the rounds we just finished.  We may</i></td></tr>
+<tr><th id="162">162</th><td><i>	     wake more threads than necessary if more than COUNT threads try</i></td></tr>
+<tr><th id="163">163</th><td><i>	     to block concurrently on the barrier, but this is not a typical</i></td></tr>
+<tr><th id="164">164</th><td><i>	     use of barriers.</i></td></tr>
+<tr><th id="165">165</th><td><i>	     Note that we can still access SHARED because we haven't yet</i></td></tr>
+<tr><th id="166">166</th><td><i>	     confirmed to have left the barrier.  */</i></td></tr>
+<tr><th id="167">167</th><td>	  <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wake" title='futex_wake' data-ref="futex_wake" data-ref-filename="futex_wake">futex_wake</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span>, <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::shared" title='pthread_barrier::shared' data-ref="pthread_barrier::shared" data-ref-filename="pthread_barrier..shared">shared</a>);</td></tr>
+<tr><th id="168">168</th><td>	  <i>/* We did as much as we could based on our position.  If we advanced</i></td></tr>
+<tr><th id="169">169</th><td><i>	     the current round to a round sufficient for us, do not wait for</i></td></tr>
+<tr><th id="170">170</th><td><i>	     that to happen and skip the acquire fence (we already</i></td></tr>
+<tr><th id="171">171</th><td><i>	     synchronize-with all other threads in our round through the</i></td></tr>
+<tr><th id="172">172</th><td><i>	     initial acquire MO fetch_add of IN.  */</i></td></tr>
+<tr><th id="173">173</th><td>	  <b>if</b> (<a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> &lt;= <a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a>)</td></tr>
+<tr><th id="174">174</th><td>	    <b>goto</b> <a class="lbl" href="#9ready_to_leave" data-ref="9ready_to_leave" data-ref-filename="9ready_to_leave">ready_to_leave</a>;</td></tr>
+<tr><th id="175">175</th><td>	  <b>else</b></td></tr>
+<tr><th id="176">176</th><td>	    <b>break</b>;</td></tr>
+<tr><th id="177">177</th><td>	}</td></tr>
+<tr><th id="178">178</th><td>    }</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>  <i>/* Wait until the current round is more recent than the round we are in.  */</i></td></tr>
+<tr><th id="181">181</th><td>  <b>while</b> (<a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> &gt; <a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a>)</td></tr>
+<tr><th id="182">182</th><td>    {</td></tr>
+<tr><th id="183">183</th><td>      <i>/* Wait for the current round to finish.  */</i></td></tr>
+<tr><th id="184">184</th><td>      <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wait_simple" title='futex_wait_simple' data-ref="futex_wait_simple" data-ref-filename="futex_wait_simple">futex_wait_simple</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>, <a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a>, <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::shared" title='pthread_barrier::shared' data-ref="pthread_barrier::shared" data-ref-filename="pthread_barrier..shared">shared</a>);</td></tr>
+<tr><th id="185">185</th><td>      <i>/* See the fence below.  */</i></td></tr>
+<tr><th id="186">186</th><td>      <a class="local col7 ref" href="#7cr" title='cr' data-ref="7cr" data-ref-filename="7cr">cr</a> = <a class="macro" href="../include/atomic.h.html#575" title="({ if ((sizeof (*(&amp;bar-&gt;current_round)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;bar-&gt;current_round), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>);</td></tr>
+<tr><th id="187">187</th><td>    }</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>  <i>/* Our round finished.  Use the acquire MO fence to synchronize-with the</i></td></tr>
+<tr><th id="190">190</th><td><i>     thread that finished the round, either through the initial load of</i></td></tr>
+<tr><th id="191">191</th><td><i>     CURRENT_ROUND above or a failed CAS in the loop above.  */</i></td></tr>
+<tr><th id="192">192</th><td>  <a class="macro" href="../include/atomic.h.html#568" title="__atomic_thread_fence (2)" data-ref="_M/atomic_thread_fence_acquire">atomic_thread_fence_acquire</a> ();</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>  <i>/* Now signal that we left.  */</i></td></tr>
+<tr><th id="195">195</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="10o" title='o' data-type='unsigned int' data-ref="10o" data-ref-filename="10o">o</dfn>;</td></tr>
+<tr><th id="196">196</th><td> <dfn class="lbl" id="9ready_to_leave" data-ref="9ready_to_leave" data-ref-filename="9ready_to_leave">ready_to_leave</dfn>:</td></tr>
+<tr><th id="197">197</th><td>  <i>/* We need release MO here so that our use of the barrier happens before</i></td></tr>
+<tr><th id="198">198</th><td><i>     reset or memory reuse after pthread_barrier_destroy.  */</i></td></tr>
+<tr><th id="199">199</th><td>  <a class="local col0 ref" href="#10o" title='o' data-ref="10o" data-ref-filename="10o">o</a> = <a class="macro" href="../include/atomic.h.html#623" title="({ if ((sizeof (*(&amp;bar-&gt;out)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;out)) != 8)) __atomic_link_error ();; __atomic_fetch_add ((&amp;bar-&gt;out), (1), 3); })" data-ref="_M/atomic_fetch_add_release">atomic_fetch_add_release</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::out" title='pthread_barrier::out' data-ref="pthread_barrier::out" data-ref-filename="pthread_barrier..out">out</a>, <var>1</var>) + <var>1</var>;</td></tr>
+<tr><th id="200">200</th><td>  <b>if</b> (<a class="local col0 ref" href="#10o" title='o' data-ref="10o" data-ref-filename="10o">o</a> == <a class="local col6 ref" href="#6max_in_before_reset" title='max_in_before_reset' data-ref="6max_in_before_reset" data-ref-filename="6max_in_before_reset">max_in_before_reset</a>)</td></tr>
+<tr><th id="201">201</th><td>    {</td></tr>
+<tr><th id="202">202</th><td>      <i>/* Perform a reset if we are the last pre-reset thread leaving.   All</i></td></tr>
+<tr><th id="203">203</th><td><i>	 other threads accessing the barrier are post-reset threads and are</i></td></tr>
+<tr><th id="204">204</th><td><i>	 incrementing or spinning on IN.  Thus, resetting IN as the last step</i></td></tr>
+<tr><th id="205">205</th><td><i>	 of reset ensures that the reset is not concurrent with actual use of</i></td></tr>
+<tr><th id="206">206</th><td><i>	 the barrier.  We need the acquire MO fence so that the reset happens</i></td></tr>
+<tr><th id="207">207</th><td><i>	 after use of the barrier by all earlier pre-reset threads.  */</i></td></tr>
+<tr><th id="208">208</th><td>      <a class="macro" href="../include/atomic.h.html#568" title="__atomic_thread_fence (2)" data-ref="_M/atomic_thread_fence_acquire">atomic_thread_fence_acquire</a> ();</td></tr>
+<tr><th id="209">209</th><td>      <a class="macro" href="../include/atomic.h.html#582" title="do { if ((sizeof (*(&amp;bar-&gt;current_round)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;current_round)) != 8)) __atomic_link_error ();; __atomic_store_n ((&amp;bar-&gt;current_round), (0), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::current_round" title='pthread_barrier::current_round' data-ref="pthread_barrier::current_round" data-ref-filename="pthread_barrier..current_round">current_round</a>, <var>0</var>);</td></tr>
+<tr><th id="210">210</th><td>      <a class="macro" href="../include/atomic.h.html#582" title="do { if ((sizeof (*(&amp;bar-&gt;out)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;out)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;out)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;out)) != 8)) __atomic_link_error ();; __atomic_store_n ((&amp;bar-&gt;out), (0), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::out" title='pthread_barrier::out' data-ref="pthread_barrier::out" data-ref-filename="pthread_barrier..out">out</a>, <var>0</var>);</td></tr>
+<tr><th id="211">211</th><td>      <i>/* When destroying the barrier, we wait for a reset to happen.  Thus,</i></td></tr>
+<tr><th id="212">212</th><td><i>	 we must load SHARED now so that this happens before the barrier is</i></td></tr>
+<tr><th id="213">213</th><td><i>	 destroyed.  */</i></td></tr>
+<tr><th id="214">214</th><td>      <em>int</em> <dfn class="local col1 decl" id="11shared" title='shared' data-type='int' data-ref="11shared" data-ref-filename="11shared">shared</dfn> = <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::shared" title='pthread_barrier::shared' data-ref="pthread_barrier::shared" data-ref-filename="pthread_barrier..shared">shared</a>;</td></tr>
+<tr><th id="215">215</th><td>      <a class="macro" href="../include/atomic.h.html#587" title="do { if ((sizeof (*(&amp;bar-&gt;in)) != 1) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 2) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 4) &amp;&amp; (sizeof (*(&amp;bar-&gt;in)) != 8)) __atomic_link_error ();; __atomic_store_n ((&amp;bar-&gt;in), (0), 3); } while (0)" data-ref="_M/atomic_store_release">atomic_store_release</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::in" title='pthread_barrier::in' data-ref="pthread_barrier::in" data-ref-filename="pthread_barrier..in">in</a>, <var>0</var>);</td></tr>
+<tr><th id="216">216</th><td>      <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wake" title='futex_wake' data-ref="futex_wake" data-ref-filename="futex_wake">futex_wake</a> (&amp;<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#pthread_barrier::in" title='pthread_barrier::in' data-ref="pthread_barrier::in" data-ref-filename="pthread_barrier..in">in</a>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span>, <a class="local col1 ref" href="#11shared" title='shared' data-ref="11shared" data-ref-filename="11shared">shared</a>);</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>    }</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>  <i>/* Return a special value for exactly one thread per round.  */</i></td></tr>
+<tr><th id="221">221</th><td>  <b>return</b> <a class="local col3 ref" href="#3i" title='i' data-ref="3i" data-ref-filename="3i">i</a> % <a class="local col5 ref" href="#5count" title='count' data-ref="5count" data-ref-filename="5count">count</a> == <var>0</var> ?  <a class="macro" href="../sysdeps/nptl/pthread.h.html#225" title="-1" data-ref="_M/PTHREAD_BARRIER_SERIAL_THREAD">PTHREAD_BARRIER_SERIAL_THREAD</a> : <var>0</var>;</td></tr>
+<tr><th id="222">222</th><td>}</td></tr>
+<tr><th id="223">223</th><td><a class="macro" href="../include/libc-symbols.h.html#107" title="extern __typeof (__pthread_barrier_wait) pthread_barrier_wait __attribute__ ((weak, alias (&quot;__pthread_barrier_wait&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__pthread_barrier_wait" title='__pthread_barrier_wait' data-ref="__pthread_barrier_wait" data-ref-filename="__pthread_barrier_wait">__pthread_barrier_wait</a>, <dfn class="decl def fn" id="pthread_barrier_wait" title='pthread_barrier_wait' data-ref="pthread_barrier_wait" data-ref-filename="pthread_barrier_wait">pthread_barrier_wait</dfn>)</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

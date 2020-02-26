@@ -1,0 +1,95 @@
+<dec f='glibc_src_2.25/include/libc-internal.h' l='17' type='int __profile_frequency()'/>
+<doc f='glibc_src_2.25/include/libc-internal.h' l='15'>/* Discover the tick frequency of the machine if something goes wrong,
+   we return 0, an impossible hertz.  */</doc>
+<dec f='glibc_src_2.25/elf/dl-profile.c' l='124' type='int __profile_frequency()'/>
+<use f='glibc_src_2.25/elf/dl-profile.c' l='308' u='c' c='_dl_start_profile'/>
+<doc f='glibc_src_2.25/elf/dl-profile.c' l='39'>/* The LD_PROFILE feature has to be implemented different to the
+   normal profiling using the gmon/ functions.  The problem is that an
+   arbitrary amount of processes simulataneously can be run using
+   profiling and all write the results in the same file.  To provide
+   this mechanism one could implement a complicated mechanism to merge
+   the content of two profiling runs or one could extend the file
+   format to allow more than one data set.  For the second solution we
+   would have the problem that the file can grow in size beyond any
+   limit and both solutions have the problem that the concurrency of
+   writing the results is a big problem.
+
+   Another much simpler method is to use mmap to map the same file in
+   all using programs and modify the data in the mmap&apos;ed area and so
+   also automatically on the disk.  Using the MAP_SHARED option of
+   mmap(2) this can be done without big problems in more than one
+   file.
+
+   This approach is very different from the normal profiling.  We have
+   to use the profiling data in exactly the way they are expected to
+   be written to disk.  But the normal format used by gprof is not usable
+   to do this.  It is optimized for size.  It writes the tags as single
+   bytes but this means that the following 32/64 bit values are
+   unaligned.
+
+   Therefore we use a new format.  This will look like this
+
+					0  1  2  3	&lt;- byte is 32 bit word
+	0000				g  m  o  n
+	0004				*version*	&lt;- GMON_SHOBJ_VERSION
+	0008				00 00 00 00
+	000c				00 00 00 00
+	0010				00 00 00 00
+
+	0014				*tag*		&lt;- GMON_TAG_TIME_HIST
+	0018				?? ?? ?? ??
+					?? ?? ?? ??	&lt;- 32/64 bit LowPC
+	0018+A				?? ?? ?? ??
+					?? ?? ?? ??	&lt;- 32/64 bit HighPC
+	0018+2*A			*histsize*
+	001c+2*A			*profrate*
+	0020+2*A			s  e  c  o
+	0024+2*A			n  d  s  \0
+	0028+2*A			\0 \0 \0 \0
+	002c+2*A			\0 \0 \0
+	002f+2*A			s
+
+	0030+2*A			?? ?? ?? ??	&lt;- Count data
+	...				...
+	0030+2*A+K			?? ?? ?? ??
+
+	0030+2*A+K			*tag*		&lt;- GMON_TAG_CG_ARC
+	0034+2*A+K			*lastused*
+	0038+2*A+K			?? ?? ?? ??
+					?? ?? ?? ??	&lt;- FromPC#1
+	0038+3*A+K			?? ?? ?? ??
+					?? ?? ?? ??	&lt;- ToPC#1
+	0038+4*A+K			?? ?? ?? ??	&lt;- Count#1
+	...				...		   ...
+	0038+(2*(CN-1)+2)*A+(CN-1)*4+K	?? ?? ?? ??
+					?? ?? ?? ??	&lt;- FromPC#CGN
+	0038+(2*(CN-1)+3)*A+(CN-1)*4+K	?? ?? ?? ??
+					?? ?? ?? ??	&lt;- ToPC#CGN
+	0038+(2*CN+2)*A+(CN-1)*4+K	?? ?? ?? ??	&lt;- Count#CGN
+
+   We put (for now?) no basic block information in the file since this would
+   introduce rase conditions among all the processes who want to write them.
+
+   `K&apos; is the number of count entries which is computed as
+
+ 		textsize / HISTFRACTION
+
+   `CG&apos; in the above table is the number of call graph arcs.  Normally,
+   the table is sparse and the profiling code writes out only the those
+   entries which are really used in the program run.  But since we must
+   not extend this table (the profiling file) we&apos;ll keep them all here.
+   So CN can be executed in advance as
+
+		MINARCS &lt;= textsize*(ARCDENSITY/100) &lt;= MAXARCS
+
+   Now the remaining question is: how to build the data structures we can
+   work with from this data.  We need the from set and must associate the
+   froms with all the associated tos.  We will do this by constructing this
+   data structures at the program start.  To do this we&apos;ll simply visit all
+   entries in the call graph table and add it to the appropriate list.  */</doc>
+<dec f='glibc_src_2.25/elf/sprof.c' l='66' type='int __profile_frequency()'/>
+<use f='glibc_src_2.25/elf/sprof.c' l='888' u='c' c='load_profdata'/>
+<use f='glibc_src_2.25/sysdeps/posix/sprofil.c' l='292' u='c' c='__sprofil'/>
+<def f='glibc_src_2.25/sysdeps/unix/sysv/linux/prof-freq.c' l='24' ll='28' type='int __profile_frequency()'/>
+<use f='glibc_src_2.25/sysdeps/posix/profil.c' l='113' u='c' c='__profil'/>
+<use f='glibc_src_2.25/gmon/gmon.c' l='215' u='c' c='write_hist'/>

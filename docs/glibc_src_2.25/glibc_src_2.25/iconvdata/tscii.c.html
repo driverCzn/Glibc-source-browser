@@ -1,0 +1,870 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>tscii.c source code [glibc_src_2.25/iconvdata/tscii.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/iconvdata/tscii.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>iconvdata</a>/<a href='tscii.c.html'>tscii.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Conversion from and to TSCII.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2002-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Bruno Haible &lt;bruno@clisp.org&gt;, 2002.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/dlfcn.h.html">&lt;dlfcn.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/gconv.h.html">&lt;gconv.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* TSCII is an 8-bit encoding consisting of:</i></td></tr>
+<tr><th id="26">26</th><td><i>   0x00..0x7F:       ASCII</i></td></tr>
+<tr><th id="27">27</th><td><i>   0x80..0x90, 0x95..0x9F, 0xAB..0xFE:</i></td></tr>
+<tr><th id="28">28</th><td><i>                     Tamil letters and glyphs</i></td></tr>
+<tr><th id="29">29</th><td><i>   0xA1..0xA5, 0xAA: Tamil combining letters (after the base character)</i></td></tr>
+<tr><th id="30">30</th><td><i>   0xA6..0xA8:       Tamil combining letters (before the base character)</i></td></tr>
+<tr><th id="31">31</th><td><i>   0x91..0x94:       Punctuation</i></td></tr>
+<tr><th id="32">32</th><td><i>   0xA9:             Symbols</i></td></tr>
+<tr><th id="33">33</th><td><i>*/</i></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i>/* Definitions used in the body of the `gconv' function.  */</i></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/CHARSET_NAME" data-ref="_M/CHARSET_NAME">CHARSET_NAME</dfn>		"TSCII//"</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		from_tscii</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			to_tscii</u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		1</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		1</u></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP_MIN_NEEDED_FROM" data-ref="_M/FROM_LOOP_MIN_NEEDED_FROM">FROM_LOOP_MIN_NEEDED_FROM</dfn>	1</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP_MAX_NEEDED_FROM" data-ref="_M/FROM_LOOP_MAX_NEEDED_FROM">FROM_LOOP_MAX_NEEDED_FROM</dfn>	2</u></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP_MIN_NEEDED_TO" data-ref="_M/FROM_LOOP_MIN_NEEDED_TO">FROM_LOOP_MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="45">45</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP_MAX_NEEDED_TO" data-ref="_M/FROM_LOOP_MAX_NEEDED_TO">FROM_LOOP_MAX_NEEDED_TO</dfn>	       16</u></td></tr>
+<tr><th id="46">46</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP_MIN_NEEDED_FROM" data-ref="_M/TO_LOOP_MIN_NEEDED_FROM">TO_LOOP_MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="47">47</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP_MAX_NEEDED_FROM" data-ref="_M/TO_LOOP_MAX_NEEDED_FROM">TO_LOOP_MAX_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="48">48</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP_MIN_NEEDED_TO" data-ref="_M/TO_LOOP_MIN_NEEDED_TO">TO_LOOP_MIN_NEEDED_TO</dfn>		1</u></td></tr>
+<tr><th id="49">49</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP_MAX_NEEDED_TO" data-ref="_M/TO_LOOP_MAX_NEEDED_TO">TO_LOOP_MAX_NEEDED_TO</dfn>		3</u></td></tr>
+<tr><th id="50">50</th><td><u>#define <dfn class="macro" id="_M/PREPARE_LOOP" data-ref="_M/PREPARE_LOOP">PREPARE_LOOP</dfn> \</u></td></tr>
+<tr><th id="51">51</th><td><u>  int saved_state;							      \</u></td></tr>
+<tr><th id="52">52</th><td><u>  int *statep = &amp;data-&gt;__statep-&gt;__count;</u></td></tr>
+<tr><th id="53">53</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_ARGS" data-ref="_M/EXTRA_LOOP_ARGS">EXTRA_LOOP_ARGS</dfn>		, statep</u></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><i>/* Since we might have to reset input pointer we must be able to save</i></td></tr>
+<tr><th id="57">57</th><td><i>   and restore the state.  */</i></td></tr>
+<tr><th id="58">58</th><td><u>#define <dfn class="macro" id="_M/SAVE_RESET_STATE" data-ref="_M/SAVE_RESET_STATE">SAVE_RESET_STATE</dfn>(Save) \</u></td></tr>
+<tr><th id="59">59</th><td><u>  if (Save)								      \</u></td></tr>
+<tr><th id="60">60</th><td><u>    saved_state = *statep;						      \</u></td></tr>
+<tr><th id="61">61</th><td><u>  else									      \</u></td></tr>
+<tr><th id="62">62</th><td><u>    *statep = saved_state</u></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><i>/* During TSCII to UCS-4 conversion, the COUNT element of the state contains</i></td></tr>
+<tr><th id="66">66</th><td><i>   the last UCS-4 character to be output, shifted by 8 bits, and an encoded</i></td></tr>
+<tr><th id="67">67</th><td><i>   representation of additional UCS-4 characters to be output (if any),</i></td></tr>
+<tr><th id="68">68</th><td><i>   shifted by 4 bits.  This character can be:</i></td></tr>
+<tr><th id="69">69</th><td><i>     0x0000                   Nothing pending.</i></td></tr>
+<tr><th id="70">70</th><td><i>     0x0BCD                   Pending VIRAMA sign. If bit 3 is set, it may be</i></td></tr>
+<tr><th id="71">71</th><td><i>                              omitted if followed by a vowel sign U or UU.</i></td></tr>
+<tr><th id="72">72</th><td><i>     0x0BC6, 0x0BC7, 0x0BC8   Pending vowel sign.  Bit 3 is set after the</i></td></tr>
+<tr><th id="73">73</th><td><i>                              consonant was seen.</i></td></tr>
+<tr><th id="74">74</th><td><i>     Other                    Bit 3 always cleared.  */</i></td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><i>/* During UCS-4 to TSCII conversion, the COUNT element of the state contains</i></td></tr>
+<tr><th id="77">77</th><td><i>   the last byte (or sometimes the last two bytes) to be output, shifted by</i></td></tr>
+<tr><th id="78">78</th><td><i>   3 bits. This can be:</i></td></tr>
+<tr><th id="79">79</th><td><i>     0x00                     Nothing pending.</i></td></tr>
+<tr><th id="80">80</th><td><i>     0xB8..0xC9, 0x83..0x86   A consonant.</i></td></tr>
+<tr><th id="81">81</th><td><i>     0xEC, 0x8A               A consonant with VIRAMA sign (final or joining).</i></td></tr>
+<tr><th id="82">82</th><td><i>     0x87, 0xC38A             Two consonants combined through a VIRAMA sign. */</i></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i>/* Since this is a stateful encoding we have to provide code which resets</i></td></tr>
+<tr><th id="85">85</th><td><i>   the output state to the initial state.  This has to be done during the</i></td></tr>
+<tr><th id="86">86</th><td><i>   flushing.  */</i></td></tr>
+<tr><th id="87">87</th><td><u>#define <dfn class="macro" id="_M/EMIT_SHIFT_TO_INIT" data-ref="_M/EMIT_SHIFT_TO_INIT">EMIT_SHIFT_TO_INIT</dfn> \</u></td></tr>
+<tr><th id="88">88</th><td><u>  if (data-&gt;__statep-&gt;__count != 0)					      \</u></td></tr>
+<tr><th id="89">89</th><td><u>    {									      \</u></td></tr>
+<tr><th id="90">90</th><td><u>      if (FROM_DIRECTION)						      \</u></td></tr>
+<tr><th id="91">91</th><td><u>	{								      \</u></td></tr>
+<tr><th id="92">92</th><td><u>	  do								      \</u></td></tr>
+<tr><th id="93">93</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="94">94</th><td><u>	      if (__glibc_unlikely (outbuf + 4 &gt; outend))		      \</u></td></tr>
+<tr><th id="95">95</th><td><u>		{							      \</u></td></tr>
+<tr><th id="96">96</th><td><u>		  /* We don't have enough room in the output buffer.  */      \</u></td></tr>
+<tr><th id="97">97</th><td><u>		  status = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="98">98</th><td><u>		  break;						      \</u></td></tr>
+<tr><th id="99">99</th><td><u>		}							      \</u></td></tr>
+<tr><th id="100">100</th><td><u>	      /* Write out the pending character.  */			      \</u></td></tr>
+<tr><th id="101">101</th><td><u>	      *((uint32_t *) outbuf) = data-&gt;__statep-&gt;__count &gt;&gt; 8;	      \</u></td></tr>
+<tr><th id="102">102</th><td><u>	      outbuf += sizeof (uint32_t);				      \</u></td></tr>
+<tr><th id="103">103</th><td><u>	      /* Retrieve the successor state.  */			      \</u></td></tr>
+<tr><th id="104">104</th><td><u>	      data-&gt;__statep-&gt;__count =					      \</u></td></tr>
+<tr><th id="105">105</th><td><u>		tscii_next_state[(data-&gt;__statep-&gt;__count &gt;&gt; 4) &amp; 0x0f];      \</u></td></tr>
+<tr><th id="106">106</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="107">107</th><td><u>	  while (data-&gt;__statep-&gt;__count != 0);				      \</u></td></tr>
+<tr><th id="108">108</th><td><u>	}								      \</u></td></tr>
+<tr><th id="109">109</th><td><u>      else								      \</u></td></tr>
+<tr><th id="110">110</th><td><u>	{								      \</u></td></tr>
+<tr><th id="111">111</th><td><u>	  uint32_t last = data-&gt;__statep-&gt;__count &gt;&gt; 3;			      \</u></td></tr>
+<tr><th id="112">112</th><td><u>	  if (__glibc_unlikely (last &gt;&gt; 8))				      \</u></td></tr>
+<tr><th id="113">113</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="114">114</th><td><u>	      /* Write out the last character, two bytes.  */		      \</u></td></tr>
+<tr><th id="115">115</th><td><u>	      if (__glibc_likely (outbuf + 2 &lt;= outend))		      \</u></td></tr>
+<tr><th id="116">116</th><td><u>		{							      \</u></td></tr>
+<tr><th id="117">117</th><td><u>		  *outbuf++ = last &amp; 0xff;				      \</u></td></tr>
+<tr><th id="118">118</th><td><u>		  *outbuf++ = (last &gt;&gt; 8) &amp; 0xff;			      \</u></td></tr>
+<tr><th id="119">119</th><td><u>		  data-&gt;__statep-&gt;__count = 0;				      \</u></td></tr>
+<tr><th id="120">120</th><td><u>		}							      \</u></td></tr>
+<tr><th id="121">121</th><td><u>	      else							      \</u></td></tr>
+<tr><th id="122">122</th><td><u>		/* We don't have enough room in the output buffer.  */	      \</u></td></tr>
+<tr><th id="123">123</th><td><u>		status = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="124">124</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="125">125</th><td><u>	  else								      \</u></td></tr>
+<tr><th id="126">126</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="127">127</th><td><u>	      /* Write out the last character, a single byte.  */	      \</u></td></tr>
+<tr><th id="128">128</th><td><u>	      if (__glibc_likely (outbuf &lt; outend))			      \</u></td></tr>
+<tr><th id="129">129</th><td><u>		{							      \</u></td></tr>
+<tr><th id="130">130</th><td><u>		  *outbuf++ = last &amp; 0xff;				      \</u></td></tr>
+<tr><th id="131">131</th><td><u>		  data-&gt;__statep-&gt;__count = 0;				      \</u></td></tr>
+<tr><th id="132">132</th><td><u>		}							      \</u></td></tr>
+<tr><th id="133">133</th><td><u>	      else							      \</u></td></tr>
+<tr><th id="134">134</th><td><u>		/* We don't have enough room in the output buffer.  */	      \</u></td></tr>
+<tr><th id="135">135</th><td><u>		status = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="136">136</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="137">137</th><td><u>	}								      \</u></td></tr>
+<tr><th id="138">138</th><td><u>    }</u></td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td><i  data-doc="tscii_to_ucs4">/* First define the conversion function from TSCII to UCS-4.  */</i></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint16_t" title='uint16_t' data-type='unsigned short' data-ref="uint16_t" data-ref-filename="uint16_t">uint16_t</a> <dfn class="tu decl def" id="tscii_to_ucs4" title='tscii_to_ucs4' data-type='const uint16_t [128][2]' data-ref="tscii_to_ucs4" data-ref-filename="tscii_to_ucs4">tscii_to_ucs4</dfn>[<var>128</var>][<var>2</var>] =</td></tr>
+<tr><th id="144">144</th><td>  {</td></tr>
+<tr><th id="145">145</th><td>    { <var>0x0BE6</var>,      <var>0</var> },</td></tr>
+<tr><th id="146">146</th><td>    { <var>0x0BE7</var>,      <var>0</var> },</td></tr>
+<tr><th id="147">147</th><td>    {      <var>0</var>,      <var>0</var> },	<i>/* 0x82 - maps to &lt;U0BB8&gt;&lt;U0BCD&gt;&lt;U0BB0&gt;&lt;U0BC0&gt; */</i></td></tr>
+<tr><th id="148">148</th><td>    { <var>0x0B9C</var>,      <var>0</var> },</td></tr>
+<tr><th id="149">149</th><td>    { <var>0x0BB7</var>,      <var>0</var> },</td></tr>
+<tr><th id="150">150</th><td>    { <var>0x0BB8</var>,      <var>0</var> },</td></tr>
+<tr><th id="151">151</th><td>    { <var>0x0BB9</var>,      <var>0</var> },</td></tr>
+<tr><th id="152">152</th><td>    {      <var>0</var>,      <var>0</var> },	<i>/* 0x87 - maps to &lt;U0B95&gt;&lt;U0BCD&gt;&lt;U0BB7&gt; */</i></td></tr>
+<tr><th id="153">153</th><td>    { <var>0x0B9C</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="154">154</th><td>    { <var>0x0BB7</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="155">155</th><td>    {      <var>0</var>,      <var>0</var> }, <i>/* 0x8a - maps to &lt;U0BB8&gt; and buffers &lt;U0BCD&gt; */</i></td></tr>
+<tr><th id="156">156</th><td>    {      <var>0</var>,      <var>0</var> }, <i>/* 0x8b - maps to &lt;U0BB9&gt; and buffers &lt;U0BCD&gt; */</i></td></tr>
+<tr><th id="157">157</th><td>    {      <var>0</var>,      <var>0</var> },	<i>/* 0x8c - maps to &lt;U0B95&gt;&lt;U0BCD&gt;&lt;U0BB7&gt;&lt;U0BCD&gt; */</i></td></tr>
+<tr><th id="158">158</th><td>    { <var>0x0BE8</var>,      <var>0</var> },</td></tr>
+<tr><th id="159">159</th><td>    { <var>0x0BE9</var>,      <var>0</var> },</td></tr>
+<tr><th id="160">160</th><td>    { <var>0x0BEA</var>,      <var>0</var> },</td></tr>
+<tr><th id="161">161</th><td>    { <var>0x0BEB</var>,      <var>0</var> },</td></tr>
+<tr><th id="162">162</th><td>    { <var>0x2018</var>,      <var>0</var> },</td></tr>
+<tr><th id="163">163</th><td>    { <var>0x2019</var>,      <var>0</var> },</td></tr>
+<tr><th id="164">164</th><td>    { <var>0x201C</var>,      <var>0</var> },</td></tr>
+<tr><th id="165">165</th><td>    { <var>0x201D</var>,      <var>0</var> },</td></tr>
+<tr><th id="166">166</th><td>    { <var>0x0BEC</var>,      <var>0</var> },</td></tr>
+<tr><th id="167">167</th><td>    { <var>0x0BED</var>,      <var>0</var> },</td></tr>
+<tr><th id="168">168</th><td>    { <var>0x0BEE</var>,      <var>0</var> },</td></tr>
+<tr><th id="169">169</th><td>    { <var>0x0BEF</var>,      <var>0</var> },</td></tr>
+<tr><th id="170">170</th><td>    { <var>0x0B99</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="171">171</th><td>    { <var>0x0B9E</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="172">172</th><td>    { <var>0x0B99</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="173">173</th><td>    { <var>0x0B9E</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="174">174</th><td>    { <var>0x0BF0</var>,      <var>0</var> },</td></tr>
+<tr><th id="175">175</th><td>    { <var>0x0BF1</var>,      <var>0</var> },</td></tr>
+<tr><th id="176">176</th><td>    { <var>0x0BF2</var>,      <var>0</var> },</td></tr>
+<tr><th id="177">177</th><td>    {      <var>0</var>,      <var>0</var> },	<i>/* 0xa0 - unmapped */</i></td></tr>
+<tr><th id="178">178</th><td>    { <var>0x0BBE</var>,      <var>0</var> },</td></tr>
+<tr><th id="179">179</th><td>    { <var>0x0BBF</var>,      <var>0</var> },</td></tr>
+<tr><th id="180">180</th><td>    { <var>0x0BC0</var>,      <var>0</var> },</td></tr>
+<tr><th id="181">181</th><td>    { <var>0x0BC1</var>,      <var>0</var> },</td></tr>
+<tr><th id="182">182</th><td>    { <var>0x0BC2</var>,      <var>0</var> },</td></tr>
+<tr><th id="183">183</th><td>    {      <var>0</var>,      <var>0</var> }, <i>/* 0xa6 - buffers &lt;U0BC6&gt; */</i></td></tr>
+<tr><th id="184">184</th><td>    {      <var>0</var>,      <var>0</var> }, <i>/* 0xa7 - buffers &lt;U0BC7&gt; */</i></td></tr>
+<tr><th id="185">185</th><td>    {      <var>0</var>,      <var>0</var> }, <i>/* 0xa8 - buffers &lt;U0BC8&gt; */</i></td></tr>
+<tr><th id="186">186</th><td>    { <var>0x00A9</var>,      <var>0</var> },</td></tr>
+<tr><th id="187">187</th><td>    { <var>0x0BD7</var>,      <var>0</var> },</td></tr>
+<tr><th id="188">188</th><td>    { <var>0x0B85</var>,      <var>0</var> },</td></tr>
+<tr><th id="189">189</th><td>    { <var>0x0B86</var>,      <var>0</var> },</td></tr>
+<tr><th id="190">190</th><td>    { <var>0x0B87</var>,      <var>0</var> },</td></tr>
+<tr><th id="191">191</th><td>    { <var>0x0B88</var>,      <var>0</var> },</td></tr>
+<tr><th id="192">192</th><td>    { <var>0x0B89</var>,      <var>0</var> },</td></tr>
+<tr><th id="193">193</th><td>    { <var>0x0B8A</var>,      <var>0</var> },</td></tr>
+<tr><th id="194">194</th><td>    { <var>0x0B8E</var>,      <var>0</var> },</td></tr>
+<tr><th id="195">195</th><td>    { <var>0x0B8F</var>,      <var>0</var> },</td></tr>
+<tr><th id="196">196</th><td>    { <var>0x0B90</var>,      <var>0</var> },</td></tr>
+<tr><th id="197">197</th><td>    { <var>0x0B92</var>,      <var>0</var> },</td></tr>
+<tr><th id="198">198</th><td>    { <var>0x0B93</var>,      <var>0</var> },</td></tr>
+<tr><th id="199">199</th><td>    { <var>0x0B94</var>,      <var>0</var> },</td></tr>
+<tr><th id="200">200</th><td>    { <var>0x0B83</var>,      <var>0</var> },</td></tr>
+<tr><th id="201">201</th><td>    { <var>0x0B95</var>,      <var>0</var> },</td></tr>
+<tr><th id="202">202</th><td>    { <var>0x0B99</var>,      <var>0</var> },</td></tr>
+<tr><th id="203">203</th><td>    { <var>0x0B9A</var>,      <var>0</var> },</td></tr>
+<tr><th id="204">204</th><td>    { <var>0x0B9E</var>,      <var>0</var> },</td></tr>
+<tr><th id="205">205</th><td>    { <var>0x0B9F</var>,      <var>0</var> },</td></tr>
+<tr><th id="206">206</th><td>    { <var>0x0BA3</var>,      <var>0</var> },</td></tr>
+<tr><th id="207">207</th><td>    { <var>0x0BA4</var>,      <var>0</var> },</td></tr>
+<tr><th id="208">208</th><td>    { <var>0x0BA8</var>,      <var>0</var> },</td></tr>
+<tr><th id="209">209</th><td>    { <var>0x0BAA</var>,      <var>0</var> },</td></tr>
+<tr><th id="210">210</th><td>    { <var>0x0BAE</var>,      <var>0</var> },</td></tr>
+<tr><th id="211">211</th><td>    { <var>0x0BAF</var>,      <var>0</var> },</td></tr>
+<tr><th id="212">212</th><td>    { <var>0x0BB0</var>,      <var>0</var> },</td></tr>
+<tr><th id="213">213</th><td>    { <var>0x0BB2</var>,      <var>0</var> },</td></tr>
+<tr><th id="214">214</th><td>    { <var>0x0BB5</var>,      <var>0</var> },</td></tr>
+<tr><th id="215">215</th><td>    { <var>0x0BB4</var>,      <var>0</var> },</td></tr>
+<tr><th id="216">216</th><td>    { <var>0x0BB3</var>,      <var>0</var> },</td></tr>
+<tr><th id="217">217</th><td>    { <var>0x0BB1</var>,      <var>0</var> },</td></tr>
+<tr><th id="218">218</th><td>    { <var>0x0BA9</var>,      <var>0</var> },</td></tr>
+<tr><th id="219">219</th><td>    { <var>0x0B9F</var>, <var>0x0BBF</var> },</td></tr>
+<tr><th id="220">220</th><td>    { <var>0x0B9F</var>, <var>0x0BC0</var> },</td></tr>
+<tr><th id="221">221</th><td>    { <var>0x0B95</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="222">222</th><td>    { <var>0x0B9A</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="223">223</th><td>    { <var>0x0B9F</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="224">224</th><td>    { <var>0x0BA3</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="225">225</th><td>    { <var>0x0BA4</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="226">226</th><td>    { <var>0x0BA8</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="227">227</th><td>    { <var>0x0BAA</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="228">228</th><td>    { <var>0x0BAE</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="229">229</th><td>    { <var>0x0BAF</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="230">230</th><td>    { <var>0x0BB0</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="231">231</th><td>    { <var>0x0BB2</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="232">232</th><td>    { <var>0x0BB5</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="233">233</th><td>    { <var>0x0BB4</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="234">234</th><td>    { <var>0x0BB3</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="235">235</th><td>    { <var>0x0BB1</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="236">236</th><td>    { <var>0x0BA9</var>, <var>0x0BC1</var> },</td></tr>
+<tr><th id="237">237</th><td>    { <var>0x0B95</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="238">238</th><td>    { <var>0x0B9A</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="239">239</th><td>    { <var>0x0B9F</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="240">240</th><td>    { <var>0x0BA3</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="241">241</th><td>    { <var>0x0BA4</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="242">242</th><td>    { <var>0x0BA8</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="243">243</th><td>    { <var>0x0BAA</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="244">244</th><td>    { <var>0x0BAE</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="245">245</th><td>    { <var>0x0BAF</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="246">246</th><td>    { <var>0x0BB0</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="247">247</th><td>    { <var>0x0BB2</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="248">248</th><td>    { <var>0x0BB5</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="249">249</th><td>    { <var>0x0BB4</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="250">250</th><td>    { <var>0x0BB3</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="251">251</th><td>    { <var>0x0BB1</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="252">252</th><td>    { <var>0x0BA9</var>, <var>0x0BC2</var> },</td></tr>
+<tr><th id="253">253</th><td>    { <var>0x0B95</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="254">254</th><td>    { <var>0x0B99</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="255">255</th><td>    { <var>0x0B9A</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="256">256</th><td>    { <var>0x0B9E</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="257">257</th><td>    { <var>0x0B9F</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="258">258</th><td>    { <var>0x0BA3</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="259">259</th><td>    { <var>0x0BA4</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="260">260</th><td>    { <var>0x0BA8</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="261">261</th><td>    { <var>0x0BAA</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="262">262</th><td>    { <var>0x0BAE</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="263">263</th><td>    { <var>0x0BAF</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="264">264</th><td>    { <var>0x0BB0</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="265">265</th><td>    { <var>0x0BB2</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="266">266</th><td>    { <var>0x0BB5</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="267">267</th><td>    { <var>0x0BB4</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="268">268</th><td>    { <var>0x0BB3</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="269">269</th><td>    { <var>0x0BB1</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="270">270</th><td>    { <var>0x0BA9</var>, <var>0x0BCD</var> },</td></tr>
+<tr><th id="271">271</th><td>    { <var>0x0B87</var>,      <var>0</var> },</td></tr>
+<tr><th id="272">272</th><td>    {      <var>0</var>,      <var>0</var> }	<i>/* 0xff - unmapped */</i></td></tr>
+<tr><th id="273">273</th><td>  };</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="tu decl def" id="tscii_next_state" title='tscii_next_state' data-type='const uint32_t [6]' data-ref="tscii_next_state" data-ref-filename="tscii_next_state">tscii_next_state</dfn>[<var>6</var>] =</td></tr>
+<tr><th id="276">276</th><td>  {</td></tr>
+<tr><th id="277">277</th><td>    <i>/* 0 means no more pending Unicode characters.  */</i></td></tr>
+<tr><th id="278">278</th><td>    <var>0</var>,</td></tr>
+<tr><th id="279">279</th><td>    <i>/* 1 means &lt;U0BB7&gt;.  */</i></td></tr>
+<tr><th id="280">280</th><td>    (<var>0x0BB7</var> &lt;&lt; <var>8</var>),</td></tr>
+<tr><th id="281">281</th><td>    <i>/* 2 means &lt;U0BC0&gt;.  */</i></td></tr>
+<tr><th id="282">282</th><td>    (<var>0x0BC0</var> &lt;&lt; <var>8</var>),</td></tr>
+<tr><th id="283">283</th><td>    <i>/* 3 means &lt;U0BCD&gt;.  */</i></td></tr>
+<tr><th id="284">284</th><td>    (<var>0x0BCD</var> &lt;&lt; <var>8</var>),</td></tr>
+<tr><th id="285">285</th><td>    <i>/* 4 means &lt;U0BB0&gt;&lt;U0BC0&gt;.  */</i></td></tr>
+<tr><th id="286">286</th><td>    (<var>0x0BB0</var> &lt;&lt; <var>8</var>) + (<var>2</var> &lt;&lt; <var>4</var>),</td></tr>
+<tr><th id="287">287</th><td>    <i>/* 5 means &lt;U0BB7&gt;&lt;U0BCD&gt;.  */</i></td></tr>
+<tr><th id="288">288</th><td>    (<var>0x0BB7</var> &lt;&lt; <var>8</var>) + (<var>3</var> &lt;&lt; <var>4</var>)</td></tr>
+<tr><th id="289">289</th><td>  };</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	FROM_LOOP_MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="292">292</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_INPUT" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</dfn>	FROM_LOOP_MAX_NEEDED_FROM</u></td></tr>
+<tr><th id="293">293</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	FROM_LOOP_MIN_NEEDED_TO</u></td></tr>
+<tr><th id="294">294</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_OUTPUT" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</dfn>	FROM_LOOP_MAX_NEEDED_TO</u></td></tr>
+<tr><th id="295">295</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="296">296</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="297">297</th><td><u>  {									      \</u></td></tr>
+<tr><th id="298">298</th><td><u>    uint32_t ch = *inptr;						      \</u></td></tr>
+<tr><th id="299">299</th><td><u>									      \</u></td></tr>
+<tr><th id="300">300</th><td><u>    if ((*statep &gt;&gt; 8) != 0)						      \</u></td></tr>
+<tr><th id="301">301</th><td><u>      {									      \</u></td></tr>
+<tr><th id="302">302</th><td><u>	/* Attempt to combine the last character with this one.  */	      \</u></td></tr>
+<tr><th id="303">303</th><td><u>	uint32_t last = *statep &gt;&gt; 8;					      \</u></td></tr>
+<tr><th id="304">304</th><td><u>									      \</u></td></tr>
+<tr><th id="305">305</th><td><u>	if (last == 0x0BCD &amp;&amp; (*statep &amp; (1 &lt;&lt; 3)))			      \</u></td></tr>
+<tr><th id="306">306</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="307">307</th><td><u>	    if (ch == 0xa4 || ch == 0xa5)				      \</u></td></tr>
+<tr><th id="308">308</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="309">309</th><td><u>		ch += 0xb1d;						      \</u></td></tr>
+<tr><th id="310">310</th><td><u>		/* Now ch = 0x0BC1 or ch = 0x0BC2.  */			      \</u></td></tr>
+<tr><th id="311">311</th><td><u>		put32 (outptr, ch);					      \</u></td></tr>
+<tr><th id="312">312</th><td><u>		outptr += 4;						      \</u></td></tr>
+<tr><th id="313">313</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="314">314</th><td><u>		inptr++;						      \</u></td></tr>
+<tr><th id="315">315</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="316">316</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="317">317</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="318">318</th><td><u>	else if (last &gt;= 0x0BC6 &amp;&amp; last &lt;= 0x0BC8)			      \</u></td></tr>
+<tr><th id="319">319</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="320">320</th><td><u>	    if ((last == 0x0BC6 &amp;&amp; ch == 0xa1)				      \</u></td></tr>
+<tr><th id="321">321</th><td><u>		|| (last == 0x0BC7 &amp;&amp; (ch == 0xa1 || ch == 0xaa)))	      \</u></td></tr>
+<tr><th id="322">322</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="323">323</th><td><u>		ch = last + 4 + (ch != 0xa1);				      \</u></td></tr>
+<tr><th id="324">324</th><td><u>		/* Now ch = 0x0BCA or ch = 0x0BCB or ch = 0x0BCC.  */	      \</u></td></tr>
+<tr><th id="325">325</th><td><u>		put32 (outptr, ch);					      \</u></td></tr>
+<tr><th id="326">326</th><td><u>		outptr += 4;						      \</u></td></tr>
+<tr><th id="327">327</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="328">328</th><td><u>		inptr++;						      \</u></td></tr>
+<tr><th id="329">329</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="330">330</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="331">331</th><td><u>	    if ((ch &gt;= 0xb8 &amp;&amp; ch &lt;= 0xc9) &amp;&amp; (*statep &amp; (1 &lt;&lt; 3)) == 0)      \</u></td></tr>
+<tr><th id="332">332</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="333">333</th><td><u>		ch = tscii_to_ucs4[ch - 0x80][0];			      \</u></td></tr>
+<tr><th id="334">334</th><td><u>		put32 (outptr, ch);					      \</u></td></tr>
+<tr><th id="335">335</th><td><u>		outptr += 4;						      \</u></td></tr>
+<tr><th id="336">336</th><td><u>		*statep |= 1 &lt;&lt; 3;					      \</u></td></tr>
+<tr><th id="337">337</th><td><u>		inptr++;						      \</u></td></tr>
+<tr><th id="338">338</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="339">339</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="340">340</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="341">341</th><td><u>									      \</u></td></tr>
+<tr><th id="342">342</th><td><u>	do								      \</u></td></tr>
+<tr><th id="343">343</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="344">344</th><td><u>	    /* Output the buffered character.  */			      \</u></td></tr>
+<tr><th id="345">345</th><td><u>	    put32 (outptr, last);					      \</u></td></tr>
+<tr><th id="346">346</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="347">347</th><td><u>	    /* Retrieve the successor state.  */			      \</u></td></tr>
+<tr><th id="348">348</th><td><u>	    *statep = tscii_next_state[(*statep &gt;&gt; 4) &amp; 0x0f];		      \</u></td></tr>
+<tr><th id="349">349</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="350">350</th><td><u>	while (*statep != 0 &amp;&amp; __builtin_expect (outptr + 4 &lt;= outend, 1));   \</u></td></tr>
+<tr><th id="351">351</th><td><u>									      \</u></td></tr>
+<tr><th id="352">352</th><td><u>	if (*statep != 0)						      \</u></td></tr>
+<tr><th id="353">353</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="354">354</th><td><u>	    /* We don't have enough room in the output buffer.		      \</u></td></tr>
+<tr><th id="355">355</th><td><u>	       Tell the caller why we terminate the loop.  */		      \</u></td></tr>
+<tr><th id="356">356</th><td><u>	    result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="357">357</th><td><u>	    break;							      \</u></td></tr>
+<tr><th id="358">358</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="359">359</th><td><u>									      \</u></td></tr>
+<tr><th id="360">360</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="361">361</th><td><u>      }									      \</u></td></tr>
+<tr><th id="362">362</th><td><u>									      \</u></td></tr>
+<tr><th id="363">363</th><td><u>    if (ch &lt; 0x80)							      \</u></td></tr>
+<tr><th id="364">364</th><td><u>      {									      \</u></td></tr>
+<tr><th id="365">365</th><td><u>	/* Plain ASCII character.  */					      \</u></td></tr>
+<tr><th id="366">366</th><td><u>	put32 (outptr, ch);						      \</u></td></tr>
+<tr><th id="367">367</th><td><u>	outptr += 4;							      \</u></td></tr>
+<tr><th id="368">368</th><td><u>      }									      \</u></td></tr>
+<tr><th id="369">369</th><td><u>    else								      \</u></td></tr>
+<tr><th id="370">370</th><td><u>      {									      \</u></td></tr>
+<tr><th id="371">371</th><td><u>	/* Tamil character.  */						      \</u></td></tr>
+<tr><th id="372">372</th><td><u>	uint32_t u1 = tscii_to_ucs4[ch - 0x80][0];			      \</u></td></tr>
+<tr><th id="373">373</th><td><u>									      \</u></td></tr>
+<tr><th id="374">374</th><td><u>	if (u1 != 0)							      \</u></td></tr>
+<tr><th id="375">375</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="376">376</th><td><u>	    uint32_t u2 = tscii_to_ucs4[ch - 0x80][1];			      \</u></td></tr>
+<tr><th id="377">377</th><td><u>									      \</u></td></tr>
+<tr><th id="378">378</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="379">379</th><td><u>									      \</u></td></tr>
+<tr><th id="380">380</th><td><u>	    put32 (outptr, u1);						      \</u></td></tr>
+<tr><th id="381">381</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="382">382</th><td><u>									      \</u></td></tr>
+<tr><th id="383">383</th><td><u>	    if (u2 != 0)						      \</u></td></tr>
+<tr><th id="384">384</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="385">385</th><td><u>		/* See whether we have room for two characters.  Otherwise    \</u></td></tr>
+<tr><th id="386">386</th><td><u>		   store only the first character now, and put the second     \</u></td></tr>
+<tr><th id="387">387</th><td><u>		   one into the queue.  */				      \</u></td></tr>
+<tr><th id="388">388</th><td><u>		if (__glibc_unlikely (outptr + 4 &gt; outend))		      \</u></td></tr>
+<tr><th id="389">389</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="390">390</th><td><u>		    *statep = u2 &lt;&lt; 8;					      \</u></td></tr>
+<tr><th id="391">391</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="392">392</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="393">393</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="394">394</th><td><u>		put32 (outptr, u2);					      \</u></td></tr>
+<tr><th id="395">395</th><td><u>		outptr += 4;						      \</u></td></tr>
+<tr><th id="396">396</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="397">397</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="398">398</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="399">399</th><td><u>	/* Special handling of a few Tamil characters.  */		      \</u></td></tr>
+<tr><th id="400">400</th><td><u>	else if (ch == 0xa6 || ch == 0xa7 || ch == 0xa8)		      \</u></td></tr>
+<tr><th id="401">401</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="402">402</th><td><u>	    ch += 0x0b20;						      \</u></td></tr>
+<tr><th id="403">403</th><td><u>	    /* Now ch = 0x0BC6 or ch = 0x0BC7 or ch = 0x0BC8.  */	      \</u></td></tr>
+<tr><th id="404">404</th><td><u>	    *statep = ch &lt;&lt; 8;						      \</u></td></tr>
+<tr><th id="405">405</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="406">406</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="407">407</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="408">408</th><td><u>	else if (ch == 0x8a || ch == 0x8b)				      \</u></td></tr>
+<tr><th id="409">409</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="410">410</th><td><u>	    ch += 0x0b2e;						      \</u></td></tr>
+<tr><th id="411">411</th><td><u>	    /* Now ch = 0x0BB8 or ch = 0x0BB9.  */			      \</u></td></tr>
+<tr><th id="412">412</th><td><u>	    put32 (outptr, ch);						      \</u></td></tr>
+<tr><th id="413">413</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="414">414</th><td><u>	    *statep = (0x0BCD &lt;&lt; 8) + (1 &lt;&lt; 3);				      \</u></td></tr>
+<tr><th id="415">415</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="416">416</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="417">417</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="418">418</th><td><u>	else if (ch == 0x82)						      \</u></td></tr>
+<tr><th id="419">419</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="420">420</th><td><u>	    /* Output &lt;U0BB8&gt;&lt;U0BCD&gt;&lt;U0BB0&gt;&lt;U0BC0&gt;, if we have room for	      \</u></td></tr>
+<tr><th id="421">421</th><td><u>	       four characters.  */					      \</u></td></tr>
+<tr><th id="422">422</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="423">423</th><td><u>	    put32 (outptr, 0x0BB8);					      \</u></td></tr>
+<tr><th id="424">424</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="425">425</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="426">426</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="427">427</th><td><u>		*statep = (0x0BCD &lt;&lt; 8) + (4 &lt;&lt; 4);			      \</u></td></tr>
+<tr><th id="428">428</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="429">429</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="430">430</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="431">431</th><td><u>	    put32 (outptr, 0x0BCD);					      \</u></td></tr>
+<tr><th id="432">432</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="433">433</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="434">434</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="435">435</th><td><u>		*statep = (0x0BB0 &lt;&lt; 8) + (2 &lt;&lt; 4);			      \</u></td></tr>
+<tr><th id="436">436</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="437">437</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="438">438</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="439">439</th><td><u>	    put32 (outptr, 0x0BB0);					      \</u></td></tr>
+<tr><th id="440">440</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="441">441</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="442">442</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="443">443</th><td><u>		*statep = (0x0BC0 &lt;&lt; 8);				      \</u></td></tr>
+<tr><th id="444">444</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="445">445</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="446">446</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="447">447</th><td><u>	    put32 (outptr, 0x0BC0);					      \</u></td></tr>
+<tr><th id="448">448</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="449">449</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="450">450</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="451">451</th><td><u>	else if (ch == 0x87)						      \</u></td></tr>
+<tr><th id="452">452</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="453">453</th><td><u>	    /* Output &lt;U0B95&gt;&lt;U0BCD&gt;&lt;U0BB7&gt;, if we have room for	      \</u></td></tr>
+<tr><th id="454">454</th><td><u>	       three characters.  */					      \</u></td></tr>
+<tr><th id="455">455</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="456">456</th><td><u>	    put32 (outptr, 0x0B95);					      \</u></td></tr>
+<tr><th id="457">457</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="458">458</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="459">459</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="460">460</th><td><u>		*statep = (0x0BCD &lt;&lt; 8) + (1 &lt;&lt; 4);			      \</u></td></tr>
+<tr><th id="461">461</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="462">462</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="463">463</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="464">464</th><td><u>	    put32 (outptr, 0x0BCD);					      \</u></td></tr>
+<tr><th id="465">465</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="466">466</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="467">467</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="468">468</th><td><u>		*statep = (0x0BB7 &lt;&lt; 8);				      \</u></td></tr>
+<tr><th id="469">469</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="470">470</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="471">471</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="472">472</th><td><u>	    put32 (outptr, 0x0BB7);					      \</u></td></tr>
+<tr><th id="473">473</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="474">474</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="475">475</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="476">476</th><td><u>	else if (ch == 0x8c)						      \</u></td></tr>
+<tr><th id="477">477</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="478">478</th><td><u>	    /* Output &lt;U0B95&gt;&lt;U0BCD&gt;&lt;U0BB7&gt;&lt;U0BCD&gt;, if we have room for	      \</u></td></tr>
+<tr><th id="479">479</th><td><u>	       four characters.  */					      \</u></td></tr>
+<tr><th id="480">480</th><td><u>	    inptr++;							      \</u></td></tr>
+<tr><th id="481">481</th><td><u>	    put32 (outptr, 0x0B95);					      \</u></td></tr>
+<tr><th id="482">482</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="483">483</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="484">484</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="485">485</th><td><u>		*statep = (0x0BCD &lt;&lt; 8) + (5 &lt;&lt; 4);			      \</u></td></tr>
+<tr><th id="486">486</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="487">487</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="488">488</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="489">489</th><td><u>	    put32 (outptr, 0x0BCD);					      \</u></td></tr>
+<tr><th id="490">490</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="491">491</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="492">492</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="493">493</th><td><u>		*statep = (0x0BB7 &lt;&lt; 8) + (3 &lt;&lt; 4);			      \</u></td></tr>
+<tr><th id="494">494</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="495">495</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="496">496</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="497">497</th><td><u>	    put32 (outptr, 0x0BB7);					      \</u></td></tr>
+<tr><th id="498">498</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="499">499</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="500">500</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="501">501</th><td><u>		*statep = (0x0BCD &lt;&lt; 8);				      \</u></td></tr>
+<tr><th id="502">502</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="503">503</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="504">504</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="505">505</th><td><u>	    put32 (outptr, 0x0BCD);					      \</u></td></tr>
+<tr><th id="506">506</th><td><u>	    outptr += 4;						      \</u></td></tr>
+<tr><th id="507">507</th><td><u>	    continue;							      \</u></td></tr>
+<tr><th id="508">508</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="509">509</th><td><u>	else								      \</u></td></tr>
+<tr><th id="510">510</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="511">511</th><td><u>	    /* This is illegal.  */					      \</u></td></tr>
+<tr><th id="512">512</th><td><u>	    STANDARD_FROM_LOOP_ERR_HANDLER (1);				      \</u></td></tr>
+<tr><th id="513">513</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="514">514</th><td><u>      }									      \</u></td></tr>
+<tr><th id="515">515</th><td><u>									      \</u></td></tr>
+<tr><th id="516">516</th><td><u>    /* Now that we wrote the output increment the input pointer.  */	      \</u></td></tr>
+<tr><th id="517">517</th><td><u>    inptr++;								      \</u></td></tr>
+<tr><th id="518">518</th><td><u>  }</u></td></tr>
+<tr><th id="519">519</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="520">520</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_DECLS" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</dfn>	, int *statep</u></td></tr>
+<tr><th id="521">521</th><td><u>#include <a href="../iconv/loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td><i  data-doc="ucs4_to_tscii">/* Next, define the other direction, from UCS-4 to TSCII.  */</i></td></tr>
+<tr><th id="525">525</th><td></td></tr>
+<tr><th id="526">526</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint8_t" title='uint8_t' data-type='unsigned char' data-ref="uint8_t" data-ref-filename="uint8_t">uint8_t</a> <dfn class="tu decl def" id="ucs4_to_tscii" title='ucs4_to_tscii' data-type='const uint8_t [128]' data-ref="ucs4_to_tscii" data-ref-filename="ucs4_to_tscii">ucs4_to_tscii</dfn>[<var>128</var>] =</td></tr>
+<tr><th id="527">527</th><td>  {</td></tr>
+<tr><th id="528">528</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xb7</var>,    <var>0</var>, <var>0xab</var>, <var>0xac</var>, <var>0xfe</var>, <i>/* 0x0B80..0x0B87 */</i></td></tr>
+<tr><th id="529">529</th><td>    <var>0xae</var>, <var>0xaf</var>, <var>0xb0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xb1</var>, <var>0xb2</var>, <i>/* 0x0B88..0x0B8F */</i></td></tr>
+<tr><th id="530">530</th><td>    <var>0xb3</var>,    <var>0</var>, <var>0xb4</var>, <var>0xb5</var>, <var>0xb6</var>, <var>0xb8</var>,    <var>0</var>,    <var>0</var>, <i>/* 0x0B90..0x0B97 */</i></td></tr>
+<tr><th id="531">531</th><td>       <var>0</var>, <var>0xb9</var>, <var>0xba</var>,    <var>0</var>, <var>0x83</var>,    <var>0</var>, <var>0xbb</var>, <var>0xbc</var>, <i>/* 0x0B98..0x0B9F */</i></td></tr>
+<tr><th id="532">532</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xbd</var>, <var>0xbe</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <i>/* 0x0BA0..0x0BA7 */</i></td></tr>
+<tr><th id="533">533</th><td>    <var>0xbf</var>, <var>0xc9</var>, <var>0xc0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xc1</var>, <var>0xc2</var>, <i>/* 0x0BA8..0x0BAF */</i></td></tr>
+<tr><th id="534">534</th><td>    <var>0xc3</var>, <var>0xc8</var>, <var>0xc4</var>, <var>0xc7</var>, <var>0xc6</var>, <var>0xc5</var>,    <var>0</var>, <var>0x84</var>, <i>/* 0x0BB0..0x0BB7 */</i></td></tr>
+<tr><th id="535">535</th><td>    <var>0x85</var>, <var>0x86</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xa1</var>, <var>0xa2</var>, <i>/* 0x0BB8..0x0BBF */</i></td></tr>
+<tr><th id="536">536</th><td>    <var>0xa3</var>, <var>0xa4</var>, <var>0xa5</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xa6</var>, <var>0xa7</var>, <i>/* 0x0BC0..0x0BC7 */</i></td></tr>
+<tr><th id="537">537</th><td>    <var>0xa8</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <i>/* 0x0BC8..0x0BCF */</i></td></tr>
+<tr><th id="538">538</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0xaa</var>, <i>/* 0x0BD0..0x0BD7 */</i></td></tr>
+<tr><th id="539">539</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <i>/* 0x0BD8..0x0BDF */</i></td></tr>
+<tr><th id="540">540</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <var>0x80</var>, <var>0x81</var>, <i>/* 0x0BE0..0x0BE7 */</i></td></tr>
+<tr><th id="541">541</th><td>    <var>0x8d</var>, <var>0x8e</var>, <var>0x8f</var>, <var>0x90</var>, <var>0x95</var>, <var>0x96</var>, <var>0x97</var>, <var>0x98</var>, <i>/* 0x0BE8..0x0BEF */</i></td></tr>
+<tr><th id="542">542</th><td>    <var>0x9d</var>, <var>0x9e</var>, <var>0x9f</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>, <i>/* 0x0BF0..0x0BF7 */</i></td></tr>
+<tr><th id="543">543</th><td>       <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>,    <var>0</var>  <i>/* 0x0BF8..0x0BFF */</i></td></tr>
+<tr><th id="544">544</th><td>  };</td></tr>
+<tr><th id="545">545</th><td></td></tr>
+<tr><th id="546">546</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint8_t" title='uint8_t' data-type='unsigned char' data-ref="uint8_t" data-ref-filename="uint8_t">uint8_t</a> <dfn class="tu decl def" id="consonant_with_u" title='consonant_with_u' data-type='const uint8_t [18]' data-ref="consonant_with_u" data-ref-filename="consonant_with_u">consonant_with_u</dfn>[<var>18</var>] =</td></tr>
+<tr><th id="547">547</th><td>  {</td></tr>
+<tr><th id="548">548</th><td>    <var>0xcc</var>, <var>0x99</var>, <var>0xcd</var>, <var>0x9a</var>, <var>0xce</var>, <var>0xcf</var>, <var>0xd0</var>, <var>0xd1</var>, <var>0xd2</var>,</td></tr>
+<tr><th id="549">549</th><td>    <var>0xd3</var>, <var>0xd4</var>, <var>0xd5</var>, <var>0xd6</var>, <var>0xd7</var>, <var>0xd8</var>, <var>0xd9</var>, <var>0xda</var>, <var>0xdb</var></td></tr>
+<tr><th id="550">550</th><td>  };</td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint8_t" title='uint8_t' data-type='unsigned char' data-ref="uint8_t" data-ref-filename="uint8_t">uint8_t</a> <dfn class="tu decl def" id="consonant_with_uu" title='consonant_with_uu' data-type='const uint8_t [18]' data-ref="consonant_with_uu" data-ref-filename="consonant_with_uu">consonant_with_uu</dfn>[<var>18</var>] =</td></tr>
+<tr><th id="553">553</th><td>  {</td></tr>
+<tr><th id="554">554</th><td>    <var>0xdc</var>, <var>0x9b</var>, <var>0xdd</var>, <var>0x9c</var>, <var>0xde</var>, <var>0xdf</var>, <var>0xe0</var>, <var>0xe1</var>, <var>0xe2</var>,</td></tr>
+<tr><th id="555">555</th><td>    <var>0xe3</var>, <var>0xe4</var>, <var>0xe5</var>, <var>0xe6</var>, <var>0xe7</var>, <var>0xe8</var>, <var>0xe9</var>, <var>0xea</var>, <var>0xeb</var></td></tr>
+<tr><th id="556">556</th><td>  };</td></tr>
+<tr><th id="557">557</th><td></td></tr>
+<tr><th id="558">558</th><td><em>static</em> <em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint8_t" title='uint8_t' data-type='unsigned char' data-ref="uint8_t" data-ref-filename="uint8_t">uint8_t</a> <dfn class="tu decl def" id="consonant_with_virama" title='consonant_with_virama' data-type='const uint8_t [18]' data-ref="consonant_with_virama" data-ref-filename="consonant_with_virama">consonant_with_virama</dfn>[<var>18</var>] =</td></tr>
+<tr><th id="559">559</th><td>  {</td></tr>
+<tr><th id="560">560</th><td>    <var>0xec</var>, <var>0xed</var>, <var>0xee</var>, <var>0xef</var>, <var>0xf0</var>, <var>0xf1</var>, <var>0xf2</var>, <var>0xf3</var>, <var>0xf4</var>,</td></tr>
+<tr><th id="561">561</th><td>    <var>0xf5</var>, <var>0xf6</var>, <var>0xf7</var>, <var>0xf8</var>, <var>0xf9</var>, <var>0xfa</var>, <var>0xfb</var>, <var>0xfc</var>, <var>0xfd</var></td></tr>
+<tr><th id="562">562</th><td>  };</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	TO_LOOP_MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="565">565</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_INPUT" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</dfn>	TO_LOOP_MAX_NEEDED_FROM</u></td></tr>
+<tr><th id="566">566</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	TO_LOOP_MIN_NEEDED_TO</u></td></tr>
+<tr><th id="567">567</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_OUTPUT" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</dfn>	TO_LOOP_MAX_NEEDED_TO</u></td></tr>
+<tr><th id="568">568</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			TO_LOOP</u></td></tr>
+<tr><th id="569">569</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="570">570</th><td><u>  {									      \</u></td></tr>
+<tr><th id="571">571</th><td><u>    uint32_t ch = get32 (inptr);					      \</u></td></tr>
+<tr><th id="572">572</th><td><u>									      \</u></td></tr>
+<tr><th id="573">573</th><td><u>    if ((*statep &gt;&gt; 3) != 0)						      \</u></td></tr>
+<tr><th id="574">574</th><td><u>      {									      \</u></td></tr>
+<tr><th id="575">575</th><td><u>	/* Attempt to combine the last character with this one.  */	      \</u></td></tr>
+<tr><th id="576">576</th><td><u>	uint32_t last = *statep &gt;&gt; 3;					      \</u></td></tr>
+<tr><th id="577">577</th><td><u>									      \</u></td></tr>
+<tr><th id="578">578</th><td><u>	if (last &gt;= 0xb8 &amp;&amp; last &lt;= 0xc9)				      \</u></td></tr>
+<tr><th id="579">579</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="580">580</th><td><u>	    if (ch == 0x0BC1)						      \</u></td></tr>
+<tr><th id="581">581</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="582">582</th><td><u>		*outptr++ = consonant_with_u[last - 0xb8];		      \</u></td></tr>
+<tr><th id="583">583</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="584">584</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="585">585</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="586">586</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="587">587</th><td><u>	    if (ch == 0x0BC2)						      \</u></td></tr>
+<tr><th id="588">588</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="589">589</th><td><u>		*outptr++ = consonant_with_uu[last - 0xb8];		      \</u></td></tr>
+<tr><th id="590">590</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="591">591</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="592">592</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="593">593</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="594">594</th><td><u>	    if (ch == 0x0BC6)						      \</u></td></tr>
+<tr><th id="595">595</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="596">596</th><td><u>		if (__glibc_likely (outptr + 2 &lt;= outend))		      \</u></td></tr>
+<tr><th id="597">597</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="598">598</th><td><u>		    *outptr++ = 0xa6;					      \</u></td></tr>
+<tr><th id="599">599</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="600">600</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="601">601</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="602">602</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="603">603</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="604">604</th><td><u>		else							      \</u></td></tr>
+<tr><th id="605">605</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="606">606</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="607">607</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="608">608</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="609">609</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="610">610</th><td><u>	    if (ch == 0x0BC7)						      \</u></td></tr>
+<tr><th id="611">611</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="612">612</th><td><u>		if (__glibc_likely (outptr + 2 &lt;= outend))		      \</u></td></tr>
+<tr><th id="613">613</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="614">614</th><td><u>		    *outptr++ = 0xa7;					      \</u></td></tr>
+<tr><th id="615">615</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="616">616</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="617">617</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="618">618</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="619">619</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="620">620</th><td><u>		else							      \</u></td></tr>
+<tr><th id="621">621</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="622">622</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="623">623</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="624">624</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="625">625</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="626">626</th><td><u>	    if (ch == 0x0BC8)						      \</u></td></tr>
+<tr><th id="627">627</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="628">628</th><td><u>		if (__glibc_likely (outptr + 2 &lt;= outend))		      \</u></td></tr>
+<tr><th id="629">629</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="630">630</th><td><u>		    *outptr++ = 0xa8;					      \</u></td></tr>
+<tr><th id="631">631</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="632">632</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="633">633</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="634">634</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="635">635</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="636">636</th><td><u>		else							      \</u></td></tr>
+<tr><th id="637">637</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="638">638</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="639">639</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="640">640</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="641">641</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="642">642</th><td><u>	    if (ch == 0x0BCA)						      \</u></td></tr>
+<tr><th id="643">643</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="644">644</th><td><u>		if (__glibc_likely (outptr + 3 &lt;= outend))		      \</u></td></tr>
+<tr><th id="645">645</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="646">646</th><td><u>		    *outptr++ = 0xa6;					      \</u></td></tr>
+<tr><th id="647">647</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="648">648</th><td><u>		    *outptr++ = 0xa1;					      \</u></td></tr>
+<tr><th id="649">649</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="650">650</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="651">651</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="652">652</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="653">653</th><td><u>		else							      \</u></td></tr>
+<tr><th id="654">654</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="655">655</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="656">656</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="657">657</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="658">658</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="659">659</th><td><u>	    if (ch == 0x0BCB)						      \</u></td></tr>
+<tr><th id="660">660</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="661">661</th><td><u>		if (__glibc_likely (outptr + 3 &lt;= outend))		      \</u></td></tr>
+<tr><th id="662">662</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="663">663</th><td><u>		    *outptr++ = 0xa7;					      \</u></td></tr>
+<tr><th id="664">664</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="665">665</th><td><u>		    *outptr++ = 0xa1;					      \</u></td></tr>
+<tr><th id="666">666</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="667">667</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="668">668</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="669">669</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="670">670</th><td><u>		else							      \</u></td></tr>
+<tr><th id="671">671</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="672">672</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="673">673</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="674">674</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="675">675</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="676">676</th><td><u>	    if (ch == 0x0BCC)						      \</u></td></tr>
+<tr><th id="677">677</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="678">678</th><td><u>		if (__glibc_likely (outptr + 3 &lt;= outend))		      \</u></td></tr>
+<tr><th id="679">679</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="680">680</th><td><u>		    *outptr++ = 0xa7;					      \</u></td></tr>
+<tr><th id="681">681</th><td><u>		    *outptr++ = last;					      \</u></td></tr>
+<tr><th id="682">682</th><td><u>		    *outptr++ = 0xaa;					      \</u></td></tr>
+<tr><th id="683">683</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="684">684</th><td><u>		    inptr += 4;						      \</u></td></tr>
+<tr><th id="685">685</th><td><u>		    continue;						      \</u></td></tr>
+<tr><th id="686">686</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="687">687</th><td><u>		else							      \</u></td></tr>
+<tr><th id="688">688</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="689">689</th><td><u>		    result = __GCONV_FULL_OUTPUT;			      \</u></td></tr>
+<tr><th id="690">690</th><td><u>		    break;						      \</u></td></tr>
+<tr><th id="691">691</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="692">692</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="693">693</th><td><u>	    if (ch == 0x0BCD)						      \</u></td></tr>
+<tr><th id="694">694</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="695">695</th><td><u>		if (last != 0xb8)					      \</u></td></tr>
+<tr><th id="696">696</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="697">697</th><td><u>		    *outptr++ = consonant_with_virama[last - 0xb8];	      \</u></td></tr>
+<tr><th id="698">698</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="699">699</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="700">700</th><td><u>		else							      \</u></td></tr>
+<tr><th id="701">701</th><td><u>		  *statep = 0xec &lt;&lt; 3;					      \</u></td></tr>
+<tr><th id="702">702</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="703">703</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="704">704</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="705">705</th><td><u>	    if (last == 0xbc &amp;&amp; (ch == 0x0BBF || ch == 0x0BC0))		      \</u></td></tr>
+<tr><th id="706">706</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="707">707</th><td><u>		*outptr++ = ch - 0x0af5;				      \</u></td></tr>
+<tr><th id="708">708</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="709">709</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="710">710</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="711">711</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="712">712</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="713">713</th><td><u>	else if (last &gt;= 0x83 &amp;&amp; last &lt;= 0x86)				      \</u></td></tr>
+<tr><th id="714">714</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="715">715</th><td><u>	    if (last &gt;= 0x85 &amp;&amp; (ch == 0x0BC1 || ch == 0x0BC2))		      \</u></td></tr>
+<tr><th id="716">716</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="717">717</th><td><u>		*outptr++ = last + 5;					      \</u></td></tr>
+<tr><th id="718">718</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="719">719</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="720">720</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="721">721</th><td><u>	    if (ch == 0x0BCD)						      \</u></td></tr>
+<tr><th id="722">722</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="723">723</th><td><u>		if (last != 0x85)					      \</u></td></tr>
+<tr><th id="724">724</th><td><u>		  {							      \</u></td></tr>
+<tr><th id="725">725</th><td><u>		    *outptr++ = last + 5;				      \</u></td></tr>
+<tr><th id="726">726</th><td><u>		    *statep = 0;					      \</u></td></tr>
+<tr><th id="727">727</th><td><u>		  }							      \</u></td></tr>
+<tr><th id="728">728</th><td><u>		else							      \</u></td></tr>
+<tr><th id="729">729</th><td><u>		  *statep = 0x8a &lt;&lt; 3;					      \</u></td></tr>
+<tr><th id="730">730</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="731">731</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="732">732</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="733">733</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="734">734</th><td><u>	else if (last == 0xec)						      \</u></td></tr>
+<tr><th id="735">735</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="736">736</th><td><u>	    if (ch == 0x0BB7)						      \</u></td></tr>
+<tr><th id="737">737</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="738">738</th><td><u>		*statep = 0x87 &lt;&lt; 3;					      \</u></td></tr>
+<tr><th id="739">739</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="740">740</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="741">741</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="742">742</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="743">743</th><td><u>	else if (last == 0x8a)						      \</u></td></tr>
+<tr><th id="744">744</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="745">745</th><td><u>	    if (ch == 0x0BB0)						      \</u></td></tr>
+<tr><th id="746">746</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="747">747</th><td><u>		*statep = 0xc38a &lt;&lt; 3;					      \</u></td></tr>
+<tr><th id="748">748</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="749">749</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="750">750</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="751">751</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="752">752</th><td><u>	else if (last == 0x87)						      \</u></td></tr>
+<tr><th id="753">753</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="754">754</th><td><u>	    if (ch == 0x0BCD)						      \</u></td></tr>
+<tr><th id="755">755</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="756">756</th><td><u>		*outptr++ = 0x8c;					      \</u></td></tr>
+<tr><th id="757">757</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="758">758</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="759">759</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="760">760</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="761">761</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="762">762</th><td><u>	else								      \</u></td></tr>
+<tr><th id="763">763</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="764">764</th><td><u>	    assert (last == 0xc38a);					      \</u></td></tr>
+<tr><th id="765">765</th><td><u>	    if (ch == 0x0BC0)						      \</u></td></tr>
+<tr><th id="766">766</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="767">767</th><td><u>		*outptr++ = 0x82;					      \</u></td></tr>
+<tr><th id="768">768</th><td><u>		*statep = 0;						      \</u></td></tr>
+<tr><th id="769">769</th><td><u>		inptr += 4;						      \</u></td></tr>
+<tr><th id="770">770</th><td><u>		continue;						      \</u></td></tr>
+<tr><th id="771">771</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="772">772</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="773">773</th><td><u>									      \</u></td></tr>
+<tr><th id="774">774</th><td><u>	/* Output the buffered character.  */				      \</u></td></tr>
+<tr><th id="775">775</th><td><u>	if (__glibc_unlikely (last &gt;&gt; 8))				      \</u></td></tr>
+<tr><th id="776">776</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="777">777</th><td><u>	    if (__glibc_likely (outptr + 2 &lt;= outend))			      \</u></td></tr>
+<tr><th id="778">778</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="779">779</th><td><u>		*outptr++ = last &amp; 0xff;				      \</u></td></tr>
+<tr><th id="780">780</th><td><u>		*outptr++ = (last &gt;&gt; 8) &amp; 0xff;				      \</u></td></tr>
+<tr><th id="781">781</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="782">782</th><td><u>	    else							      \</u></td></tr>
+<tr><th id="783">783</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="784">784</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="785">785</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="786">786</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="787">787</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="788">788</th><td><u>        else								      \</u></td></tr>
+<tr><th id="789">789</th><td><u>	  *outptr++ = last &amp; 0xff;					      \</u></td></tr>
+<tr><th id="790">790</th><td><u>	*statep = 0;							      \</u></td></tr>
+<tr><th id="791">791</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="792">792</th><td><u>      }									      \</u></td></tr>
+<tr><th id="793">793</th><td><u>									      \</u></td></tr>
+<tr><th id="794">794</th><td><u>    if (ch &lt; 0x80)							      \</u></td></tr>
+<tr><th id="795">795</th><td><u>      /* Plain ASCII character.  */					      \</u></td></tr>
+<tr><th id="796">796</th><td><u>      *outptr++ = ch;							      \</u></td></tr>
+<tr><th id="797">797</th><td><u>    else if (ch &gt;= 0x0B80 &amp;&amp; ch &lt;= 0x0BFF)				      \</u></td></tr>
+<tr><th id="798">798</th><td><u>      {									      \</u></td></tr>
+<tr><th id="799">799</th><td><u>	/* Tamil character.  */						      \</u></td></tr>
+<tr><th id="800">800</th><td><u>	uint8_t t = ucs4_to_tscii[ch - 0x0B80];				      \</u></td></tr>
+<tr><th id="801">801</th><td><u>									      \</u></td></tr>
+<tr><th id="802">802</th><td><u>	if (t != 0)							      \</u></td></tr>
+<tr><th id="803">803</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="804">804</th><td><u>	    if ((t &gt;= 0xb8 &amp;&amp; t &lt;= 0xc9) || (t &gt;= 0x83 &amp;&amp; t &lt;= 0x86))	      \</u></td></tr>
+<tr><th id="805">805</th><td><u>	      *statep = (uint32_t) t &lt;&lt; 3;				      \</u></td></tr>
+<tr><th id="806">806</th><td><u>	    else							      \</u></td></tr>
+<tr><th id="807">807</th><td><u>	      *outptr++ = t;						      \</u></td></tr>
+<tr><th id="808">808</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="809">809</th><td><u>	else if (ch &gt;= 0x0BCA &amp;&amp; ch &lt;= 0x0BCC)				      \</u></td></tr>
+<tr><th id="810">810</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="811">811</th><td><u>	    /* See whether we have room for two bytes.  */		      \</u></td></tr>
+<tr><th id="812">812</th><td><u>	    if (__glibc_likely (outptr + 2 &lt;= outend))			      \</u></td></tr>
+<tr><th id="813">813</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="814">814</th><td><u>		*outptr++ = (ch == 0x0BCA ? 0xa6 : 0xa7);		      \</u></td></tr>
+<tr><th id="815">815</th><td><u>		*outptr++ = (ch != 0x0BCC ? 0xa1 : 0xaa);		      \</u></td></tr>
+<tr><th id="816">816</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="817">817</th><td><u>	    else							      \</u></td></tr>
+<tr><th id="818">818</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="819">819</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="820">820</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="821">821</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="822">822</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="823">823</th><td><u>	else								      \</u></td></tr>
+<tr><th id="824">824</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="825">825</th><td><u>	    /* Illegal character.  */					      \</u></td></tr>
+<tr><th id="826">826</th><td><u>	    STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="827">827</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="828">828</th><td><u>      }									      \</u></td></tr>
+<tr><th id="829">829</th><td><u>    else if (ch == 0x00A9)						      \</u></td></tr>
+<tr><th id="830">830</th><td><u>      *outptr++ = ch;							      \</u></td></tr>
+<tr><th id="831">831</th><td><u>    else if (ch == 0x2018 || ch == 0x2019)				      \</u></td></tr>
+<tr><th id="832">832</th><td><u>      *outptr++ = ch - 0x1f87;						      \</u></td></tr>
+<tr><th id="833">833</th><td><u>    else if (ch == 0x201C || ch == 0x201D)				      \</u></td></tr>
+<tr><th id="834">834</th><td><u>      *outptr++ = ch - 0x1f89;						      \</u></td></tr>
+<tr><th id="835">835</th><td><u>    else								      \</u></td></tr>
+<tr><th id="836">836</th><td><u>      {									      \</u></td></tr>
+<tr><th id="837">837</th><td><u>	UNICODE_TAG_HANDLER (ch, 4);					      \</u></td></tr>
+<tr><th id="838">838</th><td><u>									      \</u></td></tr>
+<tr><th id="839">839</th><td><u>	/* Illegal character.  */					      \</u></td></tr>
+<tr><th id="840">840</th><td><u>	STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="841">841</th><td><u>      }									      \</u></td></tr>
+<tr><th id="842">842</th><td><u>									      \</u></td></tr>
+<tr><th id="843">843</th><td><u>    /* Now that we wrote the output increment the input pointer.  */	      \</u></td></tr>
+<tr><th id="844">844</th><td><u>    inptr += 4;								      \</u></td></tr>
+<tr><th id="845">845</th><td><u>  }</u></td></tr>
+<tr><th id="846">846</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="847">847</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_DECLS" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</dfn>	, int *statep</u></td></tr>
+<tr><th id="848">848</th><td><u>#include <a href="../iconv/loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="849">849</th><td></td></tr>
+<tr><th id="850">850</th><td></td></tr>
+<tr><th id="851">851</th><td><i>/* Now define the toplevel functions.  */</i></td></tr>
+<tr><th id="852">852</th><td><u>#include <a href="../iconv/skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="853">853</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

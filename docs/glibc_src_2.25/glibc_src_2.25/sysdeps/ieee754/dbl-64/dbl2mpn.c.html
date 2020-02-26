@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dbl2mpn.c source code [glibc_src_2.25/sysdeps/ieee754/dbl-64/dbl2mpn.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/sysdeps/ieee754/dbl-64/dbl2mpn.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.25</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>dbl-64</a>/<a href='dbl2mpn.c.html'>dbl2mpn.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1993-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../include/gmp.h.html">"gmp.h"</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../stdlib/gmp-impl.h.html">"gmp-impl.h"</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../stdlib/longlong.h.html">"longlong.h"</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../ieee754.h.html">&lt;ieee754.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;float.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* Convert a `double' in IEEE754 standard double-precision format to a</i></td></tr>
+<tr><th id="26">26</th><td><i>   multi-precision integer representing the significand scaled up by its</i></td></tr>
+<tr><th id="27">27</th><td><i>   number of bits (52 for double) and an integral power of two (MPN frexp). */</i></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><a class="typedef" href="../../../stdlib/gmp.h.html#mp_size_t" title='mp_size_t' data-type='long' data-ref="mp_size_t" data-ref-filename="mp_size_t">mp_size_t</a></td></tr>
+<tr><th id="30">30</th><td><dfn class="decl def fn" id="__mpn_extract_double" title='__mpn_extract_double' data-ref="__mpn_extract_double" data-ref-filename="__mpn_extract_double">__mpn_extract_double</dfn> (<a class="typedef" href="../../../stdlib/gmp.h.html#mp_ptr" title='mp_ptr' data-type='mp_limb_t *' data-ref="mp_ptr" data-ref-filename="mp_ptr">mp_ptr</a> <dfn class="local col1 decl" id="1res_ptr" title='res_ptr' data-type='mp_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</dfn>, <a class="typedef" href="../../../stdlib/gmp.h.html#mp_size_t" title='mp_size_t' data-type='long' data-ref="mp_size_t" data-ref-filename="mp_size_t">mp_size_t</a> <dfn class="local col2 decl" id="2size" title='size' data-type='mp_size_t' data-ref="2size" data-ref-filename="2size">size</dfn>,</td></tr>
+<tr><th id="31">31</th><td>		      <em>int</em> *<dfn class="local col3 decl" id="3expt" title='expt' data-type='int *' data-ref="3expt" data-ref-filename="3expt">expt</dfn>, <em>int</em> *<dfn class="local col4 decl" id="4is_neg" title='is_neg' data-type='int *' data-ref="4is_neg" data-ref-filename="4is_neg">is_neg</dfn>,</td></tr>
+<tr><th id="32">32</th><td>		      <em>double</em> <dfn class="local col5 decl" id="5value" title='value' data-type='double' data-ref="5value" data-ref-filename="5value">value</dfn>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>  <b>union</b> <a class="type" href="../ieee754.h.html#ieee754_double" title='ieee754_double' data-ref="ieee754_double" data-ref-filename="ieee754_double">ieee754_double</a> <dfn class="local col6 decl" id="6u" title='u' data-type='union ieee754_double' data-ref="6u" data-ref-filename="6u">u</dfn>;</td></tr>
+<tr><th id="35">35</th><td>  <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::d" title='ieee754_double::d' data-ref="ieee754_double::d" data-ref-filename="ieee754_double..d">d</a> = <a class="local col5 ref" href="#5value" title='value' data-ref="5value" data-ref-filename="5value">value</a>;</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>  *<a class="local col4 ref" href="#4is_neg" title='is_neg' data-ref="4is_neg" data-ref-filename="4is_neg">is_neg</a> = <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::ieee" title='ieee754_double::ieee' data-ref="ieee754_double::ieee" data-ref-filename="ieee754_double..ieee">ieee</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::(anonymous)::negative" title='ieee754_double::(anonymous struct)::negative' data-ref="ieee754_double::(anonymous)::negative" data-ref-filename="ieee754_double..(anonymous)..negative">negative</a>;</td></tr>
+<tr><th id="38">38</th><td>  *<a class="local col3 ref" href="#3expt" title='expt' data-ref="3expt" data-ref-filename="3expt">expt</a> = (<em>int</em>) <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::ieee" title='ieee754_double::ieee' data-ref="ieee754_double::ieee" data-ref-filename="ieee754_double..ieee">ieee</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::(anonymous)::exponent" title='ieee754_double::(anonymous struct)::exponent' data-ref="ieee754_double::(anonymous)::exponent" data-ref-filename="ieee754_double..(anonymous)..exponent">exponent</a> - <a class="macro" href="../ieee754.h.html#126" title="0x3ff" data-ref="_M/IEEE754_DOUBLE_BIAS">IEEE754_DOUBLE_BIAS</a>;</td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="40">if</span> <a class="macro" href="../../generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a> == 32</u></td></tr>
+<tr><th id="41">41</th><td>  res_ptr[<var>0</var>] = u.ieee.mantissa1; <i>/* Low-order 32 bits of fraction.  */</i></td></tr>
+<tr><th id="42">42</th><td>  res_ptr[<var>1</var>] = u.ieee.mantissa0; <i>/* High-order 20 bits.  */</i></td></tr>
+<tr><th id="43">43</th><td>  <u># define N 2</u></td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="40">elif</span> <a class="macro" href="../../generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a> == 64</u></td></tr>
+<tr><th id="45">45</th><td>  <i>/* Hopefully the compiler will combine the two bitfield extracts</i></td></tr>
+<tr><th id="46">46</th><td><i>     and this composition into just the original quadword extract.  */</i></td></tr>
+<tr><th id="47">47</th><td>  <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] = ((<a class="typedef" href="../../../stdlib/gmp.h.html#mp_limb_t" title='mp_limb_t' data-type='unsigned long' data-ref="mp_limb_t" data-ref-filename="mp_limb_t">mp_limb_t</a>) <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::ieee" title='ieee754_double::ieee' data-ref="ieee754_double::ieee" data-ref-filename="ieee754_double..ieee">ieee</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::(anonymous)::mantissa0" title='ieee754_double::(anonymous struct)::mantissa0' data-ref="ieee754_double::(anonymous)::mantissa0" data-ref-filename="ieee754_double..(anonymous)..mantissa0">mantissa0</a> &lt;&lt; <var>32</var>) | <a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::ieee" title='ieee754_double::ieee' data-ref="ieee754_double::ieee" data-ref-filename="ieee754_double..ieee">ieee</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::(anonymous)::mantissa1" title='ieee754_double::(anonymous struct)::mantissa1' data-ref="ieee754_double::(anonymous)::mantissa1" data-ref-filename="ieee754_double..(anonymous)..mantissa1">mantissa1</a>;</td></tr>
+<tr><th id="48">48</th><td>  <u># define <dfn class="macro" id="_M/N" data-ref="_M/N">N</dfn> 1</u></td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="40">else</span></u></td></tr>
+<tr><th id="50">50</th><td>  <u># error "mp_limb size " BITS_PER_MP_LIMB "not accounted for"</u></td></tr>
+<tr><th id="51">51</th><td><u>#<span data-ppcond="40">endif</span></u></td></tr>
+<tr><th id="52">52</th><td><i>/* The format does not fill the last limb.  There are some zeros.  */</i></td></tr>
+<tr><th id="53">53</th><td><u>#define <dfn class="macro" id="_M/NUM_LEADING_ZEROS" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</dfn> (BITS_PER_MP_LIMB \</u></td></tr>
+<tr><th id="54">54</th><td><u>			   - (DBL_MANT_DIG - ((N - 1) * BITS_PER_MP_LIMB)))</u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  <b>if</b> (<a class="local col6 ref" href="#6u" title='u' data-ref="6u" data-ref-filename="6u">u</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::ieee" title='ieee754_double::ieee' data-ref="ieee754_double::ieee" data-ref-filename="ieee754_double..ieee">ieee</a>.<a class="ref field" href="../ieee754.h.html#ieee754_double::(anonymous)::exponent" title='ieee754_double::(anonymous struct)::exponent' data-ref="ieee754_double::(anonymous)::exponent" data-ref-filename="ieee754_double..(anonymous)..exponent">exponent</a> == <var>0</var>)</td></tr>
+<tr><th id="57">57</th><td>    {</td></tr>
+<tr><th id="58">58</th><td>      <i>/* A biased exponent of zero is a special case.</i></td></tr>
+<tr><th id="59">59</th><td><i>	 Either it is a zero or it is a denormal number.  */</i></td></tr>
+<tr><th id="60">60</th><td>      <b>if</b> (<a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] == <var>0</var> &amp;&amp; <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] == <var>0</var>) <i>/* Assumes N&lt;=2.  */</i></td></tr>
+<tr><th id="61">61</th><td>	<i>/* It's zero.  */</i></td></tr>
+<tr><th id="62">62</th><td>	*<a class="local col3 ref" href="#3expt" title='expt' data-ref="3expt" data-ref-filename="3expt">expt</a> = <var>0</var>;</td></tr>
+<tr><th id="63">63</th><td>      <b>else</b></td></tr>
+<tr><th id="64">64</th><td>	{</td></tr>
+<tr><th id="65">65</th><td>          <i>/* It is a denormal number, meaning it has no implicit leading</i></td></tr>
+<tr><th id="66">66</th><td><i>	     one bit, and its exponent is in fact the format minimum.  */</i></td></tr>
+<tr><th id="67">67</th><td>	  <em>int</em> <dfn class="local col7 decl" id="7cnt" title='cnt' data-type='int' data-ref="7cnt" data-ref-filename="7cnt">cnt</dfn>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	  <b>if</b> (<a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] != <var>0</var>)</td></tr>
+<tr><th id="70">70</th><td>	    {</td></tr>
+<tr><th id="71">71</th><td>	      <a class="macro" href="../../../stdlib/longlong.h.html#520" title="((cnt) = __builtin_clzll (res_ptr[1 - 1]))" data-ref="_M/count_leading_zeros">count_leading_zeros</a> (<a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>, <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>]);</td></tr>
+<tr><th id="72">72</th><td>	      <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a> -= <a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a>;</td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="73">if</span> <a class="macro" href="#48" title="1" data-ref="_M/N">N</a> == 2</u></td></tr>
+<tr><th id="74">74</th><td>	      res_ptr[N - <var>1</var>] = res_ptr[<var>1</var>] &lt;&lt; cnt</td></tr>
+<tr><th id="75">75</th><td>			       | (N - <var>1</var>)</td></tr>
+<tr><th id="76">76</th><td>			       * (res_ptr[<var>0</var>] &gt;&gt; (BITS_PER_MP_LIMB - cnt));</td></tr>
+<tr><th id="77">77</th><td>	      res_ptr[<var>0</var>] &lt;&lt;= cnt;</td></tr>
+<tr><th id="78">78</th><td><u>#<span data-ppcond="73">else</span></u></td></tr>
+<tr><th id="79">79</th><td>	      <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] &lt;&lt;= <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>;</td></tr>
+<tr><th id="80">80</th><td><u>#<span data-ppcond="73">endif</span></u></td></tr>
+<tr><th id="81">81</th><td>	      *<a class="local col3 ref" href="#3expt" title='expt' data-ref="3expt" data-ref-filename="3expt">expt</a> = <span class="macro" title="(-1021)" data-ref="_M/DBL_MIN_EXP">DBL_MIN_EXP</span> - <var>1</var> - <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>;</td></tr>
+<tr><th id="82">82</th><td>	    }</td></tr>
+<tr><th id="83">83</th><td>	  <b>else</b></td></tr>
+<tr><th id="84">84</th><td>	    {</td></tr>
+<tr><th id="85">85</th><td>	      <a class="macro" href="../../../stdlib/longlong.h.html#520" title="((cnt) = __builtin_clzll (res_ptr[0]))" data-ref="_M/count_leading_zeros">count_leading_zeros</a> (<a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>, <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>]);</td></tr>
+<tr><th id="86">86</th><td>	      <b>if</b> (<a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a> &gt;= <a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a>)</td></tr>
+<tr><th id="87">87</th><td>		{</td></tr>
+<tr><th id="88">88</th><td>		  <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] = <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] &lt;&lt; (<a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a> - <a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a>);</td></tr>
+<tr><th id="89">89</th><td>		  <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="90">90</th><td>		}</td></tr>
+<tr><th id="91">91</th><td>	      <b>else</b></td></tr>
+<tr><th id="92">92</th><td>		{</td></tr>
+<tr><th id="93">93</th><td>		  <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] = <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] &gt;&gt; (<a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a> - <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>);</td></tr>
+<tr><th id="94">94</th><td>		  <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<var>0</var>] &lt;&lt;= <a class="macro" href="../../generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a> - (<a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a> - <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>);</td></tr>
+<tr><th id="95">95</th><td>		}</td></tr>
+<tr><th id="96">96</th><td>	      *<a class="local col3 ref" href="#3expt" title='expt' data-ref="3expt" data-ref-filename="3expt">expt</a> = <span class="macro" title="(-1021)" data-ref="_M/DBL_MIN_EXP">DBL_MIN_EXP</span> - <var>1</var></td></tr>
+<tr><th id="97">97</th><td>		      - (<a class="macro" href="../../generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a> - <a class="macro" href="#53" title="(64 - (53 - ((1 - 1) * 64)))" data-ref="_M/NUM_LEADING_ZEROS">NUM_LEADING_ZEROS</a>) - <a class="local col7 ref" href="#7cnt" title='cnt' data-ref="7cnt" data-ref-filename="7cnt">cnt</a>;</td></tr>
+<tr><th id="98">98</th><td>	    }</td></tr>
+<tr><th id="99">99</th><td>	}</td></tr>
+<tr><th id="100">100</th><td>    }</td></tr>
+<tr><th id="101">101</th><td>  <b>else</b></td></tr>
+<tr><th id="102">102</th><td>    <i>/* Add the implicit leading one bit for a normalized number.  */</i></td></tr>
+<tr><th id="103">103</th><td>    <a class="local col1 ref" href="#1res_ptr" title='res_ptr' data-ref="1res_ptr" data-ref-filename="1res_ptr">res_ptr</a>[<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>] |= (<a class="typedef" href="../../../stdlib/gmp.h.html#mp_limb_t" title='mp_limb_t' data-type='unsigned long' data-ref="mp_limb_t" data-ref-filename="mp_limb_t">mp_limb_t</a>) <var>1</var> &lt;&lt; (<span class="macro" title="53" data-ref="_M/DBL_MANT_DIG">DBL_MANT_DIG</span> - <var>1</var></td></tr>
+<tr><th id="104">104</th><td>					- ((<a class="macro" href="#48" title="1" data-ref="_M/N">N</a> - <var>1</var>) * <a class="macro" href="../../generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a>));</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>  <b>return</b> <a class="macro" href="#48" title="1" data-ref="_M/N">N</a>;</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

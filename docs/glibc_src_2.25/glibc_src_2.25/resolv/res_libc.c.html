@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>res_libc.c source code [glibc_src_2.25/resolv/res_libc.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/resolv/res_libc.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>resolv</a>/<a href='res_libc.c.html'>res_libc.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (c) 1995-1999 by Internet Software Consortium.</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Permission to use, copy, modify, and distribute this software for any</i></td></tr>
+<tr><th id="5">5</th><td><i> * purpose with or without fee is hereby granted, provided that the above</i></td></tr>
+<tr><th id="6">6</th><td><i> * copyright notice and this permission notice appear in all copies.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS</i></td></tr>
+<tr><th id="9">9</th><td><i> * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES</i></td></tr>
+<tr><th id="10">10</th><td><i> * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE</i></td></tr>
+<tr><th id="11">11</th><td><i> * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL</i></td></tr>
+<tr><th id="12">12</th><td><i> * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR</i></td></tr>
+<tr><th id="13">13</th><td><i> * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS</i></td></tr>
+<tr><th id="14">14</th><td><i> * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS</i></td></tr>
+<tr><th id="15">15</th><td><i> * SOFTWARE.</i></td></tr>
+<tr><th id="16">16</th><td><i> */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><i>/* This file contains the definitions related to res_init which are</i></td></tr>
+<tr><th id="19">19</th><td><i>   linked into libc instead of libresolv.  */</i></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/netinet/in.h.html">&lt;netinet/in.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/arpa/nameser.h.html">&lt;arpa/nameser.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/resolv.h.html">&lt;resolv.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><b>extern</b> <em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> <dfn class="decl" id="__res_initstamp" title='__res_initstamp' data-ref="__res_initstamp" data-ref-filename="__res_initstamp">__res_initstamp</dfn> <a class="macro" href="../include/libc-symbols.h.html#330" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="30">30</th><td><i>/* We have atomic increment operations on 64-bit platforms.  */</i></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">if</span> <a class="macro" href="../sysdeps/x86/bits/wordsize.h.html#4" title="64" data-ref="_M/__WORDSIZE">__WORDSIZE</a> == 64</u></td></tr>
+<tr><th id="32">32</th><td><u># define <dfn class="macro" id="_M/atomicinclock" data-ref="_M/atomicinclock">atomicinclock</dfn>(lock) (void) 0</u></td></tr>
+<tr><th id="33">33</th><td><u># define <dfn class="macro" id="_M/atomicincunlock" data-ref="_M/atomicincunlock">atomicincunlock</dfn>(lock) (void) 0</u></td></tr>
+<tr><th id="34">34</th><td><u># define <dfn class="macro" id="_M/atomicinc" data-ref="_M/atomicinc">atomicinc</dfn>(var) catomic_increment (&amp;(var))</u></td></tr>
+<tr><th id="35">35</th><td><u>#<span data-ppcond="31">else</span></u></td></tr>
+<tr><th id="36">36</th><td>__libc_lock_define_initialized (<em>static</em>, lock);</td></tr>
+<tr><th id="37">37</th><td><u># define atomicinclock(lock) __libc_lock_lock (lock)</u></td></tr>
+<tr><th id="38">38</th><td><u># define atomicincunlock(lock) __libc_lock_unlock (lock)</u></td></tr>
+<tr><th id="39">39</th><td><u># define atomicinc(var) ++var</u></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><em>int</em></td></tr>
+<tr><th id="43">43</th><td><a class="macro" href="resolv.h.html#243" title="__res_init" data-ref="_M/res_init">res_init</a>(<em>void</em>) {</td></tr>
+<tr><th id="44">44</th><td>	<b>extern</b> <em>int</em> <a class="decl fn" href="../include/resolv.h.html#__res_vinit" title='__res_vinit' data-ref="__res_vinit" data-ref-filename="__res_vinit" id="__res_vinit">__res_vinit</a>(<a class="typedef" href="resolv.h.html#res_state" title='res_state' data-type='struct __res_state *' data-ref="res_state" data-ref-filename="res_state">res_state</a>, <em>int</em>);</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>	<i>/*</i></td></tr>
+<tr><th id="47">47</th><td><i>	 * These three fields used to be statically initialized.  This made</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * it hard to use this code in a shared library.  It is necessary,</i></td></tr>
+<tr><th id="49">49</th><td><i>	 * now that we're doing dynamic initialization here, that we preserve</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * the old semantics: if an application modifies one of these three</i></td></tr>
+<tr><th id="51">51</th><td><i>	 * fields of _res before res_init() is called, res_init() will not</i></td></tr>
+<tr><th id="52">52</th><td><i>	 * alter them.  Of course, if an application is setting them to</i></td></tr>
+<tr><th id="53">53</th><td><i>	 * _zero_ before calling res_init(), hoping to override what used</i></td></tr>
+<tr><th id="54">54</th><td><i>	 * to be the static default, we can't detect it and unexpected results</i></td></tr>
+<tr><th id="55">55</th><td><i>	 * will follow.  Zero for any of these fields would make no sense,</i></td></tr>
+<tr><th id="56">56</th><td><i>	 * so one can safely assume that the applications were already getting</i></td></tr>
+<tr><th id="57">57</th><td><i>	 * unexpected results.</i></td></tr>
+<tr><th id="58">58</th><td><i>	 *</i></td></tr>
+<tr><th id="59">59</th><td><i>	 * _res.options is tricky since some apps were known to diddle the bits</i></td></tr>
+<tr><th id="60">60</th><td><i>	 * before res_init() was first called. We can't replicate that semantic</i></td></tr>
+<tr><th id="61">61</th><td><i>	 * with dynamic initialization (they may have turned bits off that are</i></td></tr>
+<tr><th id="62">62</th><td><i>	 * set in RES_DEFAULT).  Our solution is to declare such applications</i></td></tr>
+<tr><th id="63">63</th><td><i>	 * "broken".  They could fool us by setting RES_INIT but none do (yet).</i></td></tr>
+<tr><th id="64">64</th><td><i>	 */</i></td></tr>
+<tr><th id="65">65</th><td>	<b>if</b> (!<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::retrans" title='__res_state::retrans' data-ref="__res_state::retrans" data-ref-filename="__res_state..retrans">retrans</a>)</td></tr>
+<tr><th id="66">66</th><td>		<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::retrans" title='__res_state::retrans' data-ref="__res_state::retrans" data-ref-filename="__res_state..retrans">retrans</a> = <a class="macro" href="resolv.h.html#79" title="5" data-ref="_M/RES_TIMEOUT">RES_TIMEOUT</a>;</td></tr>
+<tr><th id="67">67</th><td>	<b>if</b> (!<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::retry" title='__res_state::retry' data-ref="__res_state::retry" data-ref-filename="__res_state..retry">retry</a>)</td></tr>
+<tr><th id="68">68</th><td>		<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::retry" title='__res_state::retry' data-ref="__res_state::retry" data-ref-filename="__res_state..retry">retry</a> = <var>4</var>;</td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (!(<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::options" title='__res_state::options' data-ref="__res_state::options" data-ref-filename="__res_state..options">options</a> &amp; <a class="macro" href="resolv.h.html#178" title="0x00000001" data-ref="_M/RES_INIT">RES_INIT</a>))</td></tr>
+<tr><th id="70">70</th><td>		<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::options" title='__res_state::options' data-ref="__res_state::options" data-ref-filename="__res_state..options">options</a> = <a class="macro" href="resolv.h.html#210" title="(0x00000040|0x00000080|0x00000200)" data-ref="_M/RES_DEFAULT">RES_DEFAULT</a>;</td></tr>
+<tr><th id="71">71</th><td>	<b>else</b> <b>if</b> (<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::nscount" title='__res_state::nscount' data-ref="__res_state::nscount" data-ref-filename="__res_state..nscount">nscount</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="72">72</th><td>		<a class="ref fn" href="../include/resolv.h.html#__res_iclose" title='__res_iclose' data-ref="__res_iclose" data-ref-filename="__res_iclose">__res_iclose</a> (&amp;<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>, <span class="macro" title="1" data-ref="_M/true">true</span>);	<i>/* Close any VC sockets.  */</i></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	<i>/*</i></td></tr>
+<tr><th id="75">75</th><td><i>	 * This one used to initialize implicitly to zero, so unless the app</i></td></tr>
+<tr><th id="76">76</th><td><i>	 * has set it to something in particular, we can randomize it now.</i></td></tr>
+<tr><th id="77">77</th><td><i>	 */</i></td></tr>
+<tr><th id="78">78</th><td>	<b>if</b> (!<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::id" title='__res_state::id' data-ref="__res_state::id" data-ref-filename="__res_state..id">id</a>)</td></tr>
+<tr><th id="79">79</th><td>		<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>.<a class="ref field" href="resolv.h.html#__res_state::id" title='__res_state::id' data-ref="__res_state::id" data-ref-filename="__res_state..id">id</a> = <a class="macro" href="resolv.h.html#310" title="__res_randomid" data-ref="_M/res_randomid">res_randomid</a>();</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>	<a class="macro" href="#32" title="(void) 0" data-ref="_M/atomicinclock">atomicinclock</a> (lock);</td></tr>
+<tr><th id="82">82</th><td>	<i>/* Request all threads to re-initialize their resolver states,</i></td></tr>
+<tr><th id="83">83</th><td><i>	   resolv.conf might have changed.  */</i></td></tr>
+<tr><th id="84">84</th><td>	<a class="macro" href="#34" title="do { if (sizeof (*&amp;(__res_initstamp)) == 1) __asm __volatile (&quot;cmpl $0, %%fs:%P2\n\tje 0f\n\tlock\n0:\t&quot; &quot;incb %b0&quot; : &quot;=m&quot; (*&amp;(__res_initstamp)) : &quot;m&quot; (*&amp;(__res_initstamp)), &quot;i&quot; (__builtin_offsetof(tcbhead_t, multiple_threads))); else if (sizeof (*&amp;(__res_initstamp)) == 2) __asm __volatile (&quot;cmpl $0, %%fs:%P2\n\tje 0f\n\tlock\n0:\t&quot; &quot;incw %w0&quot; : &quot;=m&quot; (*&amp;(__res_initstamp)) : &quot;m&quot; (*&amp;(__res_initstamp)), &quot;i&quot; (__builtin_offsetof(tcbhead_t, multiple_threads))); else if (sizeof (*&amp;(__res_initstamp)) == 4) __asm __volatile (&quot;cmpl $0, %%fs:%P2\n\tje 0f\n\tlock\n0:\t&quot; &quot;incl %0&quot; : &quot;=m&quot; (*&amp;(__res_initstamp)) : &quot;m&quot; (*&amp;(__res_initstamp)), &quot;i&quot; (__builtin_offsetof(tcbhead_t, multiple_threads))); else __asm __volatile (&quot;cmpl $0, %%fs:%P2\n\tje 0f\n\tlock\n0:\t&quot; &quot;incq %q0&quot; : &quot;=m&quot; (*&amp;(__res_initstamp)) : &quot;m&quot; (*&amp;(__res_initstamp)), &quot;i&quot; (__builtin_offsetof(tcbhead_t, multiple_threads))); } while (0)" data-ref="_M/atomicinc">atomicinc</a> (<a class="ref" href="#__res_initstamp" title='__res_initstamp' data-ref="__res_initstamp" data-ref-filename="__res_initstamp">__res_initstamp</a>);</td></tr>
+<tr><th id="85">85</th><td>	<a class="macro" href="#33" title="(void) 0" data-ref="_M/atomicincunlock">atomicincunlock</a> (lock);</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	<b>return</b> (<a class="ref fn" href="../include/resolv.h.html#__res_vinit" title='__res_vinit' data-ref="__res_vinit" data-ref-filename="__res_vinit">__res_vinit</a>(&amp;<a class="macro" href="../include/resolv.h.html#23" title="(*__libc_resp)" data-ref="_M/_res">_res</a>, <var>1</var>));</td></tr>
+<tr><th id="88">88</th><td>}</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><i>/* Initialize resp if RES_INIT is not yet set or if res_init in some other</i></td></tr>
+<tr><th id="91">91</th><td><i>   thread requested re-initializing.  */</i></td></tr>
+<tr><th id="92">92</th><td><em>int</em></td></tr>
+<tr><th id="93">93</th><td><dfn class="decl def fn" id="__res_maybe_init" title='__res_maybe_init' data-ref="__res_maybe_init" data-ref-filename="__res_maybe_init">__res_maybe_init</dfn> (<a class="typedef" href="resolv.h.html#res_state" title='res_state' data-type='struct __res_state *' data-ref="res_state" data-ref-filename="res_state">res_state</a> <dfn class="local col1 decl" id="1resp" title='resp' data-type='res_state' data-ref="1resp" data-ref-filename="1resp">resp</dfn>, <em>int</em> <dfn class="local col2 decl" id="2preinit" title='preinit' data-type='int' data-ref="2preinit" data-ref-filename="2preinit">preinit</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<b>if</b> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::options" title='__res_state::options' data-ref="__res_state::options" data-ref-filename="__res_state..options">options</a> &amp; <a class="macro" href="resolv.h.html#178" title="0x00000001" data-ref="_M/RES_INIT">RES_INIT</a>) {</td></tr>
+<tr><th id="96">96</th><td>		<b>if</b> (<a class="ref" href="#__res_initstamp" title='__res_initstamp' data-ref="__res_initstamp" data-ref-filename="__res_initstamp">__res_initstamp</a> != <a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::_u" title='__res_state::_u' data-ref="__res_state::_u" data-ref-filename="__res_state.._u">_u</a>.<a class="ref field" href="resolv.h.html#__res_state::(anonymous)::_ext" title='__res_state::(anonymous union)::_ext' data-ref="__res_state::(anonymous)::_ext" data-ref-filename="__res_state..(anonymous).._ext">_ext</a>.<a class="ref field" href="resolv.h.html#__res_state::(anonymousunion)::(anonymous)::initstamp" title='__res_state::(anonymous union)::(anonymous struct)::initstamp' data-ref="__res_state::(anonymousunion)::(anonymous)::initstamp" data-ref-filename="__res_state..(anonymousunion)..(anonymous)..initstamp">initstamp</a>) {</td></tr>
+<tr><th id="97">97</th><td>			<b>if</b> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::nscount" title='__res_state::nscount' data-ref="__res_state::nscount" data-ref-filename="__res_state..nscount">nscount</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="98">98</th><td>				<a class="ref fn" href="../include/resolv.h.html#__res_iclose" title='__res_iclose' data-ref="__res_iclose" data-ref-filename="__res_iclose">__res_iclose</a> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>, <span class="macro" title="1" data-ref="_M/true">true</span>);</td></tr>
+<tr><th id="99">99</th><td>			<b>return</b> <a class="ref fn" href="../include/resolv.h.html#__res_vinit" title='__res_vinit' data-ref="__res_vinit" data-ref-filename="__res_vinit">__res_vinit</a> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>, <var>1</var>);</td></tr>
+<tr><th id="100">100</th><td>		}</td></tr>
+<tr><th id="101">101</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="102">102</th><td>	} <b>else</b> <b>if</b> (<a class="local col2 ref" href="#2preinit" title='preinit' data-ref="2preinit" data-ref-filename="2preinit">preinit</a>) {</td></tr>
+<tr><th id="103">103</th><td>		<b>if</b> (!<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::retrans" title='__res_state::retrans' data-ref="__res_state::retrans" data-ref-filename="__res_state..retrans">retrans</a>)</td></tr>
+<tr><th id="104">104</th><td>			<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::retrans" title='__res_state::retrans' data-ref="__res_state::retrans" data-ref-filename="__res_state..retrans">retrans</a> = <a class="macro" href="resolv.h.html#79" title="5" data-ref="_M/RES_TIMEOUT">RES_TIMEOUT</a>;</td></tr>
+<tr><th id="105">105</th><td>		<b>if</b> (!<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::retry" title='__res_state::retry' data-ref="__res_state::retry" data-ref-filename="__res_state..retry">retry</a>)</td></tr>
+<tr><th id="106">106</th><td>			<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::retry" title='__res_state::retry' data-ref="__res_state::retry" data-ref-filename="__res_state..retry">retry</a> = <var>4</var>;</td></tr>
+<tr><th id="107">107</th><td>		<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::options" title='__res_state::options' data-ref="__res_state::options" data-ref-filename="__res_state..options">options</a> = <a class="macro" href="resolv.h.html#210" title="(0x00000040|0x00000080|0x00000200)" data-ref="_M/RES_DEFAULT">RES_DEFAULT</a>;</td></tr>
+<tr><th id="108">108</th><td>		<b>if</b> (!<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::id" title='__res_state::id' data-ref="__res_state::id" data-ref-filename="__res_state..id">id</a>)</td></tr>
+<tr><th id="109">109</th><td>			<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>-&gt;<a class="ref field" href="resolv.h.html#__res_state::id" title='__res_state::id' data-ref="__res_state::id" data-ref-filename="__res_state..id">id</a> = <a class="macro" href="resolv.h.html#310" title="__res_randomid" data-ref="_M/res_randomid">res_randomid</a> ();</td></tr>
+<tr><th id="110">110</th><td>		<b>return</b> <a class="ref fn" href="../include/resolv.h.html#__res_vinit" title='__res_vinit' data-ref="__res_vinit" data-ref-filename="__res_vinit">__res_vinit</a> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>, <var>1</var>);</td></tr>
+<tr><th id="111">111</th><td>	} <b>else</b></td></tr>
+<tr><th id="112">112</th><td>		<b>return</b> <a class="ref fn" href="resolv.h.html#361" title='__res_ninit' data-ref="__res_ninit" data-ref-filename="__res_ninit">__res_ninit</a> (<a class="local col1 ref" href="#1resp" title='resp' data-ref="1resp" data-ref-filename="1resp">resp</a>);</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td><a class="macro" href="../include/libc-symbols.h.html#495" title="extern __typeof (__res_maybe_init) __EI___res_maybe_init __asm__(&quot;&quot; &quot;__res_maybe_init&quot;); extern __typeof (__res_maybe_init) __EI___res_maybe_init __attribute__((alias (&quot;&quot; &quot;__GI___res_maybe_init&quot;)));" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (<a class="ref fn" href="#__res_maybe_init" title='__res_maybe_init' data-ref="__res_maybe_init" data-ref-filename="__res_maybe_init">__res_maybe_init</a>)</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* This needs to be after the use of _res in res_init, above.  */</i></td></tr>
+<tr><th id="117">117</th><td><u>#undef <a class="macro" href="../include/resolv.h.html#23" data-ref="_M/_res">_res</a></u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><i>/* The resolver state for use by single-threaded programs.</i></td></tr>
+<tr><th id="120">120</th><td><i>   This differs from plain `struct __res_state _res;' in that it doesn't</i></td></tr>
+<tr><th id="121">121</th><td><i>   create a common definition, but a plain symbol that resides in .bss,</i></td></tr>
+<tr><th id="122">122</th><td><i>   which can have an alias.  */</i></td></tr>
+<tr><th id="123">123</th><td><b>struct</b> <a class="type" href="resolv.h.html#__res_state" title='__res_state' data-ref="__res_state" data-ref-filename="__res_state">__res_state</a> <dfn class="decl def" id="_res" title='_res' data-ref="_res" data-ref-filename="_res">_res</dfn> <b>__attribute__</b> ((nocommon));</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><u>#undef <a class="macro" href="../include/resolv.h.html#19" data-ref="_M/__resp">__resp</a></u></td></tr>
+<tr><th id="126">126</th><td><b>__thread</b> <b>struct</b> <a class="type" href="resolv.h.html#__res_state" title='__res_state' data-ref="__res_state" data-ref-filename="__res_state">__res_state</a> *<dfn class="decl def" id="__resp" title='__resp' data-ref="__resp" data-ref-filename="__resp">__resp</dfn> = &amp;<a class="ref" href="#_res" title='_res' data-ref="_res" data-ref-filename="_res">_res</a>;</td></tr>
+<tr><th id="127">127</th><td><b>extern</b> <b>__thread</b> <b>struct</b> <a class="type" href="resolv.h.html#__res_state" title='__res_state' data-ref="__res_state" data-ref-filename="__res_state">__res_state</a> *<dfn class="decl def" id="__libc_resp" title='__libc_resp' data-ref="__libc_resp" data-ref-filename="__libc_resp">__libc_resp</dfn></td></tr>
+<tr><th id="128">128</th><td>  <b>__attribute__</b> ((alias (<q>"__resp"</q>))) <a class="macro" href="../include/libc-symbols.h.html#330" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><i>/* We declare this with compat_symbol so that it's not</i></td></tr>
+<tr><th id="131">131</th><td><i>   visible at link time.  Programs must use the accessor functions.  */</i></td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="132">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="133">133</th><td><u># include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="134">134</th><td><a class="macro" href="../include/shlib-compat.h.html#64" title="__asm__ (&quot;.symver &quot; &quot;_res&quot; &quot;,&quot; &quot;_res&quot; &quot;@&quot; &quot;GLIBC_2.2.5&quot;)" data-ref="_M/compat_symbol">compat_symbol</a> (libc, _res, _res, GLIBC_2_0);</td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="132">endif</span></u></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><u>#<span data-ppcond="139">if</span> <a class="macro" href="../include/shlib-compat.h.html#41" title="((18 == 18) &amp;&amp; (!(1 - 0) || ((1 - 0) &lt; (1 - 0))))" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a>(libc, GLIBC_2_0, GLIBC_2_2)</u></td></tr>
+<tr><th id="140">140</th><td><u># undef res_init</u></td></tr>
+<tr><th id="141">141</th><td><b>extern</b> <em>int</em> __res_init_weak (<em>void</em>);</td></tr>
+<tr><th id="142">142</th><td>weak_extern (__res_init_weak);</td></tr>
+<tr><th id="143">143</th><td>strong_alias (__res_init, __res_init_weak);</td></tr>
+<tr><th id="144">144</th><td>compat_symbol (libc, __res_init_weak, res_init, GLIBC_2_0);</td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="139">endif</span></u></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

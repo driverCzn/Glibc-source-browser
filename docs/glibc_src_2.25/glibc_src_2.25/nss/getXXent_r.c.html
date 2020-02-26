@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>getXXent_r.c source code [glibc_src_2.25/nss/getXXent_r.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/nss/getXXent_r.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>nss</a>/<a href='getXXent_r.c.html'>getXXent_r.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1996-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1996.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="nsswitch.h.html">"nsswitch.h"</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><i>/*******************************************************************\</i></td></tr>
+<tr><th id="25">25</th><td><i>|* Here we assume several symbols to be defined:		   *|</i></td></tr>
+<tr><th id="26">26</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="27">27</th><td><i>|* LOOKUP_TYPE   - the return type of the function		   *|</i></td></tr>
+<tr><th id="28">28</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="29">29</th><td><i>|* SETFUNC_NAME  - name of the non-reentrant setXXXent function	   *|</i></td></tr>
+<tr><th id="30">30</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="31">31</th><td><i>|* GETFUNC_NAME  - name of the non-reentrant getXXXent function	   *|</i></td></tr>
+<tr><th id="32">32</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="33">33</th><td><i>|* ENDFUNC_NAME  - name of the non-reentrant endXXXent function	   *|</i></td></tr>
+<tr><th id="34">34</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="35">35</th><td><i>|* DATABASE_NAME - name of the database the function accesses	   *|</i></td></tr>
+<tr><th id="36">36</th><td><i>|*		   (e.g., host, services, ...)			   *|</i></td></tr>
+<tr><th id="37">37</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="38">38</th><td><i>|* Optionally the following vars can be defined:		   *|</i></td></tr>
+<tr><th id="39">39</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="40">40</th><td><i>|* STAYOPEN      - variable declaration for setXXXent function	   *|</i></td></tr>
+<tr><th id="41">41</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="42">42</th><td><i>|* STAYOPEN_VAR  - variable name for setXXXent function		   *|</i></td></tr>
+<tr><th id="43">43</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="44">44</th><td><i>|* NEED_H_ERRNO  - an extra parameter will be passed to point to   *|</i></td></tr>
+<tr><th id="45">45</th><td><i>|*		   the global `h_errno' variable.		   *|</i></td></tr>
+<tr><th id="46">46</th><td><i>|* 								   *|</i></td></tr>
+<tr><th id="47">47</th><td><i>\*******************************************************************/</i></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* To make the real sources a bit prettier.  */</i></td></tr>
+<tr><th id="50">50</th><td><u>#define <dfn class="macro" id="_M/REENTRANT_GETNAME" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</dfn> APPEND_R (GETFUNC_NAME)</u></td></tr>
+<tr><th id="51">51</th><td><u>#define <dfn class="macro" id="_M/APPEND_R" data-ref="_M/APPEND_R">APPEND_R</dfn>(Name) CONCAT2_2 (Name, _r)</u></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/INTERNAL" data-ref="_M/INTERNAL">INTERNAL</dfn>(Name) CONCAT2_2 (__, Name)</u></td></tr>
+<tr><th id="53">53</th><td><u>#define <dfn class="macro" id="_M/CONCAT2_1" data-ref="_M/CONCAT2_1">CONCAT2_1</dfn>(Pre, Post) CONCAT2_2 (Pre, Post)</u></td></tr>
+<tr><th id="54">54</th><td><u>#define <dfn class="macro" id="_M/CONCAT2_2" data-ref="_M/CONCAT2_2">CONCAT2_2</dfn>(Pre, Post) Pre##Post</u></td></tr>
+<tr><th id="55">55</th><td><u>#define <dfn class="macro" id="_M/NEW" data-ref="_M/NEW">NEW</dfn>(name) NEW1 (name)</u></td></tr>
+<tr><th id="56">56</th><td><u>#define <dfn class="macro" id="_M/NEW1" data-ref="_M/NEW1">NEW1</dfn>(name) __new_##name</u></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><u>#define <dfn class="macro" id="_M/SETFUNC_NAME_STRING" data-ref="_M/SETFUNC_NAME_STRING">SETFUNC_NAME_STRING</dfn> STRINGIZE (SETFUNC_NAME)</u></td></tr>
+<tr><th id="59">59</th><td><u>#define <dfn class="macro" id="_M/GETFUNC_NAME_STRING" data-ref="_M/GETFUNC_NAME_STRING">GETFUNC_NAME_STRING</dfn> STRINGIZE (REENTRANT_GETNAME)</u></td></tr>
+<tr><th id="60">60</th><td><u>#define <dfn class="macro" id="_M/ENDFUNC_NAME_STRING" data-ref="_M/ENDFUNC_NAME_STRING">ENDFUNC_NAME_STRING</dfn> STRINGIZE (ENDFUNC_NAME)</u></td></tr>
+<tr><th id="61">61</th><td><u>#define <dfn class="macro" id="_M/DATABASE_NAME_STRING" data-ref="_M/DATABASE_NAME_STRING">DATABASE_NAME_STRING</dfn> STRINGIZE (DATABASE_NAME)</u></td></tr>
+<tr><th id="62">62</th><td><u>#define <dfn class="macro" id="_M/STRINGIZE" data-ref="_M/STRINGIZE">STRINGIZE</dfn>(Name) STRINGIZE1 (Name)</u></td></tr>
+<tr><th id="63">63</th><td><u>#define <dfn class="macro" id="_M/STRINGIZE1" data-ref="_M/STRINGIZE1">STRINGIZE1</dfn>(Name) #Name</u></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><u>#<span data-ppcond="65">ifndef</span> <span class="macro" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</span></u></td></tr>
+<tr><th id="66">66</th><td><u># define <dfn class="macro" id="_M/DB_LOOKUP_FCT" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</dfn> CONCAT3_1 (__nss_, DATABASE_NAME, _lookup2)</u></td></tr>
+<tr><th id="67">67</th><td><u># define <dfn class="macro" id="_M/CONCAT3_1" data-ref="_M/CONCAT3_1">CONCAT3_1</dfn>(Pre, Name, Post) CONCAT3_2 (Pre, Name, Post)</u></td></tr>
+<tr><th id="68">68</th><td><u># define <dfn class="macro" id="_M/CONCAT3_2" data-ref="_M/CONCAT3_2">CONCAT3_2</dfn>(Pre, Name, Post) Pre##Name##Post</u></td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="65">endif</span></u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* Sometimes we need to store error codes in the `h_errno' variable.  */</i></td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="72">ifdef</span> <span class="macro" data-ref="_M/NEED_H_ERRNO">NEED_H_ERRNO</span></u></td></tr>
+<tr><th id="73">73</th><td><u># define H_ERRNO_PARM , int *h_errnop</u></td></tr>
+<tr><th id="74">74</th><td><u># define H_ERRNO_VAR , &amp;h_errno</u></td></tr>
+<tr><th id="75">75</th><td><u># define H_ERRNO_VAR_P &amp;h_errno</u></td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="72">else</span></u></td></tr>
+<tr><th id="77">77</th><td><u># define <dfn class="macro" id="_M/H_ERRNO_PARM" data-ref="_M/H_ERRNO_PARM">H_ERRNO_PARM</dfn></u></td></tr>
+<tr><th id="78">78</th><td><u># define <dfn class="macro" id="_M/H_ERRNO_VAR" data-ref="_M/H_ERRNO_VAR">H_ERRNO_VAR</dfn></u></td></tr>
+<tr><th id="79">79</th><td><u># define <dfn class="macro" id="_M/H_ERRNO_VAR_P" data-ref="_M/H_ERRNO_VAR_P">H_ERRNO_VAR_P</dfn> NULL</u></td></tr>
+<tr><th id="80">80</th><td><u>#<span data-ppcond="72">endif</span></u></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* Some databases take the `stayopen' flag.  */</i></td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="83">ifdef</span> <span class="macro" data-ref="_M/STAYOPEN">STAYOPEN</span></u></td></tr>
+<tr><th id="84">84</th><td><u># define STAYOPEN_TMP CONCAT2_1 (STAYOPEN, _tmp)</u></td></tr>
+<tr><th id="85">85</th><td><u># define STAYOPEN_TMPVAR &amp;CONCAT2_1 (STAYOPEN_VAR, _tmp)</u></td></tr>
+<tr><th id="86">86</th><td><u>#<span data-ppcond="83">else</span></u></td></tr>
+<tr><th id="87">87</th><td><u># define <dfn class="macro" id="_M/STAYOPEN" data-ref="_M/STAYOPEN">STAYOPEN</dfn> void</u></td></tr>
+<tr><th id="88">88</th><td><u># define <dfn class="macro" id="_M/STAYOPEN_VAR" data-ref="_M/STAYOPEN_VAR">STAYOPEN_VAR</dfn> 0</u></td></tr>
+<tr><th id="89">89</th><td><u># define <dfn class="macro" id="_M/STAYOPEN_TMPVAR" data-ref="_M/STAYOPEN_TMPVAR">STAYOPEN_TMPVAR</dfn> NULL</u></td></tr>
+<tr><th id="90">90</th><td><u>#<span data-ppcond="83">endif</span></u></td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><u>#<span data-ppcond="92">ifndef</span> <span class="macro" data-ref="_M/NEED__RES">NEED__RES</span></u></td></tr>
+<tr><th id="93">93</th><td><u># define <dfn class="macro" id="_M/NEED__RES" data-ref="_M/NEED__RES">NEED__RES</dfn> 0</u></td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="92">endif</span></u></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><i>/* This handle for the NSS data base is shared between all</i></td></tr>
+<tr><th id="97">97</th><td><i>   set/get/endXXXent functions.  */</i></td></tr>
+<tr><th id="98">98</th><td><em>static</em> <a class="typedef" href="nsswitch.h.html#service_user" title='service_user' data-type='struct service_user' data-ref="service_user" data-ref-filename="service_user">service_user</a> *<dfn class="decl def" id="nip" title='nip' data-ref="nip" data-ref-filename="nip">nip</dfn>;</td></tr>
+<tr><th id="99">99</th><td><i>/* Remember the last service used since the last call to  `endXXent'.  */</i></td></tr>
+<tr><th id="100">100</th><td><em>static</em> <a class="typedef" href="nsswitch.h.html#service_user" title='service_user' data-type='struct service_user' data-ref="service_user" data-ref-filename="service_user">service_user</a> *<dfn class="decl def" id="last_nip" title='last_nip' data-ref="last_nip" data-ref-filename="last_nip">last_nip</dfn>;</td></tr>
+<tr><th id="101">101</th><td><i>/* Remember the first service_entry, it's always the same.  */</i></td></tr>
+<tr><th id="102">102</th><td><em>static</em> <a class="typedef" href="nsswitch.h.html#service_user" title='service_user' data-type='struct service_user' data-ref="service_user" data-ref-filename="service_user">service_user</a> *<dfn class="decl def" id="startp" title='startp' data-ref="startp" data-ref-filename="startp">startp</dfn>;</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="104">ifdef</span> <span class="macro" data-ref="_M/STAYOPEN_TMP">STAYOPEN_TMP</span></u></td></tr>
+<tr><th id="105">105</th><td><i>/* We need to remember the last `stayopen' flag given by the user</i></td></tr>
+<tr><th id="106">106</th><td><i>   since the `setent' function is only called for the first available</i></td></tr>
+<tr><th id="107">107</th><td><i>   service.  */</i></td></tr>
+<tr><th id="108">108</th><td><em>static</em> STAYOPEN_TMP;</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="104">endif</span></u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><i>/* Protect above variable against multiple uses at the same time.  */</i></td></tr>
+<tr><th id="112">112</th><td><a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#81" title="static __libc_lock_t lock;" data-ref="_M/__libc_lock_define_initialized">__libc_lock_define_initialized</a> (<em>static</em>, <dfn class="decl def" id="lock" title='lock' data-ref="lock" data-ref-filename="lock">lock</dfn>)</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><i>/* The lookup function for the first entry of this service.  */</i></td></tr>
+<tr><th id="115">115</th><td><b>extern</b> <em>int</em> <a class="macro" href="#66" title="__nss_group_lookup2" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</a> (<a class="typedef" href="nsswitch.h.html#service_user" title='service_user' data-type='struct service_user' data-ref="service_user" data-ref-filename="service_user">service_user</a> **<dfn class="local col1 decl" id="1nip" title='nip' data-type='service_user **' data-ref="1nip" data-ref-filename="1nip">nip</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2name" title='name' data-type='const char *' data-ref="2name" data-ref-filename="2name">name</dfn>,</td></tr>
+<tr><th id="116">116</th><td>			  <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3name2" title='name2' data-type='const char *' data-ref="3name2" data-ref-filename="3name2">name2</dfn>, <em>void</em> **<dfn class="local col4 decl" id="4fctp" title='fctp' data-type='void **' data-ref="4fctp" data-ref-filename="4fctp">fctp</dfn>)</td></tr>
+<tr><th id="117">117</th><td>     <a class="macro" href="../include/libc-symbols.h.html#165" title="" data-ref="_M/internal_function">internal_function</a>;</td></tr>
+<tr><th id="118">118</th><td><a class="macro" href="../include/libc-symbols.h.html#493" title="extern __typeof (__nss_group_lookup2) __nss_group_lookup2 __asm__ (&quot;&quot; &quot;__GI___nss_group_lookup2&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="macro" href="#66" title="__nss_group_lookup2" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</a>)</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><em>void</em></td></tr>
+<tr><th id="121">121</th><td><a class="macro" href="../grp/getgrent_r.c.html#23" title="setgrent" data-ref="_M/SETFUNC_NAME">SETFUNC_NAME</a> (<a class="macro" href="#87" title="void" data-ref="_M/STAYOPEN">STAYOPEN</a>)</td></tr>
+<tr><th id="122">122</th><td>{</td></tr>
+<tr><th id="123">123</th><td>  <em>int</em> <dfn class="local col5 decl" id="5save" title='save' data-type='int' data-ref="5save" data-ref-filename="5save">save</dfn>;</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#176" title="({ (void) ({ int ignore1, ignore2, ignore3; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=&amp;D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;0&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;1&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0), &quot;0&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); }); 0; })" data-ref="_M/__libc_lock_lock">__libc_lock_lock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="126">126</th><td>  <a class="ref fn" href="nsswitch.h.html#__nss_setent" title='__nss_setent' data-ref="__nss_setent" data-ref-filename="__nss_setent">__nss_setent</a> (<a class="macro" href="#58" title="&quot;setgrent&quot;" data-ref="_M/SETFUNC_NAME_STRING">SETFUNC_NAME_STRING</a>, <a class="macro" href="#66" title="__nss_group_lookup2" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</a>, &amp;<a class="ref" href="#nip" title='nip' data-ref="nip" data-ref-filename="nip">nip</a>, &amp;<a class="ref" href="#startp" title='startp' data-ref="startp" data-ref-filename="startp">startp</a>,</td></tr>
+<tr><th id="127">127</th><td>		&amp;<a class="ref" href="#last_nip" title='last_nip' data-ref="last_nip" data-ref-filename="last_nip">last_nip</a>, <a class="macro" href="#88" title="0" data-ref="_M/STAYOPEN_VAR">STAYOPEN_VAR</a>, <a class="macro" href="#89" title="((void*)0)" data-ref="_M/STAYOPEN_TMPVAR">STAYOPEN_TMPVAR</a>, <a class="macro" href="#93" title="0" data-ref="_M/NEED__RES">NEED__RES</a>);</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>  <a class="local col5 ref" href="#5save" title='save' data-ref="5save" data-ref-filename="5save">save</a> = <a class="macro" href="../include/errno.h.html#31" title="__libc_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="130">130</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#210" title="(void) ({ int ignore; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock), &quot;S&quot; (0) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); })" data-ref="_M/__libc_lock_unlock">__libc_lock_unlock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="131">131</th><td>  <a class="macro" href="../include/errno.h.html#39" title="(__libc_errno = (save))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col5 ref" href="#5save" title='save' data-ref="5save" data-ref-filename="5save">save</a>);</td></tr>
+<tr><th id="132">132</th><td>}</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><em>void</em></td></tr>
+<tr><th id="136">136</th><td><a class="macro" href="../grp/getgrent_r.c.html#25" title="endgrent" data-ref="_M/ENDFUNC_NAME">ENDFUNC_NAME</a> (<em>void</em>)</td></tr>
+<tr><th id="137">137</th><td>{</td></tr>
+<tr><th id="138">138</th><td>  <em>int</em> <dfn class="local col6 decl" id="6save" title='save' data-type='int' data-ref="6save" data-ref-filename="6save">save</dfn>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>  <i>/* If the service has not been used before do not do anything.  */</i></td></tr>
+<tr><th id="141">141</th><td>  <b>if</b> (<a class="ref" href="#startp" title='startp' data-ref="startp" data-ref-filename="startp">startp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="142">142</th><td>    {</td></tr>
+<tr><th id="143">143</th><td>      <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#176" title="({ (void) ({ int ignore1, ignore2, ignore3; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=&amp;D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;0&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;1&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0), &quot;0&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); }); 0; })" data-ref="_M/__libc_lock_lock">__libc_lock_lock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="144">144</th><td>      <a class="ref fn" href="nsswitch.h.html#__nss_endent" title='__nss_endent' data-ref="__nss_endent" data-ref-filename="__nss_endent">__nss_endent</a> (<a class="macro" href="#60" title="&quot;endgrent&quot;" data-ref="_M/ENDFUNC_NAME_STRING">ENDFUNC_NAME_STRING</a>, <a class="macro" href="#66" title="__nss_group_lookup2" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</a>, &amp;<a class="ref" href="#nip" title='nip' data-ref="nip" data-ref-filename="nip">nip</a>, &amp;<a class="ref" href="#startp" title='startp' data-ref="startp" data-ref-filename="startp">startp</a>,</td></tr>
+<tr><th id="145">145</th><td>		    &amp;<a class="ref" href="#last_nip" title='last_nip' data-ref="last_nip" data-ref-filename="last_nip">last_nip</a>, <a class="macro" href="#93" title="0" data-ref="_M/NEED__RES">NEED__RES</a>);</td></tr>
+<tr><th id="146">146</th><td>      <a class="local col6 ref" href="#6save" title='save' data-ref="6save" data-ref-filename="6save">save</a> = <a class="macro" href="../include/errno.h.html#31" title="__libc_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="147">147</th><td>      <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#210" title="(void) ({ int ignore; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock), &quot;S&quot; (0) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); })" data-ref="_M/__libc_lock_unlock">__libc_lock_unlock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="148">148</th><td>      <a class="macro" href="../include/errno.h.html#39" title="(__libc_errno = (save))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col6 ref" href="#6save" title='save' data-ref="6save" data-ref-filename="6save">save</a>);</td></tr>
+<tr><th id="149">149</th><td>    }</td></tr>
+<tr><th id="150">150</th><td>}</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><em>int</em></td></tr>
+<tr><th id="154">154</th><td><a class="macro" href="#52" title="__getgrent_r" data-ref="_M/INTERNAL">INTERNAL</a> (<a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>) (<a class="macro" href="../grp/getgrent_r.c.html#22" title="struct group" data-ref="_M/LOOKUP_TYPE">LOOKUP_TYPE</a> *<dfn class="local col7 decl" id="7resbuf" title='resbuf' data-type='struct group *' data-ref="7resbuf" data-ref-filename="7resbuf">resbuf</dfn>, <em>char</em> *<dfn class="local col8 decl" id="8buffer" title='buffer' data-type='char *' data-ref="8buffer" data-ref-filename="8buffer">buffer</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col9 decl" id="9buflen" title='buflen' data-type='size_t' data-ref="9buflen" data-ref-filename="9buflen">buflen</dfn>,</td></tr>
+<tr><th id="155">155</th><td>			      <a class="macro" href="../grp/getgrent_r.c.html#22" title="struct group" data-ref="_M/LOOKUP_TYPE">LOOKUP_TYPE</a> **<dfn class="local col0 decl" id="10result" title='result' data-type='struct group **' data-ref="10result" data-ref-filename="10result">result</dfn> <a class="macro" href="#77" title="" data-ref="_M/H_ERRNO_PARM">H_ERRNO_PARM</a>)</td></tr>
+<tr><th id="156">156</th><td>{</td></tr>
+<tr><th id="157">157</th><td>  <em>int</em> <dfn class="local col1 decl" id="11status" title='status' data-type='int' data-ref="11status" data-ref-filename="11status">status</dfn>;</td></tr>
+<tr><th id="158">158</th><td>  <em>int</em> <dfn class="local col2 decl" id="12save" title='save' data-type='int' data-ref="12save" data-ref-filename="12save">save</dfn>;</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#176" title="({ (void) ({ int ignore1, ignore2, ignore3; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=&amp;D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;0&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=D&quot; (ignore2), &quot;=m&quot; (lock), &quot;=a&quot; (ignore3) : &quot;1&quot; (1), &quot;m&quot; (lock), &quot;3&quot; (0), &quot;0&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); }); 0; })" data-ref="_M/__libc_lock_lock">__libc_lock_lock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="161">161</th><td>  <a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a> = <a class="ref fn" href="nsswitch.h.html#__nss_getent_r" title='__nss_getent_r' data-ref="__nss_getent_r" data-ref-filename="__nss_getent_r">__nss_getent_r</a> (<a class="macro" href="#59" title="&quot;getgrent_r&quot;" data-ref="_M/GETFUNC_NAME_STRING">GETFUNC_NAME_STRING</a>, <a class="macro" href="#58" title="&quot;setgrent&quot;" data-ref="_M/SETFUNC_NAME_STRING">SETFUNC_NAME_STRING</a>,</td></tr>
+<tr><th id="162">162</th><td>			   <a class="macro" href="#66" title="__nss_group_lookup2" data-ref="_M/DB_LOOKUP_FCT">DB_LOOKUP_FCT</a>, &amp;<a class="ref" href="#nip" title='nip' data-ref="nip" data-ref-filename="nip">nip</a>, &amp;<a class="ref" href="#startp" title='startp' data-ref="startp" data-ref-filename="startp">startp</a>, &amp;<a class="ref" href="#last_nip" title='last_nip' data-ref="last_nip" data-ref-filename="last_nip">last_nip</a>,</td></tr>
+<tr><th id="163">163</th><td>			   <a class="macro" href="#89" title="((void*)0)" data-ref="_M/STAYOPEN_TMPVAR">STAYOPEN_TMPVAR</a>, <a class="macro" href="#93" title="0" data-ref="_M/NEED__RES">NEED__RES</a>, <a class="local col7 ref" href="#7resbuf" title='resbuf' data-ref="7resbuf" data-ref-filename="7resbuf">resbuf</a>, <a class="local col8 ref" href="#8buffer" title='buffer' data-ref="8buffer" data-ref-filename="8buffer">buffer</a>,</td></tr>
+<tr><th id="164">164</th><td>			   <a class="local col9 ref" href="#9buflen" title='buflen' data-ref="9buflen" data-ref-filename="9buflen">buflen</a>, (<em>void</em> **) <a class="local col0 ref" href="#10result" title='result' data-ref="10result" data-ref-filename="10result">result</a>, <a class="macro" href="#79" title="((void*)0)" data-ref="_M/H_ERRNO_VAR_P">H_ERRNO_VAR_P</a>);</td></tr>
+<tr><th id="165">165</th><td>  <a class="local col2 ref" href="#12save" title='save' data-ref="12save" data-ref-filename="12save">save</a> = <a class="macro" href="../include/errno.h.html#31" title="__libc_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="166">166</th><td>  <a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#210" title="(void) ({ int ignore; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; decl %0\n\t&quot; &quot;jne 1f\n\t&quot; &quot;jmp 24f\n\t&quot; &quot;0:\tdecl %0\n\t&quot; &quot;je 24f\n\t&quot; &quot;1:\tlea %0, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_unlock_wake\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=m&quot; (lock), &quot;=&amp;D&quot; (ignore) : &quot;m&quot; (lock), &quot;S&quot; (0) : &quot;ax&quot;, &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); })" data-ref="_M/__libc_lock_unlock">__libc_lock_unlock</a> (<a class="ref" href="#112" title='lock' data-ref="lock" data-ref-filename="lock">lock</a>);</td></tr>
+<tr><th id="167">167</th><td>  <a class="macro" href="../include/errno.h.html#39" title="(__libc_errno = (save))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col2 ref" href="#12save" title='save' data-ref="12save" data-ref-filename="12save">save</a>);</td></tr>
+<tr><th id="168">168</th><td>  <b>return</b> <a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a>;</td></tr>
+<tr><th id="169">169</th><td>}</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><u>#<span data-ppcond="172">ifdef</span> <span class="macro" data-ref="_M/NO_COMPAT_NEEDED">NO_COMPAT_NEEDED</span></u></td></tr>
+<tr><th id="173">173</th><td>strong_alias (INTERNAL (REENTRANT_GETNAME), REENTRANT_GETNAME);</td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="172">else</span></u></td></tr>
+<tr><th id="175">175</th><td><u># include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="176">176</th><td><u># <span data-ppcond="176">if</span> <a class="macro" href="../include/shlib-compat.h.html#41" title="((18 == 18) &amp;&amp; (!(1 - 0) || ((1 - 0) &lt; (1 - 0))))" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a> (libc, GLIBC_2_0, GLIBC_2_1_2)</u></td></tr>
+<tr><th id="177">177</th><td><u>#  define OLD(name) OLD1 (name)</u></td></tr>
+<tr><th id="178">178</th><td><u>#  define OLD1(name) __old_##name</u></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><em>int</em></td></tr>
+<tr><th id="181">181</th><td>attribute_compat_text_section</td></tr>
+<tr><th id="182">182</th><td>OLD (REENTRANT_GETNAME) (LOOKUP_TYPE *resbuf, <em>char</em> *buffer, size_t buflen,</td></tr>
+<tr><th id="183">183</th><td>			 LOOKUP_TYPE **result H_ERRNO_PARM)</td></tr>
+<tr><th id="184">184</th><td>{</td></tr>
+<tr><th id="185">185</th><td>  <em>int</em> ret = INTERNAL (REENTRANT_GETNAME) (resbuf, buffer, buflen,</td></tr>
+<tr><th id="186">186</th><td>					  result H_ERRNO_VAR);</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td>  <b>if</b> (ret != <var>0</var>)</td></tr>
+<tr><th id="189">189</th><td>    ret = -<var>1</var>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>  <b>return</b> ret;</td></tr>
+<tr><th id="192">192</th><td>}</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><u>#  define do_symbol_version(real, name, version) \</u></td></tr>
+<tr><th id="195">195</th><td><u>  compat_symbol (libc, real, name, version)</u></td></tr>
+<tr><th id="196">196</th><td>do_symbol_version (OLD (REENTRANT_GETNAME), REENTRANT_GETNAME, GLIBC_2_0);</td></tr>
+<tr><th id="197">197</th><td><u># <span data-ppcond="176">endif</span></u></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i>/* As INTERNAL (REENTRANT_GETNAME) may be hidden, we need an alias</i></td></tr>
+<tr><th id="200">200</th><td><i>   in between so that the REENTRANT_GETNAME@@GLIBC_2.1.2 is not</i></td></tr>
+<tr><th id="201">201</th><td><i>   hidden too.  */</i></td></tr>
+<tr><th id="202">202</th><td><a class="macro" href="../include/libc-symbols.h.html#96" title="extern __typeof (__getgrent_r) __new_getgrent_r __attribute__ ((alias (&quot;__getgrent_r&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="macro" href="#52" title="__getgrent_r" data-ref="_M/INTERNAL">INTERNAL</a> (<a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>), <a class="macro" href="#55" title="__new_getgrent_r" data-ref="_M/NEW">NEW</a> (<a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>));</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td><u># define <dfn class="macro" id="_M/do_default_symbol_version" data-ref="_M/do_default_symbol_version">do_default_symbol_version</dfn>(real, name, version) \</u></td></tr>
+<tr><th id="205">205</th><td><u>  versioned_symbol (libc, real, name, version)</u></td></tr>
+<tr><th id="206">206</th><td><a class="macro" href="#204" title="__asm__ (&quot;.symver &quot; &quot;__new_getgrent_r&quot; &quot;,&quot; &quot;getgrent_r&quot; &quot;@@&quot; &quot;GLIBC_2.2.5&quot;)" data-ref="_M/do_default_symbol_version">do_default_symbol_version</a> (<a class="macro" href="#55" title="__new_getgrent_r" data-ref="_M/NEW">NEW</a> (<a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>),</td></tr>
+<tr><th id="207">207</th><td>			   <a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>, GLIBC_2_1_2);</td></tr>
+<tr><th id="208">208</th><td><u>#<span data-ppcond="172">endif</span></u></td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td><a class="macro" href="nsswitch.h.html#116" title="" data-ref="_M/nss_interface_function">nss_interface_function</a> (<a class="macro" href="../grp/getgrent_r.c.html#23" title="setgrent" data-ref="_M/SETFUNC_NAME">SETFUNC_NAME</a>)</td></tr>
+<tr><th id="211">211</th><td><a class="macro" href="nsswitch.h.html#116" title="" data-ref="_M/nss_interface_function">nss_interface_function</a> (<a class="macro" href="../grp/getgrent_r.c.html#25" title="endgrent" data-ref="_M/ENDFUNC_NAME">ENDFUNC_NAME</a>)</td></tr>
+<tr><th id="212">212</th><td><a class="macro" href="nsswitch.h.html#116" title="" data-ref="_M/nss_interface_function">nss_interface_function</a> (<a class="macro" href="#50" title="getgrent_r" data-ref="_M/REENTRANT_GETNAME">REENTRANT_GETNAME</a>)</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../grp/getgrent_r.c.html'>glibc_src_2.25/grp/getgrent_r.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,298 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>strchr-sse2-no-bsf.S source code [glibc_src_2.25/sysdeps/x86_64/multiarch/strchr-sse2-no-bsf.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/sysdeps/x86_64/multiarch/strchr-sse2-no-bsf.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.25</a>/<a href='../..'>sysdeps</a>/<a href='..'>x86_64</a>/<a href='./'>multiarch</a>/<a href='strchr-sse2-no-bsf.S.html'>strchr-sse2-no-bsf.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* strchr with SSE2 without bsf</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2011-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Intel Corporation.</i></td></tr>
+<tr><th id="4">4</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">if</span> <a class="macro" href="../../../include/libc-symbols.h.html#24" title="(18 == 18)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u># include <a href="../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u># include <a href="../../generic/asm-syntax.h.html">"asm-syntax.h"</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td>	<a class="macro" href="../sysdep.h.html#109" title=".section &quot;.text.atom&quot;, &quot;ax&quot;" data-ref="_M/atom_text_section">atom_text_section</a></td></tr>
+<tr><th id="26">26</th><td><a class="macro" href="../sysdep.h.html#41" title=".globl __strchr_sse2_no_bsf; .type __strchr_sse2_no_bsf,@function; .align 1&lt;&lt;4; __strchr_sse2_no_bsf: .cfi_startproc;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__strchr_sse2_no_bsf" title='__strchr_sse2_no_bsf' data-ref="__strchr_sse2_no_bsf" data-ref-filename="__strchr_sse2_no_bsf">__strchr_sse2_no_bsf</dfn></span>)</td></tr>
+<tr><th id="27">27</th><td>	<span class='error' title="unknown type name &apos;movd&apos;">movd</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>esi, %xmm1</td></tr>
+<tr><th id="28">28</th><td>	movq	%rdi, %rcx</td></tr>
+<tr><th id="29">29</th><td>	punpcklbw %xmm1, %xmm1</td></tr>
+<tr><th id="30">30</th><td>	andq	$~<var>15</var>, %rdi</td></tr>
+<tr><th id="31">31</th><td>	pxor	%xmm2, %xmm2</td></tr>
+<tr><th id="32">32</th><td>	punpcklbw %xmm1, %xmm1</td></tr>
+<tr><th id="33">33</th><td>	orl	$<var>0xffffffff</var>, %esi</td></tr>
+<tr><th id="34">34</th><td>	movdqa	(%rdi), %xmm0</td></tr>
+<tr><th id="35">35</th><td>	pshufd	$<var>0</var>, %xmm1, %xmm1</td></tr>
+<tr><th id="36">36</th><td>	subq	%rdi, %rcx</td></tr>
+<tr><th id="37">37</th><td>	movdqa	%xmm0, %xmm3</td></tr>
+<tr><th id="38">38</th><td>	leaq	<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="39">39</th><td>	pcmpeqb	%xmm1, %xmm0</td></tr>
+<tr><th id="40">40</th><td>	pcmpeqb	%xmm2, %xmm3</td></tr>
+<tr><th id="41">41</th><td>	shl	%cl, %esi</td></tr>
+<tr><th id="42">42</th><td>	pmovmskb %xmm0, %eax</td></tr>
+<tr><th id="43">43</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="44">44</th><td>	andl	%esi, %eax</td></tr>
+<tr><th id="45">45</th><td>	andl	%esi, %edx</td></tr>
+<tr><th id="46">46</th><td>	test	%eax, %eax</td></tr>
+<tr><th id="47">47</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatches" data-ref="_M/L">L</a>(matches)</td></tr>
+<tr><th id="48">48</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="49">49</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lloop" data-ref="_M/L">L</a>(loop):</td></tr>
+<tr><th id="52">52</th><td>	movdqa	(%rdi), %xmm0</td></tr>
+<tr><th id="53">53</th><td>	leaq	<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="54">54</th><td>	movdqa	%xmm0, %xmm3</td></tr>
+<tr><th id="55">55</th><td>	pcmpeqb	%xmm1, %xmm0</td></tr>
+<tr><th id="56">56</th><td>	pcmpeqb	%xmm2, %xmm3</td></tr>
+<tr><th id="57">57</th><td>	pmovmskb %xmm0, %eax</td></tr>
+<tr><th id="58">58</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="59">59</th><td>	or	%eax, %edx</td></tr>
+<tr><th id="60">60</th><td>	jz	<a class="macro" href="../sysdep.h.html#106" title=".Lloop" data-ref="_M/L">L</a>(loop)</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="63">63</th><td>	test	%eax, %eax</td></tr>
+<tr><th id="64">64</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatches" data-ref="_M/L">L</a>(matches)</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i>/* Return NULL.  */</i></td></tr>
+<tr><th id="67">67</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="68">68</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null):</td></tr>
+<tr><th id="69">69</th><td>	xor	%rax, %rax</td></tr>
+<tr><th id="70">70</th><td>	ret</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatches" data-ref="_M/L">L</a>(matches):</td></tr>
+<tr><th id="73">73</th><td>	<i>/* There is a match.  First find where NULL is.  */</i></td></tr>
+<tr><th id="74">74</th><td>	leaq	-<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="75">75</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="76">76</th><td>	jz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case1" data-ref="_M/L">L</a>(match_case1)</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="79">79</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case2" data-ref="_M/L">L</a>(match_case2):</td></tr>
+<tr><th id="80">80</th><td>	test	%al, %al</td></tr>
+<tr><th id="81">81</th><td>	jz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatch_high_case2" data-ref="_M/L">L</a>(match_high_case2)</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	mov	%al, %cl</td></tr>
+<tr><th id="84">84</th><td>	and	$<var>15</var>, %cl</td></tr>
+<tr><th id="85">85</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case2_4" data-ref="_M/L">L</a>(match_case2_4)</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	mov	%dl, %ch</td></tr>
+<tr><th id="88">88</th><td>	and	$<var>15</var>, %ch</td></tr>
+<tr><th id="89">89</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	test	$<var>0x10</var>, %al</td></tr>
+<tr><th id="92">92</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit5" data-ref="_M/L">L</a>(Exit5)</td></tr>
+<tr><th id="93">93</th><td>	test	$<var>0x10</var>, %dl</td></tr>
+<tr><th id="94">94</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="95">95</th><td>	test	$<var>0x20</var>, %al</td></tr>
+<tr><th id="96">96</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit6" data-ref="_M/L">L</a>(Exit6)</td></tr>
+<tr><th id="97">97</th><td>	test	$<var>0x20</var>, %dl</td></tr>
+<tr><th id="98">98</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="99">99</th><td>	test	$<var>0x40</var>, %al</td></tr>
+<tr><th id="100">100</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit7" data-ref="_M/L">L</a>(Exit7)</td></tr>
+<tr><th id="101">101</th><td>	test	$<var>0x40</var>, %dl</td></tr>
+<tr><th id="102">102</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="103">103</th><td>	lea	<var>7</var>(%rdi), %rax</td></tr>
+<tr><th id="104">104</th><td>	ret</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="107">107</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case2_4" data-ref="_M/L">L</a>(match_case2_4):</td></tr>
+<tr><th id="108">108</th><td>	test	$<var>0x01</var>, %al</td></tr>
+<tr><th id="109">109</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit1" data-ref="_M/L">L</a>(Exit1)</td></tr>
+<tr><th id="110">110</th><td>	test	$<var>0x01</var>, %dl</td></tr>
+<tr><th id="111">111</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="112">112</th><td>	test	$<var>0x02</var>, %al</td></tr>
+<tr><th id="113">113</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit2" data-ref="_M/L">L</a>(Exit2)</td></tr>
+<tr><th id="114">114</th><td>	test	$<var>0x02</var>, %dl</td></tr>
+<tr><th id="115">115</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="116">116</th><td>	test	$<var>0x04</var>, %al</td></tr>
+<tr><th id="117">117</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit3" data-ref="_M/L">L</a>(Exit3)</td></tr>
+<tr><th id="118">118</th><td>	test	$<var>0x04</var>, %dl</td></tr>
+<tr><th id="119">119</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="120">120</th><td>	lea	<var>3</var>(%rdi), %rax</td></tr>
+<tr><th id="121">121</th><td>	ret</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="124">124</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_high_case2" data-ref="_M/L">L</a>(match_high_case2):</td></tr>
+<tr><th id="125">125</th><td>	test	%dl, %dl</td></tr>
+<tr><th id="126">126</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>	mov	%ah, %cl</td></tr>
+<tr><th id="129">129</th><td>	and	$<var>15</var>, %cl</td></tr>
+<tr><th id="130">130</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case2_12" data-ref="_M/L">L</a>(match_case2_12)</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	mov	%dh, %ch</td></tr>
+<tr><th id="133">133</th><td>	and	$<var>15</var>, %ch</td></tr>
+<tr><th id="134">134</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	test	$<var>0x10</var>, %ah</td></tr>
+<tr><th id="137">137</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit13" data-ref="_M/L">L</a>(Exit13)</td></tr>
+<tr><th id="138">138</th><td>	test	$<var>0x10</var>, %dh</td></tr>
+<tr><th id="139">139</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="140">140</th><td>	test	$<var>0x20</var>, %ah</td></tr>
+<tr><th id="141">141</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit14" data-ref="_M/L">L</a>(Exit14)</td></tr>
+<tr><th id="142">142</th><td>	test	$<var>0x20</var>, %dh</td></tr>
+<tr><th id="143">143</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="144">144</th><td>	test	$<var>0x40</var>, %ah</td></tr>
+<tr><th id="145">145</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit15" data-ref="_M/L">L</a>(Exit15)</td></tr>
+<tr><th id="146">146</th><td>	test	$<var>0x40</var>, %dh</td></tr>
+<tr><th id="147">147</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="148">148</th><td>	lea	<var>15</var>(%rdi), %rax</td></tr>
+<tr><th id="149">149</th><td>	ret</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="152">152</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case2_12" data-ref="_M/L">L</a>(match_case2_12):</td></tr>
+<tr><th id="153">153</th><td>	test	$<var>0x01</var>, %ah</td></tr>
+<tr><th id="154">154</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit9" data-ref="_M/L">L</a>(Exit9)</td></tr>
+<tr><th id="155">155</th><td>	test	$<var>0x01</var>, %dh</td></tr>
+<tr><th id="156">156</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="157">157</th><td>	test	$<var>0x02</var>, %ah</td></tr>
+<tr><th id="158">158</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit10" data-ref="_M/L">L</a>(Exit10)</td></tr>
+<tr><th id="159">159</th><td>	test	$<var>0x02</var>, %dh</td></tr>
+<tr><th id="160">160</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="161">161</th><td>	test	$<var>0x04</var>, %ah</td></tr>
+<tr><th id="162">162</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit11" data-ref="_M/L">L</a>(Exit11)</td></tr>
+<tr><th id="163">163</th><td>	test	$<var>0x04</var>, %dh</td></tr>
+<tr><th id="164">164</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lreturn_null" data-ref="_M/L">L</a>(return_null)</td></tr>
+<tr><th id="165">165</th><td>	lea	<var>11</var>(%rdi), %rax</td></tr>
+<tr><th id="166">166</th><td>	ret</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="169">169</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_case1" data-ref="_M/L">L</a>(match_case1):</td></tr>
+<tr><th id="170">170</th><td>	test	%al, %al</td></tr>
+<tr><th id="171">171</th><td>	jz	<a class="macro" href="../sysdep.h.html#106" title=".Lmatch_high_case1" data-ref="_M/L">L</a>(match_high_case1)</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	test	$<var>0x01</var>, %al</td></tr>
+<tr><th id="174">174</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit1" data-ref="_M/L">L</a>(Exit1)</td></tr>
+<tr><th id="175">175</th><td>	test	$<var>0x02</var>, %al</td></tr>
+<tr><th id="176">176</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit2" data-ref="_M/L">L</a>(Exit2)</td></tr>
+<tr><th id="177">177</th><td>	test	$<var>0x04</var>, %al</td></tr>
+<tr><th id="178">178</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit3" data-ref="_M/L">L</a>(Exit3)</td></tr>
+<tr><th id="179">179</th><td>	test	$<var>0x08</var>, %al</td></tr>
+<tr><th id="180">180</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit4" data-ref="_M/L">L</a>(Exit4)</td></tr>
+<tr><th id="181">181</th><td>	test	$<var>0x10</var>, %al</td></tr>
+<tr><th id="182">182</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit5" data-ref="_M/L">L</a>(Exit5)</td></tr>
+<tr><th id="183">183</th><td>	test	$<var>0x20</var>, %al</td></tr>
+<tr><th id="184">184</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit6" data-ref="_M/L">L</a>(Exit6)</td></tr>
+<tr><th id="185">185</th><td>	test	$<var>0x40</var>, %al</td></tr>
+<tr><th id="186">186</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit7" data-ref="_M/L">L</a>(Exit7)</td></tr>
+<tr><th id="187">187</th><td>	lea	<var>7</var>(%rdi), %rax</td></tr>
+<tr><th id="188">188</th><td>	ret</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="191">191</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lmatch_high_case1" data-ref="_M/L">L</a>(match_high_case1):</td></tr>
+<tr><th id="192">192</th><td>	test	$<var>0x01</var>, %ah</td></tr>
+<tr><th id="193">193</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit9" data-ref="_M/L">L</a>(Exit9)</td></tr>
+<tr><th id="194">194</th><td>	test	$<var>0x02</var>, %ah</td></tr>
+<tr><th id="195">195</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit10" data-ref="_M/L">L</a>(Exit10)</td></tr>
+<tr><th id="196">196</th><td>	test	$<var>0x04</var>, %ah</td></tr>
+<tr><th id="197">197</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit11" data-ref="_M/L">L</a>(Exit11)</td></tr>
+<tr><th id="198">198</th><td>	test	$<var>0x08</var>, %ah</td></tr>
+<tr><th id="199">199</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit12" data-ref="_M/L">L</a>(Exit12)</td></tr>
+<tr><th id="200">200</th><td>	test	$<var>0x10</var>, %ah</td></tr>
+<tr><th id="201">201</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit13" data-ref="_M/L">L</a>(Exit13)</td></tr>
+<tr><th id="202">202</th><td>	test	$<var>0x20</var>, %ah</td></tr>
+<tr><th id="203">203</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit14" data-ref="_M/L">L</a>(Exit14)</td></tr>
+<tr><th id="204">204</th><td>	test	$<var>0x40</var>, %ah</td></tr>
+<tr><th id="205">205</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".LExit15" data-ref="_M/L">L</a>(Exit15)</td></tr>
+<tr><th id="206">206</th><td>	lea	<var>15</var>(%rdi), %rax</td></tr>
+<tr><th id="207">207</th><td>	ret</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="210">210</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit1" data-ref="_M/L">L</a>(Exit1):</td></tr>
+<tr><th id="211">211</th><td>	lea	(%rdi), %rax</td></tr>
+<tr><th id="212">212</th><td>	ret</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="215">215</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit2" data-ref="_M/L">L</a>(Exit2):</td></tr>
+<tr><th id="216">216</th><td>	lea	<var>1</var>(%rdi), %rax</td></tr>
+<tr><th id="217">217</th><td>	ret</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="220">220</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit3" data-ref="_M/L">L</a>(Exit3):</td></tr>
+<tr><th id="221">221</th><td>	lea	<var>2</var>(%rdi), %rax</td></tr>
+<tr><th id="222">222</th><td>	ret</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="225">225</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit4" data-ref="_M/L">L</a>(Exit4):</td></tr>
+<tr><th id="226">226</th><td>	lea	<var>3</var>(%rdi), %rax</td></tr>
+<tr><th id="227">227</th><td>	ret</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="230">230</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit5" data-ref="_M/L">L</a>(Exit5):</td></tr>
+<tr><th id="231">231</th><td>	lea	<var>4</var>(%rdi), %rax</td></tr>
+<tr><th id="232">232</th><td>	ret</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="235">235</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit6" data-ref="_M/L">L</a>(Exit6):</td></tr>
+<tr><th id="236">236</th><td>	lea	<var>5</var>(%rdi), %rax</td></tr>
+<tr><th id="237">237</th><td>	ret</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="240">240</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit7" data-ref="_M/L">L</a>(Exit7):</td></tr>
+<tr><th id="241">241</th><td>	lea	<var>6</var>(%rdi), %rax</td></tr>
+<tr><th id="242">242</th><td>	ret</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="245">245</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit9" data-ref="_M/L">L</a>(Exit9):</td></tr>
+<tr><th id="246">246</th><td>	lea	<var>8</var>(%rdi), %rax</td></tr>
+<tr><th id="247">247</th><td>	ret</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="250">250</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit10" data-ref="_M/L">L</a>(Exit10):</td></tr>
+<tr><th id="251">251</th><td>	lea	<var>9</var>(%rdi), %rax</td></tr>
+<tr><th id="252">252</th><td>	ret</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="255">255</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit11" data-ref="_M/L">L</a>(Exit11):</td></tr>
+<tr><th id="256">256</th><td>	lea	<var>10</var>(%rdi), %rax</td></tr>
+<tr><th id="257">257</th><td>	ret</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="260">260</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit12" data-ref="_M/L">L</a>(Exit12):</td></tr>
+<tr><th id="261">261</th><td>	lea	<var>11</var>(%rdi), %rax</td></tr>
+<tr><th id="262">262</th><td>	ret</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="265">265</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit13" data-ref="_M/L">L</a>(Exit13):</td></tr>
+<tr><th id="266">266</th><td>	lea	<var>12</var>(%rdi), %rax</td></tr>
+<tr><th id="267">267</th><td>	ret</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="270">270</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit14" data-ref="_M/L">L</a>(Exit14):</td></tr>
+<tr><th id="271">271</th><td>	lea	<var>13</var>(%rdi), %rax</td></tr>
+<tr><th id="272">272</th><td>	ret</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="275">275</th><td><a class="macro" href="../sysdep.h.html#106" title=".LExit15" data-ref="_M/L">L</a>(Exit15):</td></tr>
+<tr><th id="276">276</th><td>	lea	<var>14</var>(%rdi), %rax</td></tr>
+<tr><th id="277">277</th><td>	ret</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><a class="macro" href="../sysdep.h.html#50" title=".cfi_endproc; .size __strchr_sse2_no_bsf,.-__strchr_sse2_no_bsf;" data-ref="_M/END">END</a> (__strchr_sse2_no_bsf)</td></tr>
+<tr><th id="280">280</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="281">281</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

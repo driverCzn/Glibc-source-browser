@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>halfulp.c source code [glibc_src_2.25/sysdeps/ieee754/dbl-64/halfulp.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/sysdeps/ieee754/dbl-64/halfulp.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.25</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>dbl-64</a>/<a href='halfulp.c.html'>halfulp.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * IBM Accurate Mathematical Library</i></td></tr>
+<tr><th id="3">3</th><td><i> * written by International Business Machines Corp.</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright (C) 2001-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * This program is free software; you can redistribute it and/or modify</i></td></tr>
+<tr><th id="7">7</th><td><i> * it under the terms of the GNU Lesser General Public License as published by</i></td></tr>
+<tr><th id="8">8</th><td><i> * the Free Software Foundation; either version 2.1 of the License, or</i></td></tr>
+<tr><th id="9">9</th><td><i> * (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * This program is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i> * but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</i></td></tr>
+<tr><th id="14">14</th><td><i> * GNU Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * You should have received a copy of the GNU Lesser General Public License</i></td></tr>
+<tr><th id="17">17</th><td><i> * along with this program; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="18">18</th><td><i> */</i></td></tr>
+<tr><th id="19">19</th><td><i>/************************************************************************/</i></td></tr>
+<tr><th id="20">20</th><td><i>/*                                                                      */</i></td></tr>
+<tr><th id="21">21</th><td><i>/* MODULE_NAME:halfulp.c                                                */</i></td></tr>
+<tr><th id="22">22</th><td><i>/*                                                                      */</i></td></tr>
+<tr><th id="23">23</th><td><i>/*  FUNCTIONS:halfulp                                                   */</i></td></tr>
+<tr><th id="24">24</th><td><i>/*  FILES NEEDED: mydefs.h dla.h endian.h                               */</i></td></tr>
+<tr><th id="25">25</th><td><i>/*                uroot.c                                               */</i></td></tr>
+<tr><th id="26">26</th><td><i>/*                                                                      */</i></td></tr>
+<tr><th id="27">27</th><td><i>/*Routine halfulp(double x, double y) computes x^y where result does    */</i></td></tr>
+<tr><th id="28">28</th><td><i>/*not need rounding. If the result is closer to 0 than can be           */</i></td></tr>
+<tr><th id="29">29</th><td><i>/*represented it returns 0.                                             */</i></td></tr>
+<tr><th id="30">30</th><td><i>/*     In the following cases the function does not compute anything    */</i></td></tr>
+<tr><th id="31">31</th><td><i>/*and returns a negative number:                                        */</i></td></tr>
+<tr><th id="32">32</th><td><i>/*1. if the result needs rounding,                                      */</i></td></tr>
+<tr><th id="33">33</th><td><i>/*2. if y is outside the interval [0,  2^20-1],                         */</i></td></tr>
+<tr><th id="34">34</th><td><i>/*3. if x can be represented by  x=2**n for some integer n.             */</i></td></tr>
+<tr><th id="35">35</th><td><i>/************************************************************************/</i></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../../../include/endian.h.html">"endian.h"</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="mydefs.h.html">"mydefs.h"</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="dla.h.html">&lt;dla.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../../x86_64/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="42">ifndef</span> <span class="macro" data-ref="_M/SECTION">SECTION</span></u></td></tr>
+<tr><th id="43">43</th><td><u># define <dfn class="macro" id="_M/SECTION" data-ref="_M/SECTION">SECTION</dfn></u></td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="42">endif</span></u></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>static</em> <em>const</em> <a class="typedef" href="mydefs.h.html#int4" title='int4' data-type='int' data-ref="int4" data-ref-filename="int4">int4</a> <dfn class="tu decl def" id="tab54" title='tab54' data-type='const int4 [32]' data-ref="tab54" data-ref-filename="tab54">tab54</dfn>[<var>32</var>] = {</td></tr>
+<tr><th id="47">47</th><td>  <var>262143</var>, <var>11585</var>,  <var>1782</var>, <var>511</var>, <var>210</var>, <var>107</var>, <var>63</var>, <var>42</var>,</td></tr>
+<tr><th id="48">48</th><td>  <var>30</var>,     <var>22</var>,     <var>17</var>,   <var>14</var>,  <var>12</var>,  <var>10</var>,  <var>9</var>, <var>7</var>,</td></tr>
+<tr><th id="49">49</th><td>  <var>7</var>,      <var>6</var>,      <var>5</var>,    <var>5</var>,   <var>5</var>,   <var>4</var>,   <var>4</var>, <var>4</var>,</td></tr>
+<tr><th id="50">50</th><td>  <var>3</var>,      <var>3</var>,      <var>3</var>,    <var>3</var>,   <var>3</var>,   <var>3</var>,   <var>3</var>, <var>3</var></td></tr>
+<tr><th id="51">51</th><td>};</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>double</em></td></tr>
+<tr><th id="55">55</th><td><a class="macro" href="#43" title="" data-ref="_M/SECTION">SECTION</a></td></tr>
+<tr><th id="56">56</th><td><dfn class="decl def fn" id="__halfulp" title='__halfulp' data-ref="__halfulp" data-ref-filename="__halfulp">__halfulp</dfn> (<em>double</em> <dfn class="local col1 decl" id="1x" title='x' data-type='double' data-ref="1x" data-ref-filename="1x">x</dfn>, <em>double</em> <dfn class="local col2 decl" id="2y" title='y' data-type='double' data-ref="2y" data-ref-filename="2y">y</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>  <a class="typedef" href="mydefs.h.html#mynumber" title='mynumber' data-type='union mynumber' data-ref="mynumber" data-ref-filename="mynumber">mynumber</a> <dfn class="local col3 decl" id="3v" title='v' data-type='mynumber' data-ref="3v" data-ref-filename="3v">v</dfn>;</td></tr>
+<tr><th id="59">59</th><td>  <em>double</em> <dfn class="local col4 decl" id="4z" title='z' data-type='double' data-ref="4z" data-ref-filename="4z">z</dfn>, <dfn class="local col5 decl" id="5u" title='u' data-type='double' data-ref="5u" data-ref-filename="5u">u</dfn>, <dfn class="local col6 decl" id="6uu" title='uu' data-type='double' data-ref="6uu" data-ref-filename="6uu">uu</dfn>;</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="60">ifndef</span> <span class="macro" data-ref="_M/DLA_FMS">DLA_FMS</span></u></td></tr>
+<tr><th id="61">61</th><td>  <em>double</em> <dfn class="local col7 decl" id="7j1" title='j1' data-type='double' data-ref="7j1" data-ref-filename="7j1">j1</dfn>, <dfn class="local col8 decl" id="8j2" title='j2' data-type='double' data-ref="8j2" data-ref-filename="8j2">j2</dfn>, <dfn class="local col9 decl" id="9j3" title='j3' data-type='double' data-ref="9j3" data-ref-filename="9j3">j3</dfn>, <dfn class="local col0 decl" id="10j4" title='j4' data-type='double' data-ref="10j4" data-ref-filename="10j4">j4</dfn>, <dfn class="local col1 decl" id="11j5" title='j5' data-type='double' data-ref="11j5" data-ref-filename="11j5">j5</dfn>;</td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="60">endif</span></u></td></tr>
+<tr><th id="63">63</th><td>  <a class="typedef" href="mydefs.h.html#int4" title='int4' data-type='int' data-ref="int4" data-ref-filename="int4">int4</a> <dfn class="local col2 decl" id="12k" title='k' data-type='int4' data-ref="12k" data-ref-filename="12k">k</dfn>, <dfn class="local col3 decl" id="13l" title='l' data-type='int4' data-ref="13l" data-ref-filename="13l">l</dfn>, <dfn class="local col4 decl" id="14m" title='m' data-type='int4' data-ref="14m" data-ref-filename="14m">m</dfn>, <dfn class="local col5 decl" id="15n" title='n' data-type='int4' data-ref="15n" data-ref-filename="15n">n</dfn>;</td></tr>
+<tr><th id="64">64</th><td>  <b>if</b> (<a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a> &lt;= <var>0</var>)                 <i>/*if power is negative or zero */</i></td></tr>
+<tr><th id="65">65</th><td>    {</td></tr>
+<tr><th id="66">66</th><td>      <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>;</td></tr>
+<tr><th id="67">67</th><td>      <b>if</b> (<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#14" title="0" data-ref="_M/LOW_HALF">LOW_HALF</a>] != <var>0</var>)</td></tr>
+<tr><th id="68">68</th><td>	<b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="69">69</th><td>      <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#14" title="0" data-ref="_M/LOW_HALF">LOW_HALF</a>] != <var>0</var>)</td></tr>
+<tr><th id="71">71</th><td>	<b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="72">72</th><td>      <b>if</b> ((<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>] &amp; <var>0x000fffff</var>) != <var>0</var>)</td></tr>
+<tr><th id="73">73</th><td>	<b>return</b> -<var>10</var>;                                     <i>/* if x =2 ^ n */</i></td></tr>
+<tr><th id="74">74</th><td>      <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = ((<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>] &amp; <var>0x7fffffff</var>) &gt;&gt; <var>20</var>) - <var>1023</var>; <i>/* find this n */</i></td></tr>
+<tr><th id="75">75</th><td>      <a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a> = (<em>double</em>) <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>;</td></tr>
+<tr><th id="76">76</th><td>      <b>return</b> (<a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a> * <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a> == -<var>1075.0</var>) ? <var>0</var> : -<var>10.0</var>;</td></tr>
+<tr><th id="77">77</th><td>    }</td></tr>
+<tr><th id="78">78</th><td>  <i>/* if y &gt; 0  */</i></td></tr>
+<tr><th id="79">79</th><td>  <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>;</td></tr>
+<tr><th id="80">80</th><td>  <b>if</b> (<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#14" title="0" data-ref="_M/LOW_HALF">LOW_HALF</a>] != <var>0</var>)</td></tr>
+<tr><th id="81">81</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>  <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="84">84</th><td>  <i>/*  case where x = 2**n for some integer n */</i></td></tr>
+<tr><th id="85">85</th><td>  <b>if</b> (((<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>] &amp; <var>0x000fffff</var>) | <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#14" title="0" data-ref="_M/LOW_HALF">LOW_HALF</a>]) == <var>0</var>)</td></tr>
+<tr><th id="86">86</th><td>    {</td></tr>
+<tr><th id="87">87</th><td>      <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = (<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>] &gt;&gt; <var>20</var>) - <var>1023</var>;</td></tr>
+<tr><th id="88">88</th><td>      <b>return</b> (((<em>double</em>) <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>) * <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a> == -<var>1075.0</var>) ? <var>0</var> : -<var>10.0</var>;</td></tr>
+<tr><th id="89">89</th><td>    }</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>  <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col2 ref" href="#2y" title='y' data-ref="2y" data-ref-filename="2y">y</a>;</td></tr>
+<tr><th id="92">92</th><td>  <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>];</td></tr>
+<tr><th id="93">93</th><td>  <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &lt;&lt; <var>12</var>;</td></tr>
+<tr><th id="94">94</th><td>  <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a> = <var>0</var>;</td></tr>
+<tr><th id="95">95</th><td>  <b>while</b> (<a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a>)</td></tr>
+<tr><th id="96">96</th><td>    {</td></tr>
+<tr><th id="97">97</th><td>      <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> &lt;&lt; <var>1</var>; <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a>++;</td></tr>
+<tr><th id="98">98</th><td>    }</td></tr>
+<tr><th id="99">99</th><td>  <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> = (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &amp; <var>0x000fffff</var>) | <var>0x00100000</var>;</td></tr>
+<tr><th id="100">100</th><td>  <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> = <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> &gt;&gt; (<var>20</var> - <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a>);                       <i>/*   n is the odd integer of y    */</i></td></tr>
+<tr><th id="101">101</th><td>  <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = ((<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt;&gt; <var>20</var>) - <var>1023</var>) - <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a>;               <i>/*   y = n*2**k                   */</i></td></tr>
+<tr><th id="102">102</th><td>  <b>if</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt; <var>5</var>)</td></tr>
+<tr><th id="103">103</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="104">104</th><td>  <b>if</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="105">105</th><td>    <b>for</b> (; <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt; <var>0</var>; <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>--)</td></tr>
+<tr><th id="106">106</th><td>      <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> *= <var>2</var>;</td></tr>
+<tr><th id="107">107</th><td>  <b>if</b> (<a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> &gt; <var>34</var>)</td></tr>
+<tr><th id="108">108</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="109">109</th><td>  <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = -<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>;</td></tr>
+<tr><th id="110">110</th><td>  <b>if</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt; <var>5</var>)</td></tr>
+<tr><th id="111">111</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>  <i>/*   now treat x        */</i></td></tr>
+<tr><th id="114">114</th><td>  <b>while</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="115">115</th><td>    {</td></tr>
+<tr><th id="116">116</th><td>      <a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a> = <a class="ref fn" href="../../generic/math_private.h.html#__ieee754_sqrt" title='__ieee754_sqrt' data-ref="__ieee754_sqrt" data-ref-filename="__ieee754_sqrt">__ieee754_sqrt</a> (<a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>);</td></tr>
+<tr><th id="117">117</th><td>      <a class="macro" href="dla.h.html#73" title="j1 = 134217729.0 * (z); j2 = ((z) - j1) + j1; j3 = (z) - j2; j1 = 134217729.0 * (z); j4 = ((z) - j1) + j1; j5 = (z) - j4; u = (z) * (z); uu = (((j2 * j4 - u) + j2 * j5) + j3 * j4) + j3 * j5;" data-ref="_M/EMULV">EMULV</a> (<a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a>, <a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a>, <a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a>, <a class="local col6 ref" href="#6uu" title='uu' data-ref="6uu" data-ref-filename="6uu">uu</a>, <a class="local col7 ref" href="#7j1" title='j1' data-ref="7j1" data-ref-filename="7j1">j1</a>, <a class="local col8 ref" href="#8j2" title='j2' data-ref="8j2" data-ref-filename="8j2">j2</a>, <a class="local col9 ref" href="#9j3" title='j3' data-ref="9j3" data-ref-filename="9j3">j3</a>, <a class="local col0 ref" href="#10j4" title='j4' data-ref="10j4" data-ref-filename="10j4">j4</a>, <a class="local col1 ref" href="#11j5" title='j5' data-ref="11j5" data-ref-filename="11j5">j5</a>);</td></tr>
+<tr><th id="118">118</th><td>      <b>if</b> (((<a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a> - <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>) + <a class="local col6 ref" href="#6uu" title='uu' data-ref="6uu" data-ref-filename="6uu">uu</a>) != <var>0</var>)</td></tr>
+<tr><th id="119">119</th><td>	<b>break</b>;</td></tr>
+<tr><th id="120">120</th><td>      <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a> = <a class="local col4 ref" href="#4z" title='z' data-ref="4z" data-ref-filename="4z">z</a>;</td></tr>
+<tr><th id="121">121</th><td>      <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>--;</td></tr>
+<tr><th id="122">122</th><td>    }</td></tr>
+<tr><th id="123">123</th><td>  <b>if</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>)</td></tr>
+<tr><th id="124">124</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>  <i>/* it is impossible that n == 2,  so the mantissa of x must be short  */</i></td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>  <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::x" title='(anonymous union)::x' data-ref="(anonymous)::x" data-ref-filename="(anonymous)..x">x</a> = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="129">129</th><td>  <b>if</b> (<a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#14" title="0" data-ref="_M/LOW_HALF">LOW_HALF</a>])</td></tr>
+<tr><th id="130">130</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="131">131</th><td>  <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = <a class="local col3 ref" href="#3v" title='v' data-ref="3v" data-ref-filename="3v">v</a>.<a class="ref field" href="mydefs.h.html#(anonymous)::i" title='(anonymous union)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</a>[<a class="macro" href="../../../include/endian.h.html#13" title="1" data-ref="_M/HIGH_HALF">HIGH_HALF</a>];</td></tr>
+<tr><th id="132">132</th><td>  <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &lt;&lt; <var>12</var>;</td></tr>
+<tr><th id="133">133</th><td>  <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a> = <var>0</var>;</td></tr>
+<tr><th id="134">134</th><td>  <b>while</b> (<a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a>)</td></tr>
+<tr><th id="135">135</th><td>    {</td></tr>
+<tr><th id="136">136</th><td>      <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> &lt;&lt; <var>1</var>; <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a>++;</td></tr>
+<tr><th id="137">137</th><td>    }</td></tr>
+<tr><th id="138">138</th><td>  <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &amp; <var>0x000fffff</var>) | <var>0x00100000</var>;</td></tr>
+<tr><th id="139">139</th><td>  <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> = <a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> &gt;&gt; (<var>20</var> - <a class="local col3 ref" href="#13l" title='l' data-ref="13l" data-ref-filename="13l">l</a>);                       <i>/*   m is the odd integer of x    */</i></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>  <i>/*   now check whether the length of m**n is at most 54 bits */</i></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>  <b>if</b> (<a class="local col4 ref" href="#14m" title='m' data-ref="14m" data-ref-filename="14m">m</a> &gt; <a class="tu ref" href="#tab54" title='tab54' data-use='r' data-ref="tab54" data-ref-filename="tab54">tab54</a>[<a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a> - <var>3</var>])</td></tr>
+<tr><th id="144">144</th><td>    <b>return</b> -<var>10.0</var>;</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>  <i>/* yes, it is - now compute x**n by simple multiplications  */</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td>  <a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a> = <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="149">149</th><td>  <b>for</b> (<a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> = <var>1</var>; <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a> &lt; <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a>; <a class="local col2 ref" href="#12k" title='k' data-ref="12k" data-ref-filename="12k">k</a>++)</td></tr>
+<tr><th id="150">150</th><td>    <a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a> = <a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a> * <a class="local col1 ref" href="#1x" title='x' data-ref="1x" data-ref-filename="1x">x</a>;</td></tr>
+<tr><th id="151">151</th><td>  <b>return</b> <a class="local col5 ref" href="#5u" title='u' data-ref="5u" data-ref-filename="5u">u</a>;</td></tr>
+<tr><th id="152">152</th><td>}</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,600 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>regex.h source code [glibc_src_2.25/posix/regex.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="re_pattern_buffer,re_registers "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/posix/regex.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.25</a>/<a href='./'>posix</a>/<a href='regex.h.html'>regex.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Definitions for data structures and routines for the regular</i></td></tr>
+<tr><th id="2">2</th><td><i>   expression library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Copyright (C) 1985, 1989-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="4">4</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <span class="macro" data-ref="_M/_REGEX_H">_REGEX_H</span></u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/_REGEX_H" data-ref="_M/_REGEX_H">_REGEX_H</dfn> 1</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* Allow the use in C++ code.  */</i></td></tr>
+<tr><th id="26">26</th><td><u>#<span data-ppcond="26">ifdef</span> <span class="macro" data-ref="_M/__cplusplus">__cplusplus</span></u></td></tr>
+<tr><th id="27">27</th><td><b>extern</b> <q>"C"</q> {</td></tr>
+<tr><th id="28">28</th><td><u>#<span data-ppcond="26">endif</span></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><i>/* The following two types have to be signed and unsigned integer type</i></td></tr>
+<tr><th id="31">31</th><td><i>   wide enough to hold a value of a pointer.  For most ANSI compilers</i></td></tr>
+<tr><th id="32">32</th><td><i>   ptrdiff_t and size_t should be likely OK.  Still size of these two</i></td></tr>
+<tr><th id="33">33</th><td><i>   types is 2 for Microsoft C.  Ugh... */</i></td></tr>
+<tr><th id="34">34</th><td><b>typedef</b> <em>long</em> <em>int</em> <dfn class="typedef" id="s_reg_t" title='s_reg_t' data-type='long' data-ref="s_reg_t" data-ref-filename="s_reg_t">s_reg_t</dfn>;</td></tr>
+<tr><th id="35">35</th><td><b>typedef</b> <em>unsigned</em> <em>long</em> <em>int</em> <dfn class="typedef" id="active_reg_t" title='active_reg_t' data-type='unsigned long' data-ref="active_reg_t" data-ref-filename="active_reg_t">active_reg_t</dfn>;</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><i>/* The following bits are used to determine the regexp syntax we</i></td></tr>
+<tr><th id="38">38</th><td><i>   recognize.  The set/not-set meanings are chosen so that Emacs syntax</i></td></tr>
+<tr><th id="39">39</th><td><i>   remains the value 0.  The bits are given in alphabetical order, and</i></td></tr>
+<tr><th id="40">40</th><td><i>   the definitions shifted by one from the previous bit; thus, when we</i></td></tr>
+<tr><th id="41">41</th><td><i>   add or remove a bit, only one other definition need change.  */</i></td></tr>
+<tr><th id="42">42</th><td><b>typedef</b> <em>unsigned</em> <em>long</em> <em>int</em> <dfn class="typedef" id="reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</dfn>;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="44">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="45">45</th><td><i>/* If this bit is not set, then \ inside a bracket expression is literal.</i></td></tr>
+<tr><th id="46">46</th><td><i>   If set, then such a \ quotes the following character.  */</i></td></tr>
+<tr><th id="47">47</th><td><u># define <dfn class="macro" id="_M/RE_BACKSLASH_ESCAPE_IN_LISTS" data-ref="_M/RE_BACKSLASH_ESCAPE_IN_LISTS">RE_BACKSLASH_ESCAPE_IN_LISTS</dfn> ((unsigned long int) 1)</u></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* If this bit is not set, then + and ? are operators, and \+ and \? are</i></td></tr>
+<tr><th id="50">50</th><td><i>     literals.</i></td></tr>
+<tr><th id="51">51</th><td><i>   If set, then \+ and \? are operators and + and ? are literals.  */</i></td></tr>
+<tr><th id="52">52</th><td><u># define <dfn class="macro" id="_M/RE_BK_PLUS_QM" data-ref="_M/RE_BK_PLUS_QM">RE_BK_PLUS_QM</dfn> (RE_BACKSLASH_ESCAPE_IN_LISTS &lt;&lt; 1)</u></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><i>/* If this bit is set, then character classes are supported.  They are:</i></td></tr>
+<tr><th id="55">55</th><td><i>     [:alpha:], [:upper:], [:lower:],  [:digit:], [:alnum:], [:xdigit:],</i></td></tr>
+<tr><th id="56">56</th><td><i>     [:space:], [:print:], [:punct:], [:graph:], and [:cntrl:].</i></td></tr>
+<tr><th id="57">57</th><td><i>   If not set, then character classes are not supported.  */</i></td></tr>
+<tr><th id="58">58</th><td><u># define <dfn class="macro" id="_M/RE_CHAR_CLASSES" data-ref="_M/RE_CHAR_CLASSES">RE_CHAR_CLASSES</dfn> (RE_BK_PLUS_QM &lt;&lt; 1)</u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><i>/* If this bit is set, then ^ and $ are always anchors (outside bracket</i></td></tr>
+<tr><th id="61">61</th><td><i>     expressions, of course).</i></td></tr>
+<tr><th id="62">62</th><td><i>   If this bit is not set, then it depends:</i></td></tr>
+<tr><th id="63">63</th><td><i>	^  is an anchor if it is at the beginning of a regular</i></td></tr>
+<tr><th id="64">64</th><td><i>	   expression or after an open-group or an alternation operator;</i></td></tr>
+<tr><th id="65">65</th><td><i>	$  is an anchor if it is at the end of a regular expression, or</i></td></tr>
+<tr><th id="66">66</th><td><i>	   before a close-group or an alternation operator.</i></td></tr>
+<tr><th id="67">67</th><td><i></i></td></tr>
+<tr><th id="68">68</th><td><i>   This bit could be (re)combined with RE_CONTEXT_INDEP_OPS, because</i></td></tr>
+<tr><th id="69">69</th><td><i>   POSIX draft 11.2 says that * etc. in leading positions is undefined.</i></td></tr>
+<tr><th id="70">70</th><td><i>   We already implemented a previous draft which made those constructs</i></td></tr>
+<tr><th id="71">71</th><td><i>   invalid, though, so we haven't changed the code back.  */</i></td></tr>
+<tr><th id="72">72</th><td><u># define <dfn class="macro" id="_M/RE_CONTEXT_INDEP_ANCHORS" data-ref="_M/RE_CONTEXT_INDEP_ANCHORS">RE_CONTEXT_INDEP_ANCHORS</dfn> (RE_CHAR_CLASSES &lt;&lt; 1)</u></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* If this bit is set, then special characters are always special</i></td></tr>
+<tr><th id="75">75</th><td><i>     regardless of where they are in the pattern.</i></td></tr>
+<tr><th id="76">76</th><td><i>   If this bit is not set, then special characters are special only in</i></td></tr>
+<tr><th id="77">77</th><td><i>     some contexts; otherwise they are ordinary.  Specifically,</i></td></tr>
+<tr><th id="78">78</th><td><i>     * + ? and intervals are only special when not after the beginning,</i></td></tr>
+<tr><th id="79">79</th><td><i>     open-group, or alternation operator.  */</i></td></tr>
+<tr><th id="80">80</th><td><u># define <dfn class="macro" id="_M/RE_CONTEXT_INDEP_OPS" data-ref="_M/RE_CONTEXT_INDEP_OPS">RE_CONTEXT_INDEP_OPS</dfn> (RE_CONTEXT_INDEP_ANCHORS &lt;&lt; 1)</u></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* If this bit is set, then *, +, ?, and { cannot be first in an re or</i></td></tr>
+<tr><th id="83">83</th><td><i>     immediately after an alternation or begin-group operator.  */</i></td></tr>
+<tr><th id="84">84</th><td><u># define <dfn class="macro" id="_M/RE_CONTEXT_INVALID_OPS" data-ref="_M/RE_CONTEXT_INVALID_OPS">RE_CONTEXT_INVALID_OPS</dfn> (RE_CONTEXT_INDEP_OPS &lt;&lt; 1)</u></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><i>/* If this bit is set, then . matches newline.</i></td></tr>
+<tr><th id="87">87</th><td><i>   If not set, then it doesn't.  */</i></td></tr>
+<tr><th id="88">88</th><td><u># define <dfn class="macro" id="_M/RE_DOT_NEWLINE" data-ref="_M/RE_DOT_NEWLINE">RE_DOT_NEWLINE</dfn> (RE_CONTEXT_INVALID_OPS &lt;&lt; 1)</u></td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><i>/* If this bit is set, then . doesn't match NUL.</i></td></tr>
+<tr><th id="91">91</th><td><i>   If not set, then it does.  */</i></td></tr>
+<tr><th id="92">92</th><td><u># define <dfn class="macro" id="_M/RE_DOT_NOT_NULL" data-ref="_M/RE_DOT_NOT_NULL">RE_DOT_NOT_NULL</dfn> (RE_DOT_NEWLINE &lt;&lt; 1)</u></td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><i>/* If this bit is set, nonmatching lists [^...] do not match newline.</i></td></tr>
+<tr><th id="95">95</th><td><i>   If not set, they do.  */</i></td></tr>
+<tr><th id="96">96</th><td><u># define <dfn class="macro" id="_M/RE_HAT_LISTS_NOT_NEWLINE" data-ref="_M/RE_HAT_LISTS_NOT_NEWLINE">RE_HAT_LISTS_NOT_NEWLINE</dfn> (RE_DOT_NOT_NULL &lt;&lt; 1)</u></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i>/* If this bit is set, either \{...\} or {...} defines an</i></td></tr>
+<tr><th id="99">99</th><td><i>     interval, depending on RE_NO_BK_BRACES.</i></td></tr>
+<tr><th id="100">100</th><td><i>   If not set, \{, \}, {, and } are literals.  */</i></td></tr>
+<tr><th id="101">101</th><td><u># define <dfn class="macro" id="_M/RE_INTERVALS" data-ref="_M/RE_INTERVALS">RE_INTERVALS</dfn> (RE_HAT_LISTS_NOT_NEWLINE &lt;&lt; 1)</u></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><i>/* If this bit is set, +, ? and | aren't recognized as operators.</i></td></tr>
+<tr><th id="104">104</th><td><i>   If not set, they are.  */</i></td></tr>
+<tr><th id="105">105</th><td><u># define <dfn class="macro" id="_M/RE_LIMITED_OPS" data-ref="_M/RE_LIMITED_OPS">RE_LIMITED_OPS</dfn> (RE_INTERVALS &lt;&lt; 1)</u></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><i>/* If this bit is set, newline is an alternation operator.</i></td></tr>
+<tr><th id="108">108</th><td><i>   If not set, newline is literal.  */</i></td></tr>
+<tr><th id="109">109</th><td><u># define <dfn class="macro" id="_M/RE_NEWLINE_ALT" data-ref="_M/RE_NEWLINE_ALT">RE_NEWLINE_ALT</dfn> (RE_LIMITED_OPS &lt;&lt; 1)</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><i>/* If this bit is set, then `{...}' defines an interval, and \{ and \}</i></td></tr>
+<tr><th id="112">112</th><td><i>     are literals.</i></td></tr>
+<tr><th id="113">113</th><td><i>  If not set, then `\{...\}' defines an interval.  */</i></td></tr>
+<tr><th id="114">114</th><td><u># define <dfn class="macro" id="_M/RE_NO_BK_BRACES" data-ref="_M/RE_NO_BK_BRACES">RE_NO_BK_BRACES</dfn> (RE_NEWLINE_ALT &lt;&lt; 1)</u></td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* If this bit is set, (...) defines a group, and \( and \) are literals.</i></td></tr>
+<tr><th id="117">117</th><td><i>   If not set, \(...\) defines a group, and ( and ) are literals.  */</i></td></tr>
+<tr><th id="118">118</th><td><u># define <dfn class="macro" id="_M/RE_NO_BK_PARENS" data-ref="_M/RE_NO_BK_PARENS">RE_NO_BK_PARENS</dfn> (RE_NO_BK_BRACES &lt;&lt; 1)</u></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i>/* If this bit is set, then \&lt;digit&gt; matches &lt;digit&gt;.</i></td></tr>
+<tr><th id="121">121</th><td><i>   If not set, then \&lt;digit&gt; is a back-reference.  */</i></td></tr>
+<tr><th id="122">122</th><td><u># define <dfn class="macro" id="_M/RE_NO_BK_REFS" data-ref="_M/RE_NO_BK_REFS">RE_NO_BK_REFS</dfn> (RE_NO_BK_PARENS &lt;&lt; 1)</u></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>/* If this bit is set, then | is an alternation operator, and \| is literal.</i></td></tr>
+<tr><th id="125">125</th><td><i>   If not set, then \| is an alternation operator, and | is literal.  */</i></td></tr>
+<tr><th id="126">126</th><td><u># define <dfn class="macro" id="_M/RE_NO_BK_VBAR" data-ref="_M/RE_NO_BK_VBAR">RE_NO_BK_VBAR</dfn> (RE_NO_BK_REFS &lt;&lt; 1)</u></td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><i>/* If this bit is set, then an ending range point collating higher</i></td></tr>
+<tr><th id="129">129</th><td><i>     than the starting range point, as in [z-a], is invalid.</i></td></tr>
+<tr><th id="130">130</th><td><i>   If not set, then when ending range point collates higher than the</i></td></tr>
+<tr><th id="131">131</th><td><i>     starting range point, the range is ignored.  */</i></td></tr>
+<tr><th id="132">132</th><td><u># define <dfn class="macro" id="_M/RE_NO_EMPTY_RANGES" data-ref="_M/RE_NO_EMPTY_RANGES">RE_NO_EMPTY_RANGES</dfn> (RE_NO_BK_VBAR &lt;&lt; 1)</u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><i>/* If this bit is set, then an unmatched ) is ordinary.</i></td></tr>
+<tr><th id="135">135</th><td><i>   If not set, then an unmatched ) is invalid.  */</i></td></tr>
+<tr><th id="136">136</th><td><u># define <dfn class="macro" id="_M/RE_UNMATCHED_RIGHT_PAREN_ORD" data-ref="_M/RE_UNMATCHED_RIGHT_PAREN_ORD">RE_UNMATCHED_RIGHT_PAREN_ORD</dfn> (RE_NO_EMPTY_RANGES &lt;&lt; 1)</u></td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><i>/* If this bit is set, succeed as soon as we match the whole pattern,</i></td></tr>
+<tr><th id="139">139</th><td><i>   without further backtracking.  */</i></td></tr>
+<tr><th id="140">140</th><td><u># define <dfn class="macro" id="_M/RE_NO_POSIX_BACKTRACKING" data-ref="_M/RE_NO_POSIX_BACKTRACKING">RE_NO_POSIX_BACKTRACKING</dfn> (RE_UNMATCHED_RIGHT_PAREN_ORD &lt;&lt; 1)</u></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><i>/* If this bit is set, do not process the GNU regex operators.</i></td></tr>
+<tr><th id="143">143</th><td><i>   If not set, then the GNU regex operators are recognized. */</i></td></tr>
+<tr><th id="144">144</th><td><u># define <dfn class="macro" id="_M/RE_NO_GNU_OPS" data-ref="_M/RE_NO_GNU_OPS">RE_NO_GNU_OPS</dfn> (RE_NO_POSIX_BACKTRACKING &lt;&lt; 1)</u></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/* If this bit is set, turn on internal regex debugging.</i></td></tr>
+<tr><th id="147">147</th><td><i>   If not set, and debugging was on, turn it off.</i></td></tr>
+<tr><th id="148">148</th><td><i>   This only works if regex.c is compiled -DDEBUG.</i></td></tr>
+<tr><th id="149">149</th><td><i>   We define this bit always, so that all that's needed to turn on</i></td></tr>
+<tr><th id="150">150</th><td><i>   debugging is to recompile regex.c; the calling code can always have</i></td></tr>
+<tr><th id="151">151</th><td><i>   this bit set, and it won't affect anything in the normal case. */</i></td></tr>
+<tr><th id="152">152</th><td><u># define <dfn class="macro" id="_M/RE_DEBUG" data-ref="_M/RE_DEBUG">RE_DEBUG</dfn> (RE_NO_GNU_OPS &lt;&lt; 1)</u></td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><i>/* If this bit is set, a syntactically invalid interval is treated as</i></td></tr>
+<tr><th id="155">155</th><td><i>   a string of ordinary characters.  For example, the ERE 'a{1' is</i></td></tr>
+<tr><th id="156">156</th><td><i>   treated as 'a\{1'.  */</i></td></tr>
+<tr><th id="157">157</th><td><u># define <dfn class="macro" id="_M/RE_INVALID_INTERVAL_ORD" data-ref="_M/RE_INVALID_INTERVAL_ORD">RE_INVALID_INTERVAL_ORD</dfn> (RE_DEBUG &lt;&lt; 1)</u></td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><i>/* If this bit is set, then ignore case when matching.</i></td></tr>
+<tr><th id="160">160</th><td><i>   If not set, then case is significant.  */</i></td></tr>
+<tr><th id="161">161</th><td><u># define <dfn class="macro" id="_M/RE_ICASE" data-ref="_M/RE_ICASE">RE_ICASE</dfn> (RE_INVALID_INTERVAL_ORD &lt;&lt; 1)</u></td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td><i>/* This bit is used internally like RE_CONTEXT_INDEP_ANCHORS but only</i></td></tr>
+<tr><th id="164">164</th><td><i>   for ^, because it is difficult to scan the regex backwards to find</i></td></tr>
+<tr><th id="165">165</th><td><i>   whether ^ should be special.  */</i></td></tr>
+<tr><th id="166">166</th><td><u># define <dfn class="macro" id="_M/RE_CARET_ANCHORS_HERE" data-ref="_M/RE_CARET_ANCHORS_HERE">RE_CARET_ANCHORS_HERE</dfn> (RE_ICASE &lt;&lt; 1)</u></td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><i>/* If this bit is set, then \{ cannot be first in an bre or</i></td></tr>
+<tr><th id="169">169</th><td><i>   immediately after an alternation or begin-group operator.  */</i></td></tr>
+<tr><th id="170">170</th><td><u># define <dfn class="macro" id="_M/RE_CONTEXT_INVALID_DUP" data-ref="_M/RE_CONTEXT_INVALID_DUP">RE_CONTEXT_INVALID_DUP</dfn> (RE_CARET_ANCHORS_HERE &lt;&lt; 1)</u></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><i>/* If this bit is set, then no_sub will be set to 1 during</i></td></tr>
+<tr><th id="173">173</th><td><i>   re_compile_pattern.  */</i></td></tr>
+<tr><th id="174">174</th><td><u># define <dfn class="macro" id="_M/RE_NO_SUB" data-ref="_M/RE_NO_SUB">RE_NO_SUB</dfn> (RE_CONTEXT_INVALID_DUP &lt;&lt; 1)</u></td></tr>
+<tr><th id="175">175</th><td><u>#<span data-ppcond="44">endif</span></u></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/* This global variable defines the particular regexp syntax to use (for</i></td></tr>
+<tr><th id="178">178</th><td><i>   some interfaces).  When a regexp is compiled, the syntax used is</i></td></tr>
+<tr><th id="179">179</th><td><i>   stored in the pattern buffer, so changing this does not affect</i></td></tr>
+<tr><th id="180">180</th><td><i>   already-compiled regexps.  */</i></td></tr>
+<tr><th id="181">181</th><td><b>extern</b> <a class="typedef" href="#reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</a> <dfn class="decl" id="re_syntax_options" title='re_syntax_options' data-ref="re_syntax_options" data-ref-filename="re_syntax_options">re_syntax_options</dfn>;</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><u>#<span data-ppcond="183">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="184">184</th><td><i>/* Define combinations of the above bits for the standard possibilities.</i></td></tr>
+<tr><th id="185">185</th><td><i>   (The [[[ comments delimit what gets put into the Texinfo file, so</i></td></tr>
+<tr><th id="186">186</th><td><i>   don't delete them!)  */</i></td></tr>
+<tr><th id="187">187</th><td><i>/* [[[begin syntaxes]]] */</i></td></tr>
+<tr><th id="188">188</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_EMACS" data-ref="_M/RE_SYNTAX_EMACS">RE_SYNTAX_EMACS</dfn> 0</u></td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_AWK" data-ref="_M/RE_SYNTAX_AWK">RE_SYNTAX_AWK</dfn>							\</u></td></tr>
+<tr><th id="191">191</th><td><u>  (RE_BACKSLASH_ESCAPE_IN_LISTS   | RE_DOT_NOT_NULL			\</u></td></tr>
+<tr><th id="192">192</th><td><u>   | RE_NO_BK_PARENS              | RE_NO_BK_REFS			\</u></td></tr>
+<tr><th id="193">193</th><td><u>   | RE_NO_BK_VBAR                | RE_NO_EMPTY_RANGES			\</u></td></tr>
+<tr><th id="194">194</th><td><u>   | RE_DOT_NEWLINE		  | RE_CONTEXT_INDEP_ANCHORS		\</u></td></tr>
+<tr><th id="195">195</th><td><u>   | RE_CHAR_CLASSES							\</u></td></tr>
+<tr><th id="196">196</th><td><u>   | RE_UNMATCHED_RIGHT_PAREN_ORD | RE_NO_GNU_OPS)</u></td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_GNU_AWK" data-ref="_M/RE_SYNTAX_GNU_AWK">RE_SYNTAX_GNU_AWK</dfn>						\</u></td></tr>
+<tr><th id="199">199</th><td><u>  ((RE_SYNTAX_POSIX_EXTENDED | RE_BACKSLASH_ESCAPE_IN_LISTS		\</u></td></tr>
+<tr><th id="200">200</th><td><u>    | RE_INVALID_INTERVAL_ORD)						\</u></td></tr>
+<tr><th id="201">201</th><td><u>   &amp; ~(RE_DOT_NOT_NULL | RE_CONTEXT_INDEP_OPS				\</u></td></tr>
+<tr><th id="202">202</th><td><u>      | RE_CONTEXT_INVALID_OPS ))</u></td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_AWK" data-ref="_M/RE_SYNTAX_POSIX_AWK">RE_SYNTAX_POSIX_AWK</dfn>						\</u></td></tr>
+<tr><th id="205">205</th><td><u>  (RE_SYNTAX_POSIX_EXTENDED | RE_BACKSLASH_ESCAPE_IN_LISTS		\</u></td></tr>
+<tr><th id="206">206</th><td><u>   | RE_INTERVALS	    | RE_NO_GNU_OPS				\</u></td></tr>
+<tr><th id="207">207</th><td><u>   | RE_INVALID_INTERVAL_ORD)</u></td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_GREP" data-ref="_M/RE_SYNTAX_GREP">RE_SYNTAX_GREP</dfn>							\</u></td></tr>
+<tr><th id="210">210</th><td><u>  (RE_BK_PLUS_QM              | RE_CHAR_CLASSES				\</u></td></tr>
+<tr><th id="211">211</th><td><u>   | RE_HAT_LISTS_NOT_NEWLINE | RE_INTERVALS				\</u></td></tr>
+<tr><th id="212">212</th><td><u>   | RE_NEWLINE_ALT)</u></td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_EGREP" data-ref="_M/RE_SYNTAX_EGREP">RE_SYNTAX_EGREP</dfn>							\</u></td></tr>
+<tr><th id="215">215</th><td><u>  (RE_CHAR_CLASSES        | RE_CONTEXT_INDEP_ANCHORS			\</u></td></tr>
+<tr><th id="216">216</th><td><u>   | RE_CONTEXT_INDEP_OPS | RE_HAT_LISTS_NOT_NEWLINE			\</u></td></tr>
+<tr><th id="217">217</th><td><u>   | RE_NEWLINE_ALT       | RE_NO_BK_PARENS				\</u></td></tr>
+<tr><th id="218">218</th><td><u>   | RE_NO_BK_VBAR)</u></td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_EGREP" data-ref="_M/RE_SYNTAX_POSIX_EGREP">RE_SYNTAX_POSIX_EGREP</dfn>						\</u></td></tr>
+<tr><th id="221">221</th><td><u>  (RE_SYNTAX_EGREP | RE_INTERVALS | RE_NO_BK_BRACES			\</u></td></tr>
+<tr><th id="222">222</th><td><u>   | RE_INVALID_INTERVAL_ORD)</u></td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><i>/* P1003.2/D11.2, section 4.20.7.1, lines 5078ff.  */</i></td></tr>
+<tr><th id="225">225</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_ED" data-ref="_M/RE_SYNTAX_ED">RE_SYNTAX_ED</dfn> RE_SYNTAX_POSIX_BASIC</u></td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_SED" data-ref="_M/RE_SYNTAX_SED">RE_SYNTAX_SED</dfn> RE_SYNTAX_POSIX_BASIC</u></td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><i>/* Syntax bits common to both basic and extended POSIX regex syntax.  */</i></td></tr>
+<tr><th id="230">230</th><td><u>#define <dfn class="macro" id="_M/_RE_SYNTAX_POSIX_COMMON" data-ref="_M/_RE_SYNTAX_POSIX_COMMON">_RE_SYNTAX_POSIX_COMMON</dfn>						\</u></td></tr>
+<tr><th id="231">231</th><td><u>  (RE_CHAR_CLASSES | RE_DOT_NEWLINE      | RE_DOT_NOT_NULL		\</u></td></tr>
+<tr><th id="232">232</th><td><u>   | RE_INTERVALS  | RE_NO_EMPTY_RANGES)</u></td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_BASIC" data-ref="_M/RE_SYNTAX_POSIX_BASIC">RE_SYNTAX_POSIX_BASIC</dfn>						\</u></td></tr>
+<tr><th id="235">235</th><td><u>  (_RE_SYNTAX_POSIX_COMMON | RE_BK_PLUS_QM | RE_CONTEXT_INVALID_DUP)</u></td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td><i>/* Differs from ..._POSIX_BASIC only in that RE_BK_PLUS_QM becomes</i></td></tr>
+<tr><th id="238">238</th><td><i>   RE_LIMITED_OPS, i.e., \? \+ \| are not recognized.  Actually, this</i></td></tr>
+<tr><th id="239">239</th><td><i>   isn't minimal, since other operators, such as \`, aren't disabled.  */</i></td></tr>
+<tr><th id="240">240</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_MINIMAL_BASIC" data-ref="_M/RE_SYNTAX_POSIX_MINIMAL_BASIC">RE_SYNTAX_POSIX_MINIMAL_BASIC</dfn>					\</u></td></tr>
+<tr><th id="241">241</th><td><u>  (_RE_SYNTAX_POSIX_COMMON | RE_LIMITED_OPS)</u></td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_EXTENDED" data-ref="_M/RE_SYNTAX_POSIX_EXTENDED">RE_SYNTAX_POSIX_EXTENDED</dfn>					\</u></td></tr>
+<tr><th id="244">244</th><td><u>  (_RE_SYNTAX_POSIX_COMMON  | RE_CONTEXT_INDEP_ANCHORS			\</u></td></tr>
+<tr><th id="245">245</th><td><u>   | RE_CONTEXT_INDEP_OPS   | RE_NO_BK_BRACES				\</u></td></tr>
+<tr><th id="246">246</th><td><u>   | RE_NO_BK_PARENS        | RE_NO_BK_VBAR				\</u></td></tr>
+<tr><th id="247">247</th><td><u>   | RE_CONTEXT_INVALID_OPS | RE_UNMATCHED_RIGHT_PAREN_ORD)</u></td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td><i>/* Differs from ..._POSIX_EXTENDED in that RE_CONTEXT_INDEP_OPS is</i></td></tr>
+<tr><th id="250">250</th><td><i>   removed and RE_NO_BK_REFS is added.  */</i></td></tr>
+<tr><th id="251">251</th><td><u>#define <dfn class="macro" id="_M/RE_SYNTAX_POSIX_MINIMAL_EXTENDED" data-ref="_M/RE_SYNTAX_POSIX_MINIMAL_EXTENDED">RE_SYNTAX_POSIX_MINIMAL_EXTENDED</dfn>				\</u></td></tr>
+<tr><th id="252">252</th><td><u>  (_RE_SYNTAX_POSIX_COMMON  | RE_CONTEXT_INDEP_ANCHORS			\</u></td></tr>
+<tr><th id="253">253</th><td><u>   | RE_CONTEXT_INVALID_OPS | RE_NO_BK_BRACES				\</u></td></tr>
+<tr><th id="254">254</th><td><u>   | RE_NO_BK_PARENS        | RE_NO_BK_REFS				\</u></td></tr>
+<tr><th id="255">255</th><td><u>   | RE_NO_BK_VBAR	    | RE_UNMATCHED_RIGHT_PAREN_ORD)</u></td></tr>
+<tr><th id="256">256</th><td><i>/* [[[end syntaxes]]] */</i></td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td><i>/* Maximum number of duplicates an interval can allow.  Some systems</i></td></tr>
+<tr><th id="259">259</th><td><i>   (erroneously) define this in other header files, but we want our</i></td></tr>
+<tr><th id="260">260</th><td><i>   value, so remove any previous define.  */</i></td></tr>
+<tr><th id="261">261</th><td><u># <span data-ppcond="261">ifdef</span> <span class="macro" data-ref="_M/RE_DUP_MAX">RE_DUP_MAX</span></u></td></tr>
+<tr><th id="262">262</th><td><u>#  undef RE_DUP_MAX</u></td></tr>
+<tr><th id="263">263</th><td><u># <span data-ppcond="261">endif</span></u></td></tr>
+<tr><th id="264">264</th><td><i>/* If sizeof(int) == 2, then ((1 &lt;&lt; 15) - 1) overflows.  */</i></td></tr>
+<tr><th id="265">265</th><td><u># define <dfn class="macro" id="_M/RE_DUP_MAX" data-ref="_M/RE_DUP_MAX">RE_DUP_MAX</dfn> (0x7fff)</u></td></tr>
+<tr><th id="266">266</th><td><u>#<span data-ppcond="183">endif</span></u></td></tr>
+<tr><th id="267">267</th><td></td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><i>/* POSIX `cflags' bits (i.e., information for `regcomp').  */</i></td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td><i>/* If this bit is set, then use extended regular expression syntax.</i></td></tr>
+<tr><th id="272">272</th><td><i>   If not set, then use basic regular expression syntax.  */</i></td></tr>
+<tr><th id="273">273</th><td><u>#define <dfn class="macro" id="_M/REG_EXTENDED" data-ref="_M/REG_EXTENDED">REG_EXTENDED</dfn> 1</u></td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><i>/* If this bit is set, then ignore case when matching.</i></td></tr>
+<tr><th id="276">276</th><td><i>   If not set, then case is significant.  */</i></td></tr>
+<tr><th id="277">277</th><td><u>#define <dfn class="macro" id="_M/REG_ICASE" data-ref="_M/REG_ICASE">REG_ICASE</dfn> (REG_EXTENDED &lt;&lt; 1)</u></td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><i>/* If this bit is set, then anchors do not match at newline</i></td></tr>
+<tr><th id="280">280</th><td><i>     characters in the string.</i></td></tr>
+<tr><th id="281">281</th><td><i>   If not set, then anchors do match at newlines.  */</i></td></tr>
+<tr><th id="282">282</th><td><u>#define <dfn class="macro" id="_M/REG_NEWLINE" data-ref="_M/REG_NEWLINE">REG_NEWLINE</dfn> (REG_ICASE &lt;&lt; 1)</u></td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td><i>/* If this bit is set, then report only success or fail in regexec.</i></td></tr>
+<tr><th id="285">285</th><td><i>   If not set, then returns differ between not matching and errors.  */</i></td></tr>
+<tr><th id="286">286</th><td><u>#define <dfn class="macro" id="_M/REG_NOSUB" data-ref="_M/REG_NOSUB">REG_NOSUB</dfn> (REG_NEWLINE &lt;&lt; 1)</u></td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><i>/* POSIX `eflags' bits (i.e., information for regexec).  */</i></td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><i>/* If this bit is set, then the beginning-of-line operator doesn't match</i></td></tr>
+<tr><th id="292">292</th><td><i>     the beginning of the string (presumably because it's not the</i></td></tr>
+<tr><th id="293">293</th><td><i>     beginning of a line).</i></td></tr>
+<tr><th id="294">294</th><td><i>   If not set, then the beginning-of-line operator does match the</i></td></tr>
+<tr><th id="295">295</th><td><i>     beginning of the string.  */</i></td></tr>
+<tr><th id="296">296</th><td><u>#define <dfn class="macro" id="_M/REG_NOTBOL" data-ref="_M/REG_NOTBOL">REG_NOTBOL</dfn> 1</u></td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><i>/* Like REG_NOTBOL, except for the end-of-line.  */</i></td></tr>
+<tr><th id="299">299</th><td><u>#define <dfn class="macro" id="_M/REG_NOTEOL" data-ref="_M/REG_NOTEOL">REG_NOTEOL</dfn> (1 &lt;&lt; 1)</u></td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><i>/* Use PMATCH[0] to delimit the start and end of the search in the</i></td></tr>
+<tr><th id="302">302</th><td><i>   buffer.  */</i></td></tr>
+<tr><th id="303">303</th><td><u>#define <dfn class="macro" id="_M/REG_STARTEND" data-ref="_M/REG_STARTEND">REG_STARTEND</dfn> (1 &lt;&lt; 2)</u></td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td><i>/* If any error codes are removed, changed, or added, update the</i></td></tr>
+<tr><th id="307">307</th><td><i>   `re_error_msg' table in regex.c.  */</i></td></tr>
+<tr><th id="308">308</th><td><b>typedef</b> <b>enum</b></td></tr>
+<tr><th id="309">309</th><td>{</td></tr>
+<tr><th id="310">310</th><td><u>#<span data-ppcond="310">if</span> defined <a class="macro" href="../include/features.h.html#198" data-ref="_M/_XOPEN_SOURCE">_XOPEN_SOURCE</a> || defined <a class="macro" href="../include/features.h.html#333" data-ref="_M/__USE_XOPEN2K">__USE_XOPEN2K</a></u></td></tr>
+<tr><th id="311">311</th><td>  <dfn class="enum" id="REG_ENOSYS" title='REG_ENOSYS' data-ref="REG_ENOSYS" data-ref-filename="REG_ENOSYS">REG_ENOSYS</dfn> = -<var>1</var>,	<i>/* This will never happen for this implementation.  */</i></td></tr>
+<tr><th id="312">312</th><td><u>#<span data-ppcond="310">endif</span></u></td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>  <dfn class="enum" id="REG_NOERROR" title='REG_NOERROR' data-ref="REG_NOERROR" data-ref-filename="REG_NOERROR">REG_NOERROR</dfn> = <var>0</var>,	<i>/* Success.  */</i></td></tr>
+<tr><th id="315">315</th><td>  <dfn class="enum" id="REG_NOMATCH" title='REG_NOMATCH' data-ref="REG_NOMATCH" data-ref-filename="REG_NOMATCH">REG_NOMATCH</dfn>,		<i>/* Didn't find a match (for regexec).  */</i></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>  <i>/* POSIX regcomp return error codes.  (In the order listed in the</i></td></tr>
+<tr><th id="318">318</th><td><i>     standard.)  */</i></td></tr>
+<tr><th id="319">319</th><td>  <dfn class="enum" id="REG_BADPAT" title='REG_BADPAT' data-ref="REG_BADPAT" data-ref-filename="REG_BADPAT">REG_BADPAT</dfn>,		<i>/* Invalid pattern.  */</i></td></tr>
+<tr><th id="320">320</th><td>  <dfn class="enum" id="REG_ECOLLATE" title='REG_ECOLLATE' data-ref="REG_ECOLLATE" data-ref-filename="REG_ECOLLATE">REG_ECOLLATE</dfn>,		<i>/* Inalid collating element.  */</i></td></tr>
+<tr><th id="321">321</th><td>  <dfn class="enum" id="REG_ECTYPE" title='REG_ECTYPE' data-ref="REG_ECTYPE" data-ref-filename="REG_ECTYPE">REG_ECTYPE</dfn>,		<i>/* Invalid character class name.  */</i></td></tr>
+<tr><th id="322">322</th><td>  <dfn class="enum" id="REG_EESCAPE" title='REG_EESCAPE' data-ref="REG_EESCAPE" data-ref-filename="REG_EESCAPE">REG_EESCAPE</dfn>,		<i>/* Trailing backslash.  */</i></td></tr>
+<tr><th id="323">323</th><td>  <dfn class="enum" id="REG_ESUBREG" title='REG_ESUBREG' data-ref="REG_ESUBREG" data-ref-filename="REG_ESUBREG">REG_ESUBREG</dfn>,		<i>/* Invalid back reference.  */</i></td></tr>
+<tr><th id="324">324</th><td>  <dfn class="enum" id="REG_EBRACK" title='REG_EBRACK' data-ref="REG_EBRACK" data-ref-filename="REG_EBRACK">REG_EBRACK</dfn>,		<i>/* Unmatched left bracket.  */</i></td></tr>
+<tr><th id="325">325</th><td>  <dfn class="enum" id="REG_EPAREN" title='REG_EPAREN' data-ref="REG_EPAREN" data-ref-filename="REG_EPAREN">REG_EPAREN</dfn>,		<i>/* Parenthesis imbalance.  */</i></td></tr>
+<tr><th id="326">326</th><td>  <dfn class="enum" id="REG_EBRACE" title='REG_EBRACE' data-ref="REG_EBRACE" data-ref-filename="REG_EBRACE">REG_EBRACE</dfn>,		<i>/* Unmatched \{.  */</i></td></tr>
+<tr><th id="327">327</th><td>  <dfn class="enum" id="REG_BADBR" title='REG_BADBR' data-ref="REG_BADBR" data-ref-filename="REG_BADBR">REG_BADBR</dfn>,		<i>/* Invalid contents of \{\}.  */</i></td></tr>
+<tr><th id="328">328</th><td>  <dfn class="enum" id="REG_ERANGE" title='REG_ERANGE' data-ref="REG_ERANGE" data-ref-filename="REG_ERANGE">REG_ERANGE</dfn>,		<i>/* Invalid range end.  */</i></td></tr>
+<tr><th id="329">329</th><td>  <dfn class="enum" id="REG_ESPACE" title='REG_ESPACE' data-ref="REG_ESPACE" data-ref-filename="REG_ESPACE">REG_ESPACE</dfn>,		<i>/* Ran out of memory.  */</i></td></tr>
+<tr><th id="330">330</th><td>  <dfn class="enum" id="REG_BADRPT" title='REG_BADRPT' data-ref="REG_BADRPT" data-ref-filename="REG_BADRPT">REG_BADRPT</dfn>,		<i>/* No preceding re for repetition op.  */</i></td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>  <i>/* Error codes we've added.  */</i></td></tr>
+<tr><th id="333">333</th><td>  <dfn class="enum" id="REG_EEND" title='REG_EEND' data-ref="REG_EEND" data-ref-filename="REG_EEND">REG_EEND</dfn>,		<i>/* Premature end.  */</i></td></tr>
+<tr><th id="334">334</th><td>  <dfn class="enum" id="REG_ESIZE" title='REG_ESIZE' data-ref="REG_ESIZE" data-ref-filename="REG_ESIZE">REG_ESIZE</dfn>,		<i>/* Compiled pattern bigger than 2^16 bytes.  */</i></td></tr>
+<tr><th id="335">335</th><td>  <dfn class="enum" id="REG_ERPAREN" title='REG_ERPAREN' data-ref="REG_ERPAREN" data-ref-filename="REG_ERPAREN">REG_ERPAREN</dfn>		<i>/* Unmatched ) or \); not returned from regcomp.  */</i></td></tr>
+<tr><th id="336">336</th><td>} <dfn class="typedef" id="reg_errcode_t" title='reg_errcode_t' data-type='enum reg_errcode_t' data-ref="reg_errcode_t" data-ref-filename="reg_errcode_t">reg_errcode_t</dfn>;</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td><i>/* This data structure represents a compiled pattern.  Before calling</i></td></tr>
+<tr><th id="339">339</th><td><i>   the pattern compiler, the fields `buffer', `allocated', `fastmap',</i></td></tr>
+<tr><th id="340">340</th><td><i>   and `translate' can be set.  After the pattern has been compiled,</i></td></tr>
+<tr><th id="341">341</th><td><i>   the fields `re_nsub', `not_bol' and `not_eol' are available.  All</i></td></tr>
+<tr><th id="342">342</th><td><i>   other fields are private to the regex routines.  */</i></td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td><u>#<span data-ppcond="344">ifndef</span> <span class="macro" data-ref="_M/RE_TRANSLATE_TYPE">RE_TRANSLATE_TYPE</span></u></td></tr>
+<tr><th id="345">345</th><td><u># define <dfn class="macro" id="_M/__RE_TRANSLATE_TYPE" data-ref="_M/__RE_TRANSLATE_TYPE">__RE_TRANSLATE_TYPE</dfn> unsigned char *</u></td></tr>
+<tr><th id="346">346</th><td><u># <span data-ppcond="346">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="347">347</th><td><u>#  define <dfn class="macro" id="_M/RE_TRANSLATE_TYPE" data-ref="_M/RE_TRANSLATE_TYPE">RE_TRANSLATE_TYPE</dfn> __RE_TRANSLATE_TYPE</u></td></tr>
+<tr><th id="348">348</th><td><u># <span data-ppcond="346">endif</span></u></td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="344">endif</span></u></td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td><u>#<span data-ppcond="351">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="352">352</th><td><u># define <dfn class="macro" id="_M/__REPB_PREFIX" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</dfn>(name) name</u></td></tr>
+<tr><th id="353">353</th><td><u>#<span data-ppcond="351">else</span></u></td></tr>
+<tr><th id="354">354</th><td><u># define __REPB_PREFIX(name) __##name</u></td></tr>
+<tr><th id="355">355</th><td><u>#<span data-ppcond="351">endif</span></u></td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td><b>struct</b> <dfn class="type def" id="re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</dfn></td></tr>
+<tr><th id="358">358</th><td>{</td></tr>
+<tr><th id="359">359</th><td>  <i>/* Space that holds the compiled pattern.  It is declared as</i></td></tr>
+<tr><th id="360">360</th><td><i>     `unsigned char *' because its elements are sometimes used as</i></td></tr>
+<tr><th id="361">361</th><td><i>     array indexes.  */</i></td></tr>
+<tr><th id="362">362</th><td>  <em>unsigned</em> <em>char</em> *<a class="macro" href="#352" title="buffer" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::buffer" title='re_pattern_buffer::buffer' data-ref="re_pattern_buffer::buffer" data-ref-filename="re_pattern_buffer..buffer">buffer</dfn>);</td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td>  <i>/* Number of bytes to which `buffer' points.  */</i></td></tr>
+<tr><th id="365">365</th><td>  <em>unsigned</em> <em>long</em> <em>int</em> <a class="macro" href="#352" title="allocated" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::allocated" title='re_pattern_buffer::allocated' data-ref="re_pattern_buffer::allocated" data-ref-filename="re_pattern_buffer..allocated">allocated</dfn>);</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td>  <i>/* Number of bytes actually used in `buffer'.  */</i></td></tr>
+<tr><th id="368">368</th><td>  <em>unsigned</em> <em>long</em> <em>int</em> <a class="macro" href="#352" title="used" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::used" title='re_pattern_buffer::used' data-ref="re_pattern_buffer::used" data-ref-filename="re_pattern_buffer..used">used</dfn>);</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>  <i>/* Syntax setting with which the pattern was compiled.  */</i></td></tr>
+<tr><th id="371">371</th><td>  <a class="typedef" href="#reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</a> <a class="macro" href="#352" title="syntax" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::syntax" title='re_pattern_buffer::syntax' data-ref="re_pattern_buffer::syntax" data-ref-filename="re_pattern_buffer..syntax">syntax</dfn>);</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>  <i>/* Pointer to a fastmap, if any, otherwise zero.  re_search uses the</i></td></tr>
+<tr><th id="374">374</th><td><i>     fastmap, if there is one, to skip over impossible starting points</i></td></tr>
+<tr><th id="375">375</th><td><i>     for matches.  */</i></td></tr>
+<tr><th id="376">376</th><td>  <em>char</em> *<a class="macro" href="#352" title="fastmap" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::fastmap" title='re_pattern_buffer::fastmap' data-ref="re_pattern_buffer::fastmap" data-ref-filename="re_pattern_buffer..fastmap">fastmap</dfn>);</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>  <i>/* Either a translate table to apply to all characters before</i></td></tr>
+<tr><th id="379">379</th><td><i>     comparing them, or zero for no translation.  The translation is</i></td></tr>
+<tr><th id="380">380</th><td><i>     applied to a pattern when it is compiled and to a string when it</i></td></tr>
+<tr><th id="381">381</th><td><i>     is matched.  */</i></td></tr>
+<tr><th id="382">382</th><td>  <a class="macro" href="#345" title="unsigned char *" data-ref="_M/__RE_TRANSLATE_TYPE">__RE_TRANSLATE_TYPE</a> <a class="macro" href="#352" title="translate" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::translate" title='re_pattern_buffer::translate' data-ref="re_pattern_buffer::translate" data-ref-filename="re_pattern_buffer..translate">translate</dfn>);</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>  <i>/* Number of subexpressions found by the compiler.  */</i></td></tr>
+<tr><th id="385">385</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="re_pattern_buffer::re_nsub" title='re_pattern_buffer::re_nsub' data-ref="re_pattern_buffer::re_nsub" data-ref-filename="re_pattern_buffer..re_nsub">re_nsub</dfn>;</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>  <i>/* Zero if this pattern cannot match the empty string, one else.</i></td></tr>
+<tr><th id="388">388</th><td><i>     Well, in truth it's used only in `re_search_2', to see whether or</i></td></tr>
+<tr><th id="389">389</th><td><i>     not we should use the fastmap, so we don't set this absolutely</i></td></tr>
+<tr><th id="390">390</th><td><i>     perfectly; see `re_compile_fastmap' (the `duplicate' case).  */</i></td></tr>
+<tr><th id="391">391</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="can_be_null" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::can_be_null" title='re_pattern_buffer::can_be_null' data-ref="re_pattern_buffer::can_be_null" data-ref-filename="re_pattern_buffer..can_be_null">can_be_null</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td>  <i>/* If REGS_UNALLOCATED, allocate space in the `regs' structure</i></td></tr>
+<tr><th id="394">394</th><td><i>     for `max (RE_NREGS, re_nsub + 1)' groups.</i></td></tr>
+<tr><th id="395">395</th><td><i>     If REGS_REALLOCATE, reallocate space if necessary.</i></td></tr>
+<tr><th id="396">396</th><td><i>     If REGS_FIXED, use what's there.  */</i></td></tr>
+<tr><th id="397">397</th><td><u>#<span data-ppcond="397">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="398">398</th><td><u># define <dfn class="macro" id="_M/REGS_UNALLOCATED" data-ref="_M/REGS_UNALLOCATED">REGS_UNALLOCATED</dfn> 0</u></td></tr>
+<tr><th id="399">399</th><td><u># define <dfn class="macro" id="_M/REGS_REALLOCATE" data-ref="_M/REGS_REALLOCATE">REGS_REALLOCATE</dfn> 1</u></td></tr>
+<tr><th id="400">400</th><td><u># define <dfn class="macro" id="_M/REGS_FIXED" data-ref="_M/REGS_FIXED">REGS_FIXED</dfn> 2</u></td></tr>
+<tr><th id="401">401</th><td><u>#<span data-ppcond="397">endif</span></u></td></tr>
+<tr><th id="402">402</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="regs_allocated" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::regs_allocated" title='re_pattern_buffer::regs_allocated' data-ref="re_pattern_buffer::regs_allocated" data-ref-filename="re_pattern_buffer..regs_allocated">regs_allocated</dfn>) : <var>2</var>;</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td>  <i>/* Set to zero when `regex_compile' compiles a pattern; set to one</i></td></tr>
+<tr><th id="405">405</th><td><i>     by `re_compile_fastmap' if it updates the fastmap.  */</i></td></tr>
+<tr><th id="406">406</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="fastmap_accurate" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::fastmap_accurate" title='re_pattern_buffer::fastmap_accurate' data-ref="re_pattern_buffer::fastmap_accurate" data-ref-filename="re_pattern_buffer..fastmap_accurate">fastmap_accurate</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td>  <i>/* If set, `re_match_2' does not return information about</i></td></tr>
+<tr><th id="409">409</th><td><i>     subexpressions.  */</i></td></tr>
+<tr><th id="410">410</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="no_sub" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::no_sub" title='re_pattern_buffer::no_sub' data-ref="re_pattern_buffer::no_sub" data-ref-filename="re_pattern_buffer..no_sub">no_sub</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="411">411</th><td></td></tr>
+<tr><th id="412">412</th><td>  <i>/* If set, a beginning-of-line anchor doesn't match at the beginning</i></td></tr>
+<tr><th id="413">413</th><td><i>     of the string.  */</i></td></tr>
+<tr><th id="414">414</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="not_bol" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::not_bol" title='re_pattern_buffer::not_bol' data-ref="re_pattern_buffer::not_bol" data-ref-filename="re_pattern_buffer..not_bol">not_bol</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>  <i>/* Similarly for an end-of-line anchor.  */</i></td></tr>
+<tr><th id="417">417</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="not_eol" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::not_eol" title='re_pattern_buffer::not_eol' data-ref="re_pattern_buffer::not_eol" data-ref-filename="re_pattern_buffer..not_eol">not_eol</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td>  <i>/* If true, an anchor at a newline matches.  */</i></td></tr>
+<tr><th id="420">420</th><td>  <em>unsigned</em> <a class="macro" href="#352" title="newline_anchor" data-ref="_M/__REPB_PREFIX">__REPB_PREFIX</a>(<dfn class="decl field" id="re_pattern_buffer::newline_anchor" title='re_pattern_buffer::newline_anchor' data-ref="re_pattern_buffer::newline_anchor" data-ref-filename="re_pattern_buffer..newline_anchor">newline_anchor</dfn>) : <var>1</var>;</td></tr>
+<tr><th id="421">421</th><td>};</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> <dfn class="typedef" id="regex_t" title='regex_t' data-type='struct re_pattern_buffer' data-ref="regex_t" data-ref-filename="regex_t">regex_t</dfn>;</td></tr>
+<tr><th id="424">424</th><td></td></tr>
+<tr><th id="425">425</th><td><i>/* Type for byte offsets within the string.  POSIX mandates this.  */</i></td></tr>
+<tr><th id="426">426</th><td><b>typedef</b> <em>int</em> <dfn class="typedef" id="regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</dfn>;</td></tr>
+<tr><th id="427">427</th><td></td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td><u>#<span data-ppcond="429">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="430">430</th><td><i>/* This is the structure we store register match data in.  See</i></td></tr>
+<tr><th id="431">431</th><td><i>   regex.texinfo for a full description of what registers match.  */</i></td></tr>
+<tr><th id="432">432</th><td><b>struct</b> <dfn class="type def" id="re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</dfn></td></tr>
+<tr><th id="433">433</th><td>{</td></tr>
+<tr><th id="434">434</th><td>  <em>unsigned</em> <dfn class="decl field" id="re_registers::num_regs" title='re_registers::num_regs' data-ref="re_registers::num_regs" data-ref-filename="re_registers..num_regs">num_regs</dfn>;</td></tr>
+<tr><th id="435">435</th><td>  <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> *<dfn class="decl field" id="re_registers::start" title='re_registers::start' data-ref="re_registers::start" data-ref-filename="re_registers..start">start</dfn>;</td></tr>
+<tr><th id="436">436</th><td>  <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> *<dfn class="decl field" id="re_registers::end" title='re_registers::end' data-ref="re_registers::end" data-ref-filename="re_registers..end">end</dfn>;</td></tr>
+<tr><th id="437">437</th><td>};</td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td><i>/* If `regs_allocated' is REGS_UNALLOCATED in the pattern buffer,</i></td></tr>
+<tr><th id="441">441</th><td><i>   `re_match_2' returns information about at least this many registers</i></td></tr>
+<tr><th id="442">442</th><td><i>   the first time a `regs' structure is passed.  */</i></td></tr>
+<tr><th id="443">443</th><td><u># <span data-ppcond="443">ifndef</span> <span class="macro" data-ref="_M/RE_NREGS">RE_NREGS</span></u></td></tr>
+<tr><th id="444">444</th><td><u>#  define <dfn class="macro" id="_M/RE_NREGS" data-ref="_M/RE_NREGS">RE_NREGS</dfn> 30</u></td></tr>
+<tr><th id="445">445</th><td><u># <span data-ppcond="443">endif</span></u></td></tr>
+<tr><th id="446">446</th><td><u>#<span data-ppcond="429">endif</span></u></td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><i>/* POSIX specification for registers.  Aside from the different names than</i></td></tr>
+<tr><th id="450">450</th><td><i>   `re_registers', POSIX uses an array of structures, instead of a</i></td></tr>
+<tr><th id="451">451</th><td><i>   structure of arrays.  */</i></td></tr>
+<tr><th id="452">452</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="453">453</th><td>{</td></tr>
+<tr><th id="454">454</th><td>  <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> <dfn class="decl field" id="(anonymous)::rm_so" title='(anonymous struct)::rm_so' data-ref="(anonymous)::rm_so" data-ref-filename="(anonymous)..rm_so">rm_so</dfn>;  <i>/* Byte offset from string's start to substring's start.  */</i></td></tr>
+<tr><th id="455">455</th><td>  <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> <dfn class="decl field" id="(anonymous)::rm_eo" title='(anonymous struct)::rm_eo' data-ref="(anonymous)::rm_eo" data-ref-filename="(anonymous)..rm_eo">rm_eo</dfn>;  <i>/* Byte offset from string's start to substring's end.  */</i></td></tr>
+<tr><th id="456">456</th><td>} <dfn class="typedef" id="regmatch_t" title='regmatch_t' data-type='struct regmatch_t' data-ref="regmatch_t" data-ref-filename="regmatch_t">regmatch_t</dfn>;</td></tr>
+<tr><th id="457">457</th><td></td></tr>
+<tr><th id="458">458</th><td><i>/* Declarations for routines.  */</i></td></tr>
+<tr><th id="459">459</th><td></td></tr>
+<tr><th id="460">460</th><td><u>#<span data-ppcond="460">ifdef</span> <a class="macro" href="../include/features.h.html#368" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="461">461</th><td><i>/* Sets the current default syntax to SYNTAX, and return the old syntax.</i></td></tr>
+<tr><th id="462">462</th><td><i>   You can also simply assign to the `re_syntax_options' variable.  */</i></td></tr>
+<tr><th id="463">463</th><td><b>extern</b> <a class="typedef" href="#reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</a> <dfn class="decl fn" id="re_set_syntax" title='re_set_syntax' data-ref="re_set_syntax" data-ref-filename="re_set_syntax">re_set_syntax</dfn> (<a class="typedef" href="#reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</a> <dfn class="local col1 decl" id="1__syntax" title='__syntax' data-type='reg_syntax_t' data-ref="1__syntax" data-ref-filename="1__syntax">__syntax</dfn>);</td></tr>
+<tr><th id="464">464</th><td></td></tr>
+<tr><th id="465">465</th><td><i>/* Compile the regular expression PATTERN, with length LENGTH</i></td></tr>
+<tr><th id="466">466</th><td><i>   and syntax given by the global `re_syntax_options', into the buffer</i></td></tr>
+<tr><th id="467">467</th><td><i>   BUFFER.  Return NULL if successful, and an error string if not.</i></td></tr>
+<tr><th id="468">468</th><td><i></i></td></tr>
+<tr><th id="469">469</th><td><i>   To free the allocated storage, you must call `regfree' on BUFFER.</i></td></tr>
+<tr><th id="470">470</th><td><i>   Note that the translate table must either have been initialised by</i></td></tr>
+<tr><th id="471">471</th><td><i>   `regcomp', with a malloc'ed value, or set to NULL before calling</i></td></tr>
+<tr><th id="472">472</th><td><i>   `regfree'.  */</i></td></tr>
+<tr><th id="473">473</th><td><b>extern</b> <em>const</em> <em>char</em> *<dfn class="decl fn" id="re_compile_pattern" title='re_compile_pattern' data-ref="re_compile_pattern" data-ref-filename="re_compile_pattern">re_compile_pattern</dfn> (<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2__pattern" title='__pattern' data-type='const char *' data-ref="2__pattern" data-ref-filename="2__pattern">__pattern</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="3__length" title='__length' data-type='size_t' data-ref="3__length" data-ref-filename="3__length">__length</dfn>,</td></tr>
+<tr><th id="474">474</th><td>				       <b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col4 decl" id="4__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="4__buffer" data-ref-filename="4__buffer">__buffer</dfn>);</td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td><i>/* Compile a fastmap for the compiled pattern in BUFFER; used to</i></td></tr>
+<tr><th id="478">478</th><td><i>   accelerate searches.  Return 0 if successful and -2 if was an</i></td></tr>
+<tr><th id="479">479</th><td><i>   internal error.  */</i></td></tr>
+<tr><th id="480">480</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_compile_fastmap" title='re_compile_fastmap' data-ref="re_compile_fastmap" data-ref-filename="re_compile_fastmap">re_compile_fastmap</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col5 decl" id="5__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="5__buffer" data-ref-filename="5__buffer">__buffer</dfn>);</td></tr>
+<tr><th id="481">481</th><td></td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td><i>/* Search in the string STRING (with length LENGTH) for the pattern</i></td></tr>
+<tr><th id="484">484</th><td><i>   compiled into BUFFER.  Start searching at position START, for RANGE</i></td></tr>
+<tr><th id="485">485</th><td><i>   characters.  Return the starting position of the match, -1 for no</i></td></tr>
+<tr><th id="486">486</th><td><i>   match, or -2 for an internal error.  Also return register</i></td></tr>
+<tr><th id="487">487</th><td><i>   information in REGS (if REGS and BUFFER-&gt;no_sub are nonzero).  */</i></td></tr>
+<tr><th id="488">488</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_search" title='re_search' data-ref="re_search" data-ref-filename="re_search">re_search</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col6 decl" id="6__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="6__buffer" data-ref-filename="6__buffer">__buffer</dfn>, <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="7__string" title='__string' data-type='const char *' data-ref="7__string" data-ref-filename="7__string">__string</dfn>,</td></tr>
+<tr><th id="489">489</th><td>		      <em>int</em> <dfn class="local col8 decl" id="8__length" title='__length' data-type='int' data-ref="8__length" data-ref-filename="8__length">__length</dfn>, <em>int</em> <dfn class="local col9 decl" id="9__start" title='__start' data-type='int' data-ref="9__start" data-ref-filename="9__start">__start</dfn>, <em>int</em> <dfn class="local col0 decl" id="10__range" title='__range' data-type='int' data-ref="10__range" data-ref-filename="10__range">__range</dfn>,</td></tr>
+<tr><th id="490">490</th><td>		      <b>struct</b> <a class="type" href="#re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</a> *<dfn class="local col1 decl" id="11__regs" title='__regs' data-type='struct re_registers *' data-ref="11__regs" data-ref-filename="11__regs">__regs</dfn>);</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td></td></tr>
+<tr><th id="493">493</th><td><i>/* Like `re_search', but search in the concatenation of STRING1 and</i></td></tr>
+<tr><th id="494">494</th><td><i>   STRING2.  Also, stop searching at index START + STOP.  */</i></td></tr>
+<tr><th id="495">495</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_search_2" title='re_search_2' data-ref="re_search_2" data-ref-filename="re_search_2">re_search_2</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col2 decl" id="12__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="12__buffer" data-ref-filename="12__buffer">__buffer</dfn>,</td></tr>
+<tr><th id="496">496</th><td>			<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="13__string1" title='__string1' data-type='const char *' data-ref="13__string1" data-ref-filename="13__string1">__string1</dfn>, <em>int</em> <dfn class="local col4 decl" id="14__length1" title='__length1' data-type='int' data-ref="14__length1" data-ref-filename="14__length1">__length1</dfn>,</td></tr>
+<tr><th id="497">497</th><td>			<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="15__string2" title='__string2' data-type='const char *' data-ref="15__string2" data-ref-filename="15__string2">__string2</dfn>, <em>int</em> <dfn class="local col6 decl" id="16__length2" title='__length2' data-type='int' data-ref="16__length2" data-ref-filename="16__length2">__length2</dfn>, <em>int</em> <dfn class="local col7 decl" id="17__start" title='__start' data-type='int' data-ref="17__start" data-ref-filename="17__start">__start</dfn>,</td></tr>
+<tr><th id="498">498</th><td>			<em>int</em> <dfn class="local col8 decl" id="18__range" title='__range' data-type='int' data-ref="18__range" data-ref-filename="18__range">__range</dfn>, <b>struct</b> <a class="type" href="#re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</a> *<dfn class="local col9 decl" id="19__regs" title='__regs' data-type='struct re_registers *' data-ref="19__regs" data-ref-filename="19__regs">__regs</dfn>, <em>int</em> <dfn class="local col0 decl" id="20__stop" title='__stop' data-type='int' data-ref="20__stop" data-ref-filename="20__stop">__stop</dfn>);</td></tr>
+<tr><th id="499">499</th><td></td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td><i>/* Like `re_search', but return how many characters in STRING the regexp</i></td></tr>
+<tr><th id="502">502</th><td><i>   in BUFFER matched, starting at position START.  */</i></td></tr>
+<tr><th id="503">503</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_match" title='re_match' data-ref="re_match" data-ref-filename="re_match">re_match</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col1 decl" id="21__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="21__buffer" data-ref-filename="21__buffer">__buffer</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="22__string" title='__string' data-type='const char *' data-ref="22__string" data-ref-filename="22__string">__string</dfn>,</td></tr>
+<tr><th id="504">504</th><td>		     <em>int</em> <dfn class="local col3 decl" id="23__length" title='__length' data-type='int' data-ref="23__length" data-ref-filename="23__length">__length</dfn>, <em>int</em> <dfn class="local col4 decl" id="24__start" title='__start' data-type='int' data-ref="24__start" data-ref-filename="24__start">__start</dfn>, <b>struct</b> <a class="type" href="#re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</a> *<dfn class="local col5 decl" id="25__regs" title='__regs' data-type='struct re_registers *' data-ref="25__regs" data-ref-filename="25__regs">__regs</dfn>);</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td><i>/* Relates to `re_match' as `re_search_2' relates to `re_search'.  */</i></td></tr>
+<tr><th id="508">508</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_match_2" title='re_match_2' data-ref="re_match_2" data-ref-filename="re_match_2">re_match_2</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col6 decl" id="26__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="26__buffer" data-ref-filename="26__buffer">__buffer</dfn>,</td></tr>
+<tr><th id="509">509</th><td>		       <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="27__string1" title='__string1' data-type='const char *' data-ref="27__string1" data-ref-filename="27__string1">__string1</dfn>, <em>int</em> <dfn class="local col8 decl" id="28__length1" title='__length1' data-type='int' data-ref="28__length1" data-ref-filename="28__length1">__length1</dfn>,</td></tr>
+<tr><th id="510">510</th><td>		       <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="29__string2" title='__string2' data-type='const char *' data-ref="29__string2" data-ref-filename="29__string2">__string2</dfn>, <em>int</em> <dfn class="local col0 decl" id="30__length2" title='__length2' data-type='int' data-ref="30__length2" data-ref-filename="30__length2">__length2</dfn>, <em>int</em> <dfn class="local col1 decl" id="31__start" title='__start' data-type='int' data-ref="31__start" data-ref-filename="31__start">__start</dfn>,</td></tr>
+<tr><th id="511">511</th><td>		       <b>struct</b> <a class="type" href="#re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</a> *<dfn class="local col2 decl" id="32__regs" title='__regs' data-type='struct re_registers *' data-ref="32__regs" data-ref-filename="32__regs">__regs</dfn>, <em>int</em> <dfn class="local col3 decl" id="33__stop" title='__stop' data-type='int' data-ref="33__stop" data-ref-filename="33__stop">__stop</dfn>);</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td><i>/* Set REGS to hold NUM_REGS registers, storing them in STARTS and</i></td></tr>
+<tr><th id="515">515</th><td><i>   ENDS.  Subsequent matches using BUFFER and REGS will use this memory</i></td></tr>
+<tr><th id="516">516</th><td><i>   for recording register information.  STARTS and ENDS must be</i></td></tr>
+<tr><th id="517">517</th><td><i>   allocated with malloc, and must each be at least `NUM_REGS * sizeof</i></td></tr>
+<tr><th id="518">518</th><td><i>   (regoff_t)' bytes long.</i></td></tr>
+<tr><th id="519">519</th><td><i></i></td></tr>
+<tr><th id="520">520</th><td><i>   If NUM_REGS == 0, then subsequent matches should allocate their own</i></td></tr>
+<tr><th id="521">521</th><td><i>   register data.</i></td></tr>
+<tr><th id="522">522</th><td><i></i></td></tr>
+<tr><th id="523">523</th><td><i>   Unless this function is called, the first search or match using</i></td></tr>
+<tr><th id="524">524</th><td><i>   PATTERN_BUFFER will allocate its own register data, without</i></td></tr>
+<tr><th id="525">525</th><td><i>   freeing the old data.  */</i></td></tr>
+<tr><th id="526">526</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="re_set_registers" title='re_set_registers' data-ref="re_set_registers" data-ref-filename="re_set_registers">re_set_registers</dfn> (<b>struct</b> <a class="type" href="#re_pattern_buffer" title='re_pattern_buffer' data-ref="re_pattern_buffer" data-ref-filename="re_pattern_buffer">re_pattern_buffer</a> *<dfn class="local col4 decl" id="34__buffer" title='__buffer' data-type='struct re_pattern_buffer *' data-ref="34__buffer" data-ref-filename="34__buffer">__buffer</dfn>,</td></tr>
+<tr><th id="527">527</th><td>			      <b>struct</b> <a class="type" href="#re_registers" title='re_registers' data-ref="re_registers" data-ref-filename="re_registers">re_registers</a> *<dfn class="local col5 decl" id="35__regs" title='__regs' data-type='struct re_registers *' data-ref="35__regs" data-ref-filename="35__regs">__regs</dfn>,</td></tr>
+<tr><th id="528">528</th><td>			      <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="36__num_regs" title='__num_regs' data-type='unsigned int' data-ref="36__num_regs" data-ref-filename="36__num_regs">__num_regs</dfn>,</td></tr>
+<tr><th id="529">529</th><td>			      <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> *<dfn class="local col7 decl" id="37__starts" title='__starts' data-type='regoff_t *' data-ref="37__starts" data-ref-filename="37__starts">__starts</dfn>, <a class="typedef" href="#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> *<dfn class="local col8 decl" id="38__ends" title='__ends' data-type='regoff_t *' data-ref="38__ends" data-ref-filename="38__ends">__ends</dfn>);</td></tr>
+<tr><th id="530">530</th><td><u>#<span data-ppcond="460">endif</span>	/* Use GNU */</u></td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td><u>#<span data-ppcond="532">if</span> defined <span class="macro" data-ref="_M/_REGEX_RE_COMP">_REGEX_RE_COMP</span> || (defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a> &amp;&amp; defined <a class="macro" href="../include/features.h.html#360" data-ref="_M/__USE_MISC">__USE_MISC</a>)</u></td></tr>
+<tr><th id="533">533</th><td><u># <span data-ppcond="533">ifndef</span> <span class="macro" data-ref="_M/_CRAY">_CRAY</span></u></td></tr>
+<tr><th id="534">534</th><td><i>/* 4.2 bsd compatibility.  */</i></td></tr>
+<tr><th id="535">535</th><td><b>extern</b> <em>char</em> *<dfn class="decl fn" id="re_comp" title='re_comp' data-ref="re_comp" data-ref-filename="re_comp">re_comp</dfn> (<em>const</em> <em>char</em> *);</td></tr>
+<tr><th id="536">536</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="re_exec" title='re_exec' data-ref="re_exec" data-ref-filename="re_exec">re_exec</dfn> (<em>const</em> <em>char</em> *);</td></tr>
+<tr><th id="537">537</th><td><u># <span data-ppcond="533">endif</span></u></td></tr>
+<tr><th id="538">538</th><td><u>#<span data-ppcond="532">endif</span></u></td></tr>
+<tr><th id="539">539</th><td></td></tr>
+<tr><th id="540">540</th><td><i>/* GCC 2.95 and later have "__restrict"; C99 compilers have</i></td></tr>
+<tr><th id="541">541</th><td><i>   "restrict", and "configure" may have defined "restrict".  */</i></td></tr>
+<tr><th id="542">542</th><td><u>#<span data-ppcond="542">ifndef</span> <span class="macro" data-ref="_M/__restrict">__restrict</span></u></td></tr>
+<tr><th id="543">543</th><td><u># <span data-ppcond="543">if</span> ! (2 &lt; <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> || (2 == <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> &amp;&amp; 95 &lt;= <span class="macro" title="2" data-ref="_M/__GNUC_MINOR__">__GNUC_MINOR__</span>))</u></td></tr>
+<tr><th id="544">544</th><td><u>#  if defined restrict || 199901L &lt;= __STDC_VERSION__</u></td></tr>
+<tr><th id="545">545</th><td><u>#   define __restrict restrict</u></td></tr>
+<tr><th id="546">546</th><td><u>#  else</u></td></tr>
+<tr><th id="547">547</th><td><u>#   define __restrict</u></td></tr>
+<tr><th id="548">548</th><td><u>#  endif</u></td></tr>
+<tr><th id="549">549</th><td><u># <span data-ppcond="543">endif</span></u></td></tr>
+<tr><th id="550">550</th><td><u>#<span data-ppcond="542">endif</span></u></td></tr>
+<tr><th id="551">551</th><td><i>/* gcc 3.1 and up support the [restrict] syntax.  */</i></td></tr>
+<tr><th id="552">552</th><td><u>#<span data-ppcond="552">ifndef</span> <a class="macro" href="../misc/sys/cdefs.h.html#401" data-ref="_M/__restrict_arr">__restrict_arr</a></u></td></tr>
+<tr><th id="553">553</th><td><u># if (__GNUC__ &gt; 3 || (__GNUC__ == 3 &amp;&amp; __GNUC_MINOR__ &gt;= 1)) \</u></td></tr>
+<tr><th id="554">554</th><td><u>     &amp;&amp; !defined __GNUG__</u></td></tr>
+<tr><th id="555">555</th><td><u>#  define __restrict_arr __restrict</u></td></tr>
+<tr><th id="556">556</th><td><u># else</u></td></tr>
+<tr><th id="557">557</th><td><u>#  define __restrict_arr</u></td></tr>
+<tr><th id="558">558</th><td><u># endif</u></td></tr>
+<tr><th id="559">559</th><td><u>#<span data-ppcond="552">endif</span></u></td></tr>
+<tr><th id="560">560</th><td></td></tr>
+<tr><th id="561">561</th><td><i>/* POSIX compatibility.  */</i></td></tr>
+<tr><th id="562">562</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="regcomp" title='regcomp' data-ref="regcomp" data-ref-filename="regcomp">regcomp</dfn> (<a class="typedef" href="#regex_t" title='regex_t' data-type='struct re_pattern_buffer' data-ref="regex_t" data-ref-filename="regex_t">regex_t</a> *<b>__restrict</b> <dfn class="local col9 decl" id="39__preg" title='__preg' data-type='regex_t *restrict' data-ref="39__preg" data-ref-filename="39__preg">__preg</dfn>,</td></tr>
+<tr><th id="563">563</th><td>		    <em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col0 decl" id="40__pattern" title='__pattern' data-type='const char *restrict' data-ref="40__pattern" data-ref-filename="40__pattern">__pattern</dfn>,</td></tr>
+<tr><th id="564">564</th><td>		    <em>int</em> <dfn class="local col1 decl" id="41__cflags" title='__cflags' data-type='int' data-ref="41__cflags" data-ref-filename="41__cflags">__cflags</dfn>);</td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="regexec" title='regexec' data-ref="regexec" data-ref-filename="regexec">regexec</dfn> (<em>const</em> <a class="typedef" href="#regex_t" title='regex_t' data-type='struct re_pattern_buffer' data-ref="regex_t" data-ref-filename="regex_t">regex_t</a> *<b>__restrict</b> <dfn class="local col2 decl" id="42__preg" title='__preg' data-type='const regex_t *restrict' data-ref="42__preg" data-ref-filename="42__preg">__preg</dfn>,</td></tr>
+<tr><th id="567">567</th><td>		    <em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col3 decl" id="43__string" title='__string' data-type='const char *restrict' data-ref="43__string" data-ref-filename="43__string">__string</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="44__nmatch" title='__nmatch' data-type='size_t' data-ref="44__nmatch" data-ref-filename="44__nmatch">__nmatch</dfn>,</td></tr>
+<tr><th id="568">568</th><td>		    <a class="typedef" href="#regmatch_t" title='regmatch_t' data-type='struct regmatch_t' data-ref="regmatch_t" data-ref-filename="regmatch_t">regmatch_t</a> <dfn class="local col5 decl" id="45__pmatch" title='__pmatch' data-type='regmatch_t *restrict' data-ref="45__pmatch" data-ref-filename="45__pmatch">__pmatch</dfn>[<a class="macro" href="../misc/sys/cdefs.h.html#401" title="__restrict" data-ref="_M/__restrict_arr">__restrict_arr</a>],</td></tr>
+<tr><th id="569">569</th><td>		    <em>int</em> <dfn class="local col6 decl" id="46__eflags" title='__eflags' data-type='int' data-ref="46__eflags" data-ref-filename="46__eflags">__eflags</dfn>);</td></tr>
+<tr><th id="570">570</th><td></td></tr>
+<tr><th id="571">571</th><td><b>extern</b> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl fn" id="regerror" title='regerror' data-ref="regerror" data-ref-filename="regerror">regerror</dfn> (<em>int</em> <dfn class="local col7 decl" id="47__errcode" title='__errcode' data-type='int' data-ref="47__errcode" data-ref-filename="47__errcode">__errcode</dfn>, <em>const</em> <a class="typedef" href="#regex_t" title='regex_t' data-type='struct re_pattern_buffer' data-ref="regex_t" data-ref-filename="regex_t">regex_t</a> *<b>__restrict</b> <dfn class="local col8 decl" id="48__preg" title='__preg' data-type='const regex_t *restrict' data-ref="48__preg" data-ref-filename="48__preg">__preg</dfn>,</td></tr>
+<tr><th id="572">572</th><td>			<em>char</em> *<b>__restrict</b> <dfn class="local col9 decl" id="49__errbuf" title='__errbuf' data-type='char *restrict' data-ref="49__errbuf" data-ref-filename="49__errbuf">__errbuf</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="50__errbuf_size" title='__errbuf_size' data-type='size_t' data-ref="50__errbuf_size" data-ref-filename="50__errbuf_size">__errbuf_size</dfn>);</td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="regfree" title='regfree' data-ref="regfree" data-ref-filename="regfree">regfree</dfn> (<a class="typedef" href="#regex_t" title='regex_t' data-type='struct re_pattern_buffer' data-ref="regex_t" data-ref-filename="regex_t">regex_t</a> *<dfn class="local col1 decl" id="51__preg" title='__preg' data-type='regex_t *' data-ref="51__preg" data-ref-filename="51__preg">__preg</dfn>);</td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td></td></tr>
+<tr><th id="577">577</th><td><u>#<span data-ppcond="577">ifdef</span> <span class="macro" data-ref="_M/__cplusplus">__cplusplus</span></u></td></tr>
+<tr><th id="578">578</th><td>}</td></tr>
+<tr><th id="579">579</th><td><u>#<span data-ppcond="577">endif</span>	/* C++ */</u></td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td><u>#<span data-ppcond="20">endif</span> /* regex.h */</u></td></tr>
+<tr><th id="582">582</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../locale/programs/ld-messages.c.html'>glibc_src_2.25/locale/programs/ld-messages.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

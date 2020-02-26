@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-execstack.c source code [glibc_src_2.25/sysdeps/unix/sysv/linux/dl-execstack.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.25/sysdeps/unix/sysv/linux/dl-execstack.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.25</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='dl-execstack.c.html'>dl-execstack.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Stack executability handling for GNU dynamic linker.  Linux version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2003-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/sys/mman.h.html">&lt;sys/mman.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../../include/stackinfo.h.html">&lt;stackinfo.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../../include/caller.h.html">&lt;caller.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="__stack_prot" title='__stack_prot' data-ref="__stack_prot" data-ref-filename="__stack_prot">__stack_prot</dfn> <a class="macro" href="../../../../include/libc-symbols.h.html#337" title="__attribute__ ((section (&quot;.data.rel.ro&quot;)))" data-ref="_M/attribute_relro">attribute_relro</a> <a class="macro" href="../../../../include/libc-symbols.h.html#332" title="" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><em>int</em></td></tr>
+<tr><th id="33">33</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#165" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="34">34</th><td><dfn class="decl def fn" id="_dl_make_stack_executable" title='_dl_make_stack_executable' data-ref="_dl_make_stack_executable" data-ref-filename="_dl_make_stack_executable">_dl_make_stack_executable</dfn> (<em>void</em> **<dfn class="local col1 decl" id="1stack_endp" title='stack_endp' data-type='void **' data-ref="1stack_endp" data-ref-filename="1stack_endp">stack_endp</dfn>)</td></tr>
+<tr><th id="35">35</th><td>{</td></tr>
+<tr><th id="36">36</th><td>  <i>/* This gives us the highest/lowest page that needs to be changed.  */</i></td></tr>
+<tr><th id="37">37</th><td>  <a class="typedef" href="../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="local col2 decl" id="2page" title='page' data-type='uintptr_t' data-ref="2page" data-ref-filename="2page">page</dfn> = ((<a class="typedef" href="../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) *<a class="local col1 ref" href="#1stack_endp" title='stack_endp' data-ref="1stack_endp" data-ref-filename="1stack_endp">stack_endp</a></td></tr>
+<tr><th id="38">38</th><td>		    &amp; -(<a class="typedef" href="../../../generic/stdint.h.html#intptr_t" title='intptr_t' data-type='long' data-ref="intptr_t" data-ref-filename="intptr_t">intptr_t</a>) <a class="macro" href="../../../generic/ldsodefs.h.html#448" title="_dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize));</td></tr>
+<tr><th id="39">39</th><td>  <em>int</em> <dfn class="local col3 decl" id="3result" title='result' data-type='int' data-ref="3result" data-ref-filename="3result">result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td>  <i>/* Challenge the caller.  */</i></td></tr>
+<tr><th id="42">42</th><td>  <b>if</b> (<a class="ref fn" href="#42" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="macro" href="../../../../include/caller.h.html#28" title="(0)" data-ref="_M/__check_caller">__check_caller</a> (RETURN_ADDRESS (<var>0</var>),</td></tr>
+<tr><th id="43">43</th><td>					allow_ldso|allow_libpthread) != <var>0</var>, <var>0</var>)</td></tr>
+<tr><th id="44">44</th><td>      || <a class="ref fn" href="#42" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (*<a class="local col1 ref" href="#1stack_endp" title='stack_endp' data-ref="1stack_endp" data-ref-filename="1stack_endp">stack_endp</a> != <a class="ref" href="../../../generic/ldsodefs.h.html#__libc_stack_end" title='__libc_stack_end' data-ref="__libc_stack_end" data-ref-filename="__libc_stack_end">__libc_stack_end</a>, <var>0</var>))</td></tr>
+<tr><th id="45">45</th><td>    <b>return</b> <a class="macro" href="../../../../../include/asm-generic/errno-base.h.html#5" title="1" data-ref="_M/EPERM">EPERM</a>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>  <b>if</b> (<a class="ref fn" href="#42" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref fn" href="../../../../include/sys/mman.h.html#__mprotect" title='__mprotect' data-ref="__mprotect" data-ref-filename="__mprotect">__mprotect</a> ((<em>void</em> *) <a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>, <a class="macro" href="../../../generic/ldsodefs.h.html#448" title="_dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize),</td></tr>
+<tr><th id="48">48</th><td>				    <a class="ref" href="#__stack_prot" title='__stack_prot' data-ref="__stack_prot" data-ref-filename="__stack_prot">__stack_prot</a>) == <var>0</var>, <var>1</var>))</td></tr>
+<tr><th id="49">49</th><td>    <b>goto</b> <a class="lbl" href="#4return_success" data-ref="4return_success" data-ref-filename="4return_success">return_success</a>;</td></tr>
+<tr><th id="50">50</th><td>  <a class="local col3 ref" href="#3result" title='result' data-ref="3result" data-ref-filename="3result">result</a> = <a class="macro" href="../../../../include/errno.h.html#31" title="__libc_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="51">51</th><td>  <b>goto</b> <a class="lbl" href="#5out" data-ref="5out" data-ref-filename="5out">out</a>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td> <dfn class="lbl" id="4return_success" data-ref="4return_success" data-ref-filename="4return_success">return_success</dfn>:</td></tr>
+<tr><th id="54">54</th><td>  <i>/* Clear the address.  */</i></td></tr>
+<tr><th id="55">55</th><td>  *<a class="local col1 ref" href="#1stack_endp" title='stack_endp' data-ref="1stack_endp" data-ref-filename="1stack_endp">stack_endp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>  <i>/* Remember that we changed the permission.  */</i></td></tr>
+<tr><th id="58">58</th><td>  <a class="macro" href="../../../generic/ldsodefs.h.html#273" title="_dl_stack_flags" data-ref="_M/GL">GL</a>(dl_stack_flags) |= <a class="macro" href="../../../../elf/elf.h.html#733" title="(1 &lt;&lt; 0)" data-ref="_M/PF_X">PF_X</a>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td> <dfn class="lbl" id="5out" data-ref="5out" data-ref-filename="5out">out</dfn>:</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="61">ifdef</span> <span class="macro" data-ref="_M/check_consistency">check_consistency</span></u></td></tr>
+<tr><th id="62">62</th><td>  check_consistency ();</td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="61">endif</span></u></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>  <b>return</b> <a class="local col3 ref" href="#3result" title='result' data-ref="3result" data-ref-filename="3result">result</a>;</td></tr>
+<tr><th id="66">66</th><td>}</td></tr>
+<tr><th id="67">67</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#530" title="" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (_dl_make_stack_executable)</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.25 revision <em>2.25</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
