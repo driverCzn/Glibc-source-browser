@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>s_fmal.c source code [glibc_src_2.28/sysdeps/ieee754/ldbl-128/s_fmal.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/sysdeps/ieee754/ldbl-128/s_fmal.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.28</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-128</a>/<a href='s_fmal.c.html'>s_fmal.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Compute x * y + z as ternary operation.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2010-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Jakub Jelinek &lt;jakub@redhat.com&gt;, 2010.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../include/float.h.html">&lt;float.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../include/fenv.h.html">&lt;fenv.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../ieee754.h.html">&lt;ieee754.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../x86/fpu/math-barriers.h.html">&lt;math-barriers.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../x86_64/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../generic/libm-alias-ldouble.h.html">&lt;libm-alias-ldouble.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../x86/tininess.h.html">&lt;tininess.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/* This implementation uses rounding to odd to avoid problems with</i></td></tr>
+<tr><th id="30">30</th><td><i>   double rounding.  See a paper by Boldo and Melquiond:</i></td></tr>
+<tr><th id="31">31</th><td><i>   <a href="http://www.lri.fr/~melquion/doc/08-tc.pdf">http://www.lri.fr/~melquion/doc/08-tc.pdf</a>  */</i></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="34">34</th><td><a class="macro" href="../float128/float128_private.h.html#219" title="__fmaf128" data-ref="_M/__fmal">__fmal</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x, <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> y, <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> z)</td></tr>
+<tr><th id="35">35</th><td>{</td></tr>
+<tr><th id="36">36</th><td>  <b>union</b> <a class="macro" href="../float128/float128_private.h.html#34" title="ieee854_float128" data-ref="_M/ieee854_long_double">ieee854_long_double</a> <dfn class="local col1 decl" id="1u" title='u' data-type='union ieee854_float128' data-ref="1u" data-ref-filename="1u">u</dfn>, <dfn class="local col2 decl" id="2v" title='v' data-type='union ieee854_float128' data-ref="2v" data-ref-filename="2v">v</dfn>, <dfn class="local col3 decl" id="3w" title='w' data-type='union ieee854_float128' data-ref="3w" data-ref-filename="3w">w</dfn>;</td></tr>
+<tr><th id="37">37</th><td>  <em>int</em> <dfn class="local col4 decl" id="4adjust" title='adjust' data-type='int' data-ref="4adjust" data-ref-filename="4adjust">adjust</dfn> = <var>0</var>;</td></tr>
+<tr><th id="38">38</th><td>  u.d = x;</td></tr>
+<tr><th id="39">39</th><td>  v.d = y;</td></tr>
+<tr><th id="40">40</th><td>  w.d = z;</td></tr>
+<tr><th id="41">41</th><td>  <b>if</b> (__builtin_expect (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="42">42</th><td>			&gt;= <var>0x7fff</var> + <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a></td></tr>
+<tr><th id="43">43</th><td>			   - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>, <var>0</var>)</td></tr>
+<tr><th id="44">44</th><td>      || __builtin_expect (u.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>, <var>0</var>)</td></tr>
+<tr><th id="45">45</th><td>      || __builtin_expect (v.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>, <var>0</var>)</td></tr>
+<tr><th id="46">46</th><td>      || __builtin_expect (w.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>, <var>0</var>)</td></tr>
+<tr><th id="47">47</th><td>      || __builtin_expect (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="48">48</th><td>			   &lt;= <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a> + <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>, <var>0</var>))</td></tr>
+<tr><th id="49">49</th><td>    {</td></tr>
+<tr><th id="50">50</th><td>      <i>/* If z is Inf, but x and y are finite, the result should be</i></td></tr>
+<tr><th id="51">51</th><td><i>	 z rather than NaN.  */</i></td></tr>
+<tr><th id="52">52</th><td>      <b>if</b> (w.ieee.exponent == <var>0x7fff</var></td></tr>
+<tr><th id="53">53</th><td>	  &amp;&amp; u.ieee.exponent != <var>0x7fff</var></td></tr>
+<tr><th id="54">54</th><td>          &amp;&amp; v.ieee.exponent != <var>0x7fff</var>)</td></tr>
+<tr><th id="55">55</th><td>	<b>return</b> (z + x) + y;</td></tr>
+<tr><th id="56">56</th><td>      <i>/* If z is zero and x are y are nonzero, compute the result</i></td></tr>
+<tr><th id="57">57</th><td><i>	 as x * y to avoid the wrong sign of a zero result if x * y</i></td></tr>
+<tr><th id="58">58</th><td><i>	 underflows to 0.  */</i></td></tr>
+<tr><th id="59">59</th><td>      <b>if</b> (z == <var>0</var> &amp;&amp; x != <var>0</var> &amp;&amp; y != <var>0</var>)</td></tr>
+<tr><th id="60">60</th><td>	<b>return</b> x * y;</td></tr>
+<tr><th id="61">61</th><td>      <i>/* If x or y or z is Inf/NaN, or if x * y is zero, compute as</i></td></tr>
+<tr><th id="62">62</th><td><i>	 x * y + z.  */</i></td></tr>
+<tr><th id="63">63</th><td>      <b>if</b> (u.ieee.exponent == <var>0x7fff</var></td></tr>
+<tr><th id="64">64</th><td>	  || v.ieee.exponent == <var>0x7fff</var></td></tr>
+<tr><th id="65">65</th><td>	  || w.ieee.exponent == <var>0x7fff</var></td></tr>
+<tr><th id="66">66</th><td>	  || x == <var>0</var></td></tr>
+<tr><th id="67">67</th><td>	  || y == <var>0</var>)</td></tr>
+<tr><th id="68">68</th><td>	<b>return</b> x * y + z;</td></tr>
+<tr><th id="69">69</th><td>      <i>/* If fma will certainly overflow, compute as x * y.  */</i></td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="71">71</th><td>	  &gt; <var>0x7fff</var> + <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a>)</td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> x * y;</td></tr>
+<tr><th id="73">73</th><td>      <i>/* If x * y is less than 1/4 of LDBL_TRUE_MIN, neither the</i></td></tr>
+<tr><th id="74">74</th><td><i>	 result nor whether there is underflow depends on its exact</i></td></tr>
+<tr><th id="75">75</th><td><i>	 value, only on its sign.  */</i></td></tr>
+<tr><th id="76">76</th><td>      <b>if</b> (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="77">77</th><td>	  &lt; <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> - <var>2</var>)</td></tr>
+<tr><th id="78">78</th><td>	{</td></tr>
+<tr><th id="79">79</th><td>	  <em>int</em> <dfn class="local col5 decl" id="5neg" title='neg' data-type='int' data-ref="5neg" data-ref-filename="5neg">neg</dfn> = <a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::negative' data-ref="ieee854_float128::(anonymous)::negative" data-ref-filename="ieee854_float128..(anonymous)..negative">negative</a> ^ <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::negative' data-ref="ieee854_float128::(anonymous)::negative" data-ref-filename="ieee854_float128..(anonymous)..negative">negative</a>;</td></tr>
+<tr><th id="80">80</th><td>	  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;tiny&apos;">tiny</span> = neg ? <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-0x1p-16494)" data-ref="_M/L">L</a>(-<span class='error' title="magnitude of floating-point constant too small for type &apos;double&apos;; minimum is 4.9406564584124654E-324"><var>0x1p-16494</var></span>) : <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-16494)" data-ref="_M/L">L</a>(<span class='error' title="magnitude of floating-point constant too small for type &apos;double&apos;; minimum is 4.9406564584124654E-324"><var>0x1p-16494</var></span>);</td></tr>
+<tr><th id="81">81</th><td>	  <b>if</b> (w.ieee.exponent &gt;= <var>3</var>)</td></tr>
+<tr><th id="82">82</th><td>	    <b>return</b> <span class='error' title="use of undeclared identifier &apos;tiny&apos;">tiny</span> + z;</td></tr>
+<tr><th id="83">83</th><td>	  <i>/* Scaling up, adding TINY and scaling down produces the</i></td></tr>
+<tr><th id="84">84</th><td><i>	     correct result, because in round-to-nearest mode adding</i></td></tr>
+<tr><th id="85">85</th><td><i>	     TINY has no effect and in other modes double rounding is</i></td></tr>
+<tr><th id="86">86</th><td><i>	     harmless.  But it may not produce required underflow</i></td></tr>
+<tr><th id="87">87</th><td><i>	     exceptions.  */</i></td></tr>
+<tr><th id="88">88</th><td>	  v.d = z * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p114)" data-ref="_M/L">L</a>(<var>0x1p114</var>) + <span class='error' title="use of undeclared identifier &apos;tiny&apos;">tiny</span>;</td></tr>
+<tr><th id="89">89</th><td>	  <b>if</b> (<a class="macro" href="../../x86/tininess.h.html#1" title="1" data-ref="_M/TININESS_AFTER_ROUNDING">TININESS_AFTER_ROUNDING</a></td></tr>
+<tr><th id="90">90</th><td>	      ? <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> &lt; <var>115</var></td></tr>
+<tr><th id="91">91</th><td>	      : (<a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> == <var>0</var></td></tr>
+<tr><th id="92">92</th><td>		 || (<a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> == <var>1</var></td></tr>
+<tr><th id="93">93</th><td>		     &amp;&amp; <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::negative' data-ref="ieee854_float128::(anonymous)::negative" data-ref-filename="ieee854_float128..(anonymous)..negative">negative</a> != <a class="local col5 ref" href="#5neg" title='neg' data-ref="5neg" data-ref-filename="5neg">neg</a></td></tr>
+<tr><th id="94">94</th><td>		     &amp;&amp; <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> == <var>0</var></td></tr>
+<tr><th id="95">95</th><td>		     &amp;&amp; <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa2' data-ref="ieee854_float128::(anonymous)::mantissa2" data-ref-filename="ieee854_float128..(anonymous)..mantissa2">mantissa2</a> == <var>0</var></td></tr>
+<tr><th id="96">96</th><td>		     &amp;&amp; <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa1' data-ref="ieee854_float128::(anonymous)::mantissa1" data-ref-filename="ieee854_float128..(anonymous)..mantissa1">mantissa1</a> == <var>0</var></td></tr>
+<tr><th id="97">97</th><td>		     &amp;&amp; <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa0' data-ref="ieee854_float128::(anonymous)::mantissa0" data-ref-filename="ieee854_float128..(anonymous)..mantissa0">mantissa0</a> == <var>0</var>)))</td></tr>
+<tr><th id="98">98</th><td>	    {</td></tr>
+<tr><th id="99">99</th><td>	      <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;force_underflow&apos;">force_underflow</span> = x * y;</td></tr>
+<tr><th id="100">100</th><td>	      <a class="macro" href="../../x86/fpu/math-barriers.h.html#31" title="do { if (sizeof (force_underflow) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (force_underflow), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (force_underflow)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (force_underflow)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (<span class='error' title="use of undeclared identifier &apos;force_underflow&apos;">force_underflow</span>);</td></tr>
+<tr><th id="101">101</th><td>	    }</td></tr>
+<tr><th id="102">102</th><td>	  <b>return</b> v.d * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-114)" data-ref="_M/L">L</a>(<var>0x1p-114</var>);</td></tr>
+<tr><th id="103">103</th><td>	}</td></tr>
+<tr><th id="104">104</th><td>      <b>if</b> (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="105">105</th><td>	  &gt;= <var>0x7fff</var> + <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="106">106</th><td>	{</td></tr>
+<tr><th id="107">107</th><td>	  <i>/* Compute 1p-113 times smaller result and multiply</i></td></tr>
+<tr><th id="108">108</th><td><i>	     at the end.  */</i></td></tr>
+<tr><th id="109">109</th><td>	  <b>if</b> (u.ieee.exponent &gt; v.ieee.exponent)</td></tr>
+<tr><th id="110">110</th><td>	    u.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="111">111</th><td>	  <b>else</b></td></tr>
+<tr><th id="112">112</th><td>	    v.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="113">113</th><td>	  <i>/* If x + y exponent is very large and z exponent is very small,</i></td></tr>
+<tr><th id="114">114</th><td><i>	     it doesn't matter if we don't adjust it.  */</i></td></tr>
+<tr><th id="115">115</th><td>	  <b>if</b> (w.ieee.exponent &gt; <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="116">116</th><td>	    w.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="117">117</th><td>	  <a class="local col4 ref" href="#4adjust" title='adjust' data-ref="4adjust" data-ref-filename="4adjust">adjust</a> = <var>1</var>;</td></tr>
+<tr><th id="118">118</th><td>	}</td></tr>
+<tr><th id="119">119</th><td>      <b>else</b> <b>if</b> (w.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="120">120</th><td>	{</td></tr>
+<tr><th id="121">121</th><td>	  <i>/* Similarly.</i></td></tr>
+<tr><th id="122">122</th><td><i>	     If z exponent is very large and x and y exponents are</i></td></tr>
+<tr><th id="123">123</th><td><i>	     very small, adjust them up to avoid spurious underflows,</i></td></tr>
+<tr><th id="124">124</th><td><i>	     rather than down.  */</i></td></tr>
+<tr><th id="125">125</th><td>	  <b>if</b> (u.ieee.exponent + v.ieee.exponent</td></tr>
+<tr><th id="126">126</th><td>	      &lt;= <a class="macro" href="../float128/float128_private.h.html#50" title="0x3fff" data-ref="_M/IEEE854_LONG_DOUBLE_BIAS">IEEE854_LONG_DOUBLE_BIAS</a> + <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="127">127</th><td>	    {</td></tr>
+<tr><th id="128">128</th><td>	      <b>if</b> (u.ieee.exponent &gt; v.ieee.exponent)</td></tr>
+<tr><th id="129">129</th><td>		u.ieee.exponent += <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>2</var>;</td></tr>
+<tr><th id="130">130</th><td>	      <b>else</b></td></tr>
+<tr><th id="131">131</th><td>		v.ieee.exponent += <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>2</var>;</td></tr>
+<tr><th id="132">132</th><td>	    }</td></tr>
+<tr><th id="133">133</th><td>	  <b>else</b> <b>if</b> (<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> &gt; <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a>)</td></tr>
+<tr><th id="134">134</th><td>	    {</td></tr>
+<tr><th id="135">135</th><td>	      <b>if</b> (u.ieee.exponent &gt; <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="136">136</th><td>		u.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="137">137</th><td>	    }</td></tr>
+<tr><th id="138">138</th><td>	  <b>else</b> <b>if</b> (v.ieee.exponent &gt; <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="139">139</th><td>	    v.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="140">140</th><td>	  w.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="141">141</th><td>	  <a class="local col4 ref" href="#4adjust" title='adjust' data-ref="4adjust" data-ref-filename="4adjust">adjust</a> = <var>1</var>;</td></tr>
+<tr><th id="142">142</th><td>	}</td></tr>
+<tr><th id="143">143</th><td>      <b>else</b> <b>if</b> (u.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="144">144</th><td>	{</td></tr>
+<tr><th id="145">145</th><td>	  u.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="146">146</th><td>	  <b>if</b> (v.ieee.exponent)</td></tr>
+<tr><th id="147">147</th><td>	    v.ieee.exponent += <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="148">148</th><td>	  <b>else</b></td></tr>
+<tr><th id="149">149</th><td>	    v.d *= <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p113)" data-ref="_M/L">L</a>(<var>0x1p113</var>);</td></tr>
+<tr><th id="150">150</th><td>	}</td></tr>
+<tr><th id="151">151</th><td>      <b>else</b> <b>if</b> (v.ieee.exponent &gt;= <var>0x7fff</var> - <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>)</td></tr>
+<tr><th id="152">152</th><td>	{</td></tr>
+<tr><th id="153">153</th><td>	  v.ieee.exponent -= <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="154">154</th><td>	  <b>if</b> (u.ieee.exponent)</td></tr>
+<tr><th id="155">155</th><td>	    u.ieee.exponent += <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a>;</td></tr>
+<tr><th id="156">156</th><td>	  <b>else</b></td></tr>
+<tr><th id="157">157</th><td>	    u.d *= <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p113)" data-ref="_M/L">L</a>(<var>0x1p113</var>);</td></tr>
+<tr><th id="158">158</th><td>	}</td></tr>
+<tr><th id="159">159</th><td>      <b>else</b> <i>/* if (u.ieee.exponent + v.ieee.exponent</i></td></tr>
+<tr><th id="160">160</th><td><i>		  &lt;= IEEE854_LONG_DOUBLE_BIAS + LDBL_MANT_DIG) */</i></td></tr>
+<tr><th id="161">161</th><td>	{</td></tr>
+<tr><th id="162">162</th><td>	  <b>if</b> (u.ieee.exponent &gt; v.ieee.exponent)</td></tr>
+<tr><th id="163">163</th><td>	    u.ieee.exponent += <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>2</var>;</td></tr>
+<tr><th id="164">164</th><td>	  <b>else</b></td></tr>
+<tr><th id="165">165</th><td>	    v.ieee.exponent += <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>2</var>;</td></tr>
+<tr><th id="166">166</th><td>	  <b>if</b> (w.ieee.exponent &lt;= <var>4</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>6</var>)</td></tr>
+<tr><th id="167">167</th><td>	    {</td></tr>
+<tr><th id="168">168</th><td>	      <b>if</b> (w.ieee.exponent)</td></tr>
+<tr><th id="169">169</th><td>		w.ieee.exponent += <var>2</var> * <a class="macro" href="../float128/float128_private.h.html#90" title="FLT128_MANT_DIG" data-ref="_M/LDBL_MANT_DIG">LDBL_MANT_DIG</a> + <var>2</var>;</td></tr>
+<tr><th id="170">170</th><td>	      <b>else</b></td></tr>
+<tr><th id="171">171</th><td>		w.d *= <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p228)" data-ref="_M/L">L</a>(<var>0x1p228</var>);</td></tr>
+<tr><th id="172">172</th><td>	      <a class="local col4 ref" href="#4adjust" title='adjust' data-ref="4adjust" data-ref-filename="4adjust">adjust</a> = -<var>1</var>;</td></tr>
+<tr><th id="173">173</th><td>	    }</td></tr>
+<tr><th id="174">174</th><td>	  <i>/* Otherwise x * y should just affect inexact</i></td></tr>
+<tr><th id="175">175</th><td><i>	     and nothing else.  */</i></td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td>      x = u.d;</td></tr>
+<tr><th id="178">178</th><td>      y = v.d;</td></tr>
+<tr><th id="179">179</th><td>      z = w.d;</td></tr>
+<tr><th id="180">180</th><td>    }</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>  <i>/* Ensure correct sign of exact 0 + 0.  */</i></td></tr>
+<tr><th id="183">183</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#402" title="__builtin_expect (((x == 0 || y == 0) &amp;&amp; z == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> ((x == <var>0</var> || y == <var>0</var>) &amp;&amp; z == <var>0</var>))</td></tr>
+<tr><th id="184">184</th><td>    {</td></tr>
+<tr><th id="185">185</th><td>      x = <a class="macro" href="../../x86/fpu/math-barriers.h.html#23" title="({ __typeof(x) __x; if (sizeof (x) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (x), _Float128)) __asm (&quot;&quot; : &quot;=x&quot; (__x) : &quot;0&quot; (x)); else __asm (&quot;&quot; : &quot;=t&quot; (__x) : &quot;0&quot; (x)); __x; })" data-ref="_M/math_opt_barrier">math_opt_barrier</a> (x);</td></tr>
+<tr><th id="186">186</th><td>      <b>return</b> x * y + z;</td></tr>
+<tr><th id="187">187</th><td>    }</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>  <a class="typedef" href="../../x86/fpu/bits/fenv.h.html#fenv_t" title='fenv_t' data-type='struct fenv_t' data-ref="fenv_t" data-ref-filename="fenv_t">fenv_t</a> <dfn class="local col6 decl" id="6env" title='env' data-type='fenv_t' data-ref="6env" data-ref-filename="6env">env</dfn>;</td></tr>
+<tr><th id="190">190</th><td>  <a class="ref fn" href="../../../math/fenv.h.html#feholdexcept" title='feholdexcept' data-ref="feholdexcept" data-ref-filename="feholdexcept">feholdexcept</a> (&amp;<a class="local col6 ref" href="#6env" title='env' data-ref="6env" data-ref-filename="6env">env</a>);</td></tr>
+<tr><th id="191">191</th><td>  <a class="ref fn" href="../../../math/fenv.h.html#fesetround" title='fesetround' data-ref="fesetround" data-ref-filename="fesetround">fesetround</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#53" title="0" data-ref="_M/FE_TONEAREST">FE_TONEAREST</a>);</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>  <i>/* Multiplication m1 + m2 = x * y using Dekker's algorithm.  */</i></td></tr>
+<tr><th id="194">194</th><td><u>#define <dfn class="macro" id="_M/C" data-ref="_M/C">C</dfn> ((1LL &lt;&lt; (LDBL_MANT_DIG + 1) / 2) + 1)</u></td></tr>
+<tr><th id="195">195</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> x1 = x * <a class="macro" href="#194" title="((1LL &lt;&lt; (FLT128_MANT_DIG + 1) / 2) + 1)" data-ref="_M/C">C</a>;</td></tr>
+<tr><th id="196">196</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> y1 = y * <a class="macro" href="#194" title="((1LL &lt;&lt; (FLT128_MANT_DIG + 1) / 2) + 1)" data-ref="_M/C">C</a>;</td></tr>
+<tr><th id="197">197</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> m1 = x * y;</td></tr>
+<tr><th id="198">198</th><td>  <span class='error' title="use of undeclared identifier &apos;x1&apos;">x1</span> = (x - <span class='error' title="use of undeclared identifier &apos;x1&apos;">x1</span>) + <span class='error' title="use of undeclared identifier &apos;x1&apos;">x1</span>;</td></tr>
+<tr><th id="199">199</th><td>  y1 = (y - y1) + y1;</td></tr>
+<tr><th id="200">200</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> x2 = x - x1;</td></tr>
+<tr><th id="201">201</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> y2 = y - y1;</td></tr>
+<tr><th id="202">202</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> m2 = (((x1 * y1 - m1) + x1 * y2) + x2 * y1) + x2 * y2;</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>  <i>/* Addition a1 + a2 = z + m1 using Knuth's algorithm.  */</i></td></tr>
+<tr><th id="205">205</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> a1 = z + m1;</td></tr>
+<tr><th id="206">206</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> t1 = a1 - z;</td></tr>
+<tr><th id="207">207</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> t2 = a1 - t1;</td></tr>
+<tr><th id="208">208</th><td>  <span class='error' title="use of undeclared identifier &apos;t1&apos;">t1</span> = <span class='error' title="use of undeclared identifier &apos;m1&apos;">m1</span> - <span class='error' title="use of undeclared identifier &apos;t1&apos;">t1</span>;</td></tr>
+<tr><th id="209">209</th><td>  <span class='error' title="use of undeclared identifier &apos;t2&apos;">t2</span> = z - <span class='error' title="use of undeclared identifier &apos;t2&apos;">t2</span>;</td></tr>
+<tr><th id="210">210</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> a2 = t1 + t2;</td></tr>
+<tr><th id="211">211</th><td>  <i>/* Ensure the arithmetic is not scheduled after feclearexcept call.  */</i></td></tr>
+<tr><th id="212">212</th><td>  <a class="macro" href="../../x86/fpu/math-barriers.h.html#31" title="do { if (sizeof (m2) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (m2), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (m2)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (m2)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (<span class='error' title="use of undeclared identifier &apos;m2&apos;">m2</span>);</td></tr>
+<tr><th id="213">213</th><td>  <a class="macro" href="../../x86/fpu/math-barriers.h.html#31" title="do { if (sizeof (a2) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (a2), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (a2)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (a2)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (<span class='error' title="use of undeclared identifier &apos;a2&apos;">a2</span>);</td></tr>
+<tr><th id="214">214</th><td>  <a class="ref fn" href="../../../math/fenv.h.html#feclearexcept" title='feclearexcept' data-ref="feclearexcept" data-ref-filename="feclearexcept">feclearexcept</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#40" title="0x20" data-ref="_M/FE_INEXACT">FE_INEXACT</a>);</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>  <i>/* If the result is an exact zero, ensure it has the correct sign.  */</i></td></tr>
+<tr><th id="217">217</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> == <var>0</var> &amp;&amp; <span class='error' title="use of undeclared identifier &apos;m2&apos;">m2</span> == <var>0</var>)</td></tr>
+<tr><th id="218">218</th><td>    {</td></tr>
+<tr><th id="219">219</th><td>      <a class="ref fn" href="../../../math/fenv.h.html#feupdateenv" title='feupdateenv' data-ref="feupdateenv" data-ref-filename="feupdateenv">feupdateenv</a> (&amp;<a class="local col6 ref" href="#6env" title='env' data-ref="6env" data-ref-filename="6env">env</a>);</td></tr>
+<tr><th id="220">220</th><td>      <i>/* Ensure that round-to-nearest value of z + m1 is not reused.  */</i></td></tr>
+<tr><th id="221">221</th><td>      z = <a class="macro" href="../../x86/fpu/math-barriers.h.html#23" title="({ __typeof(z) __x; if (sizeof (z) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (z), _Float128)) __asm (&quot;&quot; : &quot;=x&quot; (__x) : &quot;0&quot; (z)); else __asm (&quot;&quot; : &quot;=t&quot; (__x) : &quot;0&quot; (z)); __x; })" data-ref="_M/math_opt_barrier">math_opt_barrier</a> (z);</td></tr>
+<tr><th id="222">222</th><td>      <b>return</b> z + <span class='error' title="use of undeclared identifier &apos;m1&apos;">m1</span>;</td></tr>
+<tr><th id="223">223</th><td>    }</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td>  <a class="ref fn" href="../../../math/fenv.h.html#fesetround" title='fesetround' data-ref="fesetround" data-ref-filename="fesetround">fesetround</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#62" title="0xc00" data-ref="_M/FE_TOWARDZERO">FE_TOWARDZERO</a>);</td></tr>
+<tr><th id="226">226</th><td>  <i>/* Perform m2 + a2 addition with round to odd.  */</i></td></tr>
+<tr><th id="227">227</th><td>  u.d = <span class='error' title="use of undeclared identifier &apos;a2&apos;">a2</span> + <span class='error' title="use of undeclared identifier &apos;m2&apos;">m2</span>;</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>  <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#403" title="__builtin_expect ((adjust == 0), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col4 ref" href="#4adjust" title='adjust' data-ref="4adjust" data-ref-filename="4adjust">adjust</a> == <var>0</var>))</td></tr>
+<tr><th id="230">230</th><td>    {</td></tr>
+<tr><th id="231">231</th><td>      <b>if</b> ((<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> &amp; <var>1</var>) == <var>0</var> &amp;&amp; <a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> != <var>0x7fff</var>)</td></tr>
+<tr><th id="232">232</th><td>	<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> |= <a class="ref fn" href="../../../math/fenv.h.html#fetestexcept" title='fetestexcept' data-ref="fetestexcept" data-ref-filename="fetestexcept">fetestexcept</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#40" title="0x20" data-ref="_M/FE_INEXACT">FE_INEXACT</a>) != <var>0</var>;</td></tr>
+<tr><th id="233">233</th><td>      <a class="ref fn" href="../../../math/fenv.h.html#feupdateenv" title='feupdateenv' data-ref="feupdateenv" data-ref-filename="feupdateenv">feupdateenv</a> (&amp;<a class="local col6 ref" href="#6env" title='env' data-ref="6env" data-ref-filename="6env">env</a>);</td></tr>
+<tr><th id="234">234</th><td>      <i>/* Result is a1 + u.d.  */</i></td></tr>
+<tr><th id="235">235</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> + u.d;</td></tr>
+<tr><th id="236">236</th><td>    }</td></tr>
+<tr><th id="237">237</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="../../../misc/sys/cdefs.h.html#403" title="__builtin_expect ((adjust &gt; 0), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col4 ref" href="#4adjust" title='adjust' data-ref="4adjust" data-ref-filename="4adjust">adjust</a> &gt; <var>0</var>))</td></tr>
+<tr><th id="238">238</th><td>    {</td></tr>
+<tr><th id="239">239</th><td>      <b>if</b> ((<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> &amp; <var>1</var>) == <var>0</var> &amp;&amp; <a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> != <var>0x7fff</var>)</td></tr>
+<tr><th id="240">240</th><td>	<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> |= <a class="ref fn" href="../../../math/fenv.h.html#fetestexcept" title='fetestexcept' data-ref="fetestexcept" data-ref-filename="fetestexcept">fetestexcept</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#40" title="0x20" data-ref="_M/FE_INEXACT">FE_INEXACT</a>) != <var>0</var>;</td></tr>
+<tr><th id="241">241</th><td>      <a class="ref fn" href="../../../math/fenv.h.html#feupdateenv" title='feupdateenv' data-ref="feupdateenv" data-ref-filename="feupdateenv">feupdateenv</a> (&amp;<a class="local col6 ref" href="#6env" title='env' data-ref="6env" data-ref-filename="6env">env</a>);</td></tr>
+<tr><th id="242">242</th><td>      <i>/* Result is a1 + u.d, scaled up.  */</i></td></tr>
+<tr><th id="243">243</th><td>      <b>return</b> (<span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> + u.d) * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p113)" data-ref="_M/L">L</a>(<var>0x1p113</var>);</td></tr>
+<tr><th id="244">244</th><td>    }</td></tr>
+<tr><th id="245">245</th><td>  <b>else</b></td></tr>
+<tr><th id="246">246</th><td>    {</td></tr>
+<tr><th id="247">247</th><td>      <b>if</b> ((<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> &amp; <var>1</var>) == <var>0</var>)</td></tr>
+<tr><th id="248">248</th><td>	<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> |= <a class="ref fn" href="../../../math/fenv.h.html#fetestexcept" title='fetestexcept' data-ref="fetestexcept" data-ref-filename="fetestexcept">fetestexcept</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#40" title="0x20" data-ref="_M/FE_INEXACT">FE_INEXACT</a>) != <var>0</var>;</td></tr>
+<tr><th id="249">249</th><td>      v.d = <span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> + u.d;</td></tr>
+<tr><th id="250">250</th><td>      <i>/* Ensure the addition is not scheduled after fetestexcept call.  */</i></td></tr>
+<tr><th id="251">251</th><td>      <a class="macro" href="../../x86/fpu/math-barriers.h.html#31" title="do { if (sizeof (v.d) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (v.d), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (v.d)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (v.d)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (v.d);</td></tr>
+<tr><th id="252">252</th><td>      <em>int</em> <dfn class="local col7 decl" id="7j" title='j' data-type='int' data-ref="7j" data-ref-filename="7j">j</dfn> = <a class="ref fn" href="../../../math/fenv.h.html#fetestexcept" title='fetestexcept' data-ref="fetestexcept" data-ref-filename="fetestexcept">fetestexcept</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#40" title="0x20" data-ref="_M/FE_INEXACT">FE_INEXACT</a>) != <var>0</var>;</td></tr>
+<tr><th id="253">253</th><td>      <a class="ref fn" href="../../../math/fenv.h.html#feupdateenv" title='feupdateenv' data-ref="feupdateenv" data-ref-filename="feupdateenv">feupdateenv</a> (&amp;<a class="local col6 ref" href="#6env" title='env' data-ref="6env" data-ref-filename="6env">env</a>);</td></tr>
+<tr><th id="254">254</th><td>      <i>/* Ensure the following computations are performed in default rounding</i></td></tr>
+<tr><th id="255">255</th><td><i>	 mode instead of just reusing the round to zero computation.  */</i></td></tr>
+<tr><th id="256">256</th><td>      <b>asm</b> <em>volatile</em> (<q>""</q> : <q>"=m"</q> (<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>) : <q>"m"</q> (<a class="local col1 ref" href="#1u" title='u' data-ref="1u" data-ref-filename="1u">u</a>));</td></tr>
+<tr><th id="257">257</th><td>      <i>/* If a1 + u.d is exact, the only rounding happens during</i></td></tr>
+<tr><th id="258">258</th><td><i>	 scaling down.  */</i></td></tr>
+<tr><th id="259">259</th><td>      <b>if</b> (j == <var>0</var>)</td></tr>
+<tr><th id="260">260</th><td>	<b>return</b> v.d * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-228)" data-ref="_M/L">L</a>(<var>0x1p-228</var>);</td></tr>
+<tr><th id="261">261</th><td>      <i>/* If result rounded to zero is not subnormal, no double</i></td></tr>
+<tr><th id="262">262</th><td><i>	 rounding will occur.  */</i></td></tr>
+<tr><th id="263">263</th><td>      <b>if</b> (v.ieee.exponent &gt; <var>228</var>)</td></tr>
+<tr><th id="264">264</th><td>	<b>return</b> (<span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> + u.d) * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-228)" data-ref="_M/L">L</a>(<var>0x1p-228</var>);</td></tr>
+<tr><th id="265">265</th><td>      <i>/* If v.d * 0x1p-228L with round to zero is a subnormal above</i></td></tr>
+<tr><th id="266">266</th><td><i>	 or equal to LDBL_MIN / 2, then v.d * 0x1p-228L shifts mantissa</i></td></tr>
+<tr><th id="267">267</th><td><i>	 down just by 1 bit, which means v.ieee.mantissa3 |= j would</i></td></tr>
+<tr><th id="268">268</th><td><i>	 change the round bit, not sticky or guard bit.</i></td></tr>
+<tr><th id="269">269</th><td><i>	 v.d * 0x1p-228L never normalizes by shifting up,</i></td></tr>
+<tr><th id="270">270</th><td><i>	 so round bit plus sticky bit should be already enough</i></td></tr>
+<tr><th id="271">271</th><td><i>	 for proper rounding.  */</i></td></tr>
+<tr><th id="272">272</th><td>      <b>if</b> (<a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::exponent' data-ref="ieee854_float128::(anonymous)::exponent" data-ref-filename="ieee854_float128..(anonymous)..exponent">exponent</a> == <var>228</var>)</td></tr>
+<tr><th id="273">273</th><td>	{</td></tr>
+<tr><th id="274">274</th><td>	  <i>/* If the exponent would be in the normal range when</i></td></tr>
+<tr><th id="275">275</th><td><i>	     rounding to normal precision with unbounded exponent</i></td></tr>
+<tr><th id="276">276</th><td><i>	     range, the exact result is known and spurious underflows</i></td></tr>
+<tr><th id="277">277</th><td><i>	     must be avoided on systems detecting tininess after</i></td></tr>
+<tr><th id="278">278</th><td><i>	     rounding.  */</i></td></tr>
+<tr><th id="279">279</th><td>	  <b>if</b> (<a class="macro" href="../../x86/tininess.h.html#1" title="1" data-ref="_M/TININESS_AFTER_ROUNDING">TININESS_AFTER_ROUNDING</a>)</td></tr>
+<tr><th id="280">280</th><td>	    {</td></tr>
+<tr><th id="281">281</th><td>	      w.d = <span class='error' title="use of undeclared identifier &apos;a1&apos;">a1</span> + u.d;</td></tr>
+<tr><th id="282">282</th><td>	      <b>if</b> (w.ieee.exponent == <var>229</var>)</td></tr>
+<tr><th id="283">283</th><td>		<b>return</b> w.d * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-228)" data-ref="_M/L">L</a>(<var>0x1p-228</var>);</td></tr>
+<tr><th id="284">284</th><td>	    }</td></tr>
+<tr><th id="285">285</th><td>	  <i>/* v.ieee.mantissa3 &amp; 2 is LSB bit of the result before rounding,</i></td></tr>
+<tr><th id="286">286</th><td><i>	     v.ieee.mantissa3 &amp; 1 is the round bit and j is our sticky</i></td></tr>
+<tr><th id="287">287</th><td><i>	     bit.  */</i></td></tr>
+<tr><th id="288">288</th><td>	  w.d = <var>0</var>;</td></tr>
+<tr><th id="289">289</th><td>	  <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> = ((<a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> &amp; <var>3</var>) &lt;&lt; <var>1</var>) | <a class="local col7 ref" href="#7j" title='j' data-ref="7j" data-ref-filename="7j">j</a>;</td></tr>
+<tr><th id="290">290</th><td>	  <a class="local col3 ref" href="#3w" title='w' data-ref="3w" data-ref-filename="3w">w</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::negative' data-ref="ieee854_float128::(anonymous)::negative" data-ref-filename="ieee854_float128..(anonymous)..negative">negative</a> = <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::negative' data-ref="ieee854_float128::(anonymous)::negative" data-ref-filename="ieee854_float128..(anonymous)..negative">negative</a>;</td></tr>
+<tr><th id="291">291</th><td>	  <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> &amp;= ~<var>3U</var>;</td></tr>
+<tr><th id="292">292</th><td>	  v.d *= <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-228)" data-ref="_M/L">L</a>(<var>0x1p-228</var>);</td></tr>
+<tr><th id="293">293</th><td>	  w.d *= <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-2)" data-ref="_M/L">L</a>(<var>0x1p-2</var>);</td></tr>
+<tr><th id="294">294</th><td>	  <b>return</b> v.d + w.d;</td></tr>
+<tr><th id="295">295</th><td>	}</td></tr>
+<tr><th id="296">296</th><td>      <a class="local col2 ref" href="#2v" title='v' data-ref="2v" data-ref-filename="2v">v</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#ieee854_float128::ieee" title='ieee854_float128::ieee' data-ref="ieee854_float128::ieee" data-ref-filename="ieee854_float128..ieee">ieee</a>.<a class="ref field" href="../float128/ieee754_float128.h.html#117" title='ieee854_float128::(anonymous struct)::mantissa3' data-ref="ieee854_float128::(anonymous)::mantissa3" data-ref-filename="ieee854_float128..(anonymous)..mantissa3">mantissa3</a> |= <a class="local col7 ref" href="#7j" title='j' data-ref="7j" data-ref-filename="7j">j</a>;</td></tr>
+<tr><th id="297">297</th><td>      <b>return</b> v.d * <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0x1p-228)" data-ref="_M/L">L</a>(<var>0x1p-228</var>);</td></tr>
+<tr><th id="298">298</th><td>    }</td></tr>
+<tr><th id="299">299</th><td>}</td></tr>
+<tr><th id="300">300</th><td><a class="macro" href="../../generic/libm-alias-ldouble.h.html#63" title="extern __typeof (__fmaf128) fmaf128 __attribute__ ((weak, alias (&quot;__fmaf128&quot;)));;" data-ref="_M/libm_alias_ldouble">libm_alias_ldouble</a> (__fma, fma)</td></tr>
+<tr><th id="301">301</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../float128/s_fmaf128.c.html'>glibc_src_2.28/sysdeps/ieee754/float128/s_fmaf128.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

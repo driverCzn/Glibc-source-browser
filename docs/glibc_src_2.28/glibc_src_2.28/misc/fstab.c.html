@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>fstab.c source code [glibc_src_2.28/misc/fstab.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="fstab_state "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/misc/fstab.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>misc</a>/<a href='fstab.c.html'>fstab.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1995-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="fstab.h.html">&lt;fstab.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/mntent.h.html">&lt;mntent.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/BUFFER_SIZE" data-ref="_M/BUFFER_SIZE">BUFFER_SIZE</dfn> 0x1fc0</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><b>struct</b> <dfn class="type def" id="fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</dfn></td></tr>
+<tr><th id="28">28</th><td>{</td></tr>
+<tr><th id="29">29</th><td>  <a class="typedef" href="../libio/bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="tu decl field" id="fstab_state::fs_fp" title='fstab_state::fs_fp' data-type='FILE *' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</dfn>;</td></tr>
+<tr><th id="30">30</th><td>  <em>char</em> *<dfn class="tu decl field" id="fstab_state::fs_buffer" title='fstab_state::fs_buffer' data-type='char *' data-ref="fstab_state::fs_buffer" data-ref-filename="fstab_state..fs_buffer">fs_buffer</dfn>;</td></tr>
+<tr><th id="31">31</th><td>  <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> <dfn class="tu decl field" id="fstab_state::fs_mntres" title='fstab_state::fs_mntres' data-type='struct mntent' data-ref="fstab_state::fs_mntres" data-ref-filename="fstab_state..fs_mntres">fs_mntres</dfn>;</td></tr>
+<tr><th id="32">32</th><td>  <b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> <dfn class="tu decl field" id="fstab_state::fs_ret" title='fstab_state::fs_ret' data-type='struct fstab' data-ref="fstab_state::fs_ret" data-ref-filename="fstab_state..fs_ret">fs_ret</dfn>;</td></tr>
+<tr><th id="33">33</th><td>};</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><em>static</em> <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<a class="tu decl fn" href="#fstab_init" title='fstab_init' data-type='struct fstab_state * fstab_init(int opt_rewind)' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</a> (<em>int</em> <dfn class="local col3 decl" id="3opt_rewind" title='opt_rewind' data-type='int' data-ref="3opt_rewind" data-ref-filename="3opt_rewind">opt_rewind</dfn>);</td></tr>
+<tr><th id="36">36</th><td><em>static</em> <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> *<a class="tu decl fn" href="#fstab_fetch" title='fstab_fetch' data-type='struct mntent * fstab_fetch(struct fstab_state * state)' data-ref="fstab_fetch" data-ref-filename="fstab_fetch">fstab_fetch</a> (<b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col4 decl" id="4state" title='state' data-type='struct fstab_state *' data-ref="4state" data-ref-filename="4state">state</dfn>);</td></tr>
+<tr><th id="37">37</th><td><em>static</em> <b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *<a class="tu decl fn" href="#fstab_convert" title='fstab_convert' data-type='struct fstab * fstab_convert(struct fstab_state * state)' data-ref="fstab_convert" data-ref-filename="fstab_convert">fstab_convert</a> (<b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col5 decl" id="5state" title='state' data-type='struct fstab_state *' data-ref="5state" data-ref-filename="5state">state</dfn>);</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>static</em> <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> <dfn class="tu decl def" id="fstab_state" title='fstab_state' data-type='struct fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</dfn>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><em>int</em></td></tr>
+<tr><th id="43">43</th><td><dfn class="decl def fn" id="setfsent" title='setfsent' data-ref="setfsent" data-ref-filename="setfsent">setfsent</dfn> (<em>void</em>)</td></tr>
+<tr><th id="44">44</th><td>{</td></tr>
+<tr><th id="45">45</th><td>  <b>return</b> <a class="tu ref fn" href="#fstab_init" title='fstab_init' data-use='c' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</a> (<var>1</var>) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="46">46</th><td>}</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *</td></tr>
+<tr><th id="50">50</th><td><dfn class="decl def fn" id="getfsent" title='getfsent' data-ref="getfsent" data-ref-filename="getfsent">getfsent</dfn> (<em>void</em>)</td></tr>
+<tr><th id="51">51</th><td>{</td></tr>
+<tr><th id="52">52</th><td>  <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col6 decl" id="6state" title='state' data-type='struct fstab_state *' data-ref="6state" data-ref-filename="6state">state</dfn>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>  <a class="local col6 ref" href="#6state" title='state' data-ref="6state" data-ref-filename="6state">state</a> = <a class="tu ref fn" href="#fstab_init" title='fstab_init' data-use='c' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</a> (<var>0</var>);</td></tr>
+<tr><th id="55">55</th><td>  <b>if</b> (<a class="local col6 ref" href="#6state" title='state' data-ref="6state" data-ref-filename="6state">state</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="56">56</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="57">57</th><td>  <b>if</b> (<a class="tu ref fn" href="#fstab_fetch" title='fstab_fetch' data-use='c' data-ref="fstab_fetch" data-ref-filename="fstab_fetch">fstab_fetch</a> (<a class="local col6 ref" href="#6state" title='state' data-ref="6state" data-ref-filename="6state">state</a>) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="58">58</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="59">59</th><td>  <b>return</b> <a class="tu ref fn" href="#fstab_convert" title='fstab_convert' data-use='c' data-ref="fstab_convert" data-ref-filename="fstab_convert">fstab_convert</a> (<a class="local col6 ref" href="#6state" title='state' data-ref="6state" data-ref-filename="6state">state</a>);</td></tr>
+<tr><th id="60">60</th><td>}</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *</td></tr>
+<tr><th id="64">64</th><td><dfn class="decl def fn" id="getfsspec" title='getfsspec' data-ref="getfsspec" data-ref-filename="getfsspec">getfsspec</dfn> (<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="7name" title='name' data-type='const char *' data-ref="7name" data-ref-filename="7name">name</dfn>)</td></tr>
+<tr><th id="65">65</th><td>{</td></tr>
+<tr><th id="66">66</th><td>  <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col8 decl" id="8state" title='state' data-type='struct fstab_state *' data-ref="8state" data-ref-filename="8state">state</dfn>;</td></tr>
+<tr><th id="67">67</th><td>  <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> *<dfn class="local col9 decl" id="9m" title='m' data-type='struct mntent *' data-ref="9m" data-ref-filename="9m">m</dfn>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  <a class="local col8 ref" href="#8state" title='state' data-ref="8state" data-ref-filename="8state">state</a> = <a class="tu ref fn" href="#fstab_init" title='fstab_init' data-use='c' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</a> (<var>1</var>);</td></tr>
+<tr><th id="70">70</th><td>  <b>if</b> (<a class="local col8 ref" href="#8state" title='state' data-ref="8state" data-ref-filename="8state">state</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="71">71</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="72">72</th><td>  <b>while</b> ((<a class="local col9 ref" href="#9m" title='m' data-ref="9m" data-ref-filename="9m">m</a> = <a class="tu ref fn" href="#fstab_fetch" title='fstab_fetch' data-use='c' data-ref="fstab_fetch" data-ref-filename="fstab_fetch">fstab_fetch</a> (<a class="local col8 ref" href="#8state" title='state' data-ref="8state" data-ref-filename="8state">state</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="73">73</th><td>    <b>if</b> (<a class="ref fn" href="../string/string.h.html#__GI_strcmp" title='strcmp' data-ref="__GI_strcmp" data-ref-filename="__GI_strcmp">strcmp</a> (<a class="local col9 ref" href="#9m" title='m' data-ref="9m" data-ref-filename="9m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_fsname" title='mntent::mnt_fsname' data-ref="mntent::mnt_fsname" data-ref-filename="mntent..mnt_fsname">mnt_fsname</a>, <a class="local col7 ref" href="#7name" title='name' data-ref="7name" data-ref-filename="7name">name</a>) == <var>0</var>)</td></tr>
+<tr><th id="74">74</th><td>      <b>return</b> <a class="tu ref fn" href="#fstab_convert" title='fstab_convert' data-use='c' data-ref="fstab_convert" data-ref-filename="fstab_convert">fstab_convert</a> (<a class="local col8 ref" href="#8state" title='state' data-ref="8state" data-ref-filename="8state">state</a>);</td></tr>
+<tr><th id="75">75</th><td>  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="76">76</th><td>}</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *</td></tr>
+<tr><th id="80">80</th><td><dfn class="decl def fn" id="getfsfile" title='getfsfile' data-ref="getfsfile" data-ref-filename="getfsfile">getfsfile</dfn> (<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="10name" title='name' data-type='const char *' data-ref="10name" data-ref-filename="10name">name</dfn>)</td></tr>
+<tr><th id="81">81</th><td>{</td></tr>
+<tr><th id="82">82</th><td>  <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col1 decl" id="11state" title='state' data-type='struct fstab_state *' data-ref="11state" data-ref-filename="11state">state</dfn>;</td></tr>
+<tr><th id="83">83</th><td>  <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> *<dfn class="local col2 decl" id="12m" title='m' data-type='struct mntent *' data-ref="12m" data-ref-filename="12m">m</dfn>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>  <a class="local col1 ref" href="#11state" title='state' data-ref="11state" data-ref-filename="11state">state</a> = <a class="tu ref fn" href="#fstab_init" title='fstab_init' data-use='c' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</a> (<var>1</var>);</td></tr>
+<tr><th id="86">86</th><td>  <b>if</b> (<a class="local col1 ref" href="#11state" title='state' data-ref="11state" data-ref-filename="11state">state</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="87">87</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="88">88</th><td>  <b>while</b> ((<a class="local col2 ref" href="#12m" title='m' data-ref="12m" data-ref-filename="12m">m</a> = <a class="tu ref fn" href="#fstab_fetch" title='fstab_fetch' data-use='c' data-ref="fstab_fetch" data-ref-filename="fstab_fetch">fstab_fetch</a> (<a class="local col1 ref" href="#11state" title='state' data-ref="11state" data-ref-filename="11state">state</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="89">89</th><td>    <b>if</b> (<a class="ref fn" href="../string/string.h.html#__GI_strcmp" title='strcmp' data-ref="__GI_strcmp" data-ref-filename="__GI_strcmp">strcmp</a> (<a class="local col2 ref" href="#12m" title='m' data-ref="12m" data-ref-filename="12m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_dir" title='mntent::mnt_dir' data-ref="mntent::mnt_dir" data-ref-filename="mntent..mnt_dir">mnt_dir</a>, <a class="local col0 ref" href="#10name" title='name' data-ref="10name" data-ref-filename="10name">name</a>) == <var>0</var>)</td></tr>
+<tr><th id="90">90</th><td>      <b>return</b> <a class="tu ref fn" href="#fstab_convert" title='fstab_convert' data-use='c' data-ref="fstab_convert" data-ref-filename="fstab_convert">fstab_convert</a> (<a class="local col1 ref" href="#11state" title='state' data-ref="11state" data-ref-filename="11state">state</a>);</td></tr>
+<tr><th id="91">91</th><td>  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="92">92</th><td>}</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><em>void</em></td></tr>
+<tr><th id="96">96</th><td><dfn class="decl def fn" id="endfsent" title='endfsent' data-ref="endfsent" data-ref-filename="endfsent">endfsent</dfn> (<em>void</em>)</td></tr>
+<tr><th id="97">97</th><td>{</td></tr>
+<tr><th id="98">98</th><td>  <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col3 decl" id="13state" title='state' data-type='struct fstab_state *' data-ref="13state" data-ref-filename="13state">state</dfn>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <a class="local col3 ref" href="#13state" title='state' data-ref="13state" data-ref-filename="13state">state</a> = &amp;<a class="tu ref" href="#fstab_state" title='fstab_state' data-use='a' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a>;</td></tr>
+<tr><th id="101">101</th><td>  <b>if</b> (<a class="local col3 ref" href="#13state" title='state' data-ref="13state" data-ref-filename="13state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='r' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="102">102</th><td>    {</td></tr>
+<tr><th id="103">103</th><td>      (<em>void</em>) <a class="ref fn" href="../include/mntent.h.html#__endmntent" title='__endmntent' data-ref="__endmntent" data-ref-filename="__endmntent">__endmntent</a> (<a class="local col3 ref" href="#13state" title='state' data-ref="13state" data-ref-filename="13state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='r' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a>);</td></tr>
+<tr><th id="104">104</th><td>      <a class="local col3 ref" href="#13state" title='state' data-ref="13state" data-ref-filename="13state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='w' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="105">105</th><td>    }</td></tr>
+<tr><th id="106">106</th><td>}</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><em>static</em> <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *</td></tr>
+<tr><th id="110">110</th><td><dfn class="tu decl def fn" id="fstab_init" title='fstab_init' data-type='struct fstab_state * fstab_init(int opt_rewind)' data-ref="fstab_init" data-ref-filename="fstab_init">fstab_init</dfn> (<em>int</em> <dfn class="local col4 decl" id="14opt_rewind" title='opt_rewind' data-type='int' data-ref="14opt_rewind" data-ref-filename="14opt_rewind">opt_rewind</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>  <b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col5 decl" id="15state" title='state' data-type='struct fstab_state *' data-ref="15state" data-ref-filename="15state">state</dfn>;</td></tr>
+<tr><th id="113">113</th><td>  <em>char</em> *<dfn class="local col6 decl" id="16buffer" title='buffer' data-type='char *' data-ref="16buffer" data-ref-filename="16buffer">buffer</dfn>;</td></tr>
+<tr><th id="114">114</th><td>  <a class="typedef" href="../libio/bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col7 decl" id="17fp" title='fp' data-type='FILE *' data-ref="17fp" data-ref-filename="17fp">fp</dfn>;</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>  <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a> = &amp;<a class="tu ref" href="#fstab_state" title='fstab_state' data-use='a' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>  <a class="local col6 ref" href="#16buffer" title='buffer' data-ref="16buffer" data-ref-filename="16buffer">buffer</a> = <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_buffer" title='fstab_state::fs_buffer' data-use='r' data-ref="fstab_state::fs_buffer" data-ref-filename="fstab_state..fs_buffer">fs_buffer</a>;</td></tr>
+<tr><th id="119">119</th><td>  <b>if</b> (<a class="local col6 ref" href="#16buffer" title='buffer' data-ref="16buffer" data-ref-filename="16buffer">buffer</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="120">120</th><td>    {</td></tr>
+<tr><th id="121">121</th><td>      <a class="local col6 ref" href="#16buffer" title='buffer' data-ref="16buffer" data-ref-filename="16buffer">buffer</a> = (<em>char</em> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="macro" href="#25" title="0x1fc0" data-ref="_M/BUFFER_SIZE">BUFFER_SIZE</a>);</td></tr>
+<tr><th id="122">122</th><td>      <b>if</b> (<a class="local col6 ref" href="#16buffer" title='buffer' data-ref="16buffer" data-ref-filename="16buffer">buffer</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="123">123</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="124">124</th><td>      <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_buffer" title='fstab_state::fs_buffer' data-use='w' data-ref="fstab_state::fs_buffer" data-ref-filename="fstab_state..fs_buffer">fs_buffer</a> = <a class="local col6 ref" href="#16buffer" title='buffer' data-ref="16buffer" data-ref-filename="16buffer">buffer</a>;</td></tr>
+<tr><th id="125">125</th><td>    }</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>  <a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a> = <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='r' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a>;</td></tr>
+<tr><th id="128">128</th><td>  <b>if</b> (<a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="129">129</th><td>    {</td></tr>
+<tr><th id="130">130</th><td>      <b>if</b> (<a class="local col4 ref" href="#14opt_rewind" title='opt_rewind' data-ref="14opt_rewind" data-ref-filename="14opt_rewind">opt_rewind</a>)</td></tr>
+<tr><th id="131">131</th><td>	<a class="ref fn" href="../libio/stdio.h.html#__GI_rewind" title='rewind' data-ref="__GI_rewind" data-ref-filename="__GI_rewind">rewind</a> (<a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a>);</td></tr>
+<tr><th id="132">132</th><td>    }</td></tr>
+<tr><th id="133">133</th><td>  <b>else</b></td></tr>
+<tr><th id="134">134</th><td>    {</td></tr>
+<tr><th id="135">135</th><td>      <a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a> = <a class="ref fn" href="../include/mntent.h.html#__setmntent" title='__setmntent' data-ref="__setmntent" data-ref-filename="__setmntent">__setmntent</a> (<a class="macro" href="fstab.h.html#48" title="&quot;/etc/fstab&quot;" data-ref="_M/_PATH_FSTAB">_PATH_FSTAB</a>, <q>"r"</q>);</td></tr>
+<tr><th id="136">136</th><td>      <b>if</b> (<a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="137">137</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="138">138</th><td>      <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='w' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a> = <a class="local col7 ref" href="#17fp" title='fp' data-ref="17fp" data-ref-filename="17fp">fp</a>;</td></tr>
+<tr><th id="139">139</th><td>    }</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>  <b>return</b> <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>;</td></tr>
+<tr><th id="142">142</th><td>}</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><em>static</em> <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> *</td></tr>
+<tr><th id="146">146</th><td><dfn class="tu decl def fn" id="fstab_fetch" title='fstab_fetch' data-type='struct mntent * fstab_fetch(struct fstab_state * state)' data-ref="fstab_fetch" data-ref-filename="fstab_fetch">fstab_fetch</dfn> (<b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col8 decl" id="18state" title='state' data-type='struct fstab_state *' data-ref="18state" data-ref-filename="18state">state</dfn>)</td></tr>
+<tr><th id="147">147</th><td>{</td></tr>
+<tr><th id="148">148</th><td>  <b>return</b> <a class="ref fn" href="../include/mntent.h.html#__getmntent_r" title='__getmntent_r' data-ref="__getmntent_r" data-ref-filename="__getmntent_r">__getmntent_r</a> (<a class="local col8 ref" href="#18state" title='state' data-ref="18state" data-ref-filename="18state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_fp" title='fstab_state::fs_fp' data-use='r' data-ref="fstab_state::fs_fp" data-ref-filename="fstab_state..fs_fp">fs_fp</a>, &amp;<a class="local col8 ref" href="#18state" title='state' data-ref="18state" data-ref-filename="18state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_mntres" title='fstab_state::fs_mntres' data-use='a' data-ref="fstab_state::fs_mntres" data-ref-filename="fstab_state..fs_mntres">fs_mntres</a>,</td></tr>
+<tr><th id="149">149</th><td>			<a class="local col8 ref" href="#18state" title='state' data-ref="18state" data-ref-filename="18state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_buffer" title='fstab_state::fs_buffer' data-use='r' data-ref="fstab_state::fs_buffer" data-ref-filename="fstab_state..fs_buffer">fs_buffer</a>, <a class="macro" href="#25" title="0x1fc0" data-ref="_M/BUFFER_SIZE">BUFFER_SIZE</a>);</td></tr>
+<tr><th id="150">150</th><td>}</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><em>static</em> <b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *</td></tr>
+<tr><th id="154">154</th><td><dfn class="tu decl def fn" id="fstab_convert" title='fstab_convert' data-type='struct fstab * fstab_convert(struct fstab_state * state)' data-ref="fstab_convert" data-ref-filename="fstab_convert">fstab_convert</dfn> (<b>struct</b> <a class="type" href="#fstab_state" title='fstab_state' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a> *<dfn class="local col9 decl" id="19state" title='state' data-type='struct fstab_state *' data-ref="19state" data-ref-filename="19state">state</dfn>)</td></tr>
+<tr><th id="155">155</th><td>{</td></tr>
+<tr><th id="156">156</th><td>  <b>struct</b> <a class="type" href="mntent.h.html#mntent" title='mntent' data-ref="mntent" data-ref-filename="mntent">mntent</a> *<dfn class="local col0 decl" id="20m" title='m' data-type='struct mntent *' data-ref="20m" data-ref-filename="20m">m</dfn>;</td></tr>
+<tr><th id="157">157</th><td>  <b>struct</b> <a class="type" href="fstab.h.html#fstab" title='fstab' data-ref="fstab" data-ref-filename="fstab">fstab</a> *<dfn class="local col1 decl" id="21f" title='f' data-type='struct fstab *' data-ref="21f" data-ref-filename="21f">f</dfn>;</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>  <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a> = &amp;<a class="local col9 ref" href="#19state" title='state' data-ref="19state" data-ref-filename="19state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_mntres" title='fstab_state::fs_mntres' data-use='a' data-ref="fstab_state::fs_mntres" data-ref-filename="fstab_state..fs_mntres">fs_mntres</a>;</td></tr>
+<tr><th id="160">160</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a> = &amp;<a class="local col9 ref" href="#19state" title='state' data-ref="19state" data-ref-filename="19state">state</a>-&gt;<a class="tu ref field" href="#fstab_state::fs_ret" title='fstab_state::fs_ret' data-use='a' data-ref="fstab_state::fs_ret" data-ref-filename="fstab_state..fs_ret">fs_ret</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_spec" title='fstab::fs_spec' data-ref="fstab::fs_spec" data-ref-filename="fstab..fs_spec">fs_spec</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_fsname" title='mntent::mnt_fsname' data-ref="mntent::mnt_fsname" data-ref-filename="mntent..mnt_fsname">mnt_fsname</a>;</td></tr>
+<tr><th id="163">163</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_file" title='fstab::fs_file' data-ref="fstab::fs_file" data-ref-filename="fstab..fs_file">fs_file</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_dir" title='mntent::mnt_dir' data-ref="mntent::mnt_dir" data-ref-filename="mntent..mnt_dir">mnt_dir</a>;</td></tr>
+<tr><th id="164">164</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_vfstype" title='fstab::fs_vfstype' data-ref="fstab::fs_vfstype" data-ref-filename="fstab..fs_vfstype">fs_vfstype</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_type" title='mntent::mnt_type' data-ref="mntent::mnt_type" data-ref-filename="mntent..mnt_type">mnt_type</a>;</td></tr>
+<tr><th id="165">165</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_mntops" title='fstab::fs_mntops' data-ref="fstab::fs_mntops" data-ref-filename="fstab..fs_mntops">fs_mntops</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_opts" title='mntent::mnt_opts' data-ref="mntent::mnt_opts" data-ref-filename="mntent..mnt_opts">mnt_opts</a>;</td></tr>
+<tr><th id="166">166</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_type" title='fstab::fs_type' data-ref="fstab::fs_type" data-ref-filename="fstab..fs_type">fs_type</a> = (<a class="ref fn" href="../include/mntent.h.html#__hasmntopt" title='__hasmntopt' data-ref="__hasmntopt" data-ref-filename="__hasmntopt">__hasmntopt</a> (<a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>, <a class="macro" href="fstab.h.html#51" title="&quot;rw&quot;" data-ref="_M/FSTAB_RW">FSTAB_RW</a>) ? <a class="macro" href="fstab.h.html#51" title="&quot;rw&quot;" data-ref="_M/FSTAB_RW">FSTAB_RW</a> :</td></tr>
+<tr><th id="167">167</th><td>		<a class="ref fn" href="../include/mntent.h.html#__hasmntopt" title='__hasmntopt' data-ref="__hasmntopt" data-ref-filename="__hasmntopt">__hasmntopt</a> (<a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>, <a class="macro" href="fstab.h.html#52" title="&quot;rq&quot;" data-ref="_M/FSTAB_RQ">FSTAB_RQ</a>) ? <a class="macro" href="fstab.h.html#52" title="&quot;rq&quot;" data-ref="_M/FSTAB_RQ">FSTAB_RQ</a> :</td></tr>
+<tr><th id="168">168</th><td>		<a class="ref fn" href="../include/mntent.h.html#__hasmntopt" title='__hasmntopt' data-ref="__hasmntopt" data-ref-filename="__hasmntopt">__hasmntopt</a> (<a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>, <a class="macro" href="fstab.h.html#53" title="&quot;ro&quot;" data-ref="_M/FSTAB_RO">FSTAB_RO</a>) ? <a class="macro" href="fstab.h.html#53" title="&quot;ro&quot;" data-ref="_M/FSTAB_RO">FSTAB_RO</a> :</td></tr>
+<tr><th id="169">169</th><td>		<a class="ref fn" href="../include/mntent.h.html#__hasmntopt" title='__hasmntopt' data-ref="__hasmntopt" data-ref-filename="__hasmntopt">__hasmntopt</a> (<a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>, <a class="macro" href="fstab.h.html#54" title="&quot;sw&quot;" data-ref="_M/FSTAB_SW">FSTAB_SW</a>) ? <a class="macro" href="fstab.h.html#54" title="&quot;sw&quot;" data-ref="_M/FSTAB_SW">FSTAB_SW</a> :</td></tr>
+<tr><th id="170">170</th><td>		<a class="ref fn" href="../include/mntent.h.html#__hasmntopt" title='__hasmntopt' data-ref="__hasmntopt" data-ref-filename="__hasmntopt">__hasmntopt</a> (<a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>, <a class="macro" href="fstab.h.html#55" title="&quot;xx&quot;" data-ref="_M/FSTAB_XX">FSTAB_XX</a>) ? <a class="macro" href="fstab.h.html#55" title="&quot;xx&quot;" data-ref="_M/FSTAB_XX">FSTAB_XX</a> :</td></tr>
+<tr><th id="171">171</th><td>		<q>"??"</q>);</td></tr>
+<tr><th id="172">172</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_freq" title='fstab::fs_freq' data-ref="fstab::fs_freq" data-ref-filename="fstab..fs_freq">fs_freq</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_freq" title='mntent::mnt_freq' data-ref="mntent::mnt_freq" data-ref-filename="mntent..mnt_freq">mnt_freq</a>;</td></tr>
+<tr><th id="173">173</th><td>  <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>-&gt;<a class="ref field" href="fstab.h.html#fstab::fs_passno" title='fstab::fs_passno' data-ref="fstab::fs_passno" data-ref-filename="fstab..fs_passno">fs_passno</a> = <a class="local col0 ref" href="#20m" title='m' data-ref="20m" data-ref-filename="20m">m</a>-&gt;<a class="ref field" href="mntent.h.html#mntent::mnt_passno" title='mntent::mnt_passno' data-ref="mntent::mnt_passno" data-ref-filename="mntent..mnt_passno">mnt_passno</a>;</td></tr>
+<tr><th id="174">174</th><td>  <b>return</b> <a class="local col1 ref" href="#21f" title='f' data-ref="21f" data-ref-filename="21f">f</a>;</td></tr>
+<tr><th id="175">175</th><td>}</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><i>/* Make sure the memory is freed if the programs ends while in</i></td></tr>
+<tr><th id="179">179</th><td><i>   memory-debugging mode and something actually was allocated.  */</i></td></tr>
+<tr><th id="180">180</th><td><a class="macro" href="../include/libc-symbols.h.html#305" title="static void fstab_free (void) __attribute__ ((__used__)) __attribute__ ((section (&quot;__libc_freeres_fn&quot;))); static const void *__elf_set___libc_subfreeres_element_fstab_free__ __attribute__ ((used, section (&quot;__libc_subfreeres&quot;))) = &amp;(fstab_free); static void fstab_free (void)" data-ref="_M/libc_freeres_fn">libc_freeres_fn</a> (<a class="decl fn" href="#180" title='fstab_free' data-ref="fstab_free" data-ref-filename="fstab_free"><a class="ref fn" href="#180" title='fstab_free' data-ref="fstab_free" data-ref-filename="fstab_free"><dfn class="decl def fn" id="fstab_free" title='fstab_free' data-ref="fstab_free" data-ref-filename="fstab_free">fstab_free</dfn></a></a>)</td></tr>
+<tr><th id="181">181</th><td>{</td></tr>
+<tr><th id="182">182</th><td>  <em>char</em> *<dfn class="local col2 decl" id="22buffer" title='buffer' data-type='char *' data-ref="22buffer" data-ref-filename="22buffer">buffer</dfn>;</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td>  <a class="local col2 ref" href="#22buffer" title='buffer' data-ref="22buffer" data-ref-filename="22buffer">buffer</a> = <a class="tu ref" href="#fstab_state" title='fstab_state' data-use='m' data-ref="fstab_state" data-ref-filename="fstab_state">fstab_state</a>.<a class="tu ref field" href="#fstab_state::fs_buffer" title='fstab_state::fs_buffer' data-use='r' data-ref="fstab_state::fs_buffer" data-ref-filename="fstab_state..fs_buffer">fs_buffer</a>;</td></tr>
+<tr><th id="185">185</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> ((<em>void</em> *) <a class="local col2 ref" href="#22buffer" title='buffer' data-ref="22buffer" data-ref-filename="22buffer">buffer</a>);</td></tr>
+<tr><th id="186">186</th><td>}</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

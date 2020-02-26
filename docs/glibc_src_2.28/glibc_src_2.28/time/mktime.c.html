@@ -1,0 +1,759 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mktime.c source code [glibc_src_2.28/time/mktime.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/time/mktime.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>time</a>/<a href='mktime.c.html'>mktime.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Convert a 'struct tm' to a time_t value.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1993-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Paul Eggert &lt;eggert@twinsun.com&gt;.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/* Define this to have a standalone program to test this implementation of</i></td></tr>
+<tr><th id="21">21</th><td><i>   mktime.  */</i></td></tr>
+<tr><th id="22">22</th><td><i>/* #define DEBUG_MKTIME 1 */</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="25">25</th><td><u># include &lt;config.h&gt;</u></td></tr>
+<tr><th id="26">26</th><td><u>#<span data-ppcond="24">endif</span></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* Assume that leap seconds are possible, unless told otherwise.</i></td></tr>
+<tr><th id="29">29</th><td><i>   If the host has a 'zic' command with a '-L leapsecondfilename' option,</i></td></tr>
+<tr><th id="30">30</th><td><i>   then it supports leap seconds; otherwise it probably doesn't.  */</i></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">ifndef</span> <span class="macro" data-ref="_M/LEAP_SECONDS_POSSIBLE">LEAP_SECONDS_POSSIBLE</span></u></td></tr>
+<tr><th id="32">32</th><td><u># define <dfn class="macro" id="_M/LEAP_SECONDS_POSSIBLE" data-ref="_M/LEAP_SECONDS_POSSIBLE">LEAP_SECONDS_POSSIBLE</dfn> 1</u></td></tr>
+<tr><th id="33">33</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../include/time.h.html">&lt;time.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a>		/* For the real memcpy prototype.  */</u></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="41">if</span> defined <span class="macro" data-ref="_M/DEBUG_MKTIME">DEBUG_MKTIME</span> &amp;&amp; DEBUG_MKTIME</u></td></tr>
+<tr><th id="42">42</th><td><u># include &lt;stdio.h&gt;</u></td></tr>
+<tr><th id="43">43</th><td><u># include &lt;stdlib.h&gt;</u></td></tr>
+<tr><th id="44">44</th><td><i>/* Make it work even if the system's libc has its own mktime routine.  */</i></td></tr>
+<tr><th id="45">45</th><td><u># undef mktime</u></td></tr>
+<tr><th id="46">46</th><td><u># define mktime my_mktime</u></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="41">endif</span> /* DEBUG_MKTIME */</u></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* Some of the code in this file assumes that signed integer overflow</i></td></tr>
+<tr><th id="50">50</th><td><i>   silently wraps around.  This assumption can't easily be programmed</i></td></tr>
+<tr><th id="51">51</th><td><i>   around, nor can it be checked for portably at compile-time or</i></td></tr>
+<tr><th id="52">52</th><td><i>   easily eliminated at run-time.</i></td></tr>
+<tr><th id="53">53</th><td><i></i></td></tr>
+<tr><th id="54">54</th><td><i>   Define WRAPV to 1 if the assumption is valid and if</i></td></tr>
+<tr><th id="55">55</th><td><i>     #pragma GCC optimize ("wrapv")</i></td></tr>
+<tr><th id="56">56</th><td><i>   does not trigger GCC bug 51793</i></td></tr>
+<tr><th id="57">57</th><td><i>   &lt;<a href="http://gcc.gnu.org/bugzilla/show_bug.cgi?id=51793">http://gcc.gnu.org/bugzilla/show_bug.cgi?id=51793</a>&gt;.</i></td></tr>
+<tr><th id="58">58</th><td><i>   Otherwise, define it to 0; this forces the use of slower code that,</i></td></tr>
+<tr><th id="59">59</th><td><i>   while not guaranteed by the C Standard, works on all production</i></td></tr>
+<tr><th id="60">60</th><td><i>   platforms that we know about.  */</i></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="61">ifndef</span> <span class="macro" data-ref="_M/WRAPV">WRAPV</span></u></td></tr>
+<tr><th id="62">62</th><td><u># <span data-ppcond="62">if</span> (((<span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> == 4 &amp;&amp; 4 &lt;= <span class="macro" title="2" data-ref="_M/__GNUC_MINOR__">__GNUC_MINOR__</span>) || 4 &lt; <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span>) \</u></td></tr>
+<tr><th id="63">63</th><td><u>      &amp;&amp; defined <a class="macro" href="../include/features.h.html#419" data-ref="_M/__GLIBC__">__GLIBC__</a>)</u></td></tr>
+<tr><th id="64">64</th><td><u>#  pragma GCC optimize ("wrapv")</u></td></tr>
+<tr><th id="65">65</th><td><u>#  define WRAPV 1</u></td></tr>
+<tr><th id="66">66</th><td><u># <span data-ppcond="62">else</span></u></td></tr>
+<tr><th id="67">67</th><td><u>#  define <dfn class="macro" id="_M/WRAPV" data-ref="_M/WRAPV">WRAPV</dfn> 0</u></td></tr>
+<tr><th id="68">68</th><td><u># <span data-ppcond="62">endif</span></u></td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="61">endif</span></u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* Verify a requirement at compile-time (unlike assert, which is runtime).  */</i></td></tr>
+<tr><th id="72">72</th><td><u>#define <dfn class="macro" id="_M/verify" data-ref="_M/verify">verify</dfn>(name, assertion) struct name { char <dfn class="tu decl field" id="long_int_is_wide_enough::a" title='long_int_is_wide_enough::a' data-type='char [1]' data-ref="long_int_is_wide_enough::a" data-ref-filename="long_int_is_wide_enough..a"><dfn class="tu decl field" id="time_t_is_integer::a" title='time_t_is_integer::a' data-type='char [1]' data-ref="time_t_is_integer::a" data-ref-filename="time_t_is_integer..a"><dfn class="tu decl field" id="twos_complement_arithmetic::a" title='twos_complement_arithmetic::a' data-type='char [1]' data-ref="twos_complement_arithmetic::a" data-ref-filename="twos_complement_arithmetic..a"><dfn class="tu decl field" id="base_year_is_a_multiple_of_100::a" title='base_year_is_a_multiple_of_100::a' data-type='char [1]' data-ref="base_year_is_a_multiple_of_100::a" data-ref-filename="base_year_is_a_multiple_of_100..a"><dfn class="local col5 decl field" id="15a" title='a' data-type='char [1]' data-ref="15a" data-ref-filename="15a"><dfn class="local col9 decl field" id="39a" title='a' data-type='char [1]' data-ref="39a" data-ref-filename="39a">a</dfn></dfn></dfn></dfn></dfn></dfn>[(assertion) ? 1 : -1]; }</u></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* A signed type that is at least one bit wider than int.  */</i></td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="75">if</span> <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span> &lt;= <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> / 2</u></td></tr>
+<tr><th id="76">76</th><td><b>typedef</b> <em>long</em> <em>int</em> <dfn class="typedef" id="long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</dfn>;</td></tr>
+<tr><th id="77">77</th><td><u>#<span data-ppcond="75">else</span></u></td></tr>
+<tr><th id="78">78</th><td><b>typedef</b> <em>long</em> <em>long</em> <em>int</em> long_int;</td></tr>
+<tr><th id="79">79</th><td><u>#<span data-ppcond="75">endif</span></u></td></tr>
+<tr><th id="80">80</th><td><a class="macro" href="#72" title="struct long_int_is_wide_enough { char a[(2147483647 == 2147483647 * (long_int) 2 / 2) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="type def" id="long_int_is_wide_enough" title='long_int_is_wide_enough' data-ref="long_int_is_wide_enough" data-ref-filename="long_int_is_wide_enough">long_int_is_wide_enough</dfn>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span> == <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span> * (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a>) <var>2</var> / <var>2</var>);</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* Shift A right by B bits portably, by dividing A by 2**B and</i></td></tr>
+<tr><th id="83">83</th><td><i>   truncating towards minus infinity.  A and B should be free of side</i></td></tr>
+<tr><th id="84">84</th><td><i>   effects, and B should be in the range 0 &lt;= B &lt;= INT_BITS - 2, where</i></td></tr>
+<tr><th id="85">85</th><td><i>   INT_BITS is the number of useful bits in an int.  GNU code can</i></td></tr>
+<tr><th id="86">86</th><td><i>   assume that INT_BITS is at least 32.</i></td></tr>
+<tr><th id="87">87</th><td><i></i></td></tr>
+<tr><th id="88">88</th><td><i>   ISO C99 says that A &gt;&gt; B is implementation-defined if A &lt; 0.  Some</i></td></tr>
+<tr><th id="89">89</th><td><i>   implementations (e.g., UNICOS 9.0 on a Cray Y-MP EL) don't shift</i></td></tr>
+<tr><th id="90">90</th><td><i>   right in the usual way when A &lt; 0, so SHR falls back on division if</i></td></tr>
+<tr><th id="91">91</th><td><i>   ordinary A &gt;&gt; B doesn't seem to be the usual signed shift.  */</i></td></tr>
+<tr><th id="92">92</th><td><u>#define <dfn class="macro" id="_M/SHR" data-ref="_M/SHR">SHR</dfn>(a, b)                                               \</u></td></tr>
+<tr><th id="93">93</th><td><u>  ((-1 &gt;&gt; 1 == -1                                               \</u></td></tr>
+<tr><th id="94">94</th><td><u>    &amp;&amp; (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a>) -1 &gt;&gt; 1 == -1                                 \</u></td></tr>
+<tr><th id="95">95</th><td><u>    &amp;&amp; ((<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>) -1 &gt;&gt; 1 == -1 || ! TYPE_SIGNED (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>)))      \</u></td></tr>
+<tr><th id="96">96</th><td><u>   ? (a) &gt;&gt; (b)                                                 \</u></td></tr>
+<tr><th id="97">97</th><td><u>   : (a) / (1 &lt;&lt; (b)) - ((a) % (1 &lt;&lt; (b)) &lt; 0))</u></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* The extra casts in the following macros work around compiler bugs,</i></td></tr>
+<tr><th id="100">100</th><td><i>   e.g., in Cray C 5.0.3.0.  */</i></td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><i>/* True if the arithmetic type T is an integer type.  bool counts as</i></td></tr>
+<tr><th id="103">103</th><td><i>   an integer.  */</i></td></tr>
+<tr><th id="104">104</th><td><u>#define <dfn class="macro" id="_M/TYPE_IS_INTEGER" data-ref="_M/TYPE_IS_INTEGER">TYPE_IS_INTEGER</dfn>(t) ((t) 1.5 == 1)</u></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/* True if negative values of the signed integer type T use two's</i></td></tr>
+<tr><th id="107">107</th><td><i>   complement, or if T is an unsigned integer type.  */</i></td></tr>
+<tr><th id="108">108</th><td><u>#define <dfn class="macro" id="_M/TYPE_TWOS_COMPLEMENT" data-ref="_M/TYPE_TWOS_COMPLEMENT">TYPE_TWOS_COMPLEMENT</dfn>(t) ((t) ~ (t) 0 == (t) -1)</u></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><i>/* True if the arithmetic type T is signed.  */</i></td></tr>
+<tr><th id="111">111</th><td><u>#define <dfn class="macro" id="_M/TYPE_SIGNED" data-ref="_M/TYPE_SIGNED">TYPE_SIGNED</dfn>(t) (! ((t) 0 &lt; (t) -1))</u></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i>/* The maximum and minimum values for the integer type T.  These</i></td></tr>
+<tr><th id="114">114</th><td><i>   macros have undefined behavior if T is signed and has padding bits.</i></td></tr>
+<tr><th id="115">115</th><td><i>   If this is a problem for you, please let us know how to fix it for</i></td></tr>
+<tr><th id="116">116</th><td><i>   your host.  */</i></td></tr>
+<tr><th id="117">117</th><td><u>#define <dfn class="macro" id="_M/TYPE_MINIMUM" data-ref="_M/TYPE_MINIMUM">TYPE_MINIMUM</dfn>(t) \</u></td></tr>
+<tr><th id="118">118</th><td><u>  ((t) (! TYPE_SIGNED (t) \</u></td></tr>
+<tr><th id="119">119</th><td><u>	? (t) 0 \</u></td></tr>
+<tr><th id="120">120</th><td><u>	: ~ TYPE_MAXIMUM (t)))</u></td></tr>
+<tr><th id="121">121</th><td><u>#define <dfn class="macro" id="_M/TYPE_MAXIMUM" data-ref="_M/TYPE_MAXIMUM">TYPE_MAXIMUM</dfn>(t) \</u></td></tr>
+<tr><th id="122">122</th><td><u>  ((t) (! TYPE_SIGNED (t) \</u></td></tr>
+<tr><th id="123">123</th><td><u>	? (t) -1 \</u></td></tr>
+<tr><th id="124">124</th><td><u>	: ((((t) 1 &lt;&lt; (sizeof (t) * CHAR_BIT - 2)) - 1) * 2 + 1)))</u></td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><u>#<span data-ppcond="126">ifndef</span> <span class="macro" data-ref="_M/TIME_T_MIN">TIME_T_MIN</span></u></td></tr>
+<tr><th id="127">127</th><td><u># define <dfn class="macro" id="_M/TIME_T_MIN" data-ref="_M/TIME_T_MIN">TIME_T_MIN</dfn> TYPE_MINIMUM (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>)</u></td></tr>
+<tr><th id="128">128</th><td><u>#<span data-ppcond="126">endif</span></u></td></tr>
+<tr><th id="129">129</th><td><u>#<span data-ppcond="129">ifndef</span> <span class="macro" data-ref="_M/TIME_T_MAX">TIME_T_MAX</span></u></td></tr>
+<tr><th id="130">130</th><td><u># define <dfn class="macro" id="_M/TIME_T_MAX" data-ref="_M/TIME_T_MAX">TIME_T_MAX</dfn> TYPE_MAXIMUM (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>)</u></td></tr>
+<tr><th id="131">131</th><td><u>#<span data-ppcond="129">endif</span></u></td></tr>
+<tr><th id="132">132</th><td><u>#define <dfn class="macro" id="_M/TIME_T_MIDPOINT" data-ref="_M/TIME_T_MIDPOINT">TIME_T_MIDPOINT</dfn> (SHR (TIME_T_MIN + TIME_T_MAX, 1) + 1)</u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><a class="macro" href="#72" title="struct time_t_is_integer { char a[(((time_t) 1.5 == 1)) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="type def" id="time_t_is_integer" title='time_t_is_integer' data-ref="time_t_is_integer" data-ref-filename="time_t_is_integer">time_t_is_integer</dfn>, <a class="macro" href="#104" title="((time_t) 1.5 == 1)" data-ref="_M/TYPE_IS_INTEGER">TYPE_IS_INTEGER</a> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>));</td></tr>
+<tr><th id="135">135</th><td><a class="macro" href="#72" title="struct twos_complement_arithmetic { char a[((((int) ~ (int) 0 == (int) -1) &amp;&amp; ((long_int) ~ (long_int) 0 == (long_int) -1) &amp;&amp; ((time_t) ~ (time_t) 0 == (time_t) -1))) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="type def" id="twos_complement_arithmetic" title='twos_complement_arithmetic' data-ref="twos_complement_arithmetic" data-ref-filename="twos_complement_arithmetic">twos_complement_arithmetic</dfn>,</td></tr>
+<tr><th id="136">136</th><td>	(<a class="macro" href="#108" title="((int) ~ (int) 0 == (int) -1)" data-ref="_M/TYPE_TWOS_COMPLEMENT">TYPE_TWOS_COMPLEMENT</a> (<em>int</em>)</td></tr>
+<tr><th id="137">137</th><td>	 &amp;&amp; <a class="macro" href="#108" title="((long_int) ~ (long_int) 0 == (long_int) -1)" data-ref="_M/TYPE_TWOS_COMPLEMENT">TYPE_TWOS_COMPLEMENT</a> (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a>)</td></tr>
+<tr><th id="138">138</th><td>	 &amp;&amp; <a class="macro" href="#108" title="((time_t) ~ (time_t) 0 == (time_t) -1)" data-ref="_M/TYPE_TWOS_COMPLEMENT">TYPE_TWOS_COMPLEMENT</a> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>)));</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><u>#define <dfn class="macro" id="_M/EPOCH_YEAR" data-ref="_M/EPOCH_YEAR">EPOCH_YEAR</dfn> 1970</u></td></tr>
+<tr><th id="141">141</th><td><u>#define <dfn class="macro" id="_M/TM_YEAR_BASE" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</dfn> 1900</u></td></tr>
+<tr><th id="142">142</th><td><a class="macro" href="#72" title="struct base_year_is_a_multiple_of_100 { char a[(1900 % 100 == 0) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="type def" id="base_year_is_a_multiple_of_100" title='base_year_is_a_multiple_of_100' data-ref="base_year_is_a_multiple_of_100" data-ref-filename="base_year_is_a_multiple_of_100">base_year_is_a_multiple_of_100</dfn>, <a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a> % <var>100</var> == <var>0</var>);</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><i  data-doc="leapyear">/* Return 1 if YEAR + TM_YEAR_BASE is a leap year.  */</i></td></tr>
+<tr><th id="145">145</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="146">146</th><td><dfn class="tu decl def fn" id="leapyear" title='leapyear' data-type='int leapyear(long_int year)' data-ref="leapyear" data-ref-filename="leapyear">leapyear</dfn> (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col1 decl" id="1year" title='year' data-type='long_int' data-ref="1year" data-ref-filename="1year">year</dfn>)</td></tr>
+<tr><th id="147">147</th><td>{</td></tr>
+<tr><th id="148">148</th><td>  <i>/* Don't add YEAR to TM_YEAR_BASE, as that might overflow.</i></td></tr>
+<tr><th id="149">149</th><td><i>     Also, work even if YEAR is negative.  */</i></td></tr>
+<tr><th id="150">150</th><td>  <b>return</b></td></tr>
+<tr><th id="151">151</th><td>    ((<a class="local col1 ref" href="#1year" title='year' data-ref="1year" data-ref-filename="1year">year</a> &amp; <var>3</var>) == <var>0</var></td></tr>
+<tr><th id="152">152</th><td>     &amp;&amp; (<a class="local col1 ref" href="#1year" title='year' data-ref="1year" data-ref-filename="1year">year</a> % <var>100</var> != <var>0</var></td></tr>
+<tr><th id="153">153</th><td>	 || ((<a class="local col1 ref" href="#1year" title='year' data-ref="1year" data-ref-filename="1year">year</a> / <var>100</var>) &amp; <var>3</var>) == (- (<a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a> / <var>100</var>) &amp; <var>3</var>)));</td></tr>
+<tr><th id="154">154</th><td>}</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><i>/* How many days come before each month (0-12).  */</i></td></tr>
+<tr><th id="157">157</th><td><u>#<span data-ppcond="157">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="158">158</th><td><em>static</em></td></tr>
+<tr><th id="159">159</th><td><u>#<span data-ppcond="157">endif</span></u></td></tr>
+<tr><th id="160">160</th><td><em>const</em> <em>unsigned</em> <em>short</em> <em>int</em> <dfn class="decl def" id="__mon_yday" title='__mon_yday' data-ref="__mon_yday" data-ref-filename="__mon_yday">__mon_yday</dfn>[<var>2</var>][<var>13</var>] =</td></tr>
+<tr><th id="161">161</th><td>  {</td></tr>
+<tr><th id="162">162</th><td>    <i>/* Normal years.  */</i></td></tr>
+<tr><th id="163">163</th><td>    { <var>0</var>, <var>31</var>, <var>59</var>, <var>90</var>, <var>120</var>, <var>151</var>, <var>181</var>, <var>212</var>, <var>243</var>, <var>273</var>, <var>304</var>, <var>334</var>, <var>365</var> },</td></tr>
+<tr><th id="164">164</th><td>    <i>/* Leap years.  */</i></td></tr>
+<tr><th id="165">165</th><td>    { <var>0</var>, <var>31</var>, <var>60</var>, <var>91</var>, <var>121</var>, <var>152</var>, <var>182</var>, <var>213</var>, <var>244</var>, <var>274</var>, <var>305</var>, <var>335</var>, <var>366</var> }</td></tr>
+<tr><th id="166">166</th><td>  };</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td><u>#<span data-ppcond="169">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="170">170</th><td><i>/* Portable standalone applications should supply a &lt;time.h&gt; that</i></td></tr>
+<tr><th id="171">171</th><td><i>   declares a POSIX-compliant localtime_r, for the benefit of older</i></td></tr>
+<tr><th id="172">172</th><td><i>   implementations that lack localtime_r or have a nonstandard one.</i></td></tr>
+<tr><th id="173">173</th><td><i>   See the gnulib time_r module for one way to implement this.  */</i></td></tr>
+<tr><th id="174">174</th><td><u># undef __localtime_r</u></td></tr>
+<tr><th id="175">175</th><td><u># define __localtime_r localtime_r</u></td></tr>
+<tr><th id="176">176</th><td><u># define __mktime_internal mktime_internal</u></td></tr>
+<tr><th id="177">177</th><td><u># include "mktime-internal.h"</u></td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="169">endif</span></u></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><i  data-doc="isdst_differ">/* Return 1 if the values A and B differ according to the rules for</i></td></tr>
+<tr><th id="181">181</th><td><i  data-doc="isdst_differ">   tm_isdst: A and B differ if one is zero and the other positive.  */</i></td></tr>
+<tr><th id="182">182</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="183">183</th><td><dfn class="tu decl def fn" id="isdst_differ" title='isdst_differ' data-type='int isdst_differ(int a, int b)' data-ref="isdst_differ" data-ref-filename="isdst_differ">isdst_differ</dfn> (<em>int</em> <dfn class="local col2 decl" id="2a" title='a' data-type='int' data-ref="2a" data-ref-filename="2a">a</dfn>, <em>int</em> <dfn class="local col3 decl" id="3b" title='b' data-type='int' data-ref="3b" data-ref-filename="3b">b</dfn>)</td></tr>
+<tr><th id="184">184</th><td>{</td></tr>
+<tr><th id="185">185</th><td>  <b>return</b> (!<a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a> != !<a class="local col3 ref" href="#3b" title='b' data-ref="3b" data-ref-filename="3b">b</a>) &amp;&amp; (<var>0</var> &lt;= <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>) &amp;&amp; (<var>0</var> &lt;= <a class="local col3 ref" href="#3b" title='b' data-ref="3b" data-ref-filename="3b">b</a>);</td></tr>
+<tr><th id="186">186</th><td>}</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><i  data-doc="ydhms_diff">/* Return an integer value measuring (YEAR1-YDAY1 HOUR1:MIN1:SEC1) -</i></td></tr>
+<tr><th id="189">189</th><td><i  data-doc="ydhms_diff">   (YEAR0-YDAY0 HOUR0:MIN0:SEC0) in seconds, assuming that the clocks</i></td></tr>
+<tr><th id="190">190</th><td><i  data-doc="ydhms_diff">   were not adjusted between the time stamps.</i></td></tr>
+<tr><th id="191">191</th><td><i  data-doc="ydhms_diff"></i></td></tr>
+<tr><th id="192">192</th><td><i  data-doc="ydhms_diff">   The YEAR values uses the same numbering as TP-&gt;tm_year.  Values</i></td></tr>
+<tr><th id="193">193</th><td><i  data-doc="ydhms_diff">   need not be in the usual range.  However, YEAR1 must not be less</i></td></tr>
+<tr><th id="194">194</th><td><i  data-doc="ydhms_diff">   than 2 * INT_MIN or greater than 2 * INT_MAX.</i></td></tr>
+<tr><th id="195">195</th><td><i  data-doc="ydhms_diff"></i></td></tr>
+<tr><th id="196">196</th><td><i  data-doc="ydhms_diff">   The result may overflow.  It is the caller's responsibility to</i></td></tr>
+<tr><th id="197">197</th><td><i  data-doc="ydhms_diff">   detect overflow.  */</i></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><em>static</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a></td></tr>
+<tr><th id="200">200</th><td><dfn class="tu decl def fn" id="ydhms_diff" title='ydhms_diff' data-type='time_t ydhms_diff(long_int year1, long_int yday1, int hour1, int min1, int sec1, int year0, int yday0, int hour0, int min0, int sec0)' data-ref="ydhms_diff" data-ref-filename="ydhms_diff">ydhms_diff</dfn> (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col4 decl" id="4year1" title='year1' data-type='long_int' data-ref="4year1" data-ref-filename="4year1">year1</dfn>, <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col5 decl" id="5yday1" title='yday1' data-type='long_int' data-ref="5yday1" data-ref-filename="5yday1">yday1</dfn>, <em>int</em> <dfn class="local col6 decl" id="6hour1" title='hour1' data-type='int' data-ref="6hour1" data-ref-filename="6hour1">hour1</dfn>, <em>int</em> <dfn class="local col7 decl" id="7min1" title='min1' data-type='int' data-ref="7min1" data-ref-filename="7min1">min1</dfn>, <em>int</em> <dfn class="local col8 decl" id="8sec1" title='sec1' data-type='int' data-ref="8sec1" data-ref-filename="8sec1">sec1</dfn>,</td></tr>
+<tr><th id="201">201</th><td>	    <em>int</em> <dfn class="local col9 decl" id="9year0" title='year0' data-type='int' data-ref="9year0" data-ref-filename="9year0">year0</dfn>, <em>int</em> <dfn class="local col0 decl" id="10yday0" title='yday0' data-type='int' data-ref="10yday0" data-ref-filename="10yday0">yday0</dfn>, <em>int</em> <dfn class="local col1 decl" id="11hour0" title='hour0' data-type='int' data-ref="11hour0" data-ref-filename="11hour0">hour0</dfn>, <em>int</em> <dfn class="local col2 decl" id="12min0" title='min0' data-type='int' data-ref="12min0" data-ref-filename="12min0">min0</dfn>, <em>int</em> <dfn class="local col3 decl" id="13sec0" title='sec0' data-type='int' data-ref="13sec0" data-ref-filename="13sec0">sec0</dfn>)</td></tr>
+<tr><th id="202">202</th><td>{</td></tr>
+<tr><th id="203">203</th><td>  <a class="macro" href="#72" title="struct C99_integer_division { char a[(-1 / 2 == 0) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="local col4 type" id="14C99_integer_division" title='C99_integer_division' data-ref="14C99_integer_division" data-ref-filename="14C99_integer_division">C99_integer_division</dfn>, -<var>1</var> / <var>2</var> == <var>0</var>);</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>  <i>/* Compute intervening leap days correctly even if year is negative.</i></td></tr>
+<tr><th id="206">206</th><td><i>     Take care to avoid integer overflow here.  */</i></td></tr>
+<tr><th id="207">207</th><td>  <em>int</em> <dfn class="local col6 decl" id="16a4" title='a4' data-type='int' data-ref="16a4" data-ref-filename="16a4">a4</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (year1) &gt;&gt; (2) : (year1) / (1 &lt;&lt; (2)) - ((year1) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col4 ref" href="#4year1" title='year1' data-ref="4year1" data-ref-filename="4year1">year1</a>, <var>2</var>) + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (1900) &gt;&gt; (2) : (1900) / (1 &lt;&lt; (2)) - ((1900) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a>, <var>2</var>) - ! (<a class="local col4 ref" href="#4year1" title='year1' data-ref="4year1" data-ref-filename="4year1">year1</a> &amp; <var>3</var>);</td></tr>
+<tr><th id="208">208</th><td>  <em>int</em> <dfn class="local col7 decl" id="17b4" title='b4' data-type='int' data-ref="17b4" data-ref-filename="17b4">b4</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (year0) &gt;&gt; (2) : (year0) / (1 &lt;&lt; (2)) - ((year0) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col9 ref" href="#9year0" title='year0' data-ref="9year0" data-ref-filename="9year0">year0</a>, <var>2</var>) + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (1900) &gt;&gt; (2) : (1900) / (1 &lt;&lt; (2)) - ((1900) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a>, <var>2</var>) - ! (<a class="local col9 ref" href="#9year0" title='year0' data-ref="9year0" data-ref-filename="9year0">year0</a> &amp; <var>3</var>);</td></tr>
+<tr><th id="209">209</th><td>  <em>int</em> <dfn class="local col8 decl" id="18a100" title='a100' data-type='int' data-ref="18a100" data-ref-filename="18a100">a100</dfn> = <a class="local col6 ref" href="#16a4" title='a4' data-ref="16a4" data-ref-filename="16a4">a4</a> / <var>25</var> - (<a class="local col6 ref" href="#16a4" title='a4' data-ref="16a4" data-ref-filename="16a4">a4</a> % <var>25</var> &lt; <var>0</var>);</td></tr>
+<tr><th id="210">210</th><td>  <em>int</em> <dfn class="local col9 decl" id="19b100" title='b100' data-type='int' data-ref="19b100" data-ref-filename="19b100">b100</dfn> = <a class="local col7 ref" href="#17b4" title='b4' data-ref="17b4" data-ref-filename="17b4">b4</a> / <var>25</var> - (<a class="local col7 ref" href="#17b4" title='b4' data-ref="17b4" data-ref-filename="17b4">b4</a> % <var>25</var> &lt; <var>0</var>);</td></tr>
+<tr><th id="211">211</th><td>  <em>int</em> <dfn class="local col0 decl" id="20a400" title='a400' data-type='int' data-ref="20a400" data-ref-filename="20a400">a400</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (a100) &gt;&gt; (2) : (a100) / (1 &lt;&lt; (2)) - ((a100) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col8 ref" href="#18a100" title='a100' data-ref="18a100" data-ref-filename="18a100">a100</a>, <var>2</var>);</td></tr>
+<tr><th id="212">212</th><td>  <em>int</em> <dfn class="local col1 decl" id="21b400" title='b400' data-type='int' data-ref="21b400" data-ref-filename="21b400">b400</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (b100) &gt;&gt; (2) : (b100) / (1 &lt;&lt; (2)) - ((b100) % (1 &lt;&lt; (2)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col9 ref" href="#19b100" title='b100' data-ref="19b100" data-ref-filename="19b100">b100</a>, <var>2</var>);</td></tr>
+<tr><th id="213">213</th><td>  <em>int</em> <dfn class="local col2 decl" id="22intervening_leap_days" title='intervening_leap_days' data-type='int' data-ref="22intervening_leap_days" data-ref-filename="22intervening_leap_days">intervening_leap_days</dfn> = (<a class="local col6 ref" href="#16a4" title='a4' data-ref="16a4" data-ref-filename="16a4">a4</a> - <a class="local col7 ref" href="#17b4" title='b4' data-ref="17b4" data-ref-filename="17b4">b4</a>) - (<a class="local col8 ref" href="#18a100" title='a100' data-ref="18a100" data-ref-filename="18a100">a100</a> - <a class="local col9 ref" href="#19b100" title='b100' data-ref="19b100" data-ref-filename="19b100">b100</a>) + (<a class="local col0 ref" href="#20a400" title='a400' data-ref="20a400" data-ref-filename="20a400">a400</a> - <a class="local col1 ref" href="#21b400" title='b400' data-ref="21b400" data-ref-filename="21b400">b400</a>);</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>  <i>/* Compute the desired time in time_t precision.  Overflow might</i></td></tr>
+<tr><th id="216">216</th><td><i>     occur here.  */</i></td></tr>
+<tr><th id="217">217</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col3 decl" id="23tyear1" title='tyear1' data-type='time_t' data-ref="23tyear1" data-ref-filename="23tyear1">tyear1</dfn> = <a class="local col4 ref" href="#4year1" title='year1' data-ref="4year1" data-ref-filename="4year1">year1</a>;</td></tr>
+<tr><th id="218">218</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col4 decl" id="24years" title='years' data-type='time_t' data-ref="24years" data-ref-filename="24years">years</dfn> = <a class="local col3 ref" href="#23tyear1" title='tyear1' data-ref="23tyear1" data-ref-filename="23tyear1">tyear1</a> - <a class="local col9 ref" href="#9year0" title='year0' data-ref="9year0" data-ref-filename="9year0">year0</a>;</td></tr>
+<tr><th id="219">219</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="25days" title='days' data-type='time_t' data-ref="25days" data-ref-filename="25days">days</dfn> = <var>365</var> * <a class="local col4 ref" href="#24years" title='years' data-ref="24years" data-ref-filename="24years">years</a> + <a class="local col5 ref" href="#5yday1" title='yday1' data-ref="5yday1" data-ref-filename="5yday1">yday1</a> - <a class="local col0 ref" href="#10yday0" title='yday0' data-ref="10yday0" data-ref-filename="10yday0">yday0</a> + <a class="local col2 ref" href="#22intervening_leap_days" title='intervening_leap_days' data-ref="22intervening_leap_days" data-ref-filename="22intervening_leap_days">intervening_leap_days</a>;</td></tr>
+<tr><th id="220">220</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col6 decl" id="26hours" title='hours' data-type='time_t' data-ref="26hours" data-ref-filename="26hours">hours</dfn> = <var>24</var> * <a class="local col5 ref" href="#25days" title='days' data-ref="25days" data-ref-filename="25days">days</a> + <a class="local col6 ref" href="#6hour1" title='hour1' data-ref="6hour1" data-ref-filename="6hour1">hour1</a> - <a class="local col1 ref" href="#11hour0" title='hour0' data-ref="11hour0" data-ref-filename="11hour0">hour0</a>;</td></tr>
+<tr><th id="221">221</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col7 decl" id="27minutes" title='minutes' data-type='time_t' data-ref="27minutes" data-ref-filename="27minutes">minutes</dfn> = <var>60</var> * <a class="local col6 ref" href="#26hours" title='hours' data-ref="26hours" data-ref-filename="26hours">hours</a> + <a class="local col7 ref" href="#7min1" title='min1' data-ref="7min1" data-ref-filename="7min1">min1</a> - <a class="local col2 ref" href="#12min0" title='min0' data-ref="12min0" data-ref-filename="12min0">min0</a>;</td></tr>
+<tr><th id="222">222</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col8 decl" id="28seconds" title='seconds' data-type='time_t' data-ref="28seconds" data-ref-filename="28seconds">seconds</dfn> = <var>60</var> * <a class="local col7 ref" href="#27minutes" title='minutes' data-ref="27minutes" data-ref-filename="27minutes">minutes</a> + <a class="local col8 ref" href="#8sec1" title='sec1' data-ref="8sec1" data-ref-filename="8sec1">sec1</a> - <a class="local col3 ref" href="#13sec0" title='sec0' data-ref="13sec0" data-ref-filename="13sec0">sec0</a>;</td></tr>
+<tr><th id="223">223</th><td>  <b>return</b> <a class="local col8 ref" href="#28seconds" title='seconds' data-ref="28seconds" data-ref-filename="28seconds">seconds</a>;</td></tr>
+<tr><th id="224">224</th><td>}</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td><i  data-doc="time_t_avg">/* Return the average of A and B, even if A + B would overflow.  */</i></td></tr>
+<tr><th id="227">227</th><td><em>static</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a></td></tr>
+<tr><th id="228">228</th><td><dfn class="tu decl def fn" id="time_t_avg" title='time_t_avg' data-type='time_t time_t_avg(time_t a, time_t b)' data-ref="time_t_avg" data-ref-filename="time_t_avg">time_t_avg</dfn> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col9 decl" id="29a" title='a' data-type='time_t' data-ref="29a" data-ref-filename="29a">a</dfn>, <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col0 decl" id="30b" title='b' data-type='time_t' data-ref="30b" data-ref-filename="30b">b</dfn>)</td></tr>
+<tr><th id="229">229</th><td>{</td></tr>
+<tr><th id="230">230</th><td>  <b>return</b> <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (a) &gt;&gt; (1) : (a) / (1 &lt;&lt; (1)) - ((a) % (1 &lt;&lt; (1)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col9 ref" href="#29a" title='a' data-ref="29a" data-ref-filename="29a">a</a>, <var>1</var>) + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (b) &gt;&gt; (1) : (b) / (1 &lt;&lt; (1)) - ((b) % (1 &lt;&lt; (1)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col0 ref" href="#30b" title='b' data-ref="30b" data-ref-filename="30b">b</a>, <var>1</var>) + (<a class="local col9 ref" href="#29a" title='a' data-ref="29a" data-ref-filename="29a">a</a> &amp; <a class="local col0 ref" href="#30b" title='b' data-ref="30b" data-ref-filename="30b">b</a> &amp; <var>1</var>);</td></tr>
+<tr><th id="231">231</th><td>}</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><i  data-doc="time_t_add_ok">/* Return 1 if A + B does not overflow.  If time_t is unsigned and if</i></td></tr>
+<tr><th id="234">234</th><td><i  data-doc="time_t_add_ok">   B's top bit is set, assume that the sum represents A - -B, and</i></td></tr>
+<tr><th id="235">235</th><td><i  data-doc="time_t_add_ok">   return 1 if the subtraction does not wrap around.  */</i></td></tr>
+<tr><th id="236">236</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="237">237</th><td><dfn class="tu decl def fn" id="time_t_add_ok" title='time_t_add_ok' data-type='int time_t_add_ok(time_t a, time_t b)' data-ref="time_t_add_ok" data-ref-filename="time_t_add_ok">time_t_add_ok</dfn> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col1 decl" id="31a" title='a' data-type='time_t' data-ref="31a" data-ref-filename="31a">a</dfn>, <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col2 decl" id="32b" title='b' data-type='time_t' data-ref="32b" data-ref-filename="32b">b</dfn>)</td></tr>
+<tr><th id="238">238</th><td>{</td></tr>
+<tr><th id="239">239</th><td>  <b>if</b> (! <a class="macro" href="#111" title="(! ((time_t) 0 &lt; (time_t) -1))" data-ref="_M/TYPE_SIGNED">TYPE_SIGNED</a> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a>))</td></tr>
+<tr><th id="240">240</th><td>    {</td></tr>
+<tr><th id="241">241</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col3 decl" id="33sum" title='sum' data-type='time_t' data-ref="33sum" data-ref-filename="33sum">sum</dfn> = <a class="local col1 ref" href="#31a" title='a' data-ref="31a" data-ref-filename="31a">a</a> + <a class="local col2 ref" href="#32b" title='b' data-ref="32b" data-ref-filename="32b">b</a>;</td></tr>
+<tr><th id="242">242</th><td>      <b>return</b> (<a class="local col3 ref" href="#33sum" title='sum' data-ref="33sum" data-ref-filename="33sum">sum</a> &lt; <a class="local col1 ref" href="#31a" title='a' data-ref="31a" data-ref-filename="31a">a</a>) == (<a class="macro" href="#132" title="(((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) &gt;&gt; (1) : (((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) / (1 &lt;&lt; (1)) - ((((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) % (1 &lt;&lt; (1)) &lt; 0)) + 1)" data-ref="_M/TIME_T_MIDPOINT">TIME_T_MIDPOINT</a> &lt;= <a class="local col2 ref" href="#32b" title='b' data-ref="32b" data-ref-filename="32b">b</a>);</td></tr>
+<tr><th id="243">243</th><td>    }</td></tr>
+<tr><th id="244">244</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="#67" title="0" data-ref="_M/WRAPV">WRAPV</a>)</td></tr>
+<tr><th id="245">245</th><td>    {</td></tr>
+<tr><th id="246">246</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col4 decl" id="34sum" title='sum' data-type='time_t' data-ref="34sum" data-ref-filename="34sum">sum</dfn> = <a class="local col1 ref" href="#31a" title='a' data-ref="31a" data-ref-filename="31a">a</a> + <a class="local col2 ref" href="#32b" title='b' data-ref="32b" data-ref-filename="32b">b</a>;</td></tr>
+<tr><th id="247">247</th><td>      <b>return</b> (<a class="local col4 ref" href="#34sum" title='sum' data-ref="34sum" data-ref-filename="34sum">sum</a> &lt; <a class="local col1 ref" href="#31a" title='a' data-ref="31a" data-ref-filename="31a">a</a>) == (<a class="local col2 ref" href="#32b" title='b' data-ref="32b" data-ref-filename="32b">b</a> &lt; <var>0</var>);</td></tr>
+<tr><th id="248">248</th><td>    }</td></tr>
+<tr><th id="249">249</th><td>  <b>else</b></td></tr>
+<tr><th id="250">250</th><td>    {</td></tr>
+<tr><th id="251">251</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="35avg" title='avg' data-type='time_t' data-ref="35avg" data-ref-filename="35avg">avg</dfn> = <a class="tu ref fn" href="#time_t_avg" title='time_t_avg' data-use='c' data-ref="time_t_avg" data-ref-filename="time_t_avg">time_t_avg</a> (<a class="local col1 ref" href="#31a" title='a' data-ref="31a" data-ref-filename="31a">a</a>, <a class="local col2 ref" href="#32b" title='b' data-ref="32b" data-ref-filename="32b">b</a>);</td></tr>
+<tr><th id="252">252</th><td>      <b>return</b> <a class="macro" href="#127" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))))" data-ref="_M/TIME_T_MIN">TIME_T_MIN</a> / <var>2</var> &lt;= <a class="local col5 ref" href="#35avg" title='avg' data-ref="35avg" data-ref-filename="35avg">avg</a> &amp;&amp; <a class="local col5 ref" href="#35avg" title='avg' data-ref="35avg" data-ref-filename="35avg">avg</a> &lt;= <a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a> / <var>2</var>;</td></tr>
+<tr><th id="253">253</th><td>    }</td></tr>
+<tr><th id="254">254</th><td>}</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td><i  data-doc="time_t_int_add_ok">/* Return 1 if A + B does not overflow.  */</i></td></tr>
+<tr><th id="257">257</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="258">258</th><td><dfn class="tu decl def fn" id="time_t_int_add_ok" title='time_t_int_add_ok' data-type='int time_t_int_add_ok(time_t a, int b)' data-ref="time_t_int_add_ok" data-ref-filename="time_t_int_add_ok">time_t_int_add_ok</dfn> (<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col6 decl" id="36a" title='a' data-type='time_t' data-ref="36a" data-ref-filename="36a">a</dfn>, <em>int</em> <dfn class="local col7 decl" id="37b" title='b' data-type='int' data-ref="37b" data-ref-filename="37b">b</dfn>)</td></tr>
+<tr><th id="259">259</th><td>{</td></tr>
+<tr><th id="260">260</th><td>  <a class="macro" href="#72" title="struct int_no_wider_than_time_t { char a[(2147483647 &lt;= ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) ? 1 : -1]; }" data-ref="_M/verify">verify</a> (<dfn class="local col8 type" id="38int_no_wider_than_time_t" title='int_no_wider_than_time_t' data-ref="38int_no_wider_than_time_t" data-ref-filename="38int_no_wider_than_time_t">int_no_wider_than_time_t</dfn>, <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span> &lt;= <a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a>);</td></tr>
+<tr><th id="261">261</th><td>  <b>if</b> (<a class="macro" href="#67" title="0" data-ref="_M/WRAPV">WRAPV</a>)</td></tr>
+<tr><th id="262">262</th><td>    {</td></tr>
+<tr><th id="263">263</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col0 decl" id="40sum" title='sum' data-type='time_t' data-ref="40sum" data-ref-filename="40sum">sum</dfn> = <a class="local col6 ref" href="#36a" title='a' data-ref="36a" data-ref-filename="36a">a</a> + <a class="local col7 ref" href="#37b" title='b' data-ref="37b" data-ref-filename="37b">b</a>;</td></tr>
+<tr><th id="264">264</th><td>      <b>return</b> (<a class="local col0 ref" href="#40sum" title='sum' data-ref="40sum" data-ref-filename="40sum">sum</a> &lt; <a class="local col6 ref" href="#36a" title='a' data-ref="36a" data-ref-filename="36a">a</a>) == (<a class="local col7 ref" href="#37b" title='b' data-ref="37b" data-ref-filename="37b">b</a> &lt; <var>0</var>);</td></tr>
+<tr><th id="265">265</th><td>    }</td></tr>
+<tr><th id="266">266</th><td>  <b>else</b></td></tr>
+<tr><th id="267">267</th><td>    {</td></tr>
+<tr><th id="268">268</th><td>      <em>int</em> <dfn class="local col1 decl" id="41a_odd" title='a_odd' data-type='int' data-ref="41a_odd" data-ref-filename="41a_odd">a_odd</dfn> = <a class="local col6 ref" href="#36a" title='a' data-ref="36a" data-ref-filename="36a">a</a> &amp; <var>1</var>;</td></tr>
+<tr><th id="269">269</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col2 decl" id="42avg" title='avg' data-type='time_t' data-ref="42avg" data-ref-filename="42avg">avg</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (a) &gt;&gt; (1) : (a) / (1 &lt;&lt; (1)) - ((a) % (1 &lt;&lt; (1)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col6 ref" href="#36a" title='a' data-ref="36a" data-ref-filename="36a">a</a>, <var>1</var>) + (<a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (b) &gt;&gt; (1) : (b) / (1 &lt;&lt; (1)) - ((b) % (1 &lt;&lt; (1)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col7 ref" href="#37b" title='b' data-ref="37b" data-ref-filename="37b">b</a>, <var>1</var>) + (<a class="local col1 ref" href="#41a_odd" title='a_odd' data-ref="41a_odd" data-ref-filename="41a_odd">a_odd</a> &amp; <a class="local col7 ref" href="#37b" title='b' data-ref="37b" data-ref-filename="37b">b</a>));</td></tr>
+<tr><th id="270">270</th><td>      <b>return</b> <a class="macro" href="#127" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))))" data-ref="_M/TIME_T_MIN">TIME_T_MIN</a> / <var>2</var> &lt;= <a class="local col2 ref" href="#42avg" title='avg' data-ref="42avg" data-ref-filename="42avg">avg</a> &amp;&amp; <a class="local col2 ref" href="#42avg" title='avg' data-ref="42avg" data-ref-filename="42avg">avg</a> &lt;= <a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a> / <var>2</var>;</td></tr>
+<tr><th id="271">271</th><td>    }</td></tr>
+<tr><th id="272">272</th><td>}</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td><i  data-doc="guess_time_tm">/* Return a time_t value corresponding to (YEAR-YDAY HOUR:MIN:SEC),</i></td></tr>
+<tr><th id="275">275</th><td><i  data-doc="guess_time_tm">   assuming that *T corresponds to *TP and that no clock adjustments</i></td></tr>
+<tr><th id="276">276</th><td><i  data-doc="guess_time_tm">   occurred between *TP and the desired time.</i></td></tr>
+<tr><th id="277">277</th><td><i  data-doc="guess_time_tm">   If TP is null, return a value not equal to *T; this avoids false matches.</i></td></tr>
+<tr><th id="278">278</th><td><i  data-doc="guess_time_tm">   If overflow occurs, yield the minimal or maximal value, except do not</i></td></tr>
+<tr><th id="279">279</th><td><i  data-doc="guess_time_tm">   yield a value equal to *T.  */</i></td></tr>
+<tr><th id="280">280</th><td><em>static</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a></td></tr>
+<tr><th id="281">281</th><td><dfn class="tu decl def fn" id="guess_time_tm" title='guess_time_tm' data-type='time_t guess_time_tm(long_int year, long_int yday, int hour, int min, int sec, const time_t * t, const struct tm * tp)' data-ref="guess_time_tm" data-ref-filename="guess_time_tm">guess_time_tm</dfn> (<a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col3 decl" id="43year" title='year' data-type='long_int' data-ref="43year" data-ref-filename="43year">year</dfn>, <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col4 decl" id="44yday" title='yday' data-type='long_int' data-ref="44yday" data-ref-filename="44yday">yday</dfn>, <em>int</em> <dfn class="local col5 decl" id="45hour" title='hour' data-type='int' data-ref="45hour" data-ref-filename="45hour">hour</dfn>, <em>int</em> <dfn class="local col6 decl" id="46min" title='min' data-type='int' data-ref="46min" data-ref-filename="46min">min</dfn>, <em>int</em> <dfn class="local col7 decl" id="47sec" title='sec' data-type='int' data-ref="47sec" data-ref-filename="47sec">sec</dfn>,</td></tr>
+<tr><th id="282">282</th><td>	       <em>const</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> *<dfn class="local col8 decl" id="48t" title='t' data-type='const time_t *' data-ref="48t" data-ref-filename="48t">t</dfn>, <em>const</em> <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *<dfn class="local col9 decl" id="49tp" title='tp' data-type='const struct tm *' data-ref="49tp" data-ref-filename="49tp">tp</dfn>)</td></tr>
+<tr><th id="283">283</th><td>{</td></tr>
+<tr><th id="284">284</th><td>  <b>if</b> (<a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>)</td></tr>
+<tr><th id="285">285</th><td>    {</td></tr>
+<tr><th id="286">286</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col0 decl" id="50d" title='d' data-type='time_t' data-ref="50d" data-ref-filename="50d">d</dfn> = <a class="tu ref fn" href="#ydhms_diff" title='ydhms_diff' data-use='c' data-ref="ydhms_diff" data-ref-filename="ydhms_diff">ydhms_diff</a> (<a class="local col3 ref" href="#43year" title='year' data-ref="43year" data-ref-filename="43year">year</a>, <a class="local col4 ref" href="#44yday" title='yday' data-ref="44yday" data-ref-filename="44yday">yday</a>, <a class="local col5 ref" href="#45hour" title='hour' data-ref="45hour" data-ref-filename="45hour">hour</a>, <a class="local col6 ref" href="#46min" title='min' data-ref="46min" data-ref-filename="46min">min</a>, <a class="local col7 ref" href="#47sec" title='sec' data-ref="47sec" data-ref-filename="47sec">sec</a>,</td></tr>
+<tr><th id="287">287</th><td>			     <a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_year" title='tm::tm_year' data-ref="tm::tm_year" data-ref-filename="tm..tm_year">tm_year</a>, <a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_yday" title='tm::tm_yday' data-ref="tm::tm_yday" data-ref-filename="tm..tm_yday">tm_yday</a>,</td></tr>
+<tr><th id="288">288</th><td>			     <a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_hour" title='tm::tm_hour' data-ref="tm::tm_hour" data-ref-filename="tm..tm_hour">tm_hour</a>, <a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_min" title='tm::tm_min' data-ref="tm::tm_min" data-ref-filename="tm..tm_min">tm_min</a>, <a class="local col9 ref" href="#49tp" title='tp' data-ref="49tp" data-ref-filename="49tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_sec" title='tm::tm_sec' data-ref="tm::tm_sec" data-ref-filename="tm..tm_sec">tm_sec</a>);</td></tr>
+<tr><th id="289">289</th><td>      <b>if</b> (<a class="tu ref fn" href="#time_t_add_ok" title='time_t_add_ok' data-use='c' data-ref="time_t_add_ok" data-ref-filename="time_t_add_ok">time_t_add_ok</a> (*<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a>, <a class="local col0 ref" href="#50d" title='d' data-ref="50d" data-ref-filename="50d">d</a>))</td></tr>
+<tr><th id="290">290</th><td>	<b>return</b> *<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> + <a class="local col0 ref" href="#50d" title='d' data-ref="50d" data-ref-filename="50d">d</a>;</td></tr>
+<tr><th id="291">291</th><td>    }</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>  <i>/* Overflow occurred one way or another.  Return the nearest result</i></td></tr>
+<tr><th id="294">294</th><td><i>     that is actually in range, except don't report a zero difference</i></td></tr>
+<tr><th id="295">295</th><td><i>     if the actual difference is nonzero, as that would cause a false</i></td></tr>
+<tr><th id="296">296</th><td><i>     match; and don't oscillate between two values, as that would</i></td></tr>
+<tr><th id="297">297</th><td><i>     confuse the spring-forward gap detector.  */</i></td></tr>
+<tr><th id="298">298</th><td>  <b>return</b> (*<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> &lt; <a class="macro" href="#132" title="(((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) &gt;&gt; (1) : (((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) / (1 &lt;&lt; (1)) - ((((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1))))) + ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))) % (1 &lt;&lt; (1)) &lt; 0)) + 1)" data-ref="_M/TIME_T_MIDPOINT">TIME_T_MIDPOINT</a></td></tr>
+<tr><th id="299">299</th><td>	  ? (*<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> &lt;= <a class="macro" href="#127" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))))" data-ref="_M/TIME_T_MIN">TIME_T_MIN</a> + <var>1</var> ? *<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> + <var>1</var> : <a class="macro" href="#127" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))))" data-ref="_M/TIME_T_MIN">TIME_T_MIN</a>)</td></tr>
+<tr><th id="300">300</th><td>	  : (<a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a> - <var>1</var> &lt;= *<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> ? *<a class="local col8 ref" href="#48t" title='t' data-ref="48t" data-ref-filename="48t">t</a> - <var>1</var> : <a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a>));</td></tr>
+<tr><th id="301">301</th><td>}</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><i  data-doc="ranged_convert">/* Use CONVERT to convert *T to a broken down time in *TP.</i></td></tr>
+<tr><th id="304">304</th><td><i  data-doc="ranged_convert">   If *T is out of range for conversion, adjust it so that</i></td></tr>
+<tr><th id="305">305</th><td><i  data-doc="ranged_convert">   it is the nearest in-range value and then convert that.  */</i></td></tr>
+<tr><th id="306">306</th><td><em>static</em> <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *</td></tr>
+<tr><th id="307">307</th><td><dfn class="tu decl def fn" id="ranged_convert" title='ranged_convert' data-type='struct tm * ranged_convert(struct tm *(*)(const time_t *, struct tm *) convert, time_t * t, struct tm * tp)' data-ref="ranged_convert" data-ref-filename="ranged_convert">ranged_convert</dfn> (<b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *(*<dfn class="local col1 decl" id="51convert" title='convert' data-type='struct tm *(*)(const time_t *, struct tm *)' data-ref="51convert" data-ref-filename="51convert">convert</dfn>) (<em>const</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> *, <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *),</td></tr>
+<tr><th id="308">308</th><td>		<a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> *<dfn class="local col2 decl" id="52t" title='t' data-type='time_t *' data-ref="52t" data-ref-filename="52t">t</dfn>, <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *<dfn class="local col3 decl" id="53tp" title='tp' data-type='struct tm *' data-ref="53tp" data-ref-filename="53tp">tp</dfn>)</td></tr>
+<tr><th id="309">309</th><td>{</td></tr>
+<tr><th id="310">310</th><td>  <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *<dfn class="local col4 decl" id="54r" title='r' data-type='struct tm *' data-ref="54r" data-ref-filename="54r">r</dfn> = <a class="local col1 ref" href="#51convert" title='convert' data-ref="51convert" data-ref-filename="51convert">convert</a> (<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a>, <a class="local col3 ref" href="#53tp" title='tp' data-ref="53tp" data-ref-filename="53tp">tp</a>);</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td>  <b>if</b> (!<a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a> &amp;&amp; *<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a>)</td></tr>
+<tr><th id="313">313</th><td>    {</td></tr>
+<tr><th id="314">314</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="55bad" title='bad' data-type='time_t' data-ref="55bad" data-ref-filename="55bad">bad</dfn> = *<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a>;</td></tr>
+<tr><th id="315">315</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col6 decl" id="56ok" title='ok' data-type='time_t' data-ref="56ok" data-ref-filename="56ok">ok</dfn> = <var>0</var>;</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>      <i>/* BAD is a known unconvertible time_t, and OK is a known good one.</i></td></tr>
+<tr><th id="318">318</th><td><i>	 Use binary search to narrow the range between BAD and OK until</i></td></tr>
+<tr><th id="319">319</th><td><i>	 they differ by 1.  */</i></td></tr>
+<tr><th id="320">320</th><td>      <b>while</b> (<a class="local col5 ref" href="#55bad" title='bad' data-ref="55bad" data-ref-filename="55bad">bad</a> != <a class="local col6 ref" href="#56ok" title='ok' data-ref="56ok" data-ref-filename="56ok">ok</a> + (<a class="local col5 ref" href="#55bad" title='bad' data-ref="55bad" data-ref-filename="55bad">bad</a> &lt; <var>0</var> ? -<var>1</var> : <var>1</var>))</td></tr>
+<tr><th id="321">321</th><td>	{</td></tr>
+<tr><th id="322">322</th><td>	  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col7 decl" id="57mid" title='mid' data-type='time_t' data-ref="57mid" data-ref-filename="57mid">mid</dfn> = *<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a> = <a class="tu ref fn" href="#time_t_avg" title='time_t_avg' data-use='c' data-ref="time_t_avg" data-ref-filename="time_t_avg">time_t_avg</a> (<a class="local col6 ref" href="#56ok" title='ok' data-ref="56ok" data-ref-filename="56ok">ok</a>, <a class="local col5 ref" href="#55bad" title='bad' data-ref="55bad" data-ref-filename="55bad">bad</a>);</td></tr>
+<tr><th id="323">323</th><td>	  <a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a> = <a class="local col1 ref" href="#51convert" title='convert' data-ref="51convert" data-ref-filename="51convert">convert</a> (<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a>, <a class="local col3 ref" href="#53tp" title='tp' data-ref="53tp" data-ref-filename="53tp">tp</a>);</td></tr>
+<tr><th id="324">324</th><td>	  <b>if</b> (<a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a>)</td></tr>
+<tr><th id="325">325</th><td>	    <a class="local col6 ref" href="#56ok" title='ok' data-ref="56ok" data-ref-filename="56ok">ok</a> = <a class="local col7 ref" href="#57mid" title='mid' data-ref="57mid" data-ref-filename="57mid">mid</a>;</td></tr>
+<tr><th id="326">326</th><td>	  <b>else</b></td></tr>
+<tr><th id="327">327</th><td>	    <a class="local col5 ref" href="#55bad" title='bad' data-ref="55bad" data-ref-filename="55bad">bad</a> = <a class="local col7 ref" href="#57mid" title='mid' data-ref="57mid" data-ref-filename="57mid">mid</a>;</td></tr>
+<tr><th id="328">328</th><td>	}</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td>      <b>if</b> (!<a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a> &amp;&amp; <a class="local col6 ref" href="#56ok" title='ok' data-ref="56ok" data-ref-filename="56ok">ok</a>)</td></tr>
+<tr><th id="331">331</th><td>	{</td></tr>
+<tr><th id="332">332</th><td>	  <i>/* The last conversion attempt failed;</i></td></tr>
+<tr><th id="333">333</th><td><i>	     revert to the most recent successful attempt.  */</i></td></tr>
+<tr><th id="334">334</th><td>	  *<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a> = <a class="local col6 ref" href="#56ok" title='ok' data-ref="56ok" data-ref-filename="56ok">ok</a>;</td></tr>
+<tr><th id="335">335</th><td>	  <a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a> = <a class="local col1 ref" href="#51convert" title='convert' data-ref="51convert" data-ref-filename="51convert">convert</a> (<a class="local col2 ref" href="#52t" title='t' data-ref="52t" data-ref-filename="52t">t</a>, <a class="local col3 ref" href="#53tp" title='tp' data-ref="53tp" data-ref-filename="53tp">tp</a>);</td></tr>
+<tr><th id="336">336</th><td>	}</td></tr>
+<tr><th id="337">337</th><td>    }</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td>  <b>return</b> <a class="local col4 ref" href="#54r" title='r' data-ref="54r" data-ref-filename="54r">r</a>;</td></tr>
+<tr><th id="340">340</th><td>}</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td><i>/* Convert *TP to a time_t value, inverting</i></td></tr>
+<tr><th id="344">344</th><td><i>   the monotonic and mostly-unit-linear conversion function CONVERT.</i></td></tr>
+<tr><th id="345">345</th><td><i>   Use *OFFSET to keep track of a guess at the offset of the result,</i></td></tr>
+<tr><th id="346">346</th><td><i>   compared to what the result would be for UTC without leap seconds.</i></td></tr>
+<tr><th id="347">347</th><td><i>   If *OFFSET's guess is correct, only one CONVERT call is needed.</i></td></tr>
+<tr><th id="348">348</th><td><i>   This function is external because it is used also by timegm.c.  */</i></td></tr>
+<tr><th id="349">349</th><td><a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a></td></tr>
+<tr><th id="350">350</th><td><dfn class="decl def fn" id="__mktime_internal" title='__mktime_internal' data-ref="__mktime_internal" data-ref-filename="__mktime_internal">__mktime_internal</dfn> (<b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *<dfn class="local col8 decl" id="58tp" title='tp' data-type='struct tm *' data-ref="58tp" data-ref-filename="58tp">tp</dfn>,</td></tr>
+<tr><th id="351">351</th><td>		   <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *(*<dfn class="local col9 decl" id="59convert" title='convert' data-type='struct tm *(*)(const time_t *, struct tm *)' data-ref="59convert" data-ref-filename="59convert">convert</dfn>) (<em>const</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> *, <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *),</td></tr>
+<tr><th id="352">352</th><td>		   <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> *<dfn class="local col0 decl" id="60offset" title='offset' data-type='time_t *' data-ref="60offset" data-ref-filename="60offset">offset</dfn>)</td></tr>
+<tr><th id="353">353</th><td>{</td></tr>
+<tr><th id="354">354</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col1 decl" id="61t" title='t' data-type='time_t' data-ref="61t" data-ref-filename="61t">t</dfn>, <dfn class="local col2 decl" id="62gt" title='gt' data-type='time_t' data-ref="62gt" data-ref-filename="62gt">gt</dfn>, <dfn class="local col3 decl" id="63t0" title='t0' data-type='time_t' data-ref="63t0" data-ref-filename="63t0">t0</dfn>, <dfn class="local col4 decl" id="64t1" title='t1' data-type='time_t' data-ref="64t1" data-ref-filename="64t1">t1</dfn>, <dfn class="local col5 decl" id="65t2" title='t2' data-type='time_t' data-ref="65t2" data-ref-filename="65t2">t2</dfn>;</td></tr>
+<tr><th id="355">355</th><td>  <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> <dfn class="local col6 decl" id="66tm" title='tm' data-type='struct tm' data-ref="66tm" data-ref-filename="66tm">tm</dfn>;</td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td>  <i>/* The maximum number of probes (calls to CONVERT) should be enough</i></td></tr>
+<tr><th id="358">358</th><td><i>     to handle any combinations of time zone rule changes, solar time,</i></td></tr>
+<tr><th id="359">359</th><td><i>     leap seconds, and oscillations around a spring-forward gap.</i></td></tr>
+<tr><th id="360">360</th><td><i>     POSIX.1 prohibits leap seconds, but some hosts have them anyway.  */</i></td></tr>
+<tr><th id="361">361</th><td>  <em>int</em> <dfn class="local col7 decl" id="67remaining_probes" title='remaining_probes' data-type='int' data-ref="67remaining_probes" data-ref-filename="67remaining_probes">remaining_probes</dfn> = <var>6</var>;</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td>  <i>/* Time requested.  Copy it in case CONVERT modifies *TP; this can</i></td></tr>
+<tr><th id="364">364</th><td><i>     occur if TP is localtime's returned value and CONVERT is localtime.  */</i></td></tr>
+<tr><th id="365">365</th><td>  <em>int</em> <dfn class="local col8 decl" id="68sec" title='sec' data-type='int' data-ref="68sec" data-ref-filename="68sec">sec</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_sec" title='tm::tm_sec' data-ref="tm::tm_sec" data-ref-filename="tm..tm_sec">tm_sec</a>;</td></tr>
+<tr><th id="366">366</th><td>  <em>int</em> <dfn class="local col9 decl" id="69min" title='min' data-type='int' data-ref="69min" data-ref-filename="69min">min</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_min" title='tm::tm_min' data-ref="tm::tm_min" data-ref-filename="tm..tm_min">tm_min</a>;</td></tr>
+<tr><th id="367">367</th><td>  <em>int</em> <dfn class="local col0 decl" id="70hour" title='hour' data-type='int' data-ref="70hour" data-ref-filename="70hour">hour</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_hour" title='tm::tm_hour' data-ref="tm::tm_hour" data-ref-filename="tm..tm_hour">tm_hour</a>;</td></tr>
+<tr><th id="368">368</th><td>  <em>int</em> <dfn class="local col1 decl" id="71mday" title='mday' data-type='int' data-ref="71mday" data-ref-filename="71mday">mday</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_mday" title='tm::tm_mday' data-ref="tm::tm_mday" data-ref-filename="tm..tm_mday">tm_mday</a>;</td></tr>
+<tr><th id="369">369</th><td>  <em>int</em> <dfn class="local col2 decl" id="72mon" title='mon' data-type='int' data-ref="72mon" data-ref-filename="72mon">mon</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_mon" title='tm::tm_mon' data-ref="tm::tm_mon" data-ref-filename="tm..tm_mon">tm_mon</a>;</td></tr>
+<tr><th id="370">370</th><td>  <em>int</em> <dfn class="local col3 decl" id="73year_requested" title='year_requested' data-type='int' data-ref="73year_requested" data-ref-filename="73year_requested">year_requested</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_year" title='tm::tm_year' data-ref="tm::tm_year" data-ref-filename="tm..tm_year">tm_year</a>;</td></tr>
+<tr><th id="371">371</th><td>  <em>int</em> <dfn class="local col4 decl" id="74isdst" title='isdst' data-type='int' data-ref="74isdst" data-ref-filename="74isdst">isdst</dfn> = <a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a>-&gt;<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a>;</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>  <i>/* 1 if the previous probe was DST.  */</i></td></tr>
+<tr><th id="374">374</th><td>  <em>int</em> <dfn class="local col5 decl" id="75dst2" title='dst2' data-type='int' data-ref="75dst2" data-ref-filename="75dst2">dst2</dfn>;</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td>  <i>/* Ensure that mon is in range, and set year accordingly.  */</i></td></tr>
+<tr><th id="377">377</th><td>  <em>int</em> <dfn class="local col6 decl" id="76mon_remainder" title='mon_remainder' data-type='int' data-ref="76mon_remainder" data-ref-filename="76mon_remainder">mon_remainder</dfn> = <a class="local col2 ref" href="#72mon" title='mon' data-ref="72mon" data-ref-filename="72mon">mon</a> % <var>12</var>;</td></tr>
+<tr><th id="378">378</th><td>  <em>int</em> <dfn class="local col7 decl" id="77negative_mon_remainder" title='negative_mon_remainder' data-type='int' data-ref="77negative_mon_remainder" data-ref-filename="77negative_mon_remainder">negative_mon_remainder</dfn> = <a class="local col6 ref" href="#76mon_remainder" title='mon_remainder' data-ref="76mon_remainder" data-ref-filename="76mon_remainder">mon_remainder</a> &lt; <var>0</var>;</td></tr>
+<tr><th id="379">379</th><td>  <em>int</em> <dfn class="local col8 decl" id="78mon_years" title='mon_years' data-type='int' data-ref="78mon_years" data-ref-filename="78mon_years">mon_years</dfn> = <a class="local col2 ref" href="#72mon" title='mon' data-ref="72mon" data-ref-filename="72mon">mon</a> / <var>12</var> - <a class="local col7 ref" href="#77negative_mon_remainder" title='negative_mon_remainder' data-ref="77negative_mon_remainder" data-ref-filename="77negative_mon_remainder">negative_mon_remainder</a>;</td></tr>
+<tr><th id="380">380</th><td>  <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col9 decl" id="79lyear_requested" title='lyear_requested' data-type='long_int' data-ref="79lyear_requested" data-ref-filename="79lyear_requested">lyear_requested</dfn> = <a class="local col3 ref" href="#73year_requested" title='year_requested' data-ref="73year_requested" data-ref-filename="73year_requested">year_requested</a>;</td></tr>
+<tr><th id="381">381</th><td>  <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col0 decl" id="80year" title='year' data-type='long_int' data-ref="80year" data-ref-filename="80year">year</dfn> = <a class="local col9 ref" href="#79lyear_requested" title='lyear_requested' data-ref="79lyear_requested" data-ref-filename="79lyear_requested">lyear_requested</a> + <a class="local col8 ref" href="#78mon_years" title='mon_years' data-ref="78mon_years" data-ref-filename="78mon_years">mon_years</a>;</td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td>  <i>/* The other values need not be in range:</i></td></tr>
+<tr><th id="384">384</th><td><i>     the remaining code handles minor overflows correctly,</i></td></tr>
+<tr><th id="385">385</th><td><i>     assuming int and time_t arithmetic wraps around.</i></td></tr>
+<tr><th id="386">386</th><td><i>     Major overflows are caught at the end.  */</i></td></tr>
+<tr><th id="387">387</th><td></td></tr>
+<tr><th id="388">388</th><td>  <i>/* Calculate day of year from year, month, and day of month.</i></td></tr>
+<tr><th id="389">389</th><td><i>     The result need not be in range.  */</i></td></tr>
+<tr><th id="390">390</th><td>  <em>int</em> <dfn class="local col1 decl" id="81mon_yday" title='mon_yday' data-type='int' data-ref="81mon_yday" data-ref-filename="81mon_yday">mon_yday</dfn> = ((<a class="ref" href="../include/time.h.html#__mon_yday" title='__mon_yday' data-ref="__mon_yday" data-ref-filename="__mon_yday">__mon_yday</a>[<a class="tu ref fn" href="#leapyear" title='leapyear' data-use='c' data-ref="leapyear" data-ref-filename="leapyear">leapyear</a> (<a class="local col0 ref" href="#80year" title='year' data-ref="80year" data-ref-filename="80year">year</a>)]</td></tr>
+<tr><th id="391">391</th><td>		   [<a class="local col6 ref" href="#76mon_remainder" title='mon_remainder' data-ref="76mon_remainder" data-ref-filename="76mon_remainder">mon_remainder</a> + <var>12</var> * <a class="local col7 ref" href="#77negative_mon_remainder" title='negative_mon_remainder' data-ref="77negative_mon_remainder" data-ref-filename="77negative_mon_remainder">negative_mon_remainder</a>])</td></tr>
+<tr><th id="392">392</th><td>		  - <var>1</var>);</td></tr>
+<tr><th id="393">393</th><td>  <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col2 decl" id="82lmday" title='lmday' data-type='long_int' data-ref="82lmday" data-ref-filename="82lmday">lmday</dfn> = <a class="local col1 ref" href="#71mday" title='mday' data-ref="71mday" data-ref-filename="71mday">mday</a>;</td></tr>
+<tr><th id="394">394</th><td>  <a class="typedef" href="#long_int" title='long_int' data-type='long' data-ref="long_int" data-ref-filename="long_int">long_int</a> <dfn class="local col3 decl" id="83yday" title='yday' data-type='long_int' data-ref="83yday" data-ref-filename="83yday">yday</dfn> = <a class="local col1 ref" href="#81mon_yday" title='mon_yday' data-ref="81mon_yday" data-ref-filename="81mon_yday">mon_yday</a> + <a class="local col2 ref" href="#82lmday" title='lmday' data-ref="82lmday" data-ref-filename="82lmday">lmday</a>;</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col4 decl" id="84guessed_offset" title='guessed_offset' data-type='time_t' data-ref="84guessed_offset" data-ref-filename="84guessed_offset">guessed_offset</dfn> = *<a class="local col0 ref" href="#60offset" title='offset' data-ref="60offset" data-ref-filename="60offset">offset</a>;</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td>  <em>int</em> <dfn class="local col5 decl" id="85sec_requested" title='sec_requested' data-type='int' data-ref="85sec_requested" data-ref-filename="85sec_requested">sec_requested</dfn> = <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>;</td></tr>
+<tr><th id="399">399</th><td></td></tr>
+<tr><th id="400">400</th><td>  <b>if</b> (<a class="macro" href="#32" title="1" data-ref="_M/LEAP_SECONDS_POSSIBLE">LEAP_SECONDS_POSSIBLE</a>)</td></tr>
+<tr><th id="401">401</th><td>    {</td></tr>
+<tr><th id="402">402</th><td>      <i>/* Handle out-of-range seconds specially,</i></td></tr>
+<tr><th id="403">403</th><td><i>	 since ydhms_tm_diff assumes every minute has 60 seconds.  */</i></td></tr>
+<tr><th id="404">404</th><td>      <b>if</b> (<a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="405">405</th><td>	<a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a> = <var>0</var>;</td></tr>
+<tr><th id="406">406</th><td>      <b>if</b> (<var>59</var> &lt; <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>)</td></tr>
+<tr><th id="407">407</th><td>	<a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a> = <var>59</var>;</td></tr>
+<tr><th id="408">408</th><td>    }</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+<tr><th id="410">410</th><td>  <i>/* Invert CONVERT by probing.  First assume the same offset as last</i></td></tr>
+<tr><th id="411">411</th><td><i>     time.  */</i></td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td>  <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a> = <a class="tu ref fn" href="#ydhms_diff" title='ydhms_diff' data-use='c' data-ref="ydhms_diff" data-ref-filename="ydhms_diff">ydhms_diff</a> (<a class="local col0 ref" href="#80year" title='year' data-ref="80year" data-ref-filename="80year">year</a>, <a class="local col3 ref" href="#83yday" title='yday' data-ref="83yday" data-ref-filename="83yday">yday</a>, <a class="local col0 ref" href="#70hour" title='hour' data-ref="70hour" data-ref-filename="70hour">hour</a>, <a class="local col9 ref" href="#69min" title='min' data-ref="69min" data-ref-filename="69min">min</a>, <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>,</td></tr>
+<tr><th id="414">414</th><td>		   <a class="macro" href="#140" title="1970" data-ref="_M/EPOCH_YEAR">EPOCH_YEAR</a> - <a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a>, <var>0</var>, <var>0</var>, <var>0</var>, - <a class="local col4 ref" href="#84guessed_offset" title='guessed_offset' data-ref="84guessed_offset" data-ref-filename="84guessed_offset">guessed_offset</a>);</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>  <b>if</b> (<a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a> / <span class="macro" title="2147483647" data-ref="_M/INT_MAX">INT_MAX</span> / <var>366</var> / <var>24</var> / <var>60</var> / <var>60</var> &lt; <var>3</var>)</td></tr>
+<tr><th id="417">417</th><td>    {</td></tr>
+<tr><th id="418">418</th><td>      <i>/* time_t isn't large enough to rule out overflows, so check</i></td></tr>
+<tr><th id="419">419</th><td><i>	 for major overflows.  A gross check suffices, since if t0</i></td></tr>
+<tr><th id="420">420</th><td><i>	 has overflowed, it is off by a multiple of TIME_T_MAX -</i></td></tr>
+<tr><th id="421">421</th><td><i>	 TIME_T_MIN + 1.  So ignore any component of the difference</i></td></tr>
+<tr><th id="422">422</th><td><i>	 that is bounded by a small value.  */</i></td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td>      <i>/* Approximate log base 2 of the number of time units per</i></td></tr>
+<tr><th id="425">425</th><td><i>	 biennium.  A biennium is 2 years; use this unit instead of</i></td></tr>
+<tr><th id="426">426</th><td><i>	 years to avoid integer overflow.  For example, 2 average</i></td></tr>
+<tr><th id="427">427</th><td><i>	 Gregorian years are 2 * 365.2425 * 24 * 60 * 60 seconds,</i></td></tr>
+<tr><th id="428">428</th><td><i>	 which is 63113904 seconds, and rint (log2 (63113904)) is</i></td></tr>
+<tr><th id="429">429</th><td><i>	 26.  */</i></td></tr>
+<tr><th id="430">430</th><td>      <em>int</em> <dfn class="local col6 decl" id="86ALOG2_SECONDS_PER_BIENNIUM" title='ALOG2_SECONDS_PER_BIENNIUM' data-type='int' data-ref="86ALOG2_SECONDS_PER_BIENNIUM" data-ref-filename="86ALOG2_SECONDS_PER_BIENNIUM">ALOG2_SECONDS_PER_BIENNIUM</dfn> = <var>26</var>;</td></tr>
+<tr><th id="431">431</th><td>      <em>int</em> <dfn class="local col7 decl" id="87ALOG2_MINUTES_PER_BIENNIUM" title='ALOG2_MINUTES_PER_BIENNIUM' data-type='int' data-ref="87ALOG2_MINUTES_PER_BIENNIUM" data-ref-filename="87ALOG2_MINUTES_PER_BIENNIUM">ALOG2_MINUTES_PER_BIENNIUM</dfn> = <var>20</var>;</td></tr>
+<tr><th id="432">432</th><td>      <em>int</em> <dfn class="local col8 decl" id="88ALOG2_HOURS_PER_BIENNIUM" title='ALOG2_HOURS_PER_BIENNIUM' data-type='int' data-ref="88ALOG2_HOURS_PER_BIENNIUM" data-ref-filename="88ALOG2_HOURS_PER_BIENNIUM">ALOG2_HOURS_PER_BIENNIUM</dfn> = <var>14</var>;</td></tr>
+<tr><th id="433">433</th><td>      <em>int</em> <dfn class="local col9 decl" id="89ALOG2_DAYS_PER_BIENNIUM" title='ALOG2_DAYS_PER_BIENNIUM' data-type='int' data-ref="89ALOG2_DAYS_PER_BIENNIUM" data-ref-filename="89ALOG2_DAYS_PER_BIENNIUM">ALOG2_DAYS_PER_BIENNIUM</dfn> = <var>10</var>;</td></tr>
+<tr><th id="434">434</th><td>      <em>int</em> <dfn class="local col0 decl" id="90LOG2_YEARS_PER_BIENNIUM" title='LOG2_YEARS_PER_BIENNIUM' data-type='int' data-ref="90LOG2_YEARS_PER_BIENNIUM" data-ref-filename="90LOG2_YEARS_PER_BIENNIUM">LOG2_YEARS_PER_BIENNIUM</dfn> = <var>1</var>;</td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td>      <em>int</em> <dfn class="local col1 decl" id="91approx_requested_biennia" title='approx_requested_biennia' data-type='int' data-ref="91approx_requested_biennia" data-ref-filename="91approx_requested_biennia">approx_requested_biennia</dfn> =</td></tr>
+<tr><th id="437">437</th><td>	(<a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (year_requested) &gt;&gt; (LOG2_YEARS_PER_BIENNIUM) : (year_requested) / (1 &lt;&lt; (LOG2_YEARS_PER_BIENNIUM)) - ((year_requested) % (1 &lt;&lt; (LOG2_YEARS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col3 ref" href="#73year_requested" title='year_requested' data-ref="73year_requested" data-ref-filename="73year_requested">year_requested</a>, <a class="local col0 ref" href="#90LOG2_YEARS_PER_BIENNIUM" title='LOG2_YEARS_PER_BIENNIUM' data-ref="90LOG2_YEARS_PER_BIENNIUM" data-ref-filename="90LOG2_YEARS_PER_BIENNIUM">LOG2_YEARS_PER_BIENNIUM</a>)</td></tr>
+<tr><th id="438">438</th><td>	 - <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (1970 - 1900) &gt;&gt; (LOG2_YEARS_PER_BIENNIUM) : (1970 - 1900) / (1 &lt;&lt; (LOG2_YEARS_PER_BIENNIUM)) - ((1970 - 1900) % (1 &lt;&lt; (LOG2_YEARS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="macro" href="#140" title="1970" data-ref="_M/EPOCH_YEAR">EPOCH_YEAR</a> - <a class="macro" href="#141" title="1900" data-ref="_M/TM_YEAR_BASE">TM_YEAR_BASE</a>, <a class="local col0 ref" href="#90LOG2_YEARS_PER_BIENNIUM" title='LOG2_YEARS_PER_BIENNIUM' data-ref="90LOG2_YEARS_PER_BIENNIUM" data-ref-filename="90LOG2_YEARS_PER_BIENNIUM">LOG2_YEARS_PER_BIENNIUM</a>)</td></tr>
+<tr><th id="439">439</th><td>	 + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (mday) &gt;&gt; (ALOG2_DAYS_PER_BIENNIUM) : (mday) / (1 &lt;&lt; (ALOG2_DAYS_PER_BIENNIUM)) - ((mday) % (1 &lt;&lt; (ALOG2_DAYS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col1 ref" href="#71mday" title='mday' data-ref="71mday" data-ref-filename="71mday">mday</a>, <a class="local col9 ref" href="#89ALOG2_DAYS_PER_BIENNIUM" title='ALOG2_DAYS_PER_BIENNIUM' data-ref="89ALOG2_DAYS_PER_BIENNIUM" data-ref-filename="89ALOG2_DAYS_PER_BIENNIUM">ALOG2_DAYS_PER_BIENNIUM</a>)</td></tr>
+<tr><th id="440">440</th><td>	 + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (hour) &gt;&gt; (ALOG2_HOURS_PER_BIENNIUM) : (hour) / (1 &lt;&lt; (ALOG2_HOURS_PER_BIENNIUM)) - ((hour) % (1 &lt;&lt; (ALOG2_HOURS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col0 ref" href="#70hour" title='hour' data-ref="70hour" data-ref-filename="70hour">hour</a>, <a class="local col8 ref" href="#88ALOG2_HOURS_PER_BIENNIUM" title='ALOG2_HOURS_PER_BIENNIUM' data-ref="88ALOG2_HOURS_PER_BIENNIUM" data-ref-filename="88ALOG2_HOURS_PER_BIENNIUM">ALOG2_HOURS_PER_BIENNIUM</a>)</td></tr>
+<tr><th id="441">441</th><td>	 + <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (min) &gt;&gt; (ALOG2_MINUTES_PER_BIENNIUM) : (min) / (1 &lt;&lt; (ALOG2_MINUTES_PER_BIENNIUM)) - ((min) % (1 &lt;&lt; (ALOG2_MINUTES_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col9 ref" href="#69min" title='min' data-ref="69min" data-ref-filename="69min">min</a>, <a class="local col7 ref" href="#87ALOG2_MINUTES_PER_BIENNIUM" title='ALOG2_MINUTES_PER_BIENNIUM' data-ref="87ALOG2_MINUTES_PER_BIENNIUM" data-ref-filename="87ALOG2_MINUTES_PER_BIENNIUM">ALOG2_MINUTES_PER_BIENNIUM</a>)</td></tr>
+<tr><th id="442">442</th><td>	 + (<a class="macro" href="#32" title="1" data-ref="_M/LEAP_SECONDS_POSSIBLE">LEAP_SECONDS_POSSIBLE</a></td></tr>
+<tr><th id="443">443</th><td>	    ? <var>0</var></td></tr>
+<tr><th id="444">444</th><td>	    : <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (sec) &gt;&gt; (ALOG2_SECONDS_PER_BIENNIUM) : (sec) / (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) - ((sec) % (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>, <a class="local col6 ref" href="#86ALOG2_SECONDS_PER_BIENNIUM" title='ALOG2_SECONDS_PER_BIENNIUM' data-ref="86ALOG2_SECONDS_PER_BIENNIUM" data-ref-filename="86ALOG2_SECONDS_PER_BIENNIUM">ALOG2_SECONDS_PER_BIENNIUM</a>)));</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td>      <em>int</em> <dfn class="local col2 decl" id="92approx_biennia" title='approx_biennia' data-type='int' data-ref="92approx_biennia" data-ref-filename="92approx_biennia">approx_biennia</dfn> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (t0) &gt;&gt; (ALOG2_SECONDS_PER_BIENNIUM) : (t0) / (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) - ((t0) % (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a>, <a class="local col6 ref" href="#86ALOG2_SECONDS_PER_BIENNIUM" title='ALOG2_SECONDS_PER_BIENNIUM' data-ref="86ALOG2_SECONDS_PER_BIENNIUM" data-ref-filename="86ALOG2_SECONDS_PER_BIENNIUM">ALOG2_SECONDS_PER_BIENNIUM</a>);</td></tr>
+<tr><th id="447">447</th><td>      <em>int</em> <dfn class="local col3 decl" id="93diff" title='diff' data-type='int' data-ref="93diff" data-ref-filename="93diff">diff</dfn> = <a class="local col2 ref" href="#92approx_biennia" title='approx_biennia' data-ref="92approx_biennia" data-ref-filename="92approx_biennia">approx_biennia</a> - <a class="local col1 ref" href="#91approx_requested_biennia" title='approx_requested_biennia' data-ref="91approx_requested_biennia" data-ref-filename="91approx_requested_biennia">approx_requested_biennia</a>;</td></tr>
+<tr><th id="448">448</th><td>      <em>int</em> <dfn class="local col4 decl" id="94approx_abs_diff" title='approx_abs_diff' data-type='int' data-ref="94approx_abs_diff" data-ref-filename="94approx_abs_diff">approx_abs_diff</dfn> = <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a> &lt; <var>0</var> ? -<var>1</var> - <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a> : <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a>;</td></tr>
+<tr><th id="449">449</th><td></td></tr>
+<tr><th id="450">450</th><td>      <i>/* IRIX 4.0.5 cc miscalculates TIME_T_MIN / 3: it erroneously</i></td></tr>
+<tr><th id="451">451</th><td><i>	 gives a positive value of 715827882.  Setting a variable</i></td></tr>
+<tr><th id="452">452</th><td><i>	 first then doing math on it seems to work.</i></td></tr>
+<tr><th id="453">453</th><td><i>	 (ghazi@caip.rutgers.edu) */</i></td></tr>
+<tr><th id="454">454</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="95time_t_max" title='time_t_max' data-type='time_t' data-ref="95time_t_max" data-ref-filename="95time_t_max">time_t_max</dfn> = <a class="macro" href="#130" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))" data-ref="_M/TIME_T_MAX">TIME_T_MAX</a>;</td></tr>
+<tr><th id="455">455</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col6 decl" id="96time_t_min" title='time_t_min' data-type='time_t' data-ref="96time_t_min" data-ref-filename="96time_t_min">time_t_min</dfn> = <a class="macro" href="#127" title="((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) 0 : ~ ((time_t) (! (! ((time_t) 0 &lt; (time_t) -1)) ? (time_t) -1 : ((((time_t) 1 &lt;&lt; (sizeof (time_t) * 8 - 2)) - 1) * 2 + 1)))))" data-ref="_M/TIME_T_MIN">TIME_T_MIN</a>;</td></tr>
+<tr><th id="456">456</th><td>      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col7 decl" id="97overflow_threshold" title='overflow_threshold' data-type='time_t' data-ref="97overflow_threshold" data-ref-filename="97overflow_threshold">overflow_threshold</dfn> =</td></tr>
+<tr><th id="457">457</th><td>	(<a class="local col5 ref" href="#95time_t_max" title='time_t_max' data-ref="95time_t_max" data-ref-filename="95time_t_max">time_t_max</a> / <var>3</var> - <a class="local col6 ref" href="#96time_t_min" title='time_t_min' data-ref="96time_t_min" data-ref-filename="96time_t_min">time_t_min</a> / <var>3</var>) &gt;&gt; <a class="local col6 ref" href="#86ALOG2_SECONDS_PER_BIENNIUM" title='ALOG2_SECONDS_PER_BIENNIUM' data-ref="86ALOG2_SECONDS_PER_BIENNIUM" data-ref-filename="86ALOG2_SECONDS_PER_BIENNIUM">ALOG2_SECONDS_PER_BIENNIUM</a>;</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td>      <b>if</b> (<a class="local col7 ref" href="#97overflow_threshold" title='overflow_threshold' data-ref="97overflow_threshold" data-ref-filename="97overflow_threshold">overflow_threshold</a> &lt; <a class="local col4 ref" href="#94approx_abs_diff" title='approx_abs_diff' data-ref="94approx_abs_diff" data-ref-filename="94approx_abs_diff">approx_abs_diff</a>)</td></tr>
+<tr><th id="460">460</th><td>	{</td></tr>
+<tr><th id="461">461</th><td>	  <i>/* Overflow occurred.  Try repairing it; this might work if</i></td></tr>
+<tr><th id="462">462</th><td><i>	     the time zone offset is enough to undo the overflow.  */</i></td></tr>
+<tr><th id="463">463</th><td>	  <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col8 decl" id="98repaired_t0" title='repaired_t0' data-type='time_t' data-ref="98repaired_t0" data-ref-filename="98repaired_t0">repaired_t0</dfn> = -<var>1</var> - <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a>;</td></tr>
+<tr><th id="464">464</th><td>	  <a class="local col2 ref" href="#92approx_biennia" title='approx_biennia' data-ref="92approx_biennia" data-ref-filename="92approx_biennia">approx_biennia</a> = <a class="macro" href="#92" title="((-1 &gt;&gt; 1 == -1 &amp;&amp; (long_int) -1 &gt;&gt; 1 == -1 &amp;&amp; ((time_t) -1 &gt;&gt; 1 == -1 || ! (! ((time_t) 0 &lt; (time_t) -1)))) ? (repaired_t0) &gt;&gt; (ALOG2_SECONDS_PER_BIENNIUM) : (repaired_t0) / (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) - ((repaired_t0) % (1 &lt;&lt; (ALOG2_SECONDS_PER_BIENNIUM)) &lt; 0))" data-ref="_M/SHR">SHR</a> (<a class="local col8 ref" href="#98repaired_t0" title='repaired_t0' data-ref="98repaired_t0" data-ref-filename="98repaired_t0">repaired_t0</a>, <a class="local col6 ref" href="#86ALOG2_SECONDS_PER_BIENNIUM" title='ALOG2_SECONDS_PER_BIENNIUM' data-ref="86ALOG2_SECONDS_PER_BIENNIUM" data-ref-filename="86ALOG2_SECONDS_PER_BIENNIUM">ALOG2_SECONDS_PER_BIENNIUM</a>);</td></tr>
+<tr><th id="465">465</th><td>	  <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a> = <a class="local col2 ref" href="#92approx_biennia" title='approx_biennia' data-ref="92approx_biennia" data-ref-filename="92approx_biennia">approx_biennia</a> - <a class="local col1 ref" href="#91approx_requested_biennia" title='approx_requested_biennia' data-ref="91approx_requested_biennia" data-ref-filename="91approx_requested_biennia">approx_requested_biennia</a>;</td></tr>
+<tr><th id="466">466</th><td>	  <a class="local col4 ref" href="#94approx_abs_diff" title='approx_abs_diff' data-ref="94approx_abs_diff" data-ref-filename="94approx_abs_diff">approx_abs_diff</a> = <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a> &lt; <var>0</var> ? -<var>1</var> - <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a> : <a class="local col3 ref" href="#93diff" title='diff' data-ref="93diff" data-ref-filename="93diff">diff</a>;</td></tr>
+<tr><th id="467">467</th><td>	  <b>if</b> (<a class="local col7 ref" href="#97overflow_threshold" title='overflow_threshold' data-ref="97overflow_threshold" data-ref-filename="97overflow_threshold">overflow_threshold</a> &lt; <a class="local col4 ref" href="#94approx_abs_diff" title='approx_abs_diff' data-ref="94approx_abs_diff" data-ref-filename="94approx_abs_diff">approx_abs_diff</a>)</td></tr>
+<tr><th id="468">468</th><td>	    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="469">469</th><td>	  <a class="local col4 ref" href="#84guessed_offset" title='guessed_offset' data-ref="84guessed_offset" data-ref-filename="84guessed_offset">guessed_offset</a> += <a class="local col8 ref" href="#98repaired_t0" title='repaired_t0' data-ref="98repaired_t0" data-ref-filename="98repaired_t0">repaired_t0</a> - <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a>;</td></tr>
+<tr><th id="470">470</th><td>	  <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a> = <a class="local col8 ref" href="#98repaired_t0" title='repaired_t0' data-ref="98repaired_t0" data-ref-filename="98repaired_t0">repaired_t0</a>;</td></tr>
+<tr><th id="471">471</th><td>	}</td></tr>
+<tr><th id="472">472</th><td>    }</td></tr>
+<tr><th id="473">473</th><td></td></tr>
+<tr><th id="474">474</th><td>  <i>/* Repeatedly use the error to improve the guess.  */</i></td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td>  <b>for</b> (<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> = <a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a> = <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a> = <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a>, <a class="local col5 ref" href="#75dst2" title='dst2' data-ref="75dst2" data-ref-filename="75dst2">dst2</a> = <var>0</var>;</td></tr>
+<tr><th id="477">477</th><td>       (<a class="local col2 ref" href="#62gt" title='gt' data-ref="62gt" data-ref-filename="62gt">gt</a> = <a class="tu ref fn" href="#guess_time_tm" title='guess_time_tm' data-use='c' data-ref="guess_time_tm" data-ref-filename="guess_time_tm">guess_time_tm</a> (<a class="local col0 ref" href="#80year" title='year' data-ref="80year" data-ref-filename="80year">year</a>, <a class="local col3 ref" href="#83yday" title='yday' data-ref="83yday" data-ref-filename="83yday">yday</a>, <a class="local col0 ref" href="#70hour" title='hour' data-ref="70hour" data-ref-filename="70hour">hour</a>, <a class="local col9 ref" href="#69min" title='min' data-ref="69min" data-ref-filename="69min">min</a>, <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>, &amp;<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>,</td></tr>
+<tr><th id="478">478</th><td>			    <a class="tu ref fn" href="#ranged_convert" title='ranged_convert' data-use='c' data-ref="ranged_convert" data-ref-filename="ranged_convert">ranged_convert</a> (<a class="local col9 ref" href="#59convert" title='convert' data-ref="59convert" data-ref-filename="59convert">convert</a>, &amp;<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>, &amp;<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>)),</td></tr>
+<tr><th id="479">479</th><td>	<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> != <a class="local col2 ref" href="#62gt" title='gt' data-ref="62gt" data-ref-filename="62gt">gt</a>);</td></tr>
+<tr><th id="480">480</th><td>       <a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a> = <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a>, <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a> = <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>, <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> = <a class="local col2 ref" href="#62gt" title='gt' data-ref="62gt" data-ref-filename="62gt">gt</a>, <a class="local col5 ref" href="#75dst2" title='dst2' data-ref="75dst2" data-ref-filename="75dst2">dst2</a> = <a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a> != <var>0</var>)</td></tr>
+<tr><th id="481">481</th><td>    <b>if</b> (<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> == <a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a> &amp;&amp; <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> != <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a></td></tr>
+<tr><th id="482">482</th><td>	&amp;&amp; (<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a> &lt; <var>0</var></td></tr>
+<tr><th id="483">483</th><td>	    || (<a class="local col4 ref" href="#74isdst" title='isdst' data-ref="74isdst" data-ref-filename="74isdst">isdst</a> &lt; <var>0</var></td></tr>
+<tr><th id="484">484</th><td>		? <a class="local col5 ref" href="#75dst2" title='dst2' data-ref="75dst2" data-ref-filename="75dst2">dst2</a> &lt;= (<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a> != <var>0</var>)</td></tr>
+<tr><th id="485">485</th><td>		: (<a class="local col4 ref" href="#74isdst" title='isdst' data-ref="74isdst" data-ref-filename="74isdst">isdst</a> != <var>0</var>) != (<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a> != <var>0</var>))))</td></tr>
+<tr><th id="486">486</th><td>      <i>/* We can't possibly find a match, as we are oscillating</i></td></tr>
+<tr><th id="487">487</th><td><i>	 between two values.  The requested time probably falls</i></td></tr>
+<tr><th id="488">488</th><td><i>	 within a spring-forward gap of size GT - T.  Follow the common</i></td></tr>
+<tr><th id="489">489</th><td><i>	 practice in this case, which is to return a time that is GT - T</i></td></tr>
+<tr><th id="490">490</th><td><i>	 away from the requested time, preferring a time whose</i></td></tr>
+<tr><th id="491">491</th><td><i>	 tm_isdst differs from the requested value.  (If no tm_isdst</i></td></tr>
+<tr><th id="492">492</th><td><i>	 was requested and only one of the two values has a nonzero</i></td></tr>
+<tr><th id="493">493</th><td><i>	 tm_isdst, prefer that value.)  In practice, this is more</i></td></tr>
+<tr><th id="494">494</th><td><i>	 useful than returning -1.  */</i></td></tr>
+<tr><th id="495">495</th><td>      <b>goto</b> <a class="lbl" href="#99offset_found" data-ref="99offset_found" data-ref-filename="99offset_found">offset_found</a>;</td></tr>
+<tr><th id="496">496</th><td>    <b>else</b> <b>if</b> (--<a class="local col7 ref" href="#67remaining_probes" title='remaining_probes' data-ref="67remaining_probes" data-ref-filename="67remaining_probes">remaining_probes</a> == <var>0</var>)</td></tr>
+<tr><th id="497">497</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td>  <i>/* We have a match.  Check whether tm.tm_isdst has the requested</i></td></tr>
+<tr><th id="500">500</th><td><i>     value, if any.  */</i></td></tr>
+<tr><th id="501">501</th><td>  <b>if</b> (<a class="tu ref fn" href="#isdst_differ" title='isdst_differ' data-use='c' data-ref="isdst_differ" data-ref-filename="isdst_differ">isdst_differ</a> (<a class="local col4 ref" href="#74isdst" title='isdst' data-ref="74isdst" data-ref-filename="74isdst">isdst</a>, <a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a>))</td></tr>
+<tr><th id="502">502</th><td>    {</td></tr>
+<tr><th id="503">503</th><td>      <i>/* tm.tm_isdst has the wrong value.  Look for a neighboring</i></td></tr>
+<tr><th id="504">504</th><td><i>	 time with the right value, and use its UTC offset.</i></td></tr>
+<tr><th id="505">505</th><td><i></i></td></tr>
+<tr><th id="506">506</th><td><i>	 Heuristic: probe the adjacent timestamps in both directions,</i></td></tr>
+<tr><th id="507">507</th><td><i>	 looking for the desired isdst.  This should work for all real</i></td></tr>
+<tr><th id="508">508</th><td><i>	 time zone histories in the tz database.  */</i></td></tr>
+<tr><th id="509">509</th><td></td></tr>
+<tr><th id="510">510</th><td>      <i>/* Distance between probes when looking for a DST boundary.  In</i></td></tr>
+<tr><th id="511">511</th><td><i>	 tzdata2003a, the shortest period of DST is 601200 seconds</i></td></tr>
+<tr><th id="512">512</th><td><i>	 (e.g., America/Recife starting 2000-10-08 01:00), and the</i></td></tr>
+<tr><th id="513">513</th><td><i>	 shortest period of non-DST surrounded by DST is 694800</i></td></tr>
+<tr><th id="514">514</th><td><i>	 seconds (Africa/Tunis starting 1943-04-17 01:00).  Use the</i></td></tr>
+<tr><th id="515">515</th><td><i>	 minimum of these two values, so we don't miss these short</i></td></tr>
+<tr><th id="516">516</th><td><i>	 periods when probing.  */</i></td></tr>
+<tr><th id="517">517</th><td>      <em>int</em> <dfn class="local col0 decl" id="100stride" title='stride' data-type='int' data-ref="100stride" data-ref-filename="100stride">stride</dfn> = <var>601200</var>;</td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td>      <i>/* The longest period of DST in tzdata2003a is 536454000 seconds</i></td></tr>
+<tr><th id="520">520</th><td><i>	 (e.g., America/Jujuy starting 1946-10-01 01:00).  The longest</i></td></tr>
+<tr><th id="521">521</th><td><i>	 period of non-DST is much longer, but it makes no real sense</i></td></tr>
+<tr><th id="522">522</th><td><i>	 to search for more than a year of non-DST, so use the DST</i></td></tr>
+<tr><th id="523">523</th><td><i>	 max.  */</i></td></tr>
+<tr><th id="524">524</th><td>      <em>int</em> <dfn class="local col1 decl" id="101duration_max" title='duration_max' data-type='int' data-ref="101duration_max" data-ref-filename="101duration_max">duration_max</dfn> = <var>536454000</var>;</td></tr>
+<tr><th id="525">525</th><td></td></tr>
+<tr><th id="526">526</th><td>      <i>/* Search in both directions, so the maximum distance is half</i></td></tr>
+<tr><th id="527">527</th><td><i>	 the duration; add the stride to avoid off-by-1 problems.  */</i></td></tr>
+<tr><th id="528">528</th><td>      <em>int</em> <dfn class="local col2 decl" id="102delta_bound" title='delta_bound' data-type='int' data-ref="102delta_bound" data-ref-filename="102delta_bound">delta_bound</dfn> = <a class="local col1 ref" href="#101duration_max" title='duration_max' data-ref="101duration_max" data-ref-filename="101duration_max">duration_max</a> / <var>2</var> + <a class="local col0 ref" href="#100stride" title='stride' data-ref="100stride" data-ref-filename="100stride">stride</a>;</td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td>      <em>int</em> <dfn class="local col3 decl" id="103delta" title='delta' data-type='int' data-ref="103delta" data-ref-filename="103delta">delta</dfn>, <dfn class="local col4 decl" id="104direction" title='direction' data-type='int' data-ref="104direction" data-ref-filename="104direction">direction</dfn>;</td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>      <b>for</b> (<a class="local col3 ref" href="#103delta" title='delta' data-ref="103delta" data-ref-filename="103delta">delta</a> = <a class="local col0 ref" href="#100stride" title='stride' data-ref="100stride" data-ref-filename="100stride">stride</a>; <a class="local col3 ref" href="#103delta" title='delta' data-ref="103delta" data-ref-filename="103delta">delta</a> &lt; <a class="local col2 ref" href="#102delta_bound" title='delta_bound' data-ref="102delta_bound" data-ref-filename="102delta_bound">delta_bound</a>; <a class="local col3 ref" href="#103delta" title='delta' data-ref="103delta" data-ref-filename="103delta">delta</a> += <a class="local col0 ref" href="#100stride" title='stride' data-ref="100stride" data-ref-filename="100stride">stride</a>)</td></tr>
+<tr><th id="533">533</th><td>	<b>for</b> (<a class="local col4 ref" href="#104direction" title='direction' data-ref="104direction" data-ref-filename="104direction">direction</a> = -<var>1</var>; <a class="local col4 ref" href="#104direction" title='direction' data-ref="104direction" data-ref-filename="104direction">direction</a> &lt;= <var>1</var>; <a class="local col4 ref" href="#104direction" title='direction' data-ref="104direction" data-ref-filename="104direction">direction</a> += <var>2</var>)</td></tr>
+<tr><th id="534">534</th><td>	  <b>if</b> (<a class="tu ref fn" href="#time_t_int_add_ok" title='time_t_int_add_ok' data-use='c' data-ref="time_t_int_add_ok" data-ref-filename="time_t_int_add_ok">time_t_int_add_ok</a> (<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>, <a class="local col3 ref" href="#103delta" title='delta' data-ref="103delta" data-ref-filename="103delta">delta</a> * <a class="local col4 ref" href="#104direction" title='direction' data-ref="104direction" data-ref-filename="104direction">direction</a>))</td></tr>
+<tr><th id="535">535</th><td>	    {</td></tr>
+<tr><th id="536">536</th><td>	      <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="105ot" title='ot' data-type='time_t' data-ref="105ot" data-ref-filename="105ot">ot</dfn> = <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> + <a class="local col3 ref" href="#103delta" title='delta' data-ref="103delta" data-ref-filename="103delta">delta</a> * <a class="local col4 ref" href="#104direction" title='direction' data-ref="104direction" data-ref-filename="104direction">direction</a>;</td></tr>
+<tr><th id="537">537</th><td>	      <b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> <dfn class="local col6 decl" id="106otm" title='otm' data-type='struct tm' data-ref="106otm" data-ref-filename="106otm">otm</dfn>;</td></tr>
+<tr><th id="538">538</th><td>	      <a class="tu ref fn" href="#ranged_convert" title='ranged_convert' data-use='c' data-ref="ranged_convert" data-ref-filename="ranged_convert">ranged_convert</a> (<a class="local col9 ref" href="#59convert" title='convert' data-ref="59convert" data-ref-filename="59convert">convert</a>, &amp;<a class="local col5 ref" href="#105ot" title='ot' data-ref="105ot" data-ref-filename="105ot">ot</a>, &amp;<a class="local col6 ref" href="#106otm" title='otm' data-ref="106otm" data-ref-filename="106otm">otm</a>);</td></tr>
+<tr><th id="539">539</th><td>	      <b>if</b> (! <a class="tu ref fn" href="#isdst_differ" title='isdst_differ' data-use='c' data-ref="isdst_differ" data-ref-filename="isdst_differ">isdst_differ</a> (<a class="local col4 ref" href="#74isdst" title='isdst' data-ref="74isdst" data-ref-filename="74isdst">isdst</a>, <a class="local col6 ref" href="#106otm" title='otm' data-ref="106otm" data-ref-filename="106otm">otm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_isdst" title='tm::tm_isdst' data-ref="tm::tm_isdst" data-ref-filename="tm..tm_isdst">tm_isdst</a>))</td></tr>
+<tr><th id="540">540</th><td>		{</td></tr>
+<tr><th id="541">541</th><td>		  <i>/* We found the desired tm_isdst.</i></td></tr>
+<tr><th id="542">542</th><td><i>		     Extrapolate back to the desired time.  */</i></td></tr>
+<tr><th id="543">543</th><td>		  <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> = <a class="tu ref fn" href="#guess_time_tm" title='guess_time_tm' data-use='c' data-ref="guess_time_tm" data-ref-filename="guess_time_tm">guess_time_tm</a> (<a class="local col0 ref" href="#80year" title='year' data-ref="80year" data-ref-filename="80year">year</a>, <a class="local col3 ref" href="#83yday" title='yday' data-ref="83yday" data-ref-filename="83yday">yday</a>, <a class="local col0 ref" href="#70hour" title='hour' data-ref="70hour" data-ref-filename="70hour">hour</a>, <a class="local col9 ref" href="#69min" title='min' data-ref="69min" data-ref-filename="69min">min</a>, <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>, &amp;<a class="local col5 ref" href="#105ot" title='ot' data-ref="105ot" data-ref-filename="105ot">ot</a>, &amp;<a class="local col6 ref" href="#106otm" title='otm' data-ref="106otm" data-ref-filename="106otm">otm</a>);</td></tr>
+<tr><th id="544">544</th><td>		  <a class="tu ref fn" href="#ranged_convert" title='ranged_convert' data-use='c' data-ref="ranged_convert" data-ref-filename="ranged_convert">ranged_convert</a> (<a class="local col9 ref" href="#59convert" title='convert' data-ref="59convert" data-ref-filename="59convert">convert</a>, &amp;<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>, &amp;<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>);</td></tr>
+<tr><th id="545">545</th><td>		  <b>goto</b> <a class="lbl" href="#99offset_found" data-ref="99offset_found" data-ref-filename="99offset_found">offset_found</a>;</td></tr>
+<tr><th id="546">546</th><td>		}</td></tr>
+<tr><th id="547">547</th><td>	    }</td></tr>
+<tr><th id="548">548</th><td>    }</td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td> <dfn class="lbl" id="99offset_found" data-ref="99offset_found" data-ref-filename="99offset_found">offset_found</dfn>:</td></tr>
+<tr><th id="551">551</th><td>  *<a class="local col0 ref" href="#60offset" title='offset' data-ref="60offset" data-ref-filename="60offset">offset</a> = <a class="local col4 ref" href="#84guessed_offset" title='guessed_offset' data-ref="84guessed_offset" data-ref-filename="84guessed_offset">guessed_offset</a> + <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> - <a class="local col3 ref" href="#63t0" title='t0' data-ref="63t0" data-ref-filename="63t0">t0</a>;</td></tr>
+<tr><th id="552">552</th><td></td></tr>
+<tr><th id="553">553</th><td>  <b>if</b> (<a class="macro" href="#32" title="1" data-ref="_M/LEAP_SECONDS_POSSIBLE">LEAP_SECONDS_POSSIBLE</a> &amp;&amp; <a class="local col5 ref" href="#85sec_requested" title='sec_requested' data-ref="85sec_requested" data-ref-filename="85sec_requested">sec_requested</a> != <a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_sec" title='tm::tm_sec' data-ref="tm::tm_sec" data-ref-filename="tm..tm_sec">tm_sec</a>)</td></tr>
+<tr><th id="554">554</th><td>    {</td></tr>
+<tr><th id="555">555</th><td>      <i>/* Adjust time to reflect the tm_sec requested, not the normalized value.</i></td></tr>
+<tr><th id="556">556</th><td><i>	 Also, repair any damage from a false match due to a leap second.  */</i></td></tr>
+<tr><th id="557">557</th><td>      <em>int</em> <dfn class="local col7 decl" id="107sec_adjustment" title='sec_adjustment' data-type='int' data-ref="107sec_adjustment" data-ref-filename="107sec_adjustment">sec_adjustment</dfn> = (<a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a> == <var>0</var> &amp;&amp; <a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>.<a class="ref field" href="bits/types/struct_tm.h.html#tm::tm_sec" title='tm::tm_sec' data-ref="tm::tm_sec" data-ref-filename="tm..tm_sec">tm_sec</a> == <var>60</var>) - <a class="local col8 ref" href="#68sec" title='sec' data-ref="68sec" data-ref-filename="68sec">sec</a>;</td></tr>
+<tr><th id="558">558</th><td>      <b>if</b> (! <a class="tu ref fn" href="#time_t_int_add_ok" title='time_t_int_add_ok' data-use='c' data-ref="time_t_int_add_ok" data-ref-filename="time_t_int_add_ok">time_t_int_add_ok</a> (<a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>, <a class="local col5 ref" href="#85sec_requested" title='sec_requested' data-ref="85sec_requested" data-ref-filename="85sec_requested">sec_requested</a>))</td></tr>
+<tr><th id="559">559</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="560">560</th><td>      <a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a> = <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> + <a class="local col5 ref" href="#85sec_requested" title='sec_requested' data-ref="85sec_requested" data-ref-filename="85sec_requested">sec_requested</a>;</td></tr>
+<tr><th id="561">561</th><td>      <b>if</b> (! <a class="tu ref fn" href="#time_t_int_add_ok" title='time_t_int_add_ok' data-use='c' data-ref="time_t_int_add_ok" data-ref-filename="time_t_int_add_ok">time_t_int_add_ok</a> (<a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a>, <a class="local col7 ref" href="#107sec_adjustment" title='sec_adjustment' data-ref="107sec_adjustment" data-ref-filename="107sec_adjustment">sec_adjustment</a>))</td></tr>
+<tr><th id="562">562</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="563">563</th><td>      <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a> = <a class="local col4 ref" href="#64t1" title='t1' data-ref="64t1" data-ref-filename="64t1">t1</a> + <a class="local col7 ref" href="#107sec_adjustment" title='sec_adjustment' data-ref="107sec_adjustment" data-ref-filename="107sec_adjustment">sec_adjustment</a>;</td></tr>
+<tr><th id="564">564</th><td>      <b>if</b> (! <a class="local col9 ref" href="#59convert" title='convert' data-ref="59convert" data-ref-filename="59convert">convert</a> (&amp;<a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a>, &amp;<a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>))</td></tr>
+<tr><th id="565">565</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="566">566</th><td>      <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a> = <a class="local col5 ref" href="#65t2" title='t2' data-ref="65t2" data-ref-filename="65t2">t2</a>;</td></tr>
+<tr><th id="567">567</th><td>    }</td></tr>
+<tr><th id="568">568</th><td></td></tr>
+<tr><th id="569">569</th><td>  *<a class="local col8 ref" href="#58tp" title='tp' data-ref="58tp" data-ref-filename="58tp">tp</a> = <a class="local col6 ref" href="#66tm" title='tm' data-ref="66tm" data-ref-filename="66tm">tm</a>;</td></tr>
+<tr><th id="570">570</th><td>  <b>return</b> <a class="local col1 ref" href="#61t" title='t' data-ref="61t" data-ref-filename="61t">t</a>;</td></tr>
+<tr><th id="571">571</th><td>}</td></tr>
+<tr><th id="572">572</th><td></td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td><i  data-doc="localtime_offset">/* FIXME: This should use a signed type wide enough to hold any UTC</i></td></tr>
+<tr><th id="575">575</th><td><i  data-doc="localtime_offset">   offset in seconds.  'int' should be good enough for GNU code.  We</i></td></tr>
+<tr><th id="576">576</th><td><i  data-doc="localtime_offset">   can't fix this unilaterally though, as other modules invoke</i></td></tr>
+<tr><th id="577">577</th><td><i  data-doc="localtime_offset">   __mktime_internal.  */</i></td></tr>
+<tr><th id="578">578</th><td><em>static</em> <a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="tu decl def" id="localtime_offset" title='localtime_offset' data-type='time_t' data-ref="localtime_offset" data-ref-filename="localtime_offset">localtime_offset</dfn>;</td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td><i>/* Convert *TP to a time_t value.  */</i></td></tr>
+<tr><th id="581">581</th><td><a class="typedef" href="bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a></td></tr>
+<tr><th id="582">582</th><td><dfn class="decl def fn" id="__GI_mktime" title='mktime' data-ref="__GI_mktime" data-ref-filename="__GI_mktime">mktime</dfn> (<b>struct</b> <a class="type" href="bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> *<dfn class="local col8 decl" id="108tp" title='tp' data-type='struct tm *' data-ref="108tp" data-ref-filename="108tp">tp</dfn>)</td></tr>
+<tr><th id="583">583</th><td>{</td></tr>
+<tr><th id="584">584</th><td><u>#<span data-ppcond="584">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="585">585</th><td>  <i>/* POSIX.1 8.1.1 requires that whenever mktime() is called, the</i></td></tr>
+<tr><th id="586">586</th><td><i>     time zone names contained in the external variable 'tzname' shall</i></td></tr>
+<tr><th id="587">587</th><td><i>     be set as if the tzset() function had been called.  */</i></td></tr>
+<tr><th id="588">588</th><td>  <a class="ref fn" href="../include/time.h.html#__tzset" title='__tzset' data-ref="__tzset" data-ref-filename="__tzset">__tzset</a> ();</td></tr>
+<tr><th id="589">589</th><td><u>#<span data-ppcond="584">endif</span></u></td></tr>
+<tr><th id="590">590</th><td></td></tr>
+<tr><th id="591">591</th><td>  <b>return</b> <a class="ref fn" href="#__mktime_internal" title='__mktime_internal' data-ref="__mktime_internal" data-ref-filename="__mktime_internal">__mktime_internal</a> (<a class="local col8 ref" href="#108tp" title='tp' data-ref="108tp" data-ref-filename="108tp">tp</a>, <a class="ref fn" href="../include/time.h.html#__localtime_r" title='__localtime_r' data-ref="__localtime_r" data-ref-filename="__localtime_r">__localtime_r</a>, &amp;<a class="tu ref" href="#localtime_offset" title='localtime_offset' data-use='a' data-ref="localtime_offset" data-ref-filename="localtime_offset">localtime_offset</a>);</td></tr>
+<tr><th id="592">592</th><td>}</td></tr>
+<tr><th id="593">593</th><td></td></tr>
+<tr><th id="594">594</th><td><u>#<span data-ppcond="594">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#144" data-ref="_M/weak_alias">weak_alias</a></u></td></tr>
+<tr><th id="595">595</th><td><a class="macro" href="../include/libc-symbols.h.html#144" title="extern __typeof (mktime) timelocal __attribute__ ((weak, alias (&quot;mktime&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__GI_mktime" title='mktime' data-ref="__GI_mktime" data-ref-filename="__GI_mktime">mktime</a>, <dfn class="decl def fn" id="__GI_timelocal" title='timelocal' data-ref="__GI_timelocal" data-ref-filename="__GI_timelocal">timelocal</dfn>)</td></tr>
+<tr><th id="596">596</th><td><u>#<span data-ppcond="594">endif</span></u></td></tr>
+<tr><th id="597">597</th><td></td></tr>
+<tr><th id="598">598</th><td><u>#<span data-ppcond="598">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="599">599</th><td><a class="macro" href="../include/libc-symbols.h.html#602" title="extern __typeof (mktime) __EI_mktime __asm__(&quot;&quot; &quot;mktime&quot;); extern __typeof (mktime) __EI_mktime __attribute__((alias (&quot;&quot; &quot;__GI_mktime&quot;)));" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (<a class="ref fn" href="#__GI_mktime" title='mktime' data-ref="__GI_mktime" data-ref-filename="__GI_mktime">mktime</a>)</td></tr>
+<tr><th id="600">600</th><td><a class="macro" href="../include/libc-symbols.h.html#603" title="extern __typeof (timelocal) __EI_timelocal __asm__(&quot;&quot; &quot;timelocal&quot;); extern __typeof (timelocal) __EI_timelocal __attribute__((alias (&quot;&quot; &quot;__GI_timelocal&quot;))) __attribute__((weak));" data-ref="_M/libc_hidden_weak">libc_hidden_weak</a> (<a class="ref fn" href="time.h.html#__GI_timelocal" title='timelocal' data-ref="__GI_timelocal" data-ref-filename="__GI_timelocal">timelocal</a>)</td></tr>
+<tr><th id="601">601</th><td><u>#<span data-ppcond="598">endif</span></u></td></tr>
+<tr><th id="602">602</th><td></td></tr>
+<tr><th id="603">603</th><td><u>#<span data-ppcond="603">if</span> defined <span class="macro" data-ref="_M/DEBUG_MKTIME">DEBUG_MKTIME</span> &amp;&amp; DEBUG_MKTIME</u></td></tr>
+<tr><th id="604">604</th><td></td></tr>
+<tr><th id="605">605</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="606">606</th><td>not_equal_tm (<em>const</em> <b>struct</b> tm *a, <em>const</em> <b>struct</b> tm *b)</td></tr>
+<tr><th id="607">607</th><td>{</td></tr>
+<tr><th id="608">608</th><td>  <b>return</b> ((a-&gt;tm_sec ^ b-&gt;tm_sec)</td></tr>
+<tr><th id="609">609</th><td>	  | (a-&gt;tm_min ^ b-&gt;tm_min)</td></tr>
+<tr><th id="610">610</th><td>	  | (a-&gt;tm_hour ^ b-&gt;tm_hour)</td></tr>
+<tr><th id="611">611</th><td>	  | (a-&gt;tm_mday ^ b-&gt;tm_mday)</td></tr>
+<tr><th id="612">612</th><td>	  | (a-&gt;tm_mon ^ b-&gt;tm_mon)</td></tr>
+<tr><th id="613">613</th><td>	  | (a-&gt;tm_year ^ b-&gt;tm_year)</td></tr>
+<tr><th id="614">614</th><td>	  | (a-&gt;tm_yday ^ b-&gt;tm_yday)</td></tr>
+<tr><th id="615">615</th><td>	  | isdst_differ (a-&gt;tm_isdst, b-&gt;tm_isdst));</td></tr>
+<tr><th id="616">616</th><td>}</td></tr>
+<tr><th id="617">617</th><td></td></tr>
+<tr><th id="618">618</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="619">619</th><td>print_tm (<em>const</em> <b>struct</b> tm *tp)</td></tr>
+<tr><th id="620">620</th><td>{</td></tr>
+<tr><th id="621">621</th><td>  <b>if</b> (tp)</td></tr>
+<tr><th id="622">622</th><td>    printf (<q>"%04d-%02d-%02d %02d:%02d:%02d yday %03d wday %d isdst %d"</q>,</td></tr>
+<tr><th id="623">623</th><td>	    tp-&gt;tm_year + TM_YEAR_BASE, tp-&gt;tm_mon + <var>1</var>, tp-&gt;tm_mday,</td></tr>
+<tr><th id="624">624</th><td>	    tp-&gt;tm_hour, tp-&gt;tm_min, tp-&gt;tm_sec,</td></tr>
+<tr><th id="625">625</th><td>	    tp-&gt;tm_yday, tp-&gt;tm_wday, tp-&gt;tm_isdst);</td></tr>
+<tr><th id="626">626</th><td>  <b>else</b></td></tr>
+<tr><th id="627">627</th><td>    printf (<q>"0"</q>);</td></tr>
+<tr><th id="628">628</th><td>}</td></tr>
+<tr><th id="629">629</th><td></td></tr>
+<tr><th id="630">630</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="631">631</th><td>check_result (time_t tk, <b>struct</b> tm tmk, time_t tl, <em>const</em> <b>struct</b> tm *lt)</td></tr>
+<tr><th id="632">632</th><td>{</td></tr>
+<tr><th id="633">633</th><td>  <b>if</b> (tk != tl || !lt || not_equal_tm (&amp;tmk, lt))</td></tr>
+<tr><th id="634">634</th><td>    {</td></tr>
+<tr><th id="635">635</th><td>      printf (<q>"mktime ("</q>);</td></tr>
+<tr><th id="636">636</th><td>      print_tm (lt);</td></tr>
+<tr><th id="637">637</th><td>      printf (<q>")\nyields ("</q>);</td></tr>
+<tr><th id="638">638</th><td>      print_tm (&amp;tmk);</td></tr>
+<tr><th id="639">639</th><td>      printf (<q>") == %ld, should be %ld\n"</q>, (<em>long</em> <em>int</em>) tk, (<em>long</em> <em>int</em>) tl);</td></tr>
+<tr><th id="640">640</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="641">641</th><td>    }</td></tr>
+<tr><th id="642">642</th><td></td></tr>
+<tr><th id="643">643</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="644">644</th><td>}</td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td><em>int</em></td></tr>
+<tr><th id="647">647</th><td>main (<em>int</em> argc, <em>char</em> **argv)</td></tr>
+<tr><th id="648">648</th><td>{</td></tr>
+<tr><th id="649">649</th><td>  <em>int</em> status = <var>0</var>;</td></tr>
+<tr><th id="650">650</th><td>  <b>struct</b> tm tm, tmk, tml;</td></tr>
+<tr><th id="651">651</th><td>  <b>struct</b> tm *lt;</td></tr>
+<tr><th id="652">652</th><td>  time_t tk, tl, tl1;</td></tr>
+<tr><th id="653">653</th><td>  <em>char</em> trailer;</td></tr>
+<tr><th id="654">654</th><td></td></tr>
+<tr><th id="655">655</th><td>  <b>if</b> ((argc == <var>3</var> || argc == <var>4</var>)</td></tr>
+<tr><th id="656">656</th><td>      &amp;&amp; (sscanf (argv[<var>1</var>], <q>"%d-%d-%d%c"</q>,</td></tr>
+<tr><th id="657">657</th><td>		  &amp;tm.tm_year, &amp;tm.tm_mon, &amp;tm.tm_mday, &amp;trailer)</td></tr>
+<tr><th id="658">658</th><td>	  == <var>3</var>)</td></tr>
+<tr><th id="659">659</th><td>      &amp;&amp; (sscanf (argv[<var>2</var>], <q>"%d:%d:%d%c"</q>,</td></tr>
+<tr><th id="660">660</th><td>		  &amp;tm.tm_hour, &amp;tm.tm_min, &amp;tm.tm_sec, &amp;trailer)</td></tr>
+<tr><th id="661">661</th><td>	  == <var>3</var>))</td></tr>
+<tr><th id="662">662</th><td>    {</td></tr>
+<tr><th id="663">663</th><td>      tm.tm_year -= TM_YEAR_BASE;</td></tr>
+<tr><th id="664">664</th><td>      tm.tm_mon--;</td></tr>
+<tr><th id="665">665</th><td>      tm.tm_isdst = argc == <var>3</var> ? -<var>1</var> : atoi (argv[<var>3</var>]);</td></tr>
+<tr><th id="666">666</th><td>      tmk = tm;</td></tr>
+<tr><th id="667">667</th><td>      tl = mktime (&amp;tmk);</td></tr>
+<tr><th id="668">668</th><td>      lt = localtime (&amp;tl);</td></tr>
+<tr><th id="669">669</th><td>      <b>if</b> (lt)</td></tr>
+<tr><th id="670">670</th><td>	{</td></tr>
+<tr><th id="671">671</th><td>	  tml = *lt;</td></tr>
+<tr><th id="672">672</th><td>	  lt = &amp;tml;</td></tr>
+<tr><th id="673">673</th><td>	}</td></tr>
+<tr><th id="674">674</th><td>      printf (<q>"mktime returns %ld == "</q>, (<em>long</em> <em>int</em>) tl);</td></tr>
+<tr><th id="675">675</th><td>      print_tm (&amp;tmk);</td></tr>
+<tr><th id="676">676</th><td>      printf (<q>"\n"</q>);</td></tr>
+<tr><th id="677">677</th><td>      status = check_result (tl, tmk, tl, lt);</td></tr>
+<tr><th id="678">678</th><td>    }</td></tr>
+<tr><th id="679">679</th><td>  <b>else</b> <b>if</b> (argc == <var>4</var> || (argc == <var>5</var> &amp;&amp; strcmp (argv[<var>4</var>], <q>"-"</q>) == <var>0</var>))</td></tr>
+<tr><th id="680">680</th><td>    {</td></tr>
+<tr><th id="681">681</th><td>      time_t from = atol (argv[<var>1</var>]);</td></tr>
+<tr><th id="682">682</th><td>      time_t by = atol (argv[<var>2</var>]);</td></tr>
+<tr><th id="683">683</th><td>      time_t to = atol (argv[<var>3</var>]);</td></tr>
+<tr><th id="684">684</th><td></td></tr>
+<tr><th id="685">685</th><td>      <b>if</b> (argc == <var>4</var>)</td></tr>
+<tr><th id="686">686</th><td>	<b>for</b> (tl = from; by &lt; <var>0</var> ? to &lt;= tl : tl &lt;= to; tl = tl1)</td></tr>
+<tr><th id="687">687</th><td>	  {</td></tr>
+<tr><th id="688">688</th><td>	    lt = localtime (&amp;tl);</td></tr>
+<tr><th id="689">689</th><td>	    <b>if</b> (lt)</td></tr>
+<tr><th id="690">690</th><td>	      {</td></tr>
+<tr><th id="691">691</th><td>		tmk = tml = *lt;</td></tr>
+<tr><th id="692">692</th><td>		tk = mktime (&amp;tmk);</td></tr>
+<tr><th id="693">693</th><td>		status |= check_result (tk, tmk, tl, &amp;tml);</td></tr>
+<tr><th id="694">694</th><td>	      }</td></tr>
+<tr><th id="695">695</th><td>	    <b>else</b></td></tr>
+<tr><th id="696">696</th><td>	      {</td></tr>
+<tr><th id="697">697</th><td>		printf (<q>"localtime (%ld) yields 0\n"</q>, (<em>long</em> <em>int</em>) tl);</td></tr>
+<tr><th id="698">698</th><td>		status = <var>1</var>;</td></tr>
+<tr><th id="699">699</th><td>	      }</td></tr>
+<tr><th id="700">700</th><td>	    tl1 = tl + by;</td></tr>
+<tr><th id="701">701</th><td>	    <b>if</b> ((tl1 &lt; tl) != (by &lt; <var>0</var>))</td></tr>
+<tr><th id="702">702</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="703">703</th><td>	  }</td></tr>
+<tr><th id="704">704</th><td>      <b>else</b></td></tr>
+<tr><th id="705">705</th><td>	<b>for</b> (tl = from; by &lt; <var>0</var> ? to &lt;= tl : tl &lt;= to; tl = tl1)</td></tr>
+<tr><th id="706">706</th><td>	  {</td></tr>
+<tr><th id="707">707</th><td>	    <i>/* Null benchmark.  */</i></td></tr>
+<tr><th id="708">708</th><td>	    lt = localtime (&amp;tl);</td></tr>
+<tr><th id="709">709</th><td>	    <b>if</b> (lt)</td></tr>
+<tr><th id="710">710</th><td>	      {</td></tr>
+<tr><th id="711">711</th><td>		tmk = tml = *lt;</td></tr>
+<tr><th id="712">712</th><td>		tk = tl;</td></tr>
+<tr><th id="713">713</th><td>		status |= check_result (tk, tmk, tl, &amp;tml);</td></tr>
+<tr><th id="714">714</th><td>	      }</td></tr>
+<tr><th id="715">715</th><td>	    <b>else</b></td></tr>
+<tr><th id="716">716</th><td>	      {</td></tr>
+<tr><th id="717">717</th><td>		printf (<q>"localtime (%ld) yields 0\n"</q>, (<em>long</em> <em>int</em>) tl);</td></tr>
+<tr><th id="718">718</th><td>		status = <var>1</var>;</td></tr>
+<tr><th id="719">719</th><td>	      }</td></tr>
+<tr><th id="720">720</th><td>	    tl1 = tl + by;</td></tr>
+<tr><th id="721">721</th><td>	    <b>if</b> ((tl1 &lt; tl) != (by &lt; <var>0</var>))</td></tr>
+<tr><th id="722">722</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="723">723</th><td>	  }</td></tr>
+<tr><th id="724">724</th><td>    }</td></tr>
+<tr><th id="725">725</th><td>  <b>else</b></td></tr>
+<tr><th id="726">726</th><td>    printf (<q>"Usage:\</q></td></tr>
+<tr><th id="727">727</th><td><q>\t%s YYYY-MM-DD HH:MM:SS [ISDST] # Test given time.\n\</q></td></tr>
+<tr><th id="728">728</th><td><q>\t%s FROM BY TO # Test values FROM, FROM+BY, ..., TO.\n\</q></td></tr>
+<tr><th id="729">729</th><td><q>\t%s FROM BY TO - # Do not test those values (for benchmark).\n"</q>,</td></tr>
+<tr><th id="730">730</th><td>	    argv[<var>0</var>], argv[<var>0</var>], argv[<var>0</var>]);</td></tr>
+<tr><th id="731">731</th><td></td></tr>
+<tr><th id="732">732</th><td>  <b>return</b> status;</td></tr>
+<tr><th id="733">733</th><td>}</td></tr>
+<tr><th id="734">734</th><td></td></tr>
+<tr><th id="735">735</th><td><u>#<span data-ppcond="603">endif</span> /* DEBUG_MKTIME */</u></td></tr>
+<tr><th id="736">736</th><td></td></tr>
+<tr><th id="737">737</th><td><i>/*</i></td></tr>
+<tr><th id="738">738</th><td><i>Local Variables:</i></td></tr>
+<tr><th id="739">739</th><td><i>compile-command: "gcc -DDEBUG_MKTIME -I. -Wall -W -O2 -g mktime.c -o mktime"</i></td></tr>
+<tr><th id="740">740</th><td><i>End:</i></td></tr>
+<tr><th id="741">741</th><td><i>*/</i></td></tr>
+<tr><th id="742">742</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

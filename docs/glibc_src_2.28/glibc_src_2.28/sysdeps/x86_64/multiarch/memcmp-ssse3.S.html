@@ -1,0 +1,2011 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>memcmp-ssse3.S source code [glibc_src_2.28/sysdeps/x86_64/multiarch/memcmp-ssse3.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/sysdeps/x86_64/multiarch/memcmp-ssse3.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.28</a>/<a href='../..'>sysdeps</a>/<a href='..'>x86_64</a>/<a href='./'>multiarch</a>/<a href='memcmp-ssse3.S.html'>memcmp-ssse3.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* memcmp with SSSE3, wmemcmp with SSSE3</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2011-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Intel Corporation.</i></td></tr>
+<tr><th id="4">4</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">if</span> <a class="macro" href="../../../include/libc-symbols.h.html#35" title="(19 == 19)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u># include <a href="../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u># <span data-ppcond="24">ifndef</span> <span class="macro" data-ref="_M/MEMCMP">MEMCMP</span></u></td></tr>
+<tr><th id="25">25</th><td><u>#  define <dfn class="macro" id="_M/MEMCMP" data-ref="_M/MEMCMP">MEMCMP</dfn>	<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__memcmp_ssse3" title='__memcmp_ssse3' data-ref="__memcmp_ssse3" data-ref-filename="__memcmp_ssse3">__memcmp_ssse3</dfn></span></u></td></tr>
+<tr><th id="26">26</th><td><u># <span data-ppcond="24">endif</span></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* Warning!</i></td></tr>
+<tr><th id="29">29</th><td><i>	   wmemcmp has to use SIGNED comparison for elements.</i></td></tr>
+<tr><th id="30">30</th><td><i>	   memcmp has to use UNSIGNED comparison for elemnts.</i></td></tr>
+<tr><th id="31">31</th><td><i>*/</i></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td>	<a class="macro" href="../../x86/sysdep.h.html#100" title=".section &quot;.text.atom&quot;, &quot;ax&quot;" data-ref="_M/atom_text_section">atom_text_section</a></td></tr>
+<tr><th id="34">34</th><td><a class="macro" href="../../x86/sysdep.h.html#67" title=".globl __memcmp_ssse3; .type __memcmp_ssse3,@function; .align 1&lt;&lt;4; __memcmp_ssse3: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a> (<a class="macro" href="#25" title="__memcmp_ssse3" data-ref="_M/MEMCMP">MEMCMP</a>)</td></tr>
+<tr><th id="35">35</th><td><u># <span data-ppcond="35">ifdef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="36">36</th><td>	shl	$<var>2</var>, %RDX_LP</td></tr>
+<tr><th id="37">37</th><td>	test	%RDX_LP, %RDX_LP</td></tr>
+<tr><th id="38">38</th><td>	jz	L(equal)</td></tr>
+<tr><th id="39">39</th><td><u># <span data-ppcond="35">elif</span> defined <span class="macro" data-ref="_M/__ILP32__">__ILP32__</span></u></td></tr>
+<tr><th id="40">40</th><td>	<i>/* Clear the upper 32 bits.  */</i></td></tr>
+<tr><th id="41">41</th><td>	mov	%edx, %edx</td></tr>
+<tr><th id="42">42</th><td><u># <span data-ppcond="35">endif</span></u></td></tr>
+<tr><th id="43">43</th><td>	<span class='error' title="unknown type name &apos;mov&apos;">mov</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rdx, %rcx</td></tr>
+<tr><th id="44">44</th><td>	mov	%rdi, %rdx</td></tr>
+<tr><th id="45">45</th><td>	cmp	$<var>48</var>, %rcx;</td></tr>
+<tr><th id="46">46</th><td>	<span class='error' title="unknown type name &apos;jae&apos;">jae</span>	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L48bytesormore" data-ref="_M/L">L</a>(<var>48bytesormore</var>)	<i>/* LEN =&gt; 48  */</i></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="49">49</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="50">50</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="53">53</th><td><i>/* ECX &gt;= 32.  */</i></td></tr>
+<tr><th id="54">54</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L48bytesormore" data-ref="_M/L">L</a>(<var>48bytesormore</var>):</td></tr>
+<tr><th id="55">55</th><td>	movdqu	(%rdi), %xmm3</td></tr>
+<tr><th id="56">56</th><td>	movdqu	(%rsi), %xmm0</td></tr>
+<tr><th id="57">57</th><td>	pcmpeqb	%xmm0, %xmm3</td></tr>
+<tr><th id="58">58</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="59">59</th><td>	lea	<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="60">60</th><td>	lea	<var>16</var>(%rsi), %rsi</td></tr>
+<tr><th id="61">61</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="62">62</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless16bytes" data-ref="_M/L">L</a>(less16bytes)</td></tr>
+<tr><th id="63">63</th><td>	mov	%edi, %edx</td></tr>
+<tr><th id="64">64</th><td>	and	$<var>0xf</var>, %edx</td></tr>
+<tr><th id="65">65</th><td>	xor	%rdx, %rdi</td></tr>
+<tr><th id="66">66</th><td>	sub	%rdx, %rsi</td></tr>
+<tr><th id="67">67</th><td>	add	%rdx, %rcx</td></tr>
+<tr><th id="68">68</th><td>	mov	%esi, %edx</td></tr>
+<tr><th id="69">69</th><td>	and	$<var>0xf</var>, %edx</td></tr>
+<tr><th id="70">70</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0" data-ref="_M/L">L</a>(shr_0)</td></tr>
+<tr><th id="71">71</th><td>	xor	%rdx, %rsi</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><u># <span data-ppcond="73">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="74">74</th><td>	cmp	$<var>8</var>, %edx</td></tr>
+<tr><th id="75">75</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext_unaligned_table" data-ref="_M/L">L</a>(next_unaligned_table)</td></tr>
+<tr><th id="76">76</th><td>	cmp	$<var>0</var>, %edx</td></tr>
+<tr><th id="77">77</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0" data-ref="_M/L">L</a>(shr_0)</td></tr>
+<tr><th id="78">78</th><td>	cmp	$<var>1</var>, %edx</td></tr>
+<tr><th id="79">79</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1" data-ref="_M/L">L</a>(shr_1)</td></tr>
+<tr><th id="80">80</th><td>	cmp	$<var>2</var>, %edx</td></tr>
+<tr><th id="81">81</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2" data-ref="_M/L">L</a>(shr_2)</td></tr>
+<tr><th id="82">82</th><td>	cmp	$<var>3</var>, %edx</td></tr>
+<tr><th id="83">83</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3" data-ref="_M/L">L</a>(shr_3)</td></tr>
+<tr><th id="84">84</th><td>	cmp	$<var>4</var>, %edx</td></tr>
+<tr><th id="85">85</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4" data-ref="_M/L">L</a>(shr_4)</td></tr>
+<tr><th id="86">86</th><td>	cmp	$<var>5</var>, %edx</td></tr>
+<tr><th id="87">87</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5" data-ref="_M/L">L</a>(shr_5)</td></tr>
+<tr><th id="88">88</th><td>	cmp	$<var>6</var>, %edx</td></tr>
+<tr><th id="89">89</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6" data-ref="_M/L">L</a>(shr_6)</td></tr>
+<tr><th id="90">90</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7" data-ref="_M/L">L</a>(shr_7)</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>	.p2align <var>2</var></td></tr>
+<tr><th id="93">93</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext_unaligned_table" data-ref="_M/L">L</a>(next_unaligned_table):</td></tr>
+<tr><th id="94">94</th><td>	cmp	$<var>8</var>, %edx</td></tr>
+<tr><th id="95">95</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8" data-ref="_M/L">L</a>(shr_8)</td></tr>
+<tr><th id="96">96</th><td>	cmp	$<var>9</var>, %edx</td></tr>
+<tr><th id="97">97</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9" data-ref="_M/L">L</a>(shr_9)</td></tr>
+<tr><th id="98">98</th><td>	cmp	$<var>10</var>, %edx</td></tr>
+<tr><th id="99">99</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10" data-ref="_M/L">L</a>(shr_10)</td></tr>
+<tr><th id="100">100</th><td>	cmp	$<var>11</var>, %edx</td></tr>
+<tr><th id="101">101</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11" data-ref="_M/L">L</a>(shr_11)</td></tr>
+<tr><th id="102">102</th><td>	cmp	$<var>12</var>, %edx</td></tr>
+<tr><th id="103">103</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12" data-ref="_M/L">L</a>(shr_12)</td></tr>
+<tr><th id="104">104</th><td>	cmp	$<var>13</var>, %edx</td></tr>
+<tr><th id="105">105</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13" data-ref="_M/L">L</a>(shr_13)</td></tr>
+<tr><th id="106">106</th><td>	cmp	$<var>14</var>, %edx</td></tr>
+<tr><th id="107">107</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14" data-ref="_M/L">L</a>(shr_14)</td></tr>
+<tr><th id="108">108</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15" data-ref="_M/L">L</a>(shr_15)</td></tr>
+<tr><th id="109">109</th><td><u># <span data-ppcond="73">else</span></u></td></tr>
+<tr><th id="110">110</th><td>	cmp	$<var>0</var>, %edx</td></tr>
+<tr><th id="111">111</th><td>	je	L(shr_0)</td></tr>
+<tr><th id="112">112</th><td>	cmp	$<var>4</var>, %edx</td></tr>
+<tr><th id="113">113</th><td>	je	L(shr_4)</td></tr>
+<tr><th id="114">114</th><td>	cmp	$<var>8</var>, %edx</td></tr>
+<tr><th id="115">115</th><td>	je	L(shr_8)</td></tr>
+<tr><th id="116">116</th><td>	jmp	L(shr_12)</td></tr>
+<tr><th id="117">117</th><td><u># <span data-ppcond="73">endif</span></u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="120">120</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0" data-ref="_M/L">L</a>(shr_0):</td></tr>
+<tr><th id="121">121</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="122">122</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="123">123</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0_gobble" data-ref="_M/L">L</a>(shr_0_gobble)</td></tr>
+<tr><th id="124">124</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="125">125</th><td>	movdqa	(%rsi), %xmm1</td></tr>
+<tr><th id="126">126</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="127">127</th><td>	movdqa	<var>16</var>(%rsi), %xmm2</td></tr>
+<tr><th id="128">128</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm2</td></tr>
+<tr><th id="129">129</th><td>	pand	%xmm1, %xmm2</td></tr>
+<tr><th id="130">130</th><td>	pmovmskb %xmm2, %edx</td></tr>
+<tr><th id="131">131</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="132">132</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="133">133</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="134">134</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="135">135</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="136">136</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="137">137</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="140">140</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0_gobble" data-ref="_M/L">L</a>(shr_0_gobble):</td></tr>
+<tr><th id="141">141</th><td>	movdqa	(%rsi), %xmm0</td></tr>
+<tr><th id="142">142</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="143">143</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="144">144</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="145">145</th><td>	movdqa	<var>16</var>(%rsi), %xmm2</td></tr>
+<tr><th id="146">146</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm2</td></tr>
+<tr><th id="147">147</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0_gobble_loop" data-ref="_M/L">L</a>(shr_0_gobble_loop):</td></tr>
+<tr><th id="148">148</th><td>	pand	%xmm0, %xmm2</td></tr>
+<tr><th id="149">149</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="150">150</th><td>	pmovmskb %xmm2, %edx</td></tr>
+<tr><th id="151">151</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="152">152</th><td>	movdqa	<var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="153">153</th><td>	movdqa	<var>48</var>(%rsi), %xmm2</td></tr>
+<tr><th id="154">154</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="155">155</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="156">156</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm2</td></tr>
+<tr><th id="157">157</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="158">158</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="159">159</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_0_gobble_loop" data-ref="_M/L">L</a>(shr_0_gobble_loop)</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>	pand	%xmm0, %xmm2</td></tr>
+<tr><th id="162">162</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="163">163</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext" data-ref="_M/L">L</a>(next)</td></tr>
+<tr><th id="164">164</th><td>	inc	%edx</td></tr>
+<tr><th id="165">165</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="166">166</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext" data-ref="_M/L">L</a>(next):</td></tr>
+<tr><th id="167">167</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="168">168</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td>	pmovmskb %xmm2, %edx</td></tr>
+<tr><th id="171">171</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="172">172</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="173">173</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="174">174</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="175">175</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="176">176</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="177">177</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="178">178</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><u># <span data-ppcond="180">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="183">183</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1" data-ref="_M/L">L</a>(shr_1):</td></tr>
+<tr><th id="184">184</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="185">185</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="186">186</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="187">187</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble" data-ref="_M/L">L</a>(shr_1_gobble)</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="190">190</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="191">191</th><td>	palignr	$<var>1</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="192">192</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="195">195</th><td>	palignr	$<var>1</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="196">196</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="199">199</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="200">200</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="201">201</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="202">202</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="203">203</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="204">204</th><td>	add	$<var>1</var>, %rsi</td></tr>
+<tr><th id="205">205</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="206">206</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="207">207</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="210">210</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble" data-ref="_M/L">L</a>(shr_1_gobble):</td></tr>
+<tr><th id="211">211</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="212">212</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="213">213</th><td>	palignr	$<var>1</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="214">214</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="217">217</th><td>	palignr	$<var>1</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="218">218</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble_loop" data-ref="_M/L">L</a>(shr_1_gobble_loop):</td></tr>
+<tr><th id="221">221</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="222">222</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="223">223</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="224">224</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="227">227</th><td>	palignr	$<var>1</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="228">228</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="229">229</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="230">230</th><td>	palignr	$<var>1</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="231">231</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="232">232</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="233">233</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="236">236</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble_loop" data-ref="_M/L">L</a>(shr_1_gobble_loop)</td></tr>
+<tr><th id="237">237</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="240">240</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble_next" data-ref="_M/L">L</a>(shr_1_gobble_next)</td></tr>
+<tr><th id="241">241</th><td>	inc	%edx</td></tr>
+<tr><th id="242">242</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="243">243</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_1_gobble_next" data-ref="_M/L">L</a>(shr_1_gobble_next):</td></tr>
+<tr><th id="244">244</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="245">245</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="248">248</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="249">249</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="250">250</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="251">251</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="252">252</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td>	lea	<var>1</var>(%rsi), %rsi</td></tr>
+<tr><th id="255">255</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="256">256</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="257">257</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="261">261</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2" data-ref="_M/L">L</a>(shr_2):</td></tr>
+<tr><th id="262">262</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="263">263</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="264">264</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="265">265</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble" data-ref="_M/L">L</a>(shr_2_gobble)</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="268">268</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="269">269</th><td>	palignr	$<var>2</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="270">270</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="273">273</th><td>	palignr	$<var>2</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="274">274</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="277">277</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="278">278</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="279">279</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="280">280</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="281">281</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="282">282</th><td>	add	$<var>2</var>, %rsi</td></tr>
+<tr><th id="283">283</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="284">284</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="285">285</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="288">288</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble" data-ref="_M/L">L</a>(shr_2_gobble):</td></tr>
+<tr><th id="289">289</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="290">290</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="291">291</th><td>	palignr	$<var>2</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="292">292</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="295">295</th><td>	palignr	$<var>2</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="296">296</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble_loop" data-ref="_M/L">L</a>(shr_2_gobble_loop):</td></tr>
+<tr><th id="299">299</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="300">300</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="301">301</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="302">302</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="305">305</th><td>	palignr	$<var>2</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="306">306</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="307">307</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="308">308</th><td>	palignr	$<var>2</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="309">309</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="310">310</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="311">311</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="314">314</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble_loop" data-ref="_M/L">L</a>(shr_2_gobble_loop)</td></tr>
+<tr><th id="315">315</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="318">318</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble_next" data-ref="_M/L">L</a>(shr_2_gobble_next)</td></tr>
+<tr><th id="319">319</th><td>	inc	%edx</td></tr>
+<tr><th id="320">320</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="321">321</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_2_gobble_next" data-ref="_M/L">L</a>(shr_2_gobble_next):</td></tr>
+<tr><th id="322">322</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="323">323</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="326">326</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="327">327</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="328">328</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="329">329</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="330">330</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>	lea	<var>2</var>(%rsi), %rsi</td></tr>
+<tr><th id="333">333</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="334">334</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="335">335</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="338">338</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3" data-ref="_M/L">L</a>(shr_3):</td></tr>
+<tr><th id="339">339</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="340">340</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="341">341</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="342">342</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble" data-ref="_M/L">L</a>(shr_3_gobble)</td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="345">345</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="346">346</th><td>	palignr	$<var>3</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="347">347</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="350">350</th><td>	palignr	$<var>3</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="351">351</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="354">354</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="355">355</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="356">356</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="357">357</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="358">358</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="359">359</th><td>	add	$<var>3</var>, %rsi</td></tr>
+<tr><th id="360">360</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="361">361</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="362">362</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="365">365</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble" data-ref="_M/L">L</a>(shr_3_gobble):</td></tr>
+<tr><th id="366">366</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="367">367</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="368">368</th><td>	palignr	$<var>3</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="369">369</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="370">370</th><td></td></tr>
+<tr><th id="371">371</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="372">372</th><td>	palignr	$<var>3</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="373">373</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble_loop" data-ref="_M/L">L</a>(shr_3_gobble_loop):</td></tr>
+<tr><th id="376">376</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="377">377</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="378">378</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="379">379</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="382">382</th><td>	palignr	$<var>3</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="383">383</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="384">384</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="385">385</th><td>	palignr	$<var>3</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="386">386</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="387">387</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="388">388</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="391">391</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble_loop" data-ref="_M/L">L</a>(shr_3_gobble_loop)</td></tr>
+<tr><th id="392">392</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="393">393</th><td></td></tr>
+<tr><th id="394">394</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="395">395</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble_next" data-ref="_M/L">L</a>(shr_3_gobble_next)</td></tr>
+<tr><th id="396">396</th><td>	inc	%edx</td></tr>
+<tr><th id="397">397</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="398">398</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_3_gobble_next" data-ref="_M/L">L</a>(shr_3_gobble_next):</td></tr>
+<tr><th id="399">399</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="400">400</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="401">401</th><td></td></tr>
+<tr><th id="402">402</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="403">403</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="404">404</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="405">405</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="406">406</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="407">407</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td>	lea	<var>3</var>(%rsi), %rsi</td></tr>
+<tr><th id="410">410</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="411">411</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="412">412</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="413">413</th><td></td></tr>
+<tr><th id="414">414</th><td><u># <span data-ppcond="180">endif</span></u></td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="417">417</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4" data-ref="_M/L">L</a>(shr_4):</td></tr>
+<tr><th id="418">418</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="419">419</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="420">420</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="421">421</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble" data-ref="_M/L">L</a>(shr_4_gobble)</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="424">424</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="425">425</th><td>	palignr	$<var>4</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="426">426</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="427">427</th><td></td></tr>
+<tr><th id="428">428</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="429">429</th><td>	palignr	$<var>4</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="430">430</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="433">433</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="434">434</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="435">435</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="436">436</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="437">437</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="438">438</th><td>	add	$<var>4</var>, %rsi</td></tr>
+<tr><th id="439">439</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="440">440</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="441">441</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="444">444</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble" data-ref="_M/L">L</a>(shr_4_gobble):</td></tr>
+<tr><th id="445">445</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="446">446</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="447">447</th><td>	palignr	$<var>4</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="448">448</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="449">449</th><td></td></tr>
+<tr><th id="450">450</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="451">451</th><td>	palignr	$<var>4</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="452">452</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="453">453</th><td></td></tr>
+<tr><th id="454">454</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble_loop" data-ref="_M/L">L</a>(shr_4_gobble_loop):</td></tr>
+<tr><th id="455">455</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="456">456</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="457">457</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="458">458</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="459">459</th><td></td></tr>
+<tr><th id="460">460</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="461">461</th><td>	palignr	$<var>4</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="462">462</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="463">463</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="464">464</th><td>	palignr	$<var>4</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="465">465</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="466">466</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="467">467</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="470">470</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble_loop" data-ref="_M/L">L</a>(shr_4_gobble_loop)</td></tr>
+<tr><th id="471">471</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="474">474</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble_next" data-ref="_M/L">L</a>(shr_4_gobble_next)</td></tr>
+<tr><th id="475">475</th><td>	inc	%edx</td></tr>
+<tr><th id="476">476</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="477">477</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_4_gobble_next" data-ref="_M/L">L</a>(shr_4_gobble_next):</td></tr>
+<tr><th id="478">478</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="479">479</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="482">482</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="483">483</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="484">484</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="485">485</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="486">486</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	lea	<var>4</var>(%rsi), %rsi</td></tr>
+<tr><th id="489">489</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="490">490</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="491">491</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="492">492</th><td></td></tr>
+<tr><th id="493">493</th><td><u># <span data-ppcond="493">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="494">494</th><td></td></tr>
+<tr><th id="495">495</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="496">496</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5" data-ref="_M/L">L</a>(shr_5):</td></tr>
+<tr><th id="497">497</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="498">498</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="499">499</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="500">500</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble" data-ref="_M/L">L</a>(shr_5_gobble)</td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="503">503</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="504">504</th><td>	palignr	$<var>5</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="505">505</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="508">508</th><td>	palignr	$<var>5</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="509">509</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="510">510</th><td></td></tr>
+<tr><th id="511">511</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="512">512</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="513">513</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="514">514</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="515">515</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="516">516</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="517">517</th><td>	add	$<var>5</var>, %rsi</td></tr>
+<tr><th id="518">518</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="519">519</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="520">520</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="523">523</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble" data-ref="_M/L">L</a>(shr_5_gobble):</td></tr>
+<tr><th id="524">524</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="525">525</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="526">526</th><td>	palignr	$<var>5</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="527">527</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="528">528</th><td></td></tr>
+<tr><th id="529">529</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="530">530</th><td>	palignr	$<var>5</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="531">531</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="532">532</th><td></td></tr>
+<tr><th id="533">533</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble_loop" data-ref="_M/L">L</a>(shr_5_gobble_loop):</td></tr>
+<tr><th id="534">534</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="535">535</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="536">536</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="537">537</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="538">538</th><td></td></tr>
+<tr><th id="539">539</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="540">540</th><td>	palignr	$<var>5</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="541">541</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="542">542</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="543">543</th><td>	palignr	$<var>5</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="544">544</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="545">545</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="546">546</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="547">547</th><td></td></tr>
+<tr><th id="548">548</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="549">549</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble_loop" data-ref="_M/L">L</a>(shr_5_gobble_loop)</td></tr>
+<tr><th id="550">550</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="553">553</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble_next" data-ref="_M/L">L</a>(shr_5_gobble_next)</td></tr>
+<tr><th id="554">554</th><td>	inc	%edx</td></tr>
+<tr><th id="555">555</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="556">556</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_5_gobble_next" data-ref="_M/L">L</a>(shr_5_gobble_next):</td></tr>
+<tr><th id="557">557</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="558">558</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="559">559</th><td></td></tr>
+<tr><th id="560">560</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="561">561</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="562">562</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="563">563</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="564">564</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="565">565</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="566">566</th><td></td></tr>
+<tr><th id="567">567</th><td>	lea	<var>5</var>(%rsi), %rsi</td></tr>
+<tr><th id="568">568</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="569">569</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="570">570</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="571">571</th><td></td></tr>
+<tr><th id="572">572</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="573">573</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6" data-ref="_M/L">L</a>(shr_6):</td></tr>
+<tr><th id="574">574</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="575">575</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="576">576</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="577">577</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble" data-ref="_M/L">L</a>(shr_6_gobble)</td></tr>
+<tr><th id="578">578</th><td></td></tr>
+<tr><th id="579">579</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="580">580</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="581">581</th><td>	palignr	$<var>6</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="582">582</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="585">585</th><td>	palignr	$<var>6</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="586">586</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="587">587</th><td></td></tr>
+<tr><th id="588">588</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="589">589</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="590">590</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="591">591</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="592">592</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="593">593</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="594">594</th><td>	add	$<var>6</var>, %rsi</td></tr>
+<tr><th id="595">595</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="596">596</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="597">597</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="598">598</th><td></td></tr>
+<tr><th id="599">599</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="600">600</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble" data-ref="_M/L">L</a>(shr_6_gobble):</td></tr>
+<tr><th id="601">601</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="602">602</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="603">603</th><td>	palignr	$<var>6</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="604">604</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="605">605</th><td></td></tr>
+<tr><th id="606">606</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="607">607</th><td>	palignr	$<var>6</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="608">608</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="609">609</th><td></td></tr>
+<tr><th id="610">610</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble_loop" data-ref="_M/L">L</a>(shr_6_gobble_loop):</td></tr>
+<tr><th id="611">611</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="612">612</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="613">613</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="614">614</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="615">615</th><td></td></tr>
+<tr><th id="616">616</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="617">617</th><td>	palignr	$<var>6</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="618">618</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="619">619</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="620">620</th><td>	palignr	$<var>6</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="621">621</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="622">622</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="623">623</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="624">624</th><td></td></tr>
+<tr><th id="625">625</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="626">626</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble_loop" data-ref="_M/L">L</a>(shr_6_gobble_loop)</td></tr>
+<tr><th id="627">627</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="630">630</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble_next" data-ref="_M/L">L</a>(shr_6_gobble_next)</td></tr>
+<tr><th id="631">631</th><td>	inc	%edx</td></tr>
+<tr><th id="632">632</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="633">633</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_6_gobble_next" data-ref="_M/L">L</a>(shr_6_gobble_next):</td></tr>
+<tr><th id="634">634</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="635">635</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="638">638</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="639">639</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="640">640</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="641">641</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="642">642</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="643">643</th><td></td></tr>
+<tr><th id="644">644</th><td>	lea	<var>6</var>(%rsi), %rsi</td></tr>
+<tr><th id="645">645</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="646">646</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="647">647</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="648">648</th><td></td></tr>
+<tr><th id="649">649</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="650">650</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7" data-ref="_M/L">L</a>(shr_7):</td></tr>
+<tr><th id="651">651</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="652">652</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="653">653</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="654">654</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble" data-ref="_M/L">L</a>(shr_7_gobble)</td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="657">657</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="658">658</th><td>	palignr	$<var>7</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="659">659</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="660">660</th><td></td></tr>
+<tr><th id="661">661</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="662">662</th><td>	palignr	$<var>7</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="663">663</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="664">664</th><td></td></tr>
+<tr><th id="665">665</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="666">666</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="667">667</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="668">668</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="669">669</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="670">670</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="671">671</th><td>	add	$<var>7</var>, %rsi</td></tr>
+<tr><th id="672">672</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="673">673</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="674">674</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="675">675</th><td></td></tr>
+<tr><th id="676">676</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="677">677</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble" data-ref="_M/L">L</a>(shr_7_gobble):</td></tr>
+<tr><th id="678">678</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="679">679</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="680">680</th><td>	palignr	$<var>7</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="681">681</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="682">682</th><td></td></tr>
+<tr><th id="683">683</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="684">684</th><td>	palignr	$<var>7</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="685">685</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble_loop" data-ref="_M/L">L</a>(shr_7_gobble_loop):</td></tr>
+<tr><th id="688">688</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="689">689</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="690">690</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="691">691</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="692">692</th><td></td></tr>
+<tr><th id="693">693</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="694">694</th><td>	palignr	$<var>7</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="695">695</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="696">696</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="697">697</th><td>	palignr	$<var>7</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="698">698</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="699">699</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="700">700</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="701">701</th><td></td></tr>
+<tr><th id="702">702</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="703">703</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble_loop" data-ref="_M/L">L</a>(shr_7_gobble_loop)</td></tr>
+<tr><th id="704">704</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="705">705</th><td></td></tr>
+<tr><th id="706">706</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="707">707</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble_next" data-ref="_M/L">L</a>(shr_7_gobble_next)</td></tr>
+<tr><th id="708">708</th><td>	inc	%edx</td></tr>
+<tr><th id="709">709</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="710">710</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_7_gobble_next" data-ref="_M/L">L</a>(shr_7_gobble_next):</td></tr>
+<tr><th id="711">711</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="712">712</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="713">713</th><td></td></tr>
+<tr><th id="714">714</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="715">715</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="716">716</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="717">717</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="718">718</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="719">719</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="720">720</th><td></td></tr>
+<tr><th id="721">721</th><td>	lea	<var>7</var>(%rsi), %rsi</td></tr>
+<tr><th id="722">722</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="723">723</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="724">724</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="725">725</th><td></td></tr>
+<tr><th id="726">726</th><td><u># <span data-ppcond="493">endif</span></u></td></tr>
+<tr><th id="727">727</th><td></td></tr>
+<tr><th id="728">728</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="729">729</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8" data-ref="_M/L">L</a>(shr_8):</td></tr>
+<tr><th id="730">730</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="731">731</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="732">732</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="733">733</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble" data-ref="_M/L">L</a>(shr_8_gobble)</td></tr>
+<tr><th id="734">734</th><td></td></tr>
+<tr><th id="735">735</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="736">736</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="737">737</th><td>	palignr	$<var>8</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="738">738</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="741">741</th><td>	palignr	$<var>8</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="742">742</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="743">743</th><td></td></tr>
+<tr><th id="744">744</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="745">745</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="746">746</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="747">747</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="748">748</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="749">749</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="750">750</th><td>	add	$<var>8</var>, %rsi</td></tr>
+<tr><th id="751">751</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="752">752</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="753">753</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="754">754</th><td></td></tr>
+<tr><th id="755">755</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="756">756</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble" data-ref="_M/L">L</a>(shr_8_gobble):</td></tr>
+<tr><th id="757">757</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="758">758</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="759">759</th><td>	palignr	$<var>8</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="760">760</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="763">763</th><td>	palignr	$<var>8</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="764">764</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="765">765</th><td></td></tr>
+<tr><th id="766">766</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble_loop" data-ref="_M/L">L</a>(shr_8_gobble_loop):</td></tr>
+<tr><th id="767">767</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="768">768</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="769">769</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="770">770</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="773">773</th><td>	palignr	$<var>8</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="774">774</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="775">775</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="776">776</th><td>	palignr	$<var>8</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="777">777</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="778">778</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="779">779</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="780">780</th><td></td></tr>
+<tr><th id="781">781</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="782">782</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble_loop" data-ref="_M/L">L</a>(shr_8_gobble_loop)</td></tr>
+<tr><th id="783">783</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="784">784</th><td></td></tr>
+<tr><th id="785">785</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="786">786</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble_next" data-ref="_M/L">L</a>(shr_8_gobble_next)</td></tr>
+<tr><th id="787">787</th><td>	inc	%edx</td></tr>
+<tr><th id="788">788</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="789">789</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_8_gobble_next" data-ref="_M/L">L</a>(shr_8_gobble_next):</td></tr>
+<tr><th id="790">790</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="791">791</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="792">792</th><td></td></tr>
+<tr><th id="793">793</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="794">794</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="795">795</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="796">796</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="797">797</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="798">798</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="799">799</th><td></td></tr>
+<tr><th id="800">800</th><td>	lea	<var>8</var>(%rsi), %rsi</td></tr>
+<tr><th id="801">801</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="802">802</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="803">803</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="804">804</th><td></td></tr>
+<tr><th id="805">805</th><td><u># <span data-ppcond="805">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="806">806</th><td></td></tr>
+<tr><th id="807">807</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="808">808</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9" data-ref="_M/L">L</a>(shr_9):</td></tr>
+<tr><th id="809">809</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="810">810</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="811">811</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="812">812</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble" data-ref="_M/L">L</a>(shr_9_gobble)</td></tr>
+<tr><th id="813">813</th><td></td></tr>
+<tr><th id="814">814</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="815">815</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="816">816</th><td>	palignr	$<var>9</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="817">817</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="818">818</th><td></td></tr>
+<tr><th id="819">819</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="820">820</th><td>	palignr	$<var>9</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="821">821</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="822">822</th><td></td></tr>
+<tr><th id="823">823</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="824">824</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="825">825</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="826">826</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="827">827</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="828">828</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="829">829</th><td>	add	$<var>9</var>, %rsi</td></tr>
+<tr><th id="830">830</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="831">831</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="832">832</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="833">833</th><td></td></tr>
+<tr><th id="834">834</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="835">835</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble" data-ref="_M/L">L</a>(shr_9_gobble):</td></tr>
+<tr><th id="836">836</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="837">837</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="838">838</th><td>	palignr	$<var>9</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="839">839</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="840">840</th><td></td></tr>
+<tr><th id="841">841</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="842">842</th><td>	palignr	$<var>9</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="843">843</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="844">844</th><td></td></tr>
+<tr><th id="845">845</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble_loop" data-ref="_M/L">L</a>(shr_9_gobble_loop):</td></tr>
+<tr><th id="846">846</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="847">847</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="848">848</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="849">849</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="850">850</th><td></td></tr>
+<tr><th id="851">851</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="852">852</th><td>	palignr	$<var>9</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="853">853</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="854">854</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="855">855</th><td>	palignr	$<var>9</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="856">856</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="857">857</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="858">858</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="859">859</th><td></td></tr>
+<tr><th id="860">860</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="861">861</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble_loop" data-ref="_M/L">L</a>(shr_9_gobble_loop)</td></tr>
+<tr><th id="862">862</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="863">863</th><td></td></tr>
+<tr><th id="864">864</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="865">865</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble_next" data-ref="_M/L">L</a>(shr_9_gobble_next)</td></tr>
+<tr><th id="866">866</th><td>	inc	%edx</td></tr>
+<tr><th id="867">867</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="868">868</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_9_gobble_next" data-ref="_M/L">L</a>(shr_9_gobble_next):</td></tr>
+<tr><th id="869">869</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="870">870</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="871">871</th><td></td></tr>
+<tr><th id="872">872</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="873">873</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="874">874</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="875">875</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="876">876</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="877">877</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="878">878</th><td></td></tr>
+<tr><th id="879">879</th><td>	lea	<var>9</var>(%rsi), %rsi</td></tr>
+<tr><th id="880">880</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="881">881</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="882">882</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="883">883</th><td></td></tr>
+<tr><th id="884">884</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="885">885</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10" data-ref="_M/L">L</a>(shr_10):</td></tr>
+<tr><th id="886">886</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="887">887</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="888">888</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="889">889</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble" data-ref="_M/L">L</a>(shr_10_gobble)</td></tr>
+<tr><th id="890">890</th><td></td></tr>
+<tr><th id="891">891</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="892">892</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="893">893</th><td>	palignr	$<var>10</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="894">894</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="895">895</th><td></td></tr>
+<tr><th id="896">896</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="897">897</th><td>	palignr	$<var>10</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="898">898</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="899">899</th><td></td></tr>
+<tr><th id="900">900</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="901">901</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="902">902</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="903">903</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="904">904</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="905">905</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="906">906</th><td>	add	$<var>10</var>, %rsi</td></tr>
+<tr><th id="907">907</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="908">908</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="909">909</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="910">910</th><td></td></tr>
+<tr><th id="911">911</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="912">912</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble" data-ref="_M/L">L</a>(shr_10_gobble):</td></tr>
+<tr><th id="913">913</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="914">914</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="915">915</th><td>	palignr	$<var>10</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="916">916</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="917">917</th><td></td></tr>
+<tr><th id="918">918</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="919">919</th><td>	palignr	$<var>10</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="920">920</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="921">921</th><td></td></tr>
+<tr><th id="922">922</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble_loop" data-ref="_M/L">L</a>(shr_10_gobble_loop):</td></tr>
+<tr><th id="923">923</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="924">924</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="925">925</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="926">926</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="927">927</th><td></td></tr>
+<tr><th id="928">928</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="929">929</th><td>	palignr	$<var>10</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="930">930</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="931">931</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="932">932</th><td>	palignr	$<var>10</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="933">933</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="934">934</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="935">935</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="936">936</th><td></td></tr>
+<tr><th id="937">937</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="938">938</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble_loop" data-ref="_M/L">L</a>(shr_10_gobble_loop)</td></tr>
+<tr><th id="939">939</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="940">940</th><td></td></tr>
+<tr><th id="941">941</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="942">942</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble_next" data-ref="_M/L">L</a>(shr_10_gobble_next)</td></tr>
+<tr><th id="943">943</th><td>	inc	%edx</td></tr>
+<tr><th id="944">944</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="945">945</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_10_gobble_next" data-ref="_M/L">L</a>(shr_10_gobble_next):</td></tr>
+<tr><th id="946">946</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="947">947</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="948">948</th><td></td></tr>
+<tr><th id="949">949</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="950">950</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="951">951</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="952">952</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="953">953</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="954">954</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="955">955</th><td></td></tr>
+<tr><th id="956">956</th><td>	lea	<var>10</var>(%rsi), %rsi</td></tr>
+<tr><th id="957">957</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="958">958</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="959">959</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="960">960</th><td></td></tr>
+<tr><th id="961">961</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="962">962</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11" data-ref="_M/L">L</a>(shr_11):</td></tr>
+<tr><th id="963">963</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="964">964</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="965">965</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="966">966</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble" data-ref="_M/L">L</a>(shr_11_gobble)</td></tr>
+<tr><th id="967">967</th><td></td></tr>
+<tr><th id="968">968</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="969">969</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="970">970</th><td>	palignr	$<var>11</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="971">971</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="972">972</th><td></td></tr>
+<tr><th id="973">973</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="974">974</th><td>	palignr	$<var>11</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="975">975</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="976">976</th><td></td></tr>
+<tr><th id="977">977</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="978">978</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="979">979</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="980">980</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="981">981</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="982">982</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="983">983</th><td>	add	$<var>11</var>, %rsi</td></tr>
+<tr><th id="984">984</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="985">985</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="986">986</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="987">987</th><td></td></tr>
+<tr><th id="988">988</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="989">989</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble" data-ref="_M/L">L</a>(shr_11_gobble):</td></tr>
+<tr><th id="990">990</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="991">991</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="992">992</th><td>	palignr	$<var>11</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="993">993</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="994">994</th><td></td></tr>
+<tr><th id="995">995</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="996">996</th><td>	palignr	$<var>11</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="997">997</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="998">998</th><td></td></tr>
+<tr><th id="999">999</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble_loop" data-ref="_M/L">L</a>(shr_11_gobble_loop):</td></tr>
+<tr><th id="1000">1000</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1001">1001</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1002">1002</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1003">1003</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1004">1004</th><td></td></tr>
+<tr><th id="1005">1005</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1006">1006</th><td>	palignr	$<var>11</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1007">1007</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1008">1008</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1009">1009</th><td>	palignr	$<var>11</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1010">1010</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="1011">1011</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1012">1012</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1013">1013</th><td></td></tr>
+<tr><th id="1014">1014</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1015">1015</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble_loop" data-ref="_M/L">L</a>(shr_11_gobble_loop)</td></tr>
+<tr><th id="1016">1016</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1017">1017</th><td></td></tr>
+<tr><th id="1018">1018</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="1019">1019</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble_next" data-ref="_M/L">L</a>(shr_11_gobble_next)</td></tr>
+<tr><th id="1020">1020</th><td>	inc	%edx</td></tr>
+<tr><th id="1021">1021</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1022">1022</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_11_gobble_next" data-ref="_M/L">L</a>(shr_11_gobble_next):</td></tr>
+<tr><th id="1023">1023</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="1024">1024</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1025">1025</th><td></td></tr>
+<tr><th id="1026">1026</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1027">1027</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1028">1028</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1029">1029</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1030">1030</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1031">1031</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1032">1032</th><td></td></tr>
+<tr><th id="1033">1033</th><td>	lea	<var>11</var>(%rsi), %rsi</td></tr>
+<tr><th id="1034">1034</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1035">1035</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1036">1036</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1037">1037</th><td></td></tr>
+<tr><th id="1038">1038</th><td><u># <span data-ppcond="805">endif</span></u></td></tr>
+<tr><th id="1039">1039</th><td></td></tr>
+<tr><th id="1040">1040</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1041">1041</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12" data-ref="_M/L">L</a>(shr_12):</td></tr>
+<tr><th id="1042">1042</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="1043">1043</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="1044">1044</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="1045">1045</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble" data-ref="_M/L">L</a>(shr_12_gobble)</td></tr>
+<tr><th id="1046">1046</th><td></td></tr>
+<tr><th id="1047">1047</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="1048">1048</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="1049">1049</th><td>	palignr	$<var>12</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="1050">1050</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="1051">1051</th><td></td></tr>
+<tr><th id="1052">1052</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1053">1053</th><td>	palignr	$<var>12</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="1054">1054</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1055">1055</th><td></td></tr>
+<tr><th id="1056">1056</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="1057">1057</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1058">1058</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1059">1059</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1060">1060</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1061">1061</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1062">1062</th><td>	add	$<var>12</var>, %rsi</td></tr>
+<tr><th id="1063">1063</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1064">1064</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1065">1065</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1066">1066</th><td></td></tr>
+<tr><th id="1067">1067</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1068">1068</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble" data-ref="_M/L">L</a>(shr_12_gobble):</td></tr>
+<tr><th id="1069">1069</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1070">1070</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1071">1071</th><td>	palignr	$<var>12</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="1072">1072</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="1073">1073</th><td></td></tr>
+<tr><th id="1074">1074</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1075">1075</th><td>	palignr	$<var>12</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1076">1076</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1077">1077</th><td></td></tr>
+<tr><th id="1078">1078</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble_loop" data-ref="_M/L">L</a>(shr_12_gobble_loop):</td></tr>
+<tr><th id="1079">1079</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1080">1080</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1081">1081</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1082">1082</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1083">1083</th><td></td></tr>
+<tr><th id="1084">1084</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1085">1085</th><td>	palignr	$<var>12</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1086">1086</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1087">1087</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1088">1088</th><td>	palignr	$<var>12</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1089">1089</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="1090">1090</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1091">1091</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1092">1092</th><td></td></tr>
+<tr><th id="1093">1093</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1094">1094</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble_loop" data-ref="_M/L">L</a>(shr_12_gobble_loop)</td></tr>
+<tr><th id="1095">1095</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1096">1096</th><td></td></tr>
+<tr><th id="1097">1097</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="1098">1098</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble_next" data-ref="_M/L">L</a>(shr_12_gobble_next)</td></tr>
+<tr><th id="1099">1099</th><td>	inc	%edx</td></tr>
+<tr><th id="1100">1100</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1101">1101</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_12_gobble_next" data-ref="_M/L">L</a>(shr_12_gobble_next):</td></tr>
+<tr><th id="1102">1102</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="1103">1103</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1104">1104</th><td></td></tr>
+<tr><th id="1105">1105</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1106">1106</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1107">1107</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1108">1108</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1109">1109</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1110">1110</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1111">1111</th><td></td></tr>
+<tr><th id="1112">1112</th><td>	lea	<var>12</var>(%rsi), %rsi</td></tr>
+<tr><th id="1113">1113</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1114">1114</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1115">1115</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1116">1116</th><td></td></tr>
+<tr><th id="1117">1117</th><td><u># <span data-ppcond="1117">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1118">1118</th><td></td></tr>
+<tr><th id="1119">1119</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1120">1120</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13" data-ref="_M/L">L</a>(shr_13):</td></tr>
+<tr><th id="1121">1121</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="1122">1122</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="1123">1123</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="1124">1124</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble" data-ref="_M/L">L</a>(shr_13_gobble)</td></tr>
+<tr><th id="1125">1125</th><td></td></tr>
+<tr><th id="1126">1126</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="1127">1127</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="1128">1128</th><td>	palignr	$<var>13</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="1129">1129</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="1130">1130</th><td></td></tr>
+<tr><th id="1131">1131</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1132">1132</th><td>	palignr	$<var>13</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="1133">1133</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1134">1134</th><td></td></tr>
+<tr><th id="1135">1135</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="1136">1136</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1137">1137</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1138">1138</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1139">1139</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1140">1140</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1141">1141</th><td>	add	$<var>13</var>, %rsi</td></tr>
+<tr><th id="1142">1142</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1143">1143</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1144">1144</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1145">1145</th><td></td></tr>
+<tr><th id="1146">1146</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1147">1147</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble" data-ref="_M/L">L</a>(shr_13_gobble):</td></tr>
+<tr><th id="1148">1148</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1149">1149</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1150">1150</th><td>	palignr	$<var>13</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="1151">1151</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="1152">1152</th><td></td></tr>
+<tr><th id="1153">1153</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1154">1154</th><td>	palignr	$<var>13</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1155">1155</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1156">1156</th><td></td></tr>
+<tr><th id="1157">1157</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble_loop" data-ref="_M/L">L</a>(shr_13_gobble_loop):</td></tr>
+<tr><th id="1158">1158</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1159">1159</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1160">1160</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1161">1161</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1162">1162</th><td></td></tr>
+<tr><th id="1163">1163</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1164">1164</th><td>	palignr	$<var>13</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1165">1165</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1166">1166</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1167">1167</th><td>	palignr	$<var>13</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1168">1168</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="1169">1169</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1170">1170</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1171">1171</th><td></td></tr>
+<tr><th id="1172">1172</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1173">1173</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble_loop" data-ref="_M/L">L</a>(shr_13_gobble_loop)</td></tr>
+<tr><th id="1174">1174</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1175">1175</th><td></td></tr>
+<tr><th id="1176">1176</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="1177">1177</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble_next" data-ref="_M/L">L</a>(shr_13_gobble_next)</td></tr>
+<tr><th id="1178">1178</th><td>	inc	%edx</td></tr>
+<tr><th id="1179">1179</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1180">1180</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_13_gobble_next" data-ref="_M/L">L</a>(shr_13_gobble_next):</td></tr>
+<tr><th id="1181">1181</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="1182">1182</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1183">1183</th><td></td></tr>
+<tr><th id="1184">1184</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1185">1185</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1186">1186</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1187">1187</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1188">1188</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1189">1189</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1190">1190</th><td></td></tr>
+<tr><th id="1191">1191</th><td>	lea	<var>13</var>(%rsi), %rsi</td></tr>
+<tr><th id="1192">1192</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1193">1193</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1194">1194</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1195">1195</th><td></td></tr>
+<tr><th id="1196">1196</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1197">1197</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14" data-ref="_M/L">L</a>(shr_14):</td></tr>
+<tr><th id="1198">1198</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="1199">1199</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="1200">1200</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="1201">1201</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble" data-ref="_M/L">L</a>(shr_14_gobble)</td></tr>
+<tr><th id="1202">1202</th><td></td></tr>
+<tr><th id="1203">1203</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="1204">1204</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="1205">1205</th><td>	palignr	$<var>14</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="1206">1206</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="1207">1207</th><td></td></tr>
+<tr><th id="1208">1208</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1209">1209</th><td>	palignr	$<var>14</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="1210">1210</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1211">1211</th><td></td></tr>
+<tr><th id="1212">1212</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="1213">1213</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1214">1214</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1215">1215</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1216">1216</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1217">1217</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1218">1218</th><td>	add	$<var>14</var>, %rsi</td></tr>
+<tr><th id="1219">1219</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1220">1220</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1221">1221</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1222">1222</th><td></td></tr>
+<tr><th id="1223">1223</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1224">1224</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble" data-ref="_M/L">L</a>(shr_14_gobble):</td></tr>
+<tr><th id="1225">1225</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1226">1226</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1227">1227</th><td>	palignr	$<var>14</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="1228">1228</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="1229">1229</th><td></td></tr>
+<tr><th id="1230">1230</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1231">1231</th><td>	palignr	$<var>14</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1232">1232</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1233">1233</th><td></td></tr>
+<tr><th id="1234">1234</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble_loop" data-ref="_M/L">L</a>(shr_14_gobble_loop):</td></tr>
+<tr><th id="1235">1235</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1236">1236</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1237">1237</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1238">1238</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1239">1239</th><td></td></tr>
+<tr><th id="1240">1240</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1241">1241</th><td>	palignr	$<var>14</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1242">1242</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1243">1243</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1244">1244</th><td>	palignr	$<var>14</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1245">1245</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="1246">1246</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1247">1247</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1248">1248</th><td></td></tr>
+<tr><th id="1249">1249</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1250">1250</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble_loop" data-ref="_M/L">L</a>(shr_14_gobble_loop)</td></tr>
+<tr><th id="1251">1251</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1252">1252</th><td></td></tr>
+<tr><th id="1253">1253</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="1254">1254</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble_next" data-ref="_M/L">L</a>(shr_14_gobble_next)</td></tr>
+<tr><th id="1255">1255</th><td>	inc	%edx</td></tr>
+<tr><th id="1256">1256</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1257">1257</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_14_gobble_next" data-ref="_M/L">L</a>(shr_14_gobble_next):</td></tr>
+<tr><th id="1258">1258</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="1259">1259</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1260">1260</th><td></td></tr>
+<tr><th id="1261">1261</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1262">1262</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1263">1263</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1264">1264</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1265">1265</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1266">1266</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1267">1267</th><td></td></tr>
+<tr><th id="1268">1268</th><td>	lea	<var>14</var>(%rsi), %rsi</td></tr>
+<tr><th id="1269">1269</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1270">1270</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1271">1271</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1272">1272</th><td></td></tr>
+<tr><th id="1273">1273</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1274">1274</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15" data-ref="_M/L">L</a>(shr_15):</td></tr>
+<tr><th id="1275">1275</th><td>	cmp	$<var>80</var>, %rcx</td></tr>
+<tr><th id="1276">1276</th><td>	lea	-<var>48</var>(%rcx), %rcx</td></tr>
+<tr><th id="1277">1277</th><td>	mov	%edx, %eax</td></tr>
+<tr><th id="1278">1278</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble" data-ref="_M/L">L</a>(shr_15_gobble)</td></tr>
+<tr><th id="1279">1279</th><td></td></tr>
+<tr><th id="1280">1280</th><td>	movdqa	<var>16</var>(%rsi), %xmm1</td></tr>
+<tr><th id="1281">1281</th><td>	movdqa	%xmm1, %xmm2</td></tr>
+<tr><th id="1282">1282</th><td>	palignr	$<var>15</var>, (%rsi), %xmm1</td></tr>
+<tr><th id="1283">1283</th><td>	pcmpeqb	(%rdi), %xmm1</td></tr>
+<tr><th id="1284">1284</th><td></td></tr>
+<tr><th id="1285">1285</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1286">1286</th><td>	palignr	$<var>15</var>, %xmm2, %xmm3</td></tr>
+<tr><th id="1287">1287</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1288">1288</th><td></td></tr>
+<tr><th id="1289">1289</th><td>	pand	%xmm1, %xmm3</td></tr>
+<tr><th id="1290">1290</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1291">1291</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1292">1292</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1293">1293</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1294">1294</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1295">1295</th><td>	add	$<var>15</var>, %rsi</td></tr>
+<tr><th id="1296">1296</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1297">1297</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1298">1298</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1299">1299</th><td></td></tr>
+<tr><th id="1300">1300</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1301">1301</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble" data-ref="_M/L">L</a>(shr_15_gobble):</td></tr>
+<tr><th id="1302">1302</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1303">1303</th><td>	movdqa	<var>16</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1304">1304</th><td>	palignr	$<var>15</var>, (%rsi), %xmm0</td></tr>
+<tr><th id="1305">1305</th><td>	pcmpeqb	(%rdi), %xmm0</td></tr>
+<tr><th id="1306">1306</th><td></td></tr>
+<tr><th id="1307">1307</th><td>	movdqa	<var>32</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1308">1308</th><td>	palignr	$<var>15</var>, <var>16</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1309">1309</th><td>	pcmpeqb	<var>16</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1310">1310</th><td></td></tr>
+<tr><th id="1311">1311</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble_loop" data-ref="_M/L">L</a>(shr_15_gobble_loop):</td></tr>
+<tr><th id="1312">1312</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1313">1313</th><td>	sub	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1314">1314</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1315">1315</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1316">1316</th><td></td></tr>
+<tr><th id="1317">1317</th><td>	movdqa	<var>64</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1318">1318</th><td>	palignr	$<var>15</var>, <var>48</var>(%rsi), %xmm3</td></tr>
+<tr><th id="1319">1319</th><td>	sbb	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1320">1320</th><td>	movdqa	<var>48</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1321">1321</th><td>	palignr	$<var>15</var>, <var>32</var>(%rsi), %xmm0</td></tr>
+<tr><th id="1322">1322</th><td>	pcmpeqb	<var>32</var>(%rdi), %xmm0</td></tr>
+<tr><th id="1323">1323</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1324">1324</th><td>	pcmpeqb	<var>48</var>(%rdi), %xmm3</td></tr>
+<tr><th id="1325">1325</th><td></td></tr>
+<tr><th id="1326">1326</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1327">1327</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble_loop" data-ref="_M/L">L</a>(shr_15_gobble_loop)</td></tr>
+<tr><th id="1328">1328</th><td>	pand	%xmm0, %xmm3</td></tr>
+<tr><th id="1329">1329</th><td></td></tr>
+<tr><th id="1330">1330</th><td>	cmp	$<var>0</var>, %rcx</td></tr>
+<tr><th id="1331">1331</th><td>	jge	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble_next" data-ref="_M/L">L</a>(shr_15_gobble_next)</td></tr>
+<tr><th id="1332">1332</th><td>	inc	%edx</td></tr>
+<tr><th id="1333">1333</th><td>	add	$<var>32</var>, %rcx</td></tr>
+<tr><th id="1334">1334</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lshr_15_gobble_next" data-ref="_M/L">L</a>(shr_15_gobble_next):</td></tr>
+<tr><th id="1335">1335</th><td>	test	%edx, %edx</td></tr>
+<tr><th id="1336">1336</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1337">1337</th><td></td></tr>
+<tr><th id="1338">1338</th><td>	pmovmskb %xmm3, %edx</td></tr>
+<tr><th id="1339">1339</th><td>	movdqa	%xmm0, %xmm1</td></tr>
+<tr><th id="1340">1340</th><td>	lea	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="1341">1341</th><td>	lea	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="1342">1342</th><td>	sub	$<var>0xffff</var>, %edx</td></tr>
+<tr><th id="1343">1343</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="1344">1344</th><td></td></tr>
+<tr><th id="1345">1345</th><td>	lea	<var>15</var>(%rsi), %rsi</td></tr>
+<tr><th id="1346">1346</th><td>	add	%rcx, %rsi</td></tr>
+<tr><th id="1347">1347</th><td>	add	%rcx, %rdi</td></tr>
+<tr><th id="1348">1348</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes)</td></tr>
+<tr><th id="1349">1349</th><td><u># <span data-ppcond="1117">endif</span></u></td></tr>
+<tr><th id="1350">1350</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1351">1351</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lexit" data-ref="_M/L">L</a>(exit):</td></tr>
+<tr><th id="1352">1352</th><td>	pmovmskb %xmm1, %r8d</td></tr>
+<tr><th id="1353">1353</th><td>	sub	$<var>0xffff</var>, %r8d</td></tr>
+<tr><th id="1354">1354</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfirst16bytes" data-ref="_M/L">L</a>(first16bytes)</td></tr>
+<tr><th id="1355">1355</th><td>	lea	-<var>16</var>(%rsi), %rsi</td></tr>
+<tr><th id="1356">1356</th><td>	lea	-<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="1357">1357</th><td>	mov	%r8d, %edx</td></tr>
+<tr><th id="1358">1358</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfirst16bytes" data-ref="_M/L">L</a>(first16bytes):</td></tr>
+<tr><th id="1359">1359</th><td>	add	%rax, %rsi</td></tr>
+<tr><th id="1360">1360</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless16bytes" data-ref="_M/L">L</a>(less16bytes):</td></tr>
+<tr><th id="1361">1361</th><td><u># <span data-ppcond="1361">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1362">1362</th><td>	test	%dl, %dl</td></tr>
+<tr><th id="1363">1363</th><td>	jz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext_24_bytes" data-ref="_M/L">L</a>(next_24_bytes)</td></tr>
+<tr><th id="1364">1364</th><td></td></tr>
+<tr><th id="1365">1365</th><td>	test	$<var>0x01</var>, %dl</td></tr>
+<tr><th id="1366">1366</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte16" data-ref="_M/L">L</a>(Byte16)</td></tr>
+<tr><th id="1367">1367</th><td></td></tr>
+<tr><th id="1368">1368</th><td>	test	$<var>0x02</var>, %dl</td></tr>
+<tr><th id="1369">1369</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte17" data-ref="_M/L">L</a>(Byte17)</td></tr>
+<tr><th id="1370">1370</th><td></td></tr>
+<tr><th id="1371">1371</th><td>	test	$<var>0x04</var>, %dl</td></tr>
+<tr><th id="1372">1372</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte18" data-ref="_M/L">L</a>(Byte18)</td></tr>
+<tr><th id="1373">1373</th><td></td></tr>
+<tr><th id="1374">1374</th><td>	test	$<var>0x08</var>, %dl</td></tr>
+<tr><th id="1375">1375</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte19" data-ref="_M/L">L</a>(Byte19)</td></tr>
+<tr><th id="1376">1376</th><td></td></tr>
+<tr><th id="1377">1377</th><td>	test	$<var>0x10</var>, %dl</td></tr>
+<tr><th id="1378">1378</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte20" data-ref="_M/L">L</a>(Byte20)</td></tr>
+<tr><th id="1379">1379</th><td></td></tr>
+<tr><th id="1380">1380</th><td>	test	$<var>0x20</var>, %dl</td></tr>
+<tr><th id="1381">1381</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte21" data-ref="_M/L">L</a>(Byte21)</td></tr>
+<tr><th id="1382">1382</th><td></td></tr>
+<tr><th id="1383">1383</th><td>	test	$<var>0x40</var>, %dl</td></tr>
+<tr><th id="1384">1384</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte22" data-ref="_M/L">L</a>(Byte22)</td></tr>
+<tr><th id="1385">1385</th><td></td></tr>
+<tr><th id="1386">1386</th><td>	movzbl	-<var>9</var>(%rdi), %eax</td></tr>
+<tr><th id="1387">1387</th><td>	movzbl	-<var>9</var>(%rsi), %edx</td></tr>
+<tr><th id="1388">1388</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1389">1389</th><td>	ret</td></tr>
+<tr><th id="1390">1390</th><td></td></tr>
+<tr><th id="1391">1391</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1392">1392</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte16" data-ref="_M/L">L</a>(Byte16):</td></tr>
+<tr><th id="1393">1393</th><td>	movzbl	-<var>16</var>(%rdi), %eax</td></tr>
+<tr><th id="1394">1394</th><td>	movzbl	-<var>16</var>(%rsi), %edx</td></tr>
+<tr><th id="1395">1395</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1396">1396</th><td>	ret</td></tr>
+<tr><th id="1397">1397</th><td></td></tr>
+<tr><th id="1398">1398</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1399">1399</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte17" data-ref="_M/L">L</a>(Byte17):</td></tr>
+<tr><th id="1400">1400</th><td>	movzbl	-<var>15</var>(%rdi), %eax</td></tr>
+<tr><th id="1401">1401</th><td>	movzbl	-<var>15</var>(%rsi), %edx</td></tr>
+<tr><th id="1402">1402</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1403">1403</th><td>	ret</td></tr>
+<tr><th id="1404">1404</th><td></td></tr>
+<tr><th id="1405">1405</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1406">1406</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte18" data-ref="_M/L">L</a>(Byte18):</td></tr>
+<tr><th id="1407">1407</th><td>	movzbl	-<var>14</var>(%rdi), %eax</td></tr>
+<tr><th id="1408">1408</th><td>	movzbl	-<var>14</var>(%rsi), %edx</td></tr>
+<tr><th id="1409">1409</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1410">1410</th><td>	ret</td></tr>
+<tr><th id="1411">1411</th><td></td></tr>
+<tr><th id="1412">1412</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1413">1413</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte19" data-ref="_M/L">L</a>(Byte19):</td></tr>
+<tr><th id="1414">1414</th><td>	movzbl	-<var>13</var>(%rdi), %eax</td></tr>
+<tr><th id="1415">1415</th><td>	movzbl	-<var>13</var>(%rsi), %edx</td></tr>
+<tr><th id="1416">1416</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1417">1417</th><td>	ret</td></tr>
+<tr><th id="1418">1418</th><td></td></tr>
+<tr><th id="1419">1419</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1420">1420</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte20" data-ref="_M/L">L</a>(Byte20):</td></tr>
+<tr><th id="1421">1421</th><td>	movzbl	-<var>12</var>(%rdi), %eax</td></tr>
+<tr><th id="1422">1422</th><td>	movzbl	-<var>12</var>(%rsi), %edx</td></tr>
+<tr><th id="1423">1423</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1424">1424</th><td>	ret</td></tr>
+<tr><th id="1425">1425</th><td></td></tr>
+<tr><th id="1426">1426</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1427">1427</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte21" data-ref="_M/L">L</a>(Byte21):</td></tr>
+<tr><th id="1428">1428</th><td>	movzbl	-<var>11</var>(%rdi), %eax</td></tr>
+<tr><th id="1429">1429</th><td>	movzbl	-<var>11</var>(%rsi), %edx</td></tr>
+<tr><th id="1430">1430</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1431">1431</th><td>	ret</td></tr>
+<tr><th id="1432">1432</th><td></td></tr>
+<tr><th id="1433">1433</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1434">1434</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte22" data-ref="_M/L">L</a>(Byte22):</td></tr>
+<tr><th id="1435">1435</th><td>	movzbl	-<var>10</var>(%rdi), %eax</td></tr>
+<tr><th id="1436">1436</th><td>	movzbl	-<var>10</var>(%rsi), %edx</td></tr>
+<tr><th id="1437">1437</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1438">1438</th><td>	ret</td></tr>
+<tr><th id="1439">1439</th><td></td></tr>
+<tr><th id="1440">1440</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1441">1441</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lnext_24_bytes" data-ref="_M/L">L</a>(next_24_bytes):</td></tr>
+<tr><th id="1442">1442</th><td>	lea	<var>8</var>(%rdi), %rdi</td></tr>
+<tr><th id="1443">1443</th><td>	lea	<var>8</var>(%rsi), %rsi</td></tr>
+<tr><th id="1444">1444</th><td>	test	$<var>0x01</var>, %dh</td></tr>
+<tr><th id="1445">1445</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte16" data-ref="_M/L">L</a>(Byte16)</td></tr>
+<tr><th id="1446">1446</th><td></td></tr>
+<tr><th id="1447">1447</th><td>	test	$<var>0x02</var>, %dh</td></tr>
+<tr><th id="1448">1448</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte17" data-ref="_M/L">L</a>(Byte17)</td></tr>
+<tr><th id="1449">1449</th><td></td></tr>
+<tr><th id="1450">1450</th><td>	test	$<var>0x04</var>, %dh</td></tr>
+<tr><th id="1451">1451</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte18" data-ref="_M/L">L</a>(Byte18)</td></tr>
+<tr><th id="1452">1452</th><td></td></tr>
+<tr><th id="1453">1453</th><td>	test	$<var>0x08</var>, %dh</td></tr>
+<tr><th id="1454">1454</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte19" data-ref="_M/L">L</a>(Byte19)</td></tr>
+<tr><th id="1455">1455</th><td></td></tr>
+<tr><th id="1456">1456</th><td>	test	$<var>0x10</var>, %dh</td></tr>
+<tr><th id="1457">1457</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte20" data-ref="_M/L">L</a>(Byte20)</td></tr>
+<tr><th id="1458">1458</th><td></td></tr>
+<tr><th id="1459">1459</th><td>	test	$<var>0x20</var>, %dh</td></tr>
+<tr><th id="1460">1460</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte21" data-ref="_M/L">L</a>(Byte21)</td></tr>
+<tr><th id="1461">1461</th><td></td></tr>
+<tr><th id="1462">1462</th><td>	test	$<var>0x40</var>, %dh</td></tr>
+<tr><th id="1463">1463</th><td>	jnz	<a class="macro" href="../../x86/sysdep.h.html#97" title=".LByte22" data-ref="_M/L">L</a>(Byte22)</td></tr>
+<tr><th id="1464">1464</th><td></td></tr>
+<tr><th id="1465">1465</th><td>	movzbl	-<var>9</var>(%rdi), %eax</td></tr>
+<tr><th id="1466">1466</th><td>	movzbl	-<var>9</var>(%rsi), %edx</td></tr>
+<tr><th id="1467">1467</th><td>	sub	%edx, %eax</td></tr>
+<tr><th id="1468">1468</th><td>	ret</td></tr>
+<tr><th id="1469">1469</th><td><u># <span data-ppcond="1361">else</span></u></td></tr>
+<tr><th id="1470">1470</th><td><i>/* special for wmemcmp */</i></td></tr>
+<tr><th id="1471">1471</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1472">1472</th><td>	test	%dl, %dl</td></tr>
+<tr><th id="1473">1473</th><td>	jz	L(next_two_double_words)</td></tr>
+<tr><th id="1474">1474</th><td>	and	$<var>15</var>, %dl</td></tr>
+<tr><th id="1475">1475</th><td>	jz	L(second_double_word)</td></tr>
+<tr><th id="1476">1476</th><td>	mov	-<var>16</var>(%rdi), %eax</td></tr>
+<tr><th id="1477">1477</th><td>	cmp	-<var>16</var>(%rsi), %eax</td></tr>
+<tr><th id="1478">1478</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1479">1479</th><td>	ret</td></tr>
+<tr><th id="1480">1480</th><td></td></tr>
+<tr><th id="1481">1481</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1482">1482</th><td>L(second_double_word):</td></tr>
+<tr><th id="1483">1483</th><td>	mov	-<var>12</var>(%rdi), %eax</td></tr>
+<tr><th id="1484">1484</th><td>	cmp	-<var>12</var>(%rsi), %eax</td></tr>
+<tr><th id="1485">1485</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1486">1486</th><td>	ret</td></tr>
+<tr><th id="1487">1487</th><td></td></tr>
+<tr><th id="1488">1488</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1489">1489</th><td>L(next_two_double_words):</td></tr>
+<tr><th id="1490">1490</th><td>	and	$<var>15</var>, %dh</td></tr>
+<tr><th id="1491">1491</th><td>	jz	L(fourth_double_word)</td></tr>
+<tr><th id="1492">1492</th><td>	mov	-<var>8</var>(%rdi), %eax</td></tr>
+<tr><th id="1493">1493</th><td>	cmp	-<var>8</var>(%rsi), %eax</td></tr>
+<tr><th id="1494">1494</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1495">1495</th><td>	ret</td></tr>
+<tr><th id="1496">1496</th><td></td></tr>
+<tr><th id="1497">1497</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1498">1498</th><td>L(fourth_double_word):</td></tr>
+<tr><th id="1499">1499</th><td>	mov	-<var>4</var>(%rdi), %eax</td></tr>
+<tr><th id="1500">1500</th><td>	cmp	-<var>4</var>(%rsi), %eax</td></tr>
+<tr><th id="1501">1501</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1502">1502</th><td>	ret</td></tr>
+<tr><th id="1503">1503</th><td><u># <span data-ppcond="1361">endif</span></u></td></tr>
+<tr><th id="1504">1504</th><td></td></tr>
+<tr><th id="1505">1505</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1506">1506</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lless48bytes" data-ref="_M/L">L</a>(less48bytes):</td></tr>
+<tr><th id="1507">1507</th><td>	cmp	$<var>8</var>, %ecx</td></tr>
+<tr><th id="1508">1508</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore8bytes" data-ref="_M/L">L</a>(more8bytes)</td></tr>
+<tr><th id="1509">1509</th><td>	cmp	$<var>0</var>, %ecx</td></tr>
+<tr><th id="1510">1510</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L0bytes" data-ref="_M/L">L</a>(<var>0bytes</var>)</td></tr>
+<tr><th id="1511">1511</th><td><u># <span data-ppcond="1511">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1512">1512</th><td>	cmp	$<var>1</var>, %ecx</td></tr>
+<tr><th id="1513">1513</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L1bytes" data-ref="_M/L">L</a>(<var>1bytes</var>)</td></tr>
+<tr><th id="1514">1514</th><td>	cmp	$<var>2</var>, %ecx</td></tr>
+<tr><th id="1515">1515</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L2bytes" data-ref="_M/L">L</a>(<var>2bytes</var>)</td></tr>
+<tr><th id="1516">1516</th><td>	cmp	$<var>3</var>, %ecx</td></tr>
+<tr><th id="1517">1517</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L3bytes" data-ref="_M/L">L</a>(<var>3bytes</var>)</td></tr>
+<tr><th id="1518">1518</th><td>	cmp	$<var>4</var>, %ecx</td></tr>
+<tr><th id="1519">1519</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L4bytes" data-ref="_M/L">L</a>(<var>4bytes</var>)</td></tr>
+<tr><th id="1520">1520</th><td>	cmp	$<var>5</var>, %ecx</td></tr>
+<tr><th id="1521">1521</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L5bytes" data-ref="_M/L">L</a>(<var>5bytes</var>)</td></tr>
+<tr><th id="1522">1522</th><td>	cmp	$<var>6</var>, %ecx</td></tr>
+<tr><th id="1523">1523</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L6bytes" data-ref="_M/L">L</a>(<var>6bytes</var>)</td></tr>
+<tr><th id="1524">1524</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L7bytes" data-ref="_M/L">L</a>(<var>7bytes</var>)</td></tr>
+<tr><th id="1525">1525</th><td><u># <span data-ppcond="1511">else</span></u></td></tr>
+<tr><th id="1526">1526</th><td>	jmp	L(<var>4bytes</var>)</td></tr>
+<tr><th id="1527">1527</th><td><u># <span data-ppcond="1511">endif</span></u></td></tr>
+<tr><th id="1528">1528</th><td></td></tr>
+<tr><th id="1529">1529</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1530">1530</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore8bytes" data-ref="_M/L">L</a>(more8bytes):</td></tr>
+<tr><th id="1531">1531</th><td>	cmp	$<var>16</var>, %ecx</td></tr>
+<tr><th id="1532">1532</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore16bytes" data-ref="_M/L">L</a>(more16bytes)</td></tr>
+<tr><th id="1533">1533</th><td>	cmp	$<var>8</var>, %ecx</td></tr>
+<tr><th id="1534">1534</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L8bytes" data-ref="_M/L">L</a>(<var>8bytes</var>)</td></tr>
+<tr><th id="1535">1535</th><td><u># <span data-ppcond="1535">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1536">1536</th><td>	cmp	$<var>9</var>, %ecx</td></tr>
+<tr><th id="1537">1537</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L9bytes" data-ref="_M/L">L</a>(<var>9bytes</var>)</td></tr>
+<tr><th id="1538">1538</th><td>	cmp	$<var>10</var>, %ecx</td></tr>
+<tr><th id="1539">1539</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L10bytes" data-ref="_M/L">L</a>(<var>10bytes</var>)</td></tr>
+<tr><th id="1540">1540</th><td>	cmp	$<var>11</var>, %ecx</td></tr>
+<tr><th id="1541">1541</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L11bytes" data-ref="_M/L">L</a>(<var>11bytes</var>)</td></tr>
+<tr><th id="1542">1542</th><td>	cmp	$<var>12</var>, %ecx</td></tr>
+<tr><th id="1543">1543</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L12bytes" data-ref="_M/L">L</a>(<var>12bytes</var>)</td></tr>
+<tr><th id="1544">1544</th><td>	cmp	$<var>13</var>, %ecx</td></tr>
+<tr><th id="1545">1545</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L13bytes" data-ref="_M/L">L</a>(<var>13bytes</var>)</td></tr>
+<tr><th id="1546">1546</th><td>	cmp	$<var>14</var>, %ecx</td></tr>
+<tr><th id="1547">1547</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L14bytes" data-ref="_M/L">L</a>(<var>14bytes</var>)</td></tr>
+<tr><th id="1548">1548</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L15bytes" data-ref="_M/L">L</a>(<var>15bytes</var>)</td></tr>
+<tr><th id="1549">1549</th><td><u># <span data-ppcond="1535">else</span></u></td></tr>
+<tr><th id="1550">1550</th><td>	jmp	L(<var>12bytes</var>)</td></tr>
+<tr><th id="1551">1551</th><td><u># <span data-ppcond="1535">endif</span></u></td></tr>
+<tr><th id="1552">1552</th><td></td></tr>
+<tr><th id="1553">1553</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1554">1554</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore16bytes" data-ref="_M/L">L</a>(more16bytes):</td></tr>
+<tr><th id="1555">1555</th><td>	cmp	$<var>24</var>, %ecx</td></tr>
+<tr><th id="1556">1556</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore24bytes" data-ref="_M/L">L</a>(more24bytes)</td></tr>
+<tr><th id="1557">1557</th><td>	cmp	$<var>16</var>, %ecx</td></tr>
+<tr><th id="1558">1558</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L16bytes" data-ref="_M/L">L</a>(<var>16bytes</var>)</td></tr>
+<tr><th id="1559">1559</th><td><u># <span data-ppcond="1559">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1560">1560</th><td>	cmp	$<var>17</var>, %ecx</td></tr>
+<tr><th id="1561">1561</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L17bytes" data-ref="_M/L">L</a>(<var>17bytes</var>)</td></tr>
+<tr><th id="1562">1562</th><td>	cmp	$<var>18</var>, %ecx</td></tr>
+<tr><th id="1563">1563</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L18bytes" data-ref="_M/L">L</a>(<var>18bytes</var>)</td></tr>
+<tr><th id="1564">1564</th><td>	cmp	$<var>19</var>, %ecx</td></tr>
+<tr><th id="1565">1565</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L19bytes" data-ref="_M/L">L</a>(<var>19bytes</var>)</td></tr>
+<tr><th id="1566">1566</th><td>	cmp	$<var>20</var>, %ecx</td></tr>
+<tr><th id="1567">1567</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L20bytes" data-ref="_M/L">L</a>(<var>20bytes</var>)</td></tr>
+<tr><th id="1568">1568</th><td>	cmp	$<var>21</var>, %ecx</td></tr>
+<tr><th id="1569">1569</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L21bytes" data-ref="_M/L">L</a>(<var>21bytes</var>)</td></tr>
+<tr><th id="1570">1570</th><td>	cmp	$<var>22</var>, %ecx</td></tr>
+<tr><th id="1571">1571</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L22bytes" data-ref="_M/L">L</a>(<var>22bytes</var>)</td></tr>
+<tr><th id="1572">1572</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L23bytes" data-ref="_M/L">L</a>(<var>23bytes</var>)</td></tr>
+<tr><th id="1573">1573</th><td><u># <span data-ppcond="1559">else</span></u></td></tr>
+<tr><th id="1574">1574</th><td>	jmp	L(<var>20bytes</var>)</td></tr>
+<tr><th id="1575">1575</th><td><u># <span data-ppcond="1559">endif</span></u></td></tr>
+<tr><th id="1576">1576</th><td></td></tr>
+<tr><th id="1577">1577</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1578">1578</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore24bytes" data-ref="_M/L">L</a>(more24bytes):</td></tr>
+<tr><th id="1579">1579</th><td>	cmp	$<var>32</var>, %ecx</td></tr>
+<tr><th id="1580">1580</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore32bytes" data-ref="_M/L">L</a>(more32bytes)</td></tr>
+<tr><th id="1581">1581</th><td>	cmp	$<var>24</var>, %ecx</td></tr>
+<tr><th id="1582">1582</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L24bytes" data-ref="_M/L">L</a>(<var>24bytes</var>)</td></tr>
+<tr><th id="1583">1583</th><td><u># <span data-ppcond="1583">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1584">1584</th><td>	cmp	$<var>25</var>, %ecx</td></tr>
+<tr><th id="1585">1585</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L25bytes" data-ref="_M/L">L</a>(<var>25bytes</var>)</td></tr>
+<tr><th id="1586">1586</th><td>	cmp	$<var>26</var>, %ecx</td></tr>
+<tr><th id="1587">1587</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L26bytes" data-ref="_M/L">L</a>(<var>26bytes</var>)</td></tr>
+<tr><th id="1588">1588</th><td>	cmp	$<var>27</var>, %ecx</td></tr>
+<tr><th id="1589">1589</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L27bytes" data-ref="_M/L">L</a>(<var>27bytes</var>)</td></tr>
+<tr><th id="1590">1590</th><td>	cmp	$<var>28</var>, %ecx</td></tr>
+<tr><th id="1591">1591</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L28bytes" data-ref="_M/L">L</a>(<var>28bytes</var>)</td></tr>
+<tr><th id="1592">1592</th><td>	cmp	$<var>29</var>, %ecx</td></tr>
+<tr><th id="1593">1593</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L29bytes" data-ref="_M/L">L</a>(<var>29bytes</var>)</td></tr>
+<tr><th id="1594">1594</th><td>	cmp	$<var>30</var>, %ecx</td></tr>
+<tr><th id="1595">1595</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L30bytes" data-ref="_M/L">L</a>(<var>30bytes</var>)</td></tr>
+<tr><th id="1596">1596</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L31bytes" data-ref="_M/L">L</a>(<var>31bytes</var>)</td></tr>
+<tr><th id="1597">1597</th><td><u># <span data-ppcond="1583">else</span></u></td></tr>
+<tr><th id="1598">1598</th><td>	jmp	L(<var>28bytes</var>)</td></tr>
+<tr><th id="1599">1599</th><td><u># <span data-ppcond="1583">endif</span></u></td></tr>
+<tr><th id="1600">1600</th><td></td></tr>
+<tr><th id="1601">1601</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1602">1602</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore32bytes" data-ref="_M/L">L</a>(more32bytes):</td></tr>
+<tr><th id="1603">1603</th><td>	cmp	$<var>40</var>, %ecx</td></tr>
+<tr><th id="1604">1604</th><td>	jae	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore40bytes" data-ref="_M/L">L</a>(more40bytes)</td></tr>
+<tr><th id="1605">1605</th><td>	cmp	$<var>32</var>, %ecx</td></tr>
+<tr><th id="1606">1606</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L32bytes" data-ref="_M/L">L</a>(<var>32bytes</var>)</td></tr>
+<tr><th id="1607">1607</th><td><u># <span data-ppcond="1607">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1608">1608</th><td>	cmp	$<var>33</var>, %ecx</td></tr>
+<tr><th id="1609">1609</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L33bytes" data-ref="_M/L">L</a>(<var>33bytes</var>)</td></tr>
+<tr><th id="1610">1610</th><td>	cmp	$<var>34</var>, %ecx</td></tr>
+<tr><th id="1611">1611</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L34bytes" data-ref="_M/L">L</a>(<var>34bytes</var>)</td></tr>
+<tr><th id="1612">1612</th><td>	cmp	$<var>35</var>, %ecx</td></tr>
+<tr><th id="1613">1613</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L35bytes" data-ref="_M/L">L</a>(<var>35bytes</var>)</td></tr>
+<tr><th id="1614">1614</th><td>	cmp	$<var>36</var>, %ecx</td></tr>
+<tr><th id="1615">1615</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L36bytes" data-ref="_M/L">L</a>(<var>36bytes</var>)</td></tr>
+<tr><th id="1616">1616</th><td>	cmp	$<var>37</var>, %ecx</td></tr>
+<tr><th id="1617">1617</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L37bytes" data-ref="_M/L">L</a>(<var>37bytes</var>)</td></tr>
+<tr><th id="1618">1618</th><td>	cmp	$<var>38</var>, %ecx</td></tr>
+<tr><th id="1619">1619</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L38bytes" data-ref="_M/L">L</a>(<var>38bytes</var>)</td></tr>
+<tr><th id="1620">1620</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L39bytes" data-ref="_M/L">L</a>(<var>39bytes</var>)</td></tr>
+<tr><th id="1621">1621</th><td><u># <span data-ppcond="1607">else</span></u></td></tr>
+<tr><th id="1622">1622</th><td>	jmp	L(<var>36bytes</var>)</td></tr>
+<tr><th id="1623">1623</th><td><u># <span data-ppcond="1607">endif</span></u></td></tr>
+<tr><th id="1624">1624</th><td></td></tr>
+<tr><th id="1625">1625</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1626">1626</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lmore40bytes" data-ref="_M/L">L</a>(more40bytes):</td></tr>
+<tr><th id="1627">1627</th><td>	cmp	$<var>40</var>, %ecx</td></tr>
+<tr><th id="1628">1628</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L40bytes" data-ref="_M/L">L</a>(<var>40bytes</var>)</td></tr>
+<tr><th id="1629">1629</th><td><u># <span data-ppcond="1629">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1630">1630</th><td>	cmp	$<var>41</var>, %ecx</td></tr>
+<tr><th id="1631">1631</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L41bytes" data-ref="_M/L">L</a>(<var>41bytes</var>)</td></tr>
+<tr><th id="1632">1632</th><td>	cmp	$<var>42</var>, %ecx</td></tr>
+<tr><th id="1633">1633</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L42bytes" data-ref="_M/L">L</a>(<var>42bytes</var>)</td></tr>
+<tr><th id="1634">1634</th><td>	cmp	$<var>43</var>, %ecx</td></tr>
+<tr><th id="1635">1635</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L43bytes" data-ref="_M/L">L</a>(<var>43bytes</var>)</td></tr>
+<tr><th id="1636">1636</th><td>	cmp	$<var>44</var>, %ecx</td></tr>
+<tr><th id="1637">1637</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L44bytes" data-ref="_M/L">L</a>(<var>44bytes</var>)</td></tr>
+<tr><th id="1638">1638</th><td>	cmp	$<var>45</var>, %ecx</td></tr>
+<tr><th id="1639">1639</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L45bytes" data-ref="_M/L">L</a>(<var>45bytes</var>)</td></tr>
+<tr><th id="1640">1640</th><td>	cmp	$<var>46</var>, %ecx</td></tr>
+<tr><th id="1641">1641</th><td>	je	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L46bytes" data-ref="_M/L">L</a>(<var>46bytes</var>)</td></tr>
+<tr><th id="1642">1642</th><td>	jmp	<a class="macro" href="../../x86/sysdep.h.html#97" title=".L47bytes" data-ref="_M/L">L</a>(<var>47bytes</var>)</td></tr>
+<tr><th id="1643">1643</th><td></td></tr>
+<tr><th id="1644">1644</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1645">1645</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L44bytes" data-ref="_M/L">L</a>(<var>44bytes</var>):</td></tr>
+<tr><th id="1646">1646</th><td>	movl	-<var>44</var>(%rdi), %eax</td></tr>
+<tr><th id="1647">1647</th><td>	movl	-<var>44</var>(%rsi), %ecx</td></tr>
+<tr><th id="1648">1648</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1649">1649</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1650">1650</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L40bytes" data-ref="_M/L">L</a>(<var>40bytes</var>):</td></tr>
+<tr><th id="1651">1651</th><td>	movl	-<var>40</var>(%rdi), %eax</td></tr>
+<tr><th id="1652">1652</th><td>	movl	-<var>40</var>(%rsi), %ecx</td></tr>
+<tr><th id="1653">1653</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1654">1654</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1655">1655</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L36bytes" data-ref="_M/L">L</a>(<var>36bytes</var>):</td></tr>
+<tr><th id="1656">1656</th><td>	movl	-<var>36</var>(%rdi), %eax</td></tr>
+<tr><th id="1657">1657</th><td>	movl	-<var>36</var>(%rsi), %ecx</td></tr>
+<tr><th id="1658">1658</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1659">1659</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1660">1660</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L32bytes" data-ref="_M/L">L</a>(<var>32bytes</var>):</td></tr>
+<tr><th id="1661">1661</th><td>	movl	-<var>32</var>(%rdi), %eax</td></tr>
+<tr><th id="1662">1662</th><td>	movl	-<var>32</var>(%rsi), %ecx</td></tr>
+<tr><th id="1663">1663</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1664">1664</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1665">1665</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L28bytes" data-ref="_M/L">L</a>(<var>28bytes</var>):</td></tr>
+<tr><th id="1666">1666</th><td>	movl	-<var>28</var>(%rdi), %eax</td></tr>
+<tr><th id="1667">1667</th><td>	movl	-<var>28</var>(%rsi), %ecx</td></tr>
+<tr><th id="1668">1668</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1669">1669</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1670">1670</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L24bytes" data-ref="_M/L">L</a>(<var>24bytes</var>):</td></tr>
+<tr><th id="1671">1671</th><td>	movl	-<var>24</var>(%rdi), %eax</td></tr>
+<tr><th id="1672">1672</th><td>	movl	-<var>24</var>(%rsi), %ecx</td></tr>
+<tr><th id="1673">1673</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1674">1674</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1675">1675</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L20bytes" data-ref="_M/L">L</a>(<var>20bytes</var>):</td></tr>
+<tr><th id="1676">1676</th><td>	movl	-<var>20</var>(%rdi), %eax</td></tr>
+<tr><th id="1677">1677</th><td>	movl	-<var>20</var>(%rsi), %ecx</td></tr>
+<tr><th id="1678">1678</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1679">1679</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1680">1680</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L16bytes" data-ref="_M/L">L</a>(<var>16bytes</var>):</td></tr>
+<tr><th id="1681">1681</th><td>	movl	-<var>16</var>(%rdi), %eax</td></tr>
+<tr><th id="1682">1682</th><td>	movl	-<var>16</var>(%rsi), %ecx</td></tr>
+<tr><th id="1683">1683</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1684">1684</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1685">1685</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L12bytes" data-ref="_M/L">L</a>(<var>12bytes</var>):</td></tr>
+<tr><th id="1686">1686</th><td>	movl	-<var>12</var>(%rdi), %eax</td></tr>
+<tr><th id="1687">1687</th><td>	movl	-<var>12</var>(%rsi), %ecx</td></tr>
+<tr><th id="1688">1688</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1689">1689</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1690">1690</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L8bytes" data-ref="_M/L">L</a>(<var>8bytes</var>):</td></tr>
+<tr><th id="1691">1691</th><td>	movl	-<var>8</var>(%rdi), %eax</td></tr>
+<tr><th id="1692">1692</th><td>	movl	-<var>8</var>(%rsi), %ecx</td></tr>
+<tr><th id="1693">1693</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1694">1694</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1695">1695</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L4bytes" data-ref="_M/L">L</a>(<var>4bytes</var>):</td></tr>
+<tr><th id="1696">1696</th><td>	movl	-<var>4</var>(%rdi), %eax</td></tr>
+<tr><th id="1697">1697</th><td>	movl	-<var>4</var>(%rsi), %ecx</td></tr>
+<tr><th id="1698">1698</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1699">1699</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1700">1700</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L0bytes" data-ref="_M/L">L</a>(<var>0bytes</var>):</td></tr>
+<tr><th id="1701">1701</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1702">1702</th><td>	ret</td></tr>
+<tr><th id="1703">1703</th><td><u># <span data-ppcond="1629">else</span></u></td></tr>
+<tr><th id="1704">1704</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1705">1705</th><td>L(<var>44bytes</var>):</td></tr>
+<tr><th id="1706">1706</th><td>	movl	-<var>44</var>(%rdi), %eax</td></tr>
+<tr><th id="1707">1707</th><td>	cmp	-<var>44</var>(%rsi), %eax</td></tr>
+<tr><th id="1708">1708</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1709">1709</th><td>L(<var>40bytes</var>):</td></tr>
+<tr><th id="1710">1710</th><td>	movl	-<var>40</var>(%rdi), %eax</td></tr>
+<tr><th id="1711">1711</th><td>	cmp	-<var>40</var>(%rsi), %eax</td></tr>
+<tr><th id="1712">1712</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1713">1713</th><td>L(<var>36bytes</var>):</td></tr>
+<tr><th id="1714">1714</th><td>	movl	-<var>36</var>(%rdi), %eax</td></tr>
+<tr><th id="1715">1715</th><td>	cmp	-<var>36</var>(%rsi), %eax</td></tr>
+<tr><th id="1716">1716</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1717">1717</th><td>L(<var>32bytes</var>):</td></tr>
+<tr><th id="1718">1718</th><td>	movl	-<var>32</var>(%rdi), %eax</td></tr>
+<tr><th id="1719">1719</th><td>	cmp	-<var>32</var>(%rsi), %eax</td></tr>
+<tr><th id="1720">1720</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1721">1721</th><td>L(<var>28bytes</var>):</td></tr>
+<tr><th id="1722">1722</th><td>	movl	-<var>28</var>(%rdi), %eax</td></tr>
+<tr><th id="1723">1723</th><td>	cmp	-<var>28</var>(%rsi), %eax</td></tr>
+<tr><th id="1724">1724</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1725">1725</th><td>L(<var>24bytes</var>):</td></tr>
+<tr><th id="1726">1726</th><td>	movl	-<var>24</var>(%rdi), %eax</td></tr>
+<tr><th id="1727">1727</th><td>	cmp	-<var>24</var>(%rsi), %eax</td></tr>
+<tr><th id="1728">1728</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1729">1729</th><td>L(<var>20bytes</var>):</td></tr>
+<tr><th id="1730">1730</th><td>	movl	-<var>20</var>(%rdi), %eax</td></tr>
+<tr><th id="1731">1731</th><td>	cmp	-<var>20</var>(%rsi), %eax</td></tr>
+<tr><th id="1732">1732</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1733">1733</th><td>L(<var>16bytes</var>):</td></tr>
+<tr><th id="1734">1734</th><td>	movl	-<var>16</var>(%rdi), %eax</td></tr>
+<tr><th id="1735">1735</th><td>	cmp	-<var>16</var>(%rsi), %eax</td></tr>
+<tr><th id="1736">1736</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1737">1737</th><td>L(<var>12bytes</var>):</td></tr>
+<tr><th id="1738">1738</th><td>	movl	-<var>12</var>(%rdi), %eax</td></tr>
+<tr><th id="1739">1739</th><td>	cmp	-<var>12</var>(%rsi), %eax</td></tr>
+<tr><th id="1740">1740</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1741">1741</th><td>L(<var>8bytes</var>):</td></tr>
+<tr><th id="1742">1742</th><td>	movl	-<var>8</var>(%rdi), %eax</td></tr>
+<tr><th id="1743">1743</th><td>	cmp	-<var>8</var>(%rsi), %eax</td></tr>
+<tr><th id="1744">1744</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1745">1745</th><td>L(<var>4bytes</var>):</td></tr>
+<tr><th id="1746">1746</th><td>	movl	-<var>4</var>(%rdi), %eax</td></tr>
+<tr><th id="1747">1747</th><td>	cmp	-<var>4</var>(%rsi), %eax</td></tr>
+<tr><th id="1748">1748</th><td>	jne	L(find_diff)</td></tr>
+<tr><th id="1749">1749</th><td>L(<var>0bytes</var>):</td></tr>
+<tr><th id="1750">1750</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1751">1751</th><td>	ret</td></tr>
+<tr><th id="1752">1752</th><td><u># <span data-ppcond="1629">endif</span></u></td></tr>
+<tr><th id="1753">1753</th><td></td></tr>
+<tr><th id="1754">1754</th><td><u># <span data-ppcond="1754">ifndef</span> <span class="macro" data-ref="_M/USE_AS_WMEMCMP">USE_AS_WMEMCMP</span></u></td></tr>
+<tr><th id="1755">1755</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1756">1756</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L45bytes" data-ref="_M/L">L</a>(<var>45bytes</var>):</td></tr>
+<tr><th id="1757">1757</th><td>	movl	-<var>45</var>(%rdi), %eax</td></tr>
+<tr><th id="1758">1758</th><td>	movl	-<var>45</var>(%rsi), %ecx</td></tr>
+<tr><th id="1759">1759</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1760">1760</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1761">1761</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L41bytes" data-ref="_M/L">L</a>(<var>41bytes</var>):</td></tr>
+<tr><th id="1762">1762</th><td>	movl	-<var>41</var>(%rdi), %eax</td></tr>
+<tr><th id="1763">1763</th><td>	movl	-<var>41</var>(%rsi), %ecx</td></tr>
+<tr><th id="1764">1764</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1765">1765</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1766">1766</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L37bytes" data-ref="_M/L">L</a>(<var>37bytes</var>):</td></tr>
+<tr><th id="1767">1767</th><td>	movl	-<var>37</var>(%rdi), %eax</td></tr>
+<tr><th id="1768">1768</th><td>	movl	-<var>37</var>(%rsi), %ecx</td></tr>
+<tr><th id="1769">1769</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1770">1770</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1771">1771</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L33bytes" data-ref="_M/L">L</a>(<var>33bytes</var>):</td></tr>
+<tr><th id="1772">1772</th><td>	movl	-<var>33</var>(%rdi), %eax</td></tr>
+<tr><th id="1773">1773</th><td>	movl	-<var>33</var>(%rsi), %ecx</td></tr>
+<tr><th id="1774">1774</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1775">1775</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1776">1776</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L29bytes" data-ref="_M/L">L</a>(<var>29bytes</var>):</td></tr>
+<tr><th id="1777">1777</th><td>	movl	-<var>29</var>(%rdi), %eax</td></tr>
+<tr><th id="1778">1778</th><td>	movl	-<var>29</var>(%rsi), %ecx</td></tr>
+<tr><th id="1779">1779</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1780">1780</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1781">1781</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L25bytes" data-ref="_M/L">L</a>(<var>25bytes</var>):</td></tr>
+<tr><th id="1782">1782</th><td>	movl	-<var>25</var>(%rdi), %eax</td></tr>
+<tr><th id="1783">1783</th><td>	movl	-<var>25</var>(%rsi), %ecx</td></tr>
+<tr><th id="1784">1784</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1785">1785</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1786">1786</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L21bytes" data-ref="_M/L">L</a>(<var>21bytes</var>):</td></tr>
+<tr><th id="1787">1787</th><td>	movl	-<var>21</var>(%rdi), %eax</td></tr>
+<tr><th id="1788">1788</th><td>	movl	-<var>21</var>(%rsi), %ecx</td></tr>
+<tr><th id="1789">1789</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1790">1790</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1791">1791</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L17bytes" data-ref="_M/L">L</a>(<var>17bytes</var>):</td></tr>
+<tr><th id="1792">1792</th><td>	movl	-<var>17</var>(%rdi), %eax</td></tr>
+<tr><th id="1793">1793</th><td>	movl	-<var>17</var>(%rsi), %ecx</td></tr>
+<tr><th id="1794">1794</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1795">1795</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1796">1796</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L13bytes" data-ref="_M/L">L</a>(<var>13bytes</var>):</td></tr>
+<tr><th id="1797">1797</th><td>	movl	-<var>13</var>(%rdi), %eax</td></tr>
+<tr><th id="1798">1798</th><td>	movl	-<var>13</var>(%rsi), %ecx</td></tr>
+<tr><th id="1799">1799</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1800">1800</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1801">1801</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L9bytes" data-ref="_M/L">L</a>(<var>9bytes</var>):</td></tr>
+<tr><th id="1802">1802</th><td>	movl	-<var>9</var>(%rdi), %eax</td></tr>
+<tr><th id="1803">1803</th><td>	movl	-<var>9</var>(%rsi), %ecx</td></tr>
+<tr><th id="1804">1804</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1805">1805</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1806">1806</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L5bytes" data-ref="_M/L">L</a>(<var>5bytes</var>):</td></tr>
+<tr><th id="1807">1807</th><td>	movl	-<var>5</var>(%rdi), %eax</td></tr>
+<tr><th id="1808">1808</th><td>	movl	-<var>5</var>(%rsi), %ecx</td></tr>
+<tr><th id="1809">1809</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1810">1810</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1811">1811</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L1bytes" data-ref="_M/L">L</a>(<var>1bytes</var>):</td></tr>
+<tr><th id="1812">1812</th><td>	movzbl	-<var>1</var>(%rdi), %eax</td></tr>
+<tr><th id="1813">1813</th><td>	cmpb	-<var>1</var>(%rsi), %al</td></tr>
+<tr><th id="1814">1814</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1815">1815</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1816">1816</th><td>	ret</td></tr>
+<tr><th id="1817">1817</th><td></td></tr>
+<tr><th id="1818">1818</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1819">1819</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L46bytes" data-ref="_M/L">L</a>(<var>46bytes</var>):</td></tr>
+<tr><th id="1820">1820</th><td>	movl	-<var>46</var>(%rdi), %eax</td></tr>
+<tr><th id="1821">1821</th><td>	movl	-<var>46</var>(%rsi), %ecx</td></tr>
+<tr><th id="1822">1822</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1823">1823</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1824">1824</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L42bytes" data-ref="_M/L">L</a>(<var>42bytes</var>):</td></tr>
+<tr><th id="1825">1825</th><td>	movl	-<var>42</var>(%rdi), %eax</td></tr>
+<tr><th id="1826">1826</th><td>	movl	-<var>42</var>(%rsi), %ecx</td></tr>
+<tr><th id="1827">1827</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1828">1828</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1829">1829</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L38bytes" data-ref="_M/L">L</a>(<var>38bytes</var>):</td></tr>
+<tr><th id="1830">1830</th><td>	movl	-<var>38</var>(%rdi), %eax</td></tr>
+<tr><th id="1831">1831</th><td>	movl	-<var>38</var>(%rsi), %ecx</td></tr>
+<tr><th id="1832">1832</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1833">1833</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1834">1834</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L34bytes" data-ref="_M/L">L</a>(<var>34bytes</var>):</td></tr>
+<tr><th id="1835">1835</th><td>	movl	-<var>34</var>(%rdi), %eax</td></tr>
+<tr><th id="1836">1836</th><td>	movl	-<var>34</var>(%rsi), %ecx</td></tr>
+<tr><th id="1837">1837</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1838">1838</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1839">1839</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L30bytes" data-ref="_M/L">L</a>(<var>30bytes</var>):</td></tr>
+<tr><th id="1840">1840</th><td>	movl	-<var>30</var>(%rdi), %eax</td></tr>
+<tr><th id="1841">1841</th><td>	movl	-<var>30</var>(%rsi), %ecx</td></tr>
+<tr><th id="1842">1842</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1843">1843</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1844">1844</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L26bytes" data-ref="_M/L">L</a>(<var>26bytes</var>):</td></tr>
+<tr><th id="1845">1845</th><td>	movl	-<var>26</var>(%rdi), %eax</td></tr>
+<tr><th id="1846">1846</th><td>	movl	-<var>26</var>(%rsi), %ecx</td></tr>
+<tr><th id="1847">1847</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1848">1848</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1849">1849</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L22bytes" data-ref="_M/L">L</a>(<var>22bytes</var>):</td></tr>
+<tr><th id="1850">1850</th><td>	movl	-<var>22</var>(%rdi), %eax</td></tr>
+<tr><th id="1851">1851</th><td>	movl	-<var>22</var>(%rsi), %ecx</td></tr>
+<tr><th id="1852">1852</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1853">1853</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1854">1854</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L18bytes" data-ref="_M/L">L</a>(<var>18bytes</var>):</td></tr>
+<tr><th id="1855">1855</th><td>	movl	-<var>18</var>(%rdi), %eax</td></tr>
+<tr><th id="1856">1856</th><td>	movl	-<var>18</var>(%rsi), %ecx</td></tr>
+<tr><th id="1857">1857</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1858">1858</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1859">1859</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L14bytes" data-ref="_M/L">L</a>(<var>14bytes</var>):</td></tr>
+<tr><th id="1860">1860</th><td>	movl	-<var>14</var>(%rdi), %eax</td></tr>
+<tr><th id="1861">1861</th><td>	movl	-<var>14</var>(%rsi), %ecx</td></tr>
+<tr><th id="1862">1862</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1863">1863</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1864">1864</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L10bytes" data-ref="_M/L">L</a>(<var>10bytes</var>):</td></tr>
+<tr><th id="1865">1865</th><td>	movl	-<var>10</var>(%rdi), %eax</td></tr>
+<tr><th id="1866">1866</th><td>	movl	-<var>10</var>(%rsi), %ecx</td></tr>
+<tr><th id="1867">1867</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1868">1868</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1869">1869</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L6bytes" data-ref="_M/L">L</a>(<var>6bytes</var>):</td></tr>
+<tr><th id="1870">1870</th><td>	movl	-<var>6</var>(%rdi), %eax</td></tr>
+<tr><th id="1871">1871</th><td>	movl	-<var>6</var>(%rsi), %ecx</td></tr>
+<tr><th id="1872">1872</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1873">1873</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1874">1874</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L2bytes" data-ref="_M/L">L</a>(<var>2bytes</var>):</td></tr>
+<tr><th id="1875">1875</th><td>	movzwl	-<var>2</var>(%rdi), %eax</td></tr>
+<tr><th id="1876">1876</th><td>	movzwl	-<var>2</var>(%rsi), %ecx</td></tr>
+<tr><th id="1877">1877</th><td>	cmpb	%cl, %al</td></tr>
+<tr><th id="1878">1878</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1879">1879</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1880">1880</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1881">1881</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1882">1882</th><td>	ret</td></tr>
+<tr><th id="1883">1883</th><td></td></tr>
+<tr><th id="1884">1884</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1885">1885</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L47bytes" data-ref="_M/L">L</a>(<var>47bytes</var>):</td></tr>
+<tr><th id="1886">1886</th><td>	movl	-<var>47</var>(%rdi), %eax</td></tr>
+<tr><th id="1887">1887</th><td>	movl	-<var>47</var>(%rsi), %ecx</td></tr>
+<tr><th id="1888">1888</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1889">1889</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1890">1890</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L43bytes" data-ref="_M/L">L</a>(<var>43bytes</var>):</td></tr>
+<tr><th id="1891">1891</th><td>	movl	-<var>43</var>(%rdi), %eax</td></tr>
+<tr><th id="1892">1892</th><td>	movl	-<var>43</var>(%rsi), %ecx</td></tr>
+<tr><th id="1893">1893</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1894">1894</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1895">1895</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L39bytes" data-ref="_M/L">L</a>(<var>39bytes</var>):</td></tr>
+<tr><th id="1896">1896</th><td>	movl	-<var>39</var>(%rdi), %eax</td></tr>
+<tr><th id="1897">1897</th><td>	movl	-<var>39</var>(%rsi), %ecx</td></tr>
+<tr><th id="1898">1898</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1899">1899</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1900">1900</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L35bytes" data-ref="_M/L">L</a>(<var>35bytes</var>):</td></tr>
+<tr><th id="1901">1901</th><td>	movl	-<var>35</var>(%rdi), %eax</td></tr>
+<tr><th id="1902">1902</th><td>	movl	-<var>35</var>(%rsi), %ecx</td></tr>
+<tr><th id="1903">1903</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1904">1904</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1905">1905</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L31bytes" data-ref="_M/L">L</a>(<var>31bytes</var>):</td></tr>
+<tr><th id="1906">1906</th><td>	movl	-<var>31</var>(%rdi), %eax</td></tr>
+<tr><th id="1907">1907</th><td>	movl	-<var>31</var>(%rsi), %ecx</td></tr>
+<tr><th id="1908">1908</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1909">1909</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1910">1910</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L27bytes" data-ref="_M/L">L</a>(<var>27bytes</var>):</td></tr>
+<tr><th id="1911">1911</th><td>	movl	-<var>27</var>(%rdi), %eax</td></tr>
+<tr><th id="1912">1912</th><td>	movl	-<var>27</var>(%rsi), %ecx</td></tr>
+<tr><th id="1913">1913</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1914">1914</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1915">1915</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L23bytes" data-ref="_M/L">L</a>(<var>23bytes</var>):</td></tr>
+<tr><th id="1916">1916</th><td>	movl	-<var>23</var>(%rdi), %eax</td></tr>
+<tr><th id="1917">1917</th><td>	movl	-<var>23</var>(%rsi), %ecx</td></tr>
+<tr><th id="1918">1918</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1919">1919</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1920">1920</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L19bytes" data-ref="_M/L">L</a>(<var>19bytes</var>):</td></tr>
+<tr><th id="1921">1921</th><td>	movl	-<var>19</var>(%rdi), %eax</td></tr>
+<tr><th id="1922">1922</th><td>	movl	-<var>19</var>(%rsi), %ecx</td></tr>
+<tr><th id="1923">1923</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1924">1924</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1925">1925</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L15bytes" data-ref="_M/L">L</a>(<var>15bytes</var>):</td></tr>
+<tr><th id="1926">1926</th><td>	movl	-<var>15</var>(%rdi), %eax</td></tr>
+<tr><th id="1927">1927</th><td>	movl	-<var>15</var>(%rsi), %ecx</td></tr>
+<tr><th id="1928">1928</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1929">1929</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1930">1930</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L11bytes" data-ref="_M/L">L</a>(<var>11bytes</var>):</td></tr>
+<tr><th id="1931">1931</th><td>	movl	-<var>11</var>(%rdi), %eax</td></tr>
+<tr><th id="1932">1932</th><td>	movl	-<var>11</var>(%rsi), %ecx</td></tr>
+<tr><th id="1933">1933</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1934">1934</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1935">1935</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L7bytes" data-ref="_M/L">L</a>(<var>7bytes</var>):</td></tr>
+<tr><th id="1936">1936</th><td>	movl	-<var>7</var>(%rdi), %eax</td></tr>
+<tr><th id="1937">1937</th><td>	movl	-<var>7</var>(%rsi), %ecx</td></tr>
+<tr><th id="1938">1938</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1939">1939</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff)</td></tr>
+<tr><th id="1940">1940</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".L3bytes" data-ref="_M/L">L</a>(<var>3bytes</var>):</td></tr>
+<tr><th id="1941">1941</th><td>	movzwl	-<var>3</var>(%rdi), %eax</td></tr>
+<tr><th id="1942">1942</th><td>	movzwl	-<var>3</var>(%rsi), %ecx</td></tr>
+<tr><th id="1943">1943</th><td>	cmpb	%cl, %al</td></tr>
+<tr><th id="1944">1944</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1945">1945</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1946">1946</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1947">1947</th><td>	movzbl	-<var>1</var>(%rdi), %eax</td></tr>
+<tr><th id="1948">1948</th><td>	cmpb	-<var>1</var>(%rsi), %al</td></tr>
+<tr><th id="1949">1949</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1950">1950</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1951">1951</th><td>	ret</td></tr>
+<tr><th id="1952">1952</th><td></td></tr>
+<tr><th id="1953">1953</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1954">1954</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lfind_diff" data-ref="_M/L">L</a>(find_diff):</td></tr>
+<tr><th id="1955">1955</th><td>	cmpb	%cl, %al</td></tr>
+<tr><th id="1956">1956</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1957">1957</th><td>	cmpw	%cx, %ax</td></tr>
+<tr><th id="1958">1958</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1959">1959</th><td>	shr	$<var>16</var>, %eax</td></tr>
+<tr><th id="1960">1960</th><td>	shr	$<var>16</var>, %ecx</td></tr>
+<tr><th id="1961">1961</th><td>	cmpb	%cl, %al</td></tr>
+<tr><th id="1962">1962</th><td>	jne	<a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set)</td></tr>
+<tr><th id="1963">1963</th><td></td></tr>
+<tr><th id="1964">1964</th><td><i>/* We get there only if we already know there is a</i></td></tr>
+<tr><th id="1965">1965</th><td><i>difference.  */</i></td></tr>
+<tr><th id="1966">1966</th><td></td></tr>
+<tr><th id="1967">1967</th><td>	cmp	%ecx, %eax</td></tr>
+<tr><th id="1968">1968</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lset" data-ref="_M/L">L</a>(set):</td></tr>
+<tr><th id="1969">1969</th><td>	sbb	%eax, %eax</td></tr>
+<tr><th id="1970">1970</th><td>	sbb	$-<var>1</var>, %eax</td></tr>
+<tr><th id="1971">1971</th><td>	ret</td></tr>
+<tr><th id="1972">1972</th><td><u># <span data-ppcond="1754">else</span></u></td></tr>
+<tr><th id="1973">1973</th><td></td></tr>
+<tr><th id="1974">1974</th><td><i>/* for wmemcmp */</i></td></tr>
+<tr><th id="1975">1975</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1976">1976</th><td>L(find_diff):</td></tr>
+<tr><th id="1977">1977</th><td>	mov	$<var>1</var>, %eax</td></tr>
+<tr><th id="1978">1978</th><td>	jg	L(find_diff_bigger)</td></tr>
+<tr><th id="1979">1979</th><td>	neg	%eax</td></tr>
+<tr><th id="1980">1980</th><td>	ret</td></tr>
+<tr><th id="1981">1981</th><td></td></tr>
+<tr><th id="1982">1982</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1983">1983</th><td>L(find_diff_bigger):</td></tr>
+<tr><th id="1984">1984</th><td>	ret</td></tr>
+<tr><th id="1985">1985</th><td><u># <span data-ppcond="1754">endif</span></u></td></tr>
+<tr><th id="1986">1986</th><td></td></tr>
+<tr><th id="1987">1987</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="1988">1988</th><td><a class="macro" href="../../x86/sysdep.h.html#97" title=".Lequal" data-ref="_M/L">L</a>(equal):</td></tr>
+<tr><th id="1989">1989</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="1990">1990</th><td>	ret</td></tr>
+<tr><th id="1991">1991</th><td></td></tr>
+<tr><th id="1992">1992</th><td><a class="macro" href="../../x86/sysdep.h.html#77" title=".cfi_endproc; .size __memcmp_ssse3,.-__memcmp_ssse3;" data-ref="_M/END">END</a> (<a class="macro" href="#25" title="__memcmp_ssse3" data-ref="_M/MEMCMP">MEMCMP</a>)</td></tr>
+<tr><th id="1993">1993</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="1994">1994</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,337 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>e_acosl.c source code [glibc_src_2.28/sysdeps/ieee754/ldbl-128/e_acosl.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/sysdeps/ieee754/ldbl-128/e_acosl.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.28</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-128</a>/<a href='e_acosl.c.html'>e_acosl.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Developed at SunPro, a Sun Microsystems, Inc. business.</i></td></tr>
+<tr><th id="6">6</th><td><i> * Permission to use, copy, modify, and distribute this</i></td></tr>
+<tr><th id="7">7</th><td><i> * software is freely granted, provided that this notice</i></td></tr>
+<tr><th id="8">8</th><td><i> * is preserved.</i></td></tr>
+<tr><th id="9">9</th><td><i> * ====================================================</i></td></tr>
+<tr><th id="10">10</th><td><i> */</i></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><i>/*</i></td></tr>
+<tr><th id="13">13</th><td><i>   Long double expansions are</i></td></tr>
+<tr><th id="14">14</th><td><i>   Copyright (C) 2001 Stephen L. Moshier &lt;moshier@na-net.ornl.gov&gt;</i></td></tr>
+<tr><th id="15">15</th><td><i>   and are incorporated herein by permission of the author.  The author</i></td></tr>
+<tr><th id="16">16</th><td><i>   reserves the right to distribute this material elsewhere under different</i></td></tr>
+<tr><th id="17">17</th><td><i>   copying permissions.  These modifications are distributed here under</i></td></tr>
+<tr><th id="18">18</th><td><i>   the following terms:</i></td></tr>
+<tr><th id="19">19</th><td><i></i></td></tr>
+<tr><th id="20">20</th><td><i>    This library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="21">21</th><td><i>    modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="22">22</th><td><i>    License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="23">23</th><td><i>    version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="24">24</th><td><i></i></td></tr>
+<tr><th id="25">25</th><td><i>    This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="26">26</th><td><i>    but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="27">27</th><td><i>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="28">28</th><td><i>    Lesser General Public License for more details.</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>    You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="31">31</th><td><i>    License along with this library; if not, see</i></td></tr>
+<tr><th id="32">32</th><td><i>    &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* __ieee754_acosl(x)</i></td></tr>
+<tr><th id="35">35</th><td><i> * Method :</i></td></tr>
+<tr><th id="36">36</th><td><i> *      acos(x)  = pi/2 - asin(x)</i></td></tr>
+<tr><th id="37">37</th><td><i> *      acos(-x) = pi/2 + asin(x)</i></td></tr>
+<tr><th id="38">38</th><td><i> * For |x| &lt;= 0.375</i></td></tr>
+<tr><th id="39">39</th><td><i> *      acos(x) = pi/2 - asin(x)</i></td></tr>
+<tr><th id="40">40</th><td><i> * Between .375 and .5 the approximation is</i></td></tr>
+<tr><th id="41">41</th><td><i> *      acos(0.4375 + x) = acos(0.4375) + x P(x) / Q(x)</i></td></tr>
+<tr><th id="42">42</th><td><i> * Between .5 and .625 the approximation is</i></td></tr>
+<tr><th id="43">43</th><td><i> *      acos(0.5625 + x) = acos(0.5625) + x rS(x) / sS(x)</i></td></tr>
+<tr><th id="44">44</th><td><i> * For x &gt; 0.625,</i></td></tr>
+<tr><th id="45">45</th><td><i> *      acos(x) = 2 asin(sqrt((1-x)/2))</i></td></tr>
+<tr><th id="46">46</th><td><i> *      computed with an extended precision square root in the leading term.</i></td></tr>
+<tr><th id="47">47</th><td><i> * For x &lt; -0.625</i></td></tr>
+<tr><th id="48">48</th><td><i> *      acos(x) = pi - 2 asin(sqrt((1-|x|)/2))</i></td></tr>
+<tr><th id="49">49</th><td><i> *</i></td></tr>
+<tr><th id="50">50</th><td><i> * Special cases:</i></td></tr>
+<tr><th id="51">51</th><td><i> *      if x is NaN, return x itself;</i></td></tr>
+<tr><th id="52">52</th><td><i> *      if |x|&gt;1, return NaN with invalid signal.</i></td></tr>
+<tr><th id="53">53</th><td><i> *</i></td></tr>
+<tr><th id="54">54</th><td><i> * Functions needed: sqrtl.</i></td></tr>
+<tr><th id="55">55</th><td><i> */</i></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="58">58</th><td><u>#include <a href="../../x86_64/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="61">61</th><td>  <dfn class="decl def" id="one" title='one' data-ref="one" data-ref-filename="one">one</dfn> = <var>1</var>,</td></tr>
+<tr><th id="62">62</th><td>  pio2_hi<span class='error' title="expected &apos;;&apos; after top level declarator"></span> = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.5707963267948966192313216916397514420986)" data-ref="_M/L">L</a>(<var>1.5707963267948966192313216916397514420986</var>),</td></tr>
+<tr><th id="63">63</th><td>  pio2_lo = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (4.3359050650618905123985220130216759843812E-35)" data-ref="_M/L">L</a>(<var>4.3359050650618905123985220130216759843812E-35</var>),</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>  <i>/* acos(0.5625 + x) = acos(0.5625) + x rS(x) / sS(x)</i></td></tr>
+<tr><th id="66">66</th><td><i>     -0.0625 &lt;= x &lt;= 0.0625</i></td></tr>
+<tr><th id="67">67</th><td><i>     peak relative error 3.3e-35  */</i></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  rS0 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (5.619049346208901520945464704848780243887E0)" data-ref="_M/L">L</a>(<var>5.619049346208901520945464704848780243887E0</var>),</td></tr>
+<tr><th id="70">70</th><td>  rS1 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.460504162777731472539175700169871920352E1)" data-ref="_M/L">L</a>(-<var>4.460504162777731472539175700169871920352E1</var>),</td></tr>
+<tr><th id="71">71</th><td>  rS2 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.317669505315409261479577040530751477488E2)" data-ref="_M/L">L</a>(<var>1.317669505315409261479577040530751477488E2</var>),</td></tr>
+<tr><th id="72">72</th><td>  rS3 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.626532582423661989632442410808596009227E2)" data-ref="_M/L">L</a>(-<var>1.626532582423661989632442410808596009227E2</var>),</td></tr>
+<tr><th id="73">73</th><td>  rS4 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (3.144806644195158614904369445440583873264E1)" data-ref="_M/L">L</a>(<var>3.144806644195158614904369445440583873264E1</var>),</td></tr>
+<tr><th id="74">74</th><td>  rS5 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (9.806674443470740708765165604769099559553E1)" data-ref="_M/L">L</a>(<var>9.806674443470740708765165604769099559553E1</var>),</td></tr>
+<tr><th id="75">75</th><td>  rS6 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-5.708468492052010816555762842394927806920E1)" data-ref="_M/L">L</a>(-<var>5.708468492052010816555762842394927806920E1</var>),</td></tr>
+<tr><th id="76">76</th><td>  rS7 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.396540499232262112248553357962639431922E1)" data-ref="_M/L">L</a>(-<var>1.396540499232262112248553357962639431922E1</var>),</td></tr>
+<tr><th id="77">77</th><td>  rS8 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.126243289311910363001762058295832610344E1)" data-ref="_M/L">L</a>(<var>1.126243289311910363001762058295832610344E1</var>),</td></tr>
+<tr><th id="78">78</th><td>  rS9 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (4.956179821329901954211277873774472383512E-1)" data-ref="_M/L">L</a>(<var>4.956179821329901954211277873774472383512E-1</var>),</td></tr>
+<tr><th id="79">79</th><td>  rS10 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-3.313227657082367169241333738391762525780E-1)" data-ref="_M/L">L</a>(-<var>3.313227657082367169241333738391762525780E-1</var>),</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>  sS0 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.645814742084009935700221277307007679325E0)" data-ref="_M/L">L</a>(-<var>4.645814742084009935700221277307007679325E0</var>),</td></tr>
+<tr><th id="82">82</th><td>  sS1 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (3.879074822457694323970438316317961918430E1)" data-ref="_M/L">L</a>(<var>3.879074822457694323970438316317961918430E1</var>),</td></tr>
+<tr><th id="83">83</th><td>  sS2 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.221986588013474694623973554726201001066E2)" data-ref="_M/L">L</a>(-<var>1.221986588013474694623973554726201001066E2</var>),</td></tr>
+<tr><th id="84">84</th><td>  sS3 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.658821150347718105012079876756201905822E2)" data-ref="_M/L">L</a>(<var>1.658821150347718105012079876756201905822E2</var>),</td></tr>
+<tr><th id="85">85</th><td>  sS4 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.804379630977558197953176474426239748977E1)" data-ref="_M/L">L</a>(-<var>4.804379630977558197953176474426239748977E1</var>),</td></tr>
+<tr><th id="86">86</th><td>  sS5 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.004296417397316948114344573811562952793E2)" data-ref="_M/L">L</a>(-<var>1.004296417397316948114344573811562952793E2</var>),</td></tr>
+<tr><th id="87">87</th><td>  sS6 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (7.530281592861320234941101403870010111138E1)" data-ref="_M/L">L</a>(<var>7.530281592861320234941101403870010111138E1</var>),</td></tr>
+<tr><th id="88">88</th><td>  sS7 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.270735595411673647119592092304357226607E1)" data-ref="_M/L">L</a>(<var>1.270735595411673647119592092304357226607E1</var>),</td></tr>
+<tr><th id="89">89</th><td>  sS8 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.815144839646376500705105967064792930282E1)" data-ref="_M/L">L</a>(-<var>1.815144839646376500705105967064792930282E1</var>),</td></tr>
+<tr><th id="90">90</th><td>  sS9 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-7.821597334910963922204235247786840828217E-2)" data-ref="_M/L">L</a>(-<var>7.821597334910963922204235247786840828217E-2</var>),</td></tr>
+<tr><th id="91">91</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>  acosr5625 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (9.7338991014954640492751132535550279812151E-1)" data-ref="_M/L">L</a>(<var>9.7338991014954640492751132535550279812151E-1</var>),</td></tr>
+<tr><th id="94">94</th><td>  pimacosr5625 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.1682027434402468335351320579240000860757E0)" data-ref="_M/L">L</a>(<var>2.1682027434402468335351320579240000860757E0</var>),</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>  <i>/* acos(0.4375 + x) = acos(0.4375) + x rS(x) / sS(x)</i></td></tr>
+<tr><th id="97">97</th><td><i>     -0.0625 &lt;= x &lt;= 0.0625</i></td></tr>
+<tr><th id="98">98</th><td><i>     peak relative error 2.1e-35  */</i></td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  P0 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.177690192235413635229046633751390484892E0)" data-ref="_M/L">L</a>(<var>2.177690192235413635229046633751390484892E0</var>),</td></tr>
+<tr><th id="101">101</th><td>  P1 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-2.848698225706605746657192566166142909573E1)" data-ref="_M/L">L</a>(-<var>2.848698225706605746657192566166142909573E1</var>),</td></tr>
+<tr><th id="102">102</th><td>  P2 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.040076477655245590871244795403659880304E2)" data-ref="_M/L">L</a>(<var>1.040076477655245590871244795403659880304E2</var>),</td></tr>
+<tr><th id="103">103</th><td>  P3 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.400087608918906358323551402881238180553E2)" data-ref="_M/L">L</a>(-<var>1.400087608918906358323551402881238180553E2</var>),</td></tr>
+<tr><th id="104">104</th><td>  P4 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.221047917671449176051896400503615543757E1)" data-ref="_M/L">L</a>(<var>2.221047917671449176051896400503615543757E1</var>),</td></tr>
+<tr><th id="105">105</th><td>  P5 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (9.643714856395587663736110523917499638702E1)" data-ref="_M/L">L</a>(<var>9.643714856395587663736110523917499638702E1</var>),</td></tr>
+<tr><th id="106">106</th><td>  P6 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-5.158406639829833829027457284942389079196E1)" data-ref="_M/L">L</a>(-<var>5.158406639829833829027457284942389079196E1</var>),</td></tr>
+<tr><th id="107">107</th><td>  P7 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.578651828337585944715290382181219741813E1)" data-ref="_M/L">L</a>(-<var>1.578651828337585944715290382181219741813E1</var>),</td></tr>
+<tr><th id="108">108</th><td>  P8 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.093632715903802870546857764647931045906E1)" data-ref="_M/L">L</a>(<var>1.093632715903802870546857764647931045906E1</var>),</td></tr>
+<tr><th id="109">109</th><td>  P9 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (5.448925479898460003048760932274085300103E-1)" data-ref="_M/L">L</a>(<var>5.448925479898460003048760932274085300103E-1</var>),</td></tr>
+<tr><th id="110">110</th><td>  P10 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-3.315886001095605268470690485170092986337E-1)" data-ref="_M/L">L</a>(-<var>3.315886001095605268470690485170092986337E-1</var>),</td></tr>
+<tr><th id="111">111</th><td>  Q0 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.958219113487162405143608843774587557016E0)" data-ref="_M/L">L</a>(-<var>1.958219113487162405143608843774587557016E0</var>),</td></tr>
+<tr><th id="112">112</th><td>  Q1 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.614577866876185080678907676023269360520E1)" data-ref="_M/L">L</a>(<var>2.614577866876185080678907676023269360520E1</var>),</td></tr>
+<tr><th id="113">113</th><td>  Q2 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-9.990858606464150981009763389881793660938E1)" data-ref="_M/L">L</a>(-<var>9.990858606464150981009763389881793660938E1</var>),</td></tr>
+<tr><th id="114">114</th><td>  Q3 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.443958741356995763628660823395334281596E2)" data-ref="_M/L">L</a>(<var>1.443958741356995763628660823395334281596E2</var>),</td></tr>
+<tr><th id="115">115</th><td>  Q4 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-3.206441012484232867657763518369723873129E1)" data-ref="_M/L">L</a>(-<var>3.206441012484232867657763518369723873129E1</var>),</td></tr>
+<tr><th id="116">116</th><td>  Q5 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.048560885341833443564920145642588991492E2)" data-ref="_M/L">L</a>(-<var>1.048560885341833443564920145642588991492E2</var>),</td></tr>
+<tr><th id="117">117</th><td>  Q6 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (6.745883931909770880159915641984874746358E1)" data-ref="_M/L">L</a>(<var>6.745883931909770880159915641984874746358E1</var>),</td></tr>
+<tr><th id="118">118</th><td>  Q7 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.806809656342804436118449982647641392951E1)" data-ref="_M/L">L</a>(<var>1.806809656342804436118449982647641392951E1</var>),</td></tr>
+<tr><th id="119">119</th><td>  Q8 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-1.770150690652438294290020775359580915464E1)" data-ref="_M/L">L</a>(-<var>1.770150690652438294290020775359580915464E1</var>),</td></tr>
+<tr><th id="120">120</th><td>  Q9 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-5.659156469628629327045433069052560211164E-1)" data-ref="_M/L">L</a>(-<var>5.659156469628629327045433069052560211164E-1</var>),</td></tr>
+<tr><th id="121">121</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>  acosr4375 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.1179797320499710475919903296900511518755E0)" data-ref="_M/L">L</a>(<var>1.1179797320499710475919903296900511518755E0</var>),</td></tr>
+<tr><th id="124">124</th><td>  pimacosr4375 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.0236129215398221908706530535894517323217E0)" data-ref="_M/L">L</a>(<var>2.0236129215398221908706530535894517323217E0</var>),</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>  <i>/* asin(x) = x + x^3 pS(x^2) / qS(x^2)</i></td></tr>
+<tr><th id="127">127</th><td><i>     0 &lt;= x &lt;= 0.5</i></td></tr>
+<tr><th id="128">128</th><td><i>     peak relative error 1.9e-35  */</i></td></tr>
+<tr><th id="129">129</th><td>  pS0 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-8.358099012470680544198472400254596543711E2)" data-ref="_M/L">L</a>(-<var>8.358099012470680544198472400254596543711E2</var>),</td></tr>
+<tr><th id="130">130</th><td>  pS1 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (3.674973957689619490312782828051860366493E3)" data-ref="_M/L">L</a>(<var>3.674973957689619490312782828051860366493E3</var>),</td></tr>
+<tr><th id="131">131</th><td>  pS2 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-6.730729094812979665807581609853656623219E3)" data-ref="_M/L">L</a>(-<var>6.730729094812979665807581609853656623219E3</var>),</td></tr>
+<tr><th id="132">132</th><td>  pS3 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (6.643843795209060298375552684423454077633E3)" data-ref="_M/L">L</a>(<var>6.643843795209060298375552684423454077633E3</var>),</td></tr>
+<tr><th id="133">133</th><td>  pS4 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-3.817341990928606692235481812252049415993E3)" data-ref="_M/L">L</a>(-<var>3.817341990928606692235481812252049415993E3</var>),</td></tr>
+<tr><th id="134">134</th><td>  pS5 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.284635388402653715636722822195716476156E3)" data-ref="_M/L">L</a>(<var>1.284635388402653715636722822195716476156E3</var>),</td></tr>
+<tr><th id="135">135</th><td>  pS6 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-2.410736125231549204856567737329112037867E2)" data-ref="_M/L">L</a>(-<var>2.410736125231549204856567737329112037867E2</var>),</td></tr>
+<tr><th id="136">136</th><td>  pS7 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.219191969382402856557594215833622156220E1)" data-ref="_M/L">L</a>(<var>2.219191969382402856557594215833622156220E1</var>),</td></tr>
+<tr><th id="137">137</th><td>  pS8 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-7.249056260830627156600112195061001036533E-1)" data-ref="_M/L">L</a>(-<var>7.249056260830627156600112195061001036533E-1</var>),</td></tr>
+<tr><th id="138">138</th><td>  pS9 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.055923570937755300061509030361395604448E-3)" data-ref="_M/L">L</a>(<var>1.055923570937755300061509030361395604448E-3</var>),</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>  qS0 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-5.014859407482408326519083440151745519205E3)" data-ref="_M/L">L</a>(-<var>5.014859407482408326519083440151745519205E3</var>),</td></tr>
+<tr><th id="141">141</th><td>  qS1 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (2.430653047950480068881028451580393430537E4)" data-ref="_M/L">L</a>(<var>2.430653047950480068881028451580393430537E4</var>),</td></tr>
+<tr><th id="142">142</th><td>  qS2 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.997904737193653607449250593976069726962E4)" data-ref="_M/L">L</a>(-<var>4.997904737193653607449250593976069726962E4</var>),</td></tr>
+<tr><th id="143">143</th><td>  qS3 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (5.675712336110456923807959930107347511086E4)" data-ref="_M/L">L</a>(<var>5.675712336110456923807959930107347511086E4</var>),</td></tr>
+<tr><th id="144">144</th><td>  qS4 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-3.881523118339661268482937768522572588022E4)" data-ref="_M/L">L</a>(-<var>3.881523118339661268482937768522572588022E4</var>),</td></tr>
+<tr><th id="145">145</th><td>  qS5 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (1.634202194895541569749717032234510811216E4)" data-ref="_M/L">L</a>(<var>1.634202194895541569749717032234510811216E4</var>),</td></tr>
+<tr><th id="146">146</th><td>  qS6 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.151452662440709301601820849901296953752E3)" data-ref="_M/L">L</a>(-<var>4.151452662440709301601820849901296953752E3</var>),</td></tr>
+<tr><th id="147">147</th><td>  qS7 =  <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (5.956050864057192019085175976175695342168E2)" data-ref="_M/L">L</a>(<var>5.956050864057192019085175976175695342168E2</var>),</td></tr>
+<tr><th id="148">148</th><td>  qS8 = <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (-4.175375777334867025769346564600396877176E1)" data-ref="_M/L">L</a>(-<var>4.175375777334867025769346564600396877176E1</var>);</td></tr>
+<tr><th id="149">149</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="152">152</th><td><a class="macro" href="../float128/float128_private.h.html#144" title="__ieee754_acosf128" data-ref="_M/__ieee754_acosl">__ieee754_acosl</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x)</td></tr>
+<tr><th id="153">153</th><td>{</td></tr>
+<tr><th id="154">154</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>, <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span>, <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>, <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>, <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span>, <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span>, <span class='error' title="use of undeclared identifier &apos;f2&apos;">f2</span>;</td></tr>
+<tr><th id="155">155</th><td>  <a class="typedef" href="../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col7 decl" id="67ix" title='ix' data-type='int32_t' data-ref="67ix" data-ref-filename="67ix">ix</dfn>, <dfn class="local col8 decl" id="68sign" title='sign' data-type='int32_t' data-ref="68sign" data-ref-filename="68sign">sign</dfn>;</td></tr>
+<tr><th id="156">156</th><td>  <a class="macro" href="../float128/float128_private.h.html#33" title="ieee854_float128_shape_type" data-ref="_M/ieee854_long_double_shape_type">ieee854_long_double_shape_type</a> <dfn class="local col9 decl" id="69u" title='u' data-type='ieee854_float128_shape_type' data-ref="69u" data-ref-filename="69u">u</dfn>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>  u.value = x;</td></tr>
+<tr><th id="159">159</th><td>  <a class="local col8 ref" href="#68sign" title='sign' data-ref="68sign" data-ref-filename="68sign">sign</a> = <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col1 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="61w0" data-ref-filename="61w0">w0</a>;</td></tr>
+<tr><th id="160">160</th><td>  <a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> = <a class="local col8 ref" href="#68sign" title='sign' data-ref="68sign" data-ref-filename="68sign">sign</a> &amp; <var>0x7fffffff</var>;</td></tr>
+<tr><th id="161">161</th><td>  <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col1 ref field" href="../float128/ieee754_float128.h.html#55" title='w0' data-ref="61w0" data-ref-filename="61w0">w0</a> = <a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a>;		<i>/* |x| */</i></td></tr>
+<tr><th id="162">162</th><td>  <b>if</b> (<a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> &gt;= <var>0x3fff0000</var>)		<i>/* |x| &gt;= 1 */</i></td></tr>
+<tr><th id="163">163</th><td>    {</td></tr>
+<tr><th id="164">164</th><td>      <b>if</b> (<a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> == <var>0x3fff0000</var></td></tr>
+<tr><th id="165">165</th><td>	  &amp;&amp; (<a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col0 ref field" href="../float128/ieee754_float128.h.html#55" title='w1' data-ref="60w1" data-ref-filename="60w1">w1</a> | <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col9 ref field" href="../float128/ieee754_float128.h.html#55" title='w2' data-ref="59w2" data-ref-filename="59w2">w2</a> | <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#55" title='w3' data-ref="58w3" data-ref-filename="58w3">w3</a>) == <var>0</var>)</td></tr>
+<tr><th id="166">166</th><td>	{			<i>/* |x| == 1 */</i></td></tr>
+<tr><th id="167">167</th><td>	  <b>if</b> ((<a class="local col8 ref" href="#68sign" title='sign' data-ref="68sign" data-ref-filename="68sign">sign</a> &amp; <var>0x80000000</var>) == <var>0</var>)</td></tr>
+<tr><th id="168">168</th><td>	    <b>return</b> <var>0.0</var>;		<i>/* acos(1) = 0  */</i></td></tr>
+<tr><th id="169">169</th><td>	  <b>else</b></td></tr>
+<tr><th id="170">170</th><td>	    <b>return</b> (<var>2.0</var> * <span class='error' title="use of undeclared identifier &apos;pio2_hi&apos;">pio2_hi</span>) + (<var>2.0</var> * <span class='error' title="use of undeclared identifier &apos;pio2_lo&apos;">pio2_lo</span>);	<i>/* acos(-1)= pi */</i></td></tr>
+<tr><th id="171">171</th><td>	}</td></tr>
+<tr><th id="172">172</th><td>      <b>return</b> (x - x) / (x - x);	<i>/* acos(|x| &gt; 1) is NaN */</i></td></tr>
+<tr><th id="173">173</th><td>    }</td></tr>
+<tr><th id="174">174</th><td>  <b>else</b> <b>if</b> (<a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> &lt; <var>0x3ffe0000</var>)	<i>/* |x| &lt; 0.5 */</i></td></tr>
+<tr><th id="175">175</th><td>    {</td></tr>
+<tr><th id="176">176</th><td>      <b>if</b> (ix &lt; <var>0x3f8e0000</var>)	<i>/* |x| &lt; 2**-113 */</i></td></tr>
+<tr><th id="177">177</th><td>	<b>return</b> <span class='error' title="use of undeclared identifier &apos;pio2_hi&apos;">pio2_hi</span> + <span class='error' title="use of undeclared identifier &apos;pio2_lo&apos;">pio2_lo</span>;</td></tr>
+<tr><th id="178">178</th><td>      <b>if</b> (<a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> &lt; <var>0x3ffde000</var>)	<i>/* |x| &lt; .4375 */</i></td></tr>
+<tr><th id="179">179</th><td>	{</td></tr>
+<tr><th id="180">180</th><td>	  <i>/* Arcsine of x.  */</i></td></tr>
+<tr><th id="181">181</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = x * x;</td></tr>
+<tr><th id="182">182</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = (((((((((<span class='error' title="use of undeclared identifier &apos;pS9&apos;">pS9</span> * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="183">183</th><td>		       + <span class='error' title="use of undeclared identifier &apos;pS8&apos;">pS8</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="184">184</th><td>		      + <span class='error' title="use of undeclared identifier &apos;pS7&apos;">pS7</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="185">185</th><td>		     + <span class='error' title="use of undeclared identifier &apos;pS6&apos;">pS6</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="186">186</th><td>		    + <span class='error' title="use of undeclared identifier &apos;pS5&apos;">pS5</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="187">187</th><td>		   + <span class='error' title="use of undeclared identifier &apos;pS4&apos;">pS4</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="188">188</th><td>		  + <span class='error' title="use of undeclared identifier &apos;pS3&apos;">pS3</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="189">189</th><td>		 + <span class='error' title="use of undeclared identifier &apos;pS2&apos;">pS2</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="190">190</th><td>		+ <span class='error' title="use of undeclared identifier &apos;pS1&apos;">pS1</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="191">191</th><td>	       + <span class='error' title="use of undeclared identifier &apos;pS0&apos;">pS0</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="192">192</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = (((((((( <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="193">193</th><td>		       + <span class='error' title="use of undeclared identifier &apos;qS8&apos;">qS8</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="194">194</th><td>		     + <span class='error' title="use of undeclared identifier &apos;qS7&apos;">qS7</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="195">195</th><td>		    + <span class='error' title="use of undeclared identifier &apos;qS6&apos;">qS6</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="196">196</th><td>		   + <span class='error' title="use of undeclared identifier &apos;qS5&apos;">qS5</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="197">197</th><td>		  + <span class='error' title="use of undeclared identifier &apos;qS4&apos;">qS4</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="198">198</th><td>		 + <span class='error' title="use of undeclared identifier &apos;qS3&apos;">qS3</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="199">199</th><td>		+ <span class='error' title="use of undeclared identifier &apos;qS2&apos;">qS2</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="200">200</th><td>	       + <span class='error' title="use of undeclared identifier &apos;qS1&apos;">qS1</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="201">201</th><td>	    + <span class='error' title="use of undeclared identifier &apos;qS0&apos;">qS0</span>;</td></tr>
+<tr><th id="202">202</th><td>	  <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = x + x * <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> / <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="203">203</th><td>	  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;pio2_hi&apos;">pio2_hi</span> - (<span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> - <span class='error' title="use of undeclared identifier &apos;pio2_lo&apos;">pio2_lo</span>);</td></tr>
+<tr><th id="204">204</th><td>	  <b>return</b> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="205">205</th><td>	}</td></tr>
+<tr><th id="206">206</th><td>      <i>/* .4375 &lt;= |x| &lt; .5 */</i></td></tr>
+<tr><th id="207">207</th><td>      <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span> = u.value - <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0.4375)" data-ref="_M/L">L</a>(<var>0.4375</var>);</td></tr>
+<tr><th id="208">208</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = ((((((((((<span class='error' title="use of undeclared identifier &apos;P10&apos;">P10</span> * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="209">209</th><td>		    + <span class='error' title="use of undeclared identifier &apos;P9&apos;">P9</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="210">210</th><td>		   + <span class='error' title="use of undeclared identifier &apos;P8&apos;">P8</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="211">211</th><td>		  + <span class='error' title="use of undeclared identifier &apos;P7&apos;">P7</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="212">212</th><td>		 + <span class='error' title="use of undeclared identifier &apos;P6&apos;">P6</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="213">213</th><td>		+ <span class='error' title="use of undeclared identifier &apos;P5&apos;">P5</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="214">214</th><td>	       + <span class='error' title="use of undeclared identifier &apos;P4&apos;">P4</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="215">215</th><td>	      + <span class='error' title="use of undeclared identifier &apos;P3&apos;">P3</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="216">216</th><td>	     + <span class='error' title="use of undeclared identifier &apos;P2&apos;">P2</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="217">217</th><td>	    + <span class='error' title="use of undeclared identifier &apos;P1&apos;">P1</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="218">218</th><td>	   + <span class='error' title="use of undeclared identifier &apos;P0&apos;">P0</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = (((((((((<span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="221">221</th><td>		   + <span class='error' title="use of undeclared identifier &apos;Q9&apos;">Q9</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="222">222</th><td>		  + <span class='error' title="use of undeclared identifier &apos;Q8&apos;">Q8</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="223">223</th><td>		 + <span class='error' title="use of undeclared identifier &apos;Q7&apos;">Q7</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="224">224</th><td>		+ <span class='error' title="use of undeclared identifier &apos;Q6&apos;">Q6</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="225">225</th><td>	       + <span class='error' title="use of undeclared identifier &apos;Q5&apos;">Q5</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="226">226</th><td>	      + <span class='error' title="use of undeclared identifier &apos;Q4&apos;">Q4</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="227">227</th><td>	     + <span class='error' title="use of undeclared identifier &apos;Q3&apos;">Q3</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="228">228</th><td>	    + <span class='error' title="use of undeclared identifier &apos;Q2&apos;">Q2</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="229">229</th><td>	   + <span class='error' title="use of undeclared identifier &apos;Q1&apos;">Q1</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="230">230</th><td>	+ <span class='error' title="use of undeclared identifier &apos;Q0&apos;">Q0</span>;</td></tr>
+<tr><th id="231">231</th><td>      <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> / <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="232">232</th><td>      <b>if</b> (sign &amp; <var>0x80000000</var>)</td></tr>
+<tr><th id="233">233</th><td>	<span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;pimacosr4375&apos;">pimacosr4375</span> - <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>;</td></tr>
+<tr><th id="234">234</th><td>      <b>else</b></td></tr>
+<tr><th id="235">235</th><td>	<span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;acosr4375&apos;">acosr4375</span> + <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>;</td></tr>
+<tr><th id="236">236</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>;</td></tr>
+<tr><th id="237">237</th><td>    }</td></tr>
+<tr><th id="238">238</th><td>  <b>else</b> <b>if</b> (<a class="local col7 ref" href="#67ix" title='ix' data-ref="67ix" data-ref-filename="67ix">ix</a> &lt; <var>0x3ffe4000</var>)	<i>/* |x| &lt; 0.625 */</i></td></tr>
+<tr><th id="239">239</th><td>    {</td></tr>
+<tr><th id="240">240</th><td>      <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span> = u.value - <a class="macro" href="../float128/float128_private.h.html#344" title="__f128 (0.5625)" data-ref="_M/L">L</a>(<var>0.5625</var>);</td></tr>
+<tr><th id="241">241</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = ((((((((((<span class='error' title="use of undeclared identifier &apos;rS10&apos;">rS10</span> * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="242">242</th><td>		    + <span class='error' title="use of undeclared identifier &apos;rS9&apos;">rS9</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="243">243</th><td>		   + <span class='error' title="use of undeclared identifier &apos;rS8&apos;">rS8</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="244">244</th><td>		  + <span class='error' title="use of undeclared identifier &apos;rS7&apos;">rS7</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="245">245</th><td>		 + <span class='error' title="use of undeclared identifier &apos;rS6&apos;">rS6</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="246">246</th><td>		+ <span class='error' title="use of undeclared identifier &apos;rS5&apos;">rS5</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="247">247</th><td>	       + <span class='error' title="use of undeclared identifier &apos;rS4&apos;">rS4</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="248">248</th><td>	      + <span class='error' title="use of undeclared identifier &apos;rS3&apos;">rS3</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="249">249</th><td>	     + <span class='error' title="use of undeclared identifier &apos;rS2&apos;">rS2</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="250">250</th><td>	    + <span class='error' title="use of undeclared identifier &apos;rS1&apos;">rS1</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="251">251</th><td>	   + <span class='error' title="use of undeclared identifier &apos;rS0&apos;">rS0</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span>;</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = (((((((((<span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="254">254</th><td>		   + <span class='error' title="use of undeclared identifier &apos;sS9&apos;">sS9</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="255">255</th><td>		  + <span class='error' title="use of undeclared identifier &apos;sS8&apos;">sS8</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="256">256</th><td>		 + <span class='error' title="use of undeclared identifier &apos;sS7&apos;">sS7</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="257">257</th><td>		+ <span class='error' title="use of undeclared identifier &apos;sS6&apos;">sS6</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="258">258</th><td>	       + <span class='error' title="use of undeclared identifier &apos;sS5&apos;">sS5</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="259">259</th><td>	      + <span class='error' title="use of undeclared identifier &apos;sS4&apos;">sS4</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="260">260</th><td>	     + <span class='error' title="use of undeclared identifier &apos;sS3&apos;">sS3</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="261">261</th><td>	    + <span class='error' title="use of undeclared identifier &apos;sS2&apos;">sS2</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="262">262</th><td>	   + <span class='error' title="use of undeclared identifier &apos;sS1&apos;">sS1</span>) * <span class='error' title="use of undeclared identifier &apos;t&apos;">t</span></td></tr>
+<tr><th id="263">263</th><td>	+ <span class='error' title="use of undeclared identifier &apos;sS0&apos;">sS0</span>;</td></tr>
+<tr><th id="264">264</th><td>      <b>if</b> (sign &amp; <var>0x80000000</var>)</td></tr>
+<tr><th id="265">265</th><td>	<span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;pimacosr5625&apos;">pimacosr5625</span> - <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> / <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="266">266</th><td>      <b>else</b></td></tr>
+<tr><th id="267">267</th><td>	<span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;acosr5625&apos;">acosr5625</span> + <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> / <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="268">268</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>;</td></tr>
+<tr><th id="269">269</th><td>    }</td></tr>
+<tr><th id="270">270</th><td>  <b>else</b></td></tr>
+<tr><th id="271">271</th><td>    {				<i>/* |x| &gt;= .625 */</i></td></tr>
+<tr><th id="272">272</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = (one - u.value) * <var>0.5</var>;</td></tr>
+<tr><th id="273">273</th><td>      <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> = <a class="macro" href="../float128/float128_private.h.html#316" title="sqrtf128" data-ref="_M/sqrtl">sqrtl</a> (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>);</td></tr>
+<tr><th id="274">274</th><td>      <i>/* Compute an extended precision square root from</i></td></tr>
+<tr><th id="275">275</th><td><i>	 the Newton iteration  s -&gt; 0.5 * (s + z / s).</i></td></tr>
+<tr><th id="276">276</th><td><i>	 The change w from s to the improved value is</i></td></tr>
+<tr><th id="277">277</th><td><i>	    w = 0.5 * (s + z / s) - s  = (s^2 + z)/2s - s = (z - s^2)/2s.</i></td></tr>
+<tr><th id="278">278</th><td><i>	  Express s = f1 + f2 where f1 * f1 is exactly representable.</i></td></tr>
+<tr><th id="279">279</th><td><i>	  w = (z - s^2)/2s = (z - f1^2 - 2 f1 f2 - f2^2)/2s .</i></td></tr>
+<tr><th id="280">280</th><td><i>	  s + w has extended precision.  */</i></td></tr>
+<tr><th id="281">281</th><td>      u.value = <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span>;</td></tr>
+<tr><th id="282">282</th><td>      <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col9 ref field" href="../float128/ieee754_float128.h.html#55" title='w2' data-ref="59w2" data-ref-filename="59w2">w2</a> = <var>0</var>;</td></tr>
+<tr><th id="283">283</th><td>      <a class="local col9 ref" href="#69u" title='u' data-ref="69u" data-ref-filename="69u">u</a>.<a class="local col2 ref field" href="../float128/ieee754_float128.h.html#62parts32" title='parts32' data-ref="62parts32" data-ref-filename="62parts32">parts32</a>.<a class="local col8 ref field" href="../float128/ieee754_float128.h.html#55" title='w3' data-ref="58w3" data-ref-filename="58w3">w3</a> = <var>0</var>;</td></tr>
+<tr><th id="284">284</th><td>      <span class='error' title="use of undeclared identifier &apos;f2&apos;">f2</span> = <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> - u.value;</td></tr>
+<tr><th id="285">285</th><td>      <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> - u.value * u.value;</td></tr>
+<tr><th id="286">286</th><td>      <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> - <var>2.0</var> * u.value * <span class='error' title="use of undeclared identifier &apos;f2&apos;">f2</span>;</td></tr>
+<tr><th id="287">287</th><td>      <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> - <span class='error' title="use of undeclared identifier &apos;f2&apos;">f2</span> * <span class='error' title="use of undeclared identifier &apos;f2&apos;">f2</span>;</td></tr>
+<tr><th id="288">288</th><td>      <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> / (<var>2.0</var> * <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span>);</td></tr>
+<tr><th id="289">289</th><td>      <i>/* Arcsine of s.  */</i></td></tr>
+<tr><th id="290">290</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = (((((((((<span class='error' title="use of undeclared identifier &apos;pS9&apos;">pS9</span> * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="291">291</th><td>		   + <span class='error' title="use of undeclared identifier &apos;pS8&apos;">pS8</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="292">292</th><td>		  + <span class='error' title="use of undeclared identifier &apos;pS7&apos;">pS7</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="293">293</th><td>		 + <span class='error' title="use of undeclared identifier &apos;pS6&apos;">pS6</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="294">294</th><td>		+ <span class='error' title="use of undeclared identifier &apos;pS5&apos;">pS5</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="295">295</th><td>	       + <span class='error' title="use of undeclared identifier &apos;pS4&apos;">pS4</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="296">296</th><td>	      + <span class='error' title="use of undeclared identifier &apos;pS3&apos;">pS3</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="297">297</th><td>	     + <span class='error' title="use of undeclared identifier &apos;pS2&apos;">pS2</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="298">298</th><td>	    + <span class='error' title="use of undeclared identifier &apos;pS1&apos;">pS1</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="299">299</th><td>	   + <span class='error' title="use of undeclared identifier &apos;pS0&apos;">pS0</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="300">300</th><td>      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = (((((((( <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="301">301</th><td>		   + <span class='error' title="use of undeclared identifier &apos;qS8&apos;">qS8</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="302">302</th><td>		 + <span class='error' title="use of undeclared identifier &apos;qS7&apos;">qS7</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="303">303</th><td>		+ <span class='error' title="use of undeclared identifier &apos;qS6&apos;">qS6</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="304">304</th><td>	       + <span class='error' title="use of undeclared identifier &apos;qS5&apos;">qS5</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="305">305</th><td>	      + <span class='error' title="use of undeclared identifier &apos;qS4&apos;">qS4</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="306">306</th><td>	     + <span class='error' title="use of undeclared identifier &apos;qS3&apos;">qS3</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="307">307</th><td>	    + <span class='error' title="use of undeclared identifier &apos;qS2&apos;">qS2</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="308">308</th><td>	   + <span class='error' title="use of undeclared identifier &apos;qS1&apos;">qS1</span>) * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span></td></tr>
+<tr><th id="309">309</th><td>	+ <span class='error' title="use of undeclared identifier &apos;qS0&apos;">qS0</span>;</td></tr>
+<tr><th id="310">310</th><td>      <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span> = <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> + (<span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> + <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> * <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> / <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>);</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td>      <b>if</b> (sign &amp; <var>0x80000000</var>)</td></tr>
+<tr><th id="313">313</th><td>	<span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;pio2_hi&apos;">pio2_hi</span> + (<span class='error' title="use of undeclared identifier &apos;pio2_lo&apos;">pio2_lo</span> - <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>);</td></tr>
+<tr><th id="314">314</th><td>      <b>else</b></td></tr>
+<tr><th id="315">315</th><td>	<span class='error' title="use of undeclared identifier &apos;w&apos;">w</span> = <span class='error' title="use of undeclared identifier &apos;r&apos;">r</span>;</td></tr>
+<tr><th id="316">316</th><td>      <b>return</b> <var>2.0</var> * <span class='error' title="use of undeclared identifier &apos;w&apos;">w</span>;</td></tr>
+<tr><th id="317">317</th><td>    }</td></tr>
+<tr><th id="318">318</th><td>}</td></tr>
+<tr><th id="319">319</th><td><a class="macro" href="../../../include/libc-symbols.h.html#133" title="extern __typeof (__ieee754_acosf128) __acosf128_finite __attribute__ ((alias (&quot;__ieee754_acosf128&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="macro" href="../float128/float128_private.h.html#144" title="__ieee754_acosf128" data-ref="_M/__ieee754_acosl">__ieee754_acosl</a>, <a class="macro" href="../float128/float128_private.h.html#177" title="__acosf128_finite" data-ref="_M/__acosl_finite">__acosl_finite</a>)</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../float128/e_acosf128.c.html'>glibc_src_2.28/sysdeps/ieee754/float128/e_acosf128.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

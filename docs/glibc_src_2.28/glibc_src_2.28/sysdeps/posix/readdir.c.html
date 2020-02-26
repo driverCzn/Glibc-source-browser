@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>readdir.c source code [glibc_src_2.28/sysdeps/posix/readdir.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/sysdeps/posix/readdir.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.28</a>/<a href='..'>sysdeps</a>/<a href='./'>posix</a>/<a href='readdir.c.html'>readdir.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1991-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/dirent.h.html">&lt;dirent.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="dirstream.h.html">&lt;dirstream.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><u>#<span data-ppcond="29">ifndef</span> <a class="macro" href="../unix/sysv/linux/readdir64.c.html#27" data-ref="_M/__READDIR">__READDIR</a></u></td></tr>
+<tr><th id="30">30</th><td><u># define __READDIR __readdir</u></td></tr>
+<tr><th id="31">31</th><td><u># define __GETDENTS __getdents</u></td></tr>
+<tr><th id="32">32</th><td><u># define DIRENT_TYPE struct dirent</u></td></tr>
+<tr><th id="33">33</th><td><u># define __READDIR_ALIAS</u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="29">endif</span></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/* Read a directory entry from DIRP.  */</i></td></tr>
+<tr><th id="37">37</th><td><a class="macro" href="../unix/sysv/linux/readdir64.c.html#29" title="struct dirent64" data-ref="_M/DIRENT_TYPE">DIRENT_TYPE</a> *</td></tr>
+<tr><th id="38">38</th><td><a class="macro" href="../unix/sysv/linux/readdir64.c.html#27" title="__readdir64" data-ref="_M/__READDIR">__READDIR</a> (<a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *<dfn class="local col1 decl" id="1dirp" title='dirp' data-type='DIR *' data-ref="1dirp" data-ref-filename="1dirp">dirp</dfn>)</td></tr>
+<tr><th id="39">39</th><td>{</td></tr>
+<tr><th id="40">40</th><td>  <a class="macro" href="../unix/sysv/linux/readdir64.c.html#29" title="struct dirent64" data-ref="_M/DIRENT_TYPE">DIRENT_TYPE</a> *<dfn class="local col2 decl" id="2dp" title='dp' data-type='struct dirent64 *' data-ref="2dp" data-ref-filename="2dp">dp</dfn>;</td></tr>
+<tr><th id="41">41</th><td>  <em>int</em> <dfn class="local col3 decl" id="3saved_errno" title='saved_errno' data-type='int' data-ref="3saved_errno" data-ref-filename="3saved_errno">saved_errno</dfn> = <a class="macro" href="../../include/errno.h.html#20" title="rtld_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="43">if</span> <a class="macro" href="../../include/libc-symbols.h.html#35" title="(18 == 19)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="44">44</th><td>  __libc_lock_lock (dirp-&gt;lock);</td></tr>
+<tr><th id="45">45</th><td><u>#<span data-ppcond="43">endif</span></u></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>  <b>do</b></td></tr>
+<tr><th id="48">48</th><td>    {</td></tr>
+<tr><th id="49">49</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="4reclen" title='reclen' data-type='size_t' data-ref="4reclen" data-ref-filename="4reclen">reclen</dfn>;</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td>      <b>if</b> (<a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::offset" title='__dirstream::offset' data-ref="__dirstream::offset" data-ref-filename="__dirstream..offset">offset</a> &gt;= <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::size" title='__dirstream::size' data-ref="__dirstream::size" data-ref-filename="__dirstream..size">size</a>)</td></tr>
+<tr><th id="52">52</th><td>	{</td></tr>
+<tr><th id="53">53</th><td>	  <i>/* We've emptied out our buffer.  Refill it.  */</i></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>	  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="5maxread" title='maxread' data-type='size_t' data-ref="5maxread" data-ref-filename="5maxread">maxread</dfn>;</td></tr>
+<tr><th id="56">56</th><td>	  <a class="typedef" href="../../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col6 decl" id="6bytes" title='bytes' data-type='ssize_t' data-ref="6bytes" data-ref-filename="6bytes">bytes</dfn>;</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><u>#<span data-ppcond="58">ifndef</span> <a class="macro" href="../unix/sysv/linux/bits/dirent.h.html#50" data-ref="_M/_DIRENT_HAVE_D_RECLEN">_DIRENT_HAVE_D_RECLEN</a></u></td></tr>
+<tr><th id="59">59</th><td>	  <i>/* Fixed-size struct; must read one at a time (see below).  */</i></td></tr>
+<tr><th id="60">60</th><td>	  maxread = <b>sizeof</b> *dp;</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="58">else</span></u></td></tr>
+<tr><th id="62">62</th><td>	  <a class="local col5 ref" href="#5maxread" title='maxread' data-ref="5maxread" data-ref-filename="5maxread">maxread</a> = <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::allocation" title='__dirstream::allocation' data-ref="__dirstream::allocation" data-ref-filename="__dirstream..allocation">allocation</a>;</td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="58">endif</span></u></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	  <a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a> = <a class="macro" href="../unix/sysv/linux/readdir64.c.html#28" title="__getdents64" data-ref="_M/__GETDENTS">__GETDENTS</a> (<a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::fd" title='__dirstream::fd' data-ref="__dirstream::fd" data-ref-filename="__dirstream..fd">fd</a>, <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::data" title='__dirstream::data' data-ref="__dirstream::data" data-ref-filename="__dirstream..data">data</a>, <a class="local col5 ref" href="#5maxread" title='maxread' data-ref="5maxread" data-ref-filename="5maxread">maxread</a>);</td></tr>
+<tr><th id="66">66</th><td>	  <b>if</b> (<a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a> &lt;= <var>0</var>)</td></tr>
+<tr><th id="67">67</th><td>	    {</td></tr>
+<tr><th id="68">68</th><td>	      <i>/* On some systems getdents fails with ENOENT when the</i></td></tr>
+<tr><th id="69">69</th><td><i>		 open directory has been rmdir'd already.  POSIX.1</i></td></tr>
+<tr><th id="70">70</th><td><i>		 requires that we treat this condition like normal EOF.  */</i></td></tr>
+<tr><th id="71">71</th><td>	      <b>if</b> (<a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a> &lt; <var>0</var> &amp;&amp; <a class="macro" href="../../include/errno.h.html#20" title="rtld_errno" data-ref="_M/errno">errno</a> == <a class="macro" href="../../../include/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>)</td></tr>
+<tr><th id="72">72</th><td>		<a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a> = <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	      <i>/* Don't modifiy errno when reaching EOF.  */</i></td></tr>
+<tr><th id="75">75</th><td>	      <b>if</b> (<a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a> == <var>0</var>)</td></tr>
+<tr><th id="76">76</th><td>		<a class="macro" href="../../include/errno.h.html#37" title="(rtld_errno = (saved_errno))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col3 ref" href="#3saved_errno" title='saved_errno' data-ref="3saved_errno" data-ref-filename="3saved_errno">saved_errno</a>);</td></tr>
+<tr><th id="77">77</th><td>	      <a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="78">78</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="79">79</th><td>	    }</td></tr>
+<tr><th id="80">80</th><td>	  <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::size" title='__dirstream::size' data-ref="__dirstream::size" data-ref-filename="__dirstream..size">size</a> = (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col6 ref" href="#6bytes" title='bytes' data-ref="6bytes" data-ref-filename="6bytes">bytes</a>;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	  <i>/* Reset the offset into the buffer.  */</i></td></tr>
+<tr><th id="83">83</th><td>	  <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::offset" title='__dirstream::offset' data-ref="__dirstream::offset" data-ref-filename="__dirstream..offset">offset</a> = <var>0</var>;</td></tr>
+<tr><th id="84">84</th><td>	}</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>      <a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a> = (<a class="macro" href="../unix/sysv/linux/readdir64.c.html#29" title="struct dirent64" data-ref="_M/DIRENT_TYPE">DIRENT_TYPE</a> *) &amp;<a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::data" title='__dirstream::data' data-ref="__dirstream::data" data-ref-filename="__dirstream..data">data</a>[<a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::offset" title='__dirstream::offset' data-ref="__dirstream::offset" data-ref-filename="__dirstream..offset">offset</a>];</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="88">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/dirent.h.html#50" data-ref="_M/_DIRENT_HAVE_D_RECLEN">_DIRENT_HAVE_D_RECLEN</a></u></td></tr>
+<tr><th id="89">89</th><td>      <a class="local col4 ref" href="#4reclen" title='reclen' data-ref="4reclen" data-ref-filename="4reclen">reclen</a> = <a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a>-&gt;<a class="ref field" href="../unix/sysv/linux/bits/dirent.h.html#dirent64::d_reclen" title='dirent64::d_reclen' data-ref="dirent64::d_reclen" data-ref-filename="dirent64..d_reclen">d_reclen</a>;</td></tr>
+<tr><th id="90">90</th><td><u>#<span data-ppcond="88">else</span></u></td></tr>
+<tr><th id="91">91</th><td>      <i>/* The only version of `struct dirent*' that lacks `d_reclen'</i></td></tr>
+<tr><th id="92">92</th><td><i>	 is fixed-size.  */</i></td></tr>
+<tr><th id="93">93</th><td>      assert (<b>sizeof</b> dp-&gt;d_name &gt; <var>1</var>);</td></tr>
+<tr><th id="94">94</th><td>      reclen = <b>sizeof</b> *dp;</td></tr>
+<tr><th id="95">95</th><td>      <i>/* The name is not terminated if it is the largest possible size.</i></td></tr>
+<tr><th id="96">96</th><td><i>	 Clobber the following byte to ensure proper null termination.  We</i></td></tr>
+<tr><th id="97">97</th><td><i>	 read jst one entry at a time above so we know that byte will not</i></td></tr>
+<tr><th id="98">98</th><td><i>	 be used later.  */</i></td></tr>
+<tr><th id="99">99</th><td>      dp-&gt;d_name[<b>sizeof</b> dp-&gt;d_name] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="100">100</th><td><u>#<span data-ppcond="88">endif</span></u></td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>      <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::offset" title='__dirstream::offset' data-ref="__dirstream::offset" data-ref-filename="__dirstream..offset">offset</a> += <a class="local col4 ref" href="#4reclen" title='reclen' data-ref="4reclen" data-ref-filename="4reclen">reclen</a>;</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="104">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/dirent.h.html#51" data-ref="_M/_DIRENT_HAVE_D_OFF">_DIRENT_HAVE_D_OFF</a></u></td></tr>
+<tr><th id="105">105</th><td>      <a class="local col1 ref" href="#1dirp" title='dirp' data-ref="1dirp" data-ref-filename="1dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::filepos" title='__dirstream::filepos' data-ref="__dirstream::filepos" data-ref-filename="__dirstream..filepos">filepos</a> = <a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a>-&gt;<a class="ref field" href="../unix/sysv/linux/bits/dirent.h.html#dirent64::d_off" title='dirent64::d_off' data-ref="dirent64::d_off" data-ref-filename="dirent64..d_off">d_off</a>;</td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="104">else</span></u></td></tr>
+<tr><th id="107">107</th><td>      dirp-&gt;filepos += reclen;</td></tr>
+<tr><th id="108">108</th><td><u>#<span data-ppcond="104">endif</span></u></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>      <i>/* Skip deleted files.  */</i></td></tr>
+<tr><th id="111">111</th><td>    } <b>while</b> (<a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a>-&gt;<a class="ref field" href="../unix/sysv/linux/bits/dirent.h.html#dirent64::d_ino" title='dirent64::d_ino' data-ref="dirent64::d_ino" data-ref-filename="dirent64..d_ino">d_ino</a> == <var>0</var>);</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><u>#<span data-ppcond="113">if</span> <a class="macro" href="../../include/libc-symbols.h.html#35" title="(18 == 19)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="114">114</th><td>  __libc_lock_unlock (dirp-&gt;lock);</td></tr>
+<tr><th id="115">115</th><td><u>#<span data-ppcond="113">endif</span></u></td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>  <b>return</b> <a class="local col2 ref" href="#2dp" title='dp' data-ref="2dp" data-ref-filename="2dp">dp</a>;</td></tr>
+<tr><th id="118">118</th><td>}</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="120">ifdef</span> <span class="macro" data-ref="_M/__READDIR_ALIAS">__READDIR_ALIAS</span></u></td></tr>
+<tr><th id="121">121</th><td>weak_alias (__readdir, readdir)</td></tr>
+<tr><th id="122">122</th><td><u>#<span data-ppcond="120">endif</span></u></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><u>#undef <a class="macro" href="../unix/sysv/linux/readdir64.c.html#27" data-ref="_M/__READDIR">__READDIR</a></u></td></tr>
+<tr><th id="125">125</th><td><u>#undef <a class="macro" href="../unix/sysv/linux/readdir64.c.html#28" data-ref="_M/__GETDENTS">__GETDENTS</a></u></td></tr>
+<tr><th id="126">126</th><td><u>#undef <a class="macro" href="../unix/sysv/linux/readdir64.c.html#29" data-ref="_M/DIRENT_TYPE">DIRENT_TYPE</a></u></td></tr>
+<tr><th id="127">127</th><td><u>#undef <span class="macro" data-ref="_M/__READDIR_ALIAS">__READDIR_ALIAS</span></u></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../unix/sysv/linux/readdir64.c.html'>glibc_src_2.28/sysdeps/unix/sysv/linux/readdir64.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

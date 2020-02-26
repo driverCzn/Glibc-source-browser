@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>support_openpty.c source code [glibc_src_2.28/support/support_openpty.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/support/support_openpty.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>support</a>/<a href='support_openpty.c.html'>support_openpty.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Open a pseudoterminal.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="tty.h.html">&lt;support/tty.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="check.h.html">&lt;support/check.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="support.h.html">&lt;support/support.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/termios.h.html">&lt;termios.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/sys/ioctl.h.html">&lt;sys/ioctl.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i  data-doc="xptsname">/* As ptsname, but allocates space for an appropriately-sized string</i></td></tr>
+<tr><th id="33">33</th><td><i  data-doc="xptsname">   using malloc.  */</i></td></tr>
+<tr><th id="34">34</th><td><em>static</em> <em>char</em> *</td></tr>
+<tr><th id="35">35</th><td><dfn class="tu decl def fn" id="xptsname" title='xptsname' data-type='char * xptsname(int fd)' data-ref="xptsname" data-ref-filename="xptsname">xptsname</dfn> (<em>int</em> <dfn class="local col6 decl" id="6fd" title='fd' data-type='int' data-ref="6fd" data-ref-filename="6fd">fd</dfn>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>  <em>int</em> <dfn class="local col7 decl" id="7rv" title='rv' data-type='int' data-ref="7rv" data-ref-filename="7rv">rv</dfn>;</td></tr>
+<tr><th id="38">38</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8buf_len" title='buf_len' data-type='size_t' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</dfn> = <var>128</var>;</td></tr>
+<tr><th id="39">39</th><td>  <em>char</em> *<dfn class="local col9 decl" id="9buf" title='buf' data-type='char *' data-ref="9buf" data-ref-filename="9buf">buf</dfn> = <a class="ref fn" href="support.h.html#xmalloc" title='xmalloc' data-ref="xmalloc" data-ref-filename="xmalloc">xmalloc</a> (<a class="local col8 ref" href="#8buf_len" title='buf_len' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</a>);</td></tr>
+<tr><th id="40">40</th><td>  <b>for</b> (;;)</td></tr>
+<tr><th id="41">41</th><td>    {</td></tr>
+<tr><th id="42">42</th><td>      <a class="local col7 ref" href="#7rv" title='rv' data-ref="7rv" data-ref-filename="7rv">rv</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#ptsname_r" title='ptsname_r' data-ref="ptsname_r" data-ref-filename="ptsname_r">ptsname_r</a> (<a class="local col6 ref" href="#6fd" title='fd' data-ref="6fd" data-ref-filename="6fd">fd</a>, <a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf" data-ref-filename="9buf">buf</a>, <a class="local col8 ref" href="#8buf_len" title='buf_len' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</a>);</td></tr>
+<tr><th id="43">43</th><td>      <b>if</b> (<a class="local col7 ref" href="#7rv" title='rv' data-ref="7rv" data-ref-filename="7rv">rv</a>)</td></tr>
+<tr><th id="44">44</th><td>        <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 44, &quot;ptsname_r: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"ptsname_r: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>      <b>if</b> (<a class="ref fn" href="../string/string.h.html#memchr" title='memchr' data-ref="memchr" data-ref-filename="memchr">memchr</a> (<a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf" data-ref-filename="9buf">buf</a>, <kbd>'\0'</kbd>, <a class="local col8 ref" href="#8buf_len" title='buf_len' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</a>))</td></tr>
+<tr><th id="47">47</th><td>        <b>return</b> <a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf" data-ref-filename="9buf">buf</a>; <i>/* ptsname succeeded and the buffer was not truncated */</i></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>      <a class="local col8 ref" href="#8buf_len" title='buf_len' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</a> *= <var>2</var>;</td></tr>
+<tr><th id="50">50</th><td>      <a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf" data-ref-filename="9buf">buf</a> = <a class="ref fn" href="support.h.html#xrealloc" title='xrealloc' data-ref="xrealloc" data-ref-filename="xrealloc">xrealloc</a> (<a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf" data-ref-filename="9buf">buf</a>, <a class="local col8 ref" href="#8buf_len" title='buf_len' data-ref="8buf_len" data-ref-filename="8buf_len">buf_len</a>);</td></tr>
+<tr><th id="51">51</th><td>    }</td></tr>
+<tr><th id="52">52</th><td>}</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>void</em></td></tr>
+<tr><th id="55">55</th><td><dfn class="decl def fn" id="support_openpty" title='support_openpty' data-ref="support_openpty" data-ref-filename="support_openpty">support_openpty</dfn> (<em>int</em> *<dfn class="local col0 decl" id="10a_outer" title='a_outer' data-type='int *' data-ref="10a_outer" data-ref-filename="10a_outer">a_outer</dfn>, <em>int</em> *<dfn class="local col1 decl" id="11a_inner" title='a_inner' data-type='int *' data-ref="11a_inner" data-ref-filename="11a_inner">a_inner</dfn>, <em>char</em> **<dfn class="local col2 decl" id="12a_name" title='a_name' data-type='char **' data-ref="12a_name" data-ref-filename="12a_name">a_name</dfn>,</td></tr>
+<tr><th id="56">56</th><td>                 <em>const</em> <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/bits/termios.h.html#termios" title='termios' data-ref="termios" data-ref-filename="termios">termios</a> *<dfn class="local col3 decl" id="13termp" title='termp' data-type='const struct termios *' data-ref="13termp" data-ref-filename="13termp">termp</dfn>,</td></tr>
+<tr><th id="57">57</th><td>                 <em>const</em> <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/bits/ioctl-types.h.html#winsize" title='winsize' data-ref="winsize" data-ref-filename="winsize">winsize</a> *<dfn class="local col4 decl" id="14winp" title='winp' data-type='const struct winsize *' data-ref="14winp" data-ref-filename="14winp">winp</dfn>)</td></tr>
+<tr><th id="58">58</th><td>{</td></tr>
+<tr><th id="59">59</th><td>  <em>int</em> <dfn class="local col5 decl" id="15outer" title='outer' data-type='int' data-ref="15outer" data-ref-filename="15outer">outer</dfn> = -<var>1</var>, <dfn class="local col6 decl" id="16inner" title='inner' data-type='int' data-ref="16inner" data-ref-filename="16inner">inner</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="60">60</th><td>  <em>char</em> *<dfn class="local col7 decl" id="17namebuf" title='namebuf' data-type='char *' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</dfn> = <var>0</var>;</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td>  <a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#posix_openpt" title='posix_openpt' data-ref="posix_openpt" data-ref-filename="posix_openpt">posix_openpt</a> (<a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#45" title="02" data-ref="_M/O_RDWR">O_RDWR</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#53" title="0400" data-ref="_M/O_NOCTTY">O_NOCTTY</a>);</td></tr>
+<tr><th id="63">63</th><td>  <b>if</b> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a> == -<var>1</var>)</td></tr>
+<tr><th id="64">64</th><td>    <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 64, &quot;posix_openpt: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"posix_openpt: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <b>if</b> (<a class="ref fn" href="../stdlib/stdlib.h.html#grantpt" title='grantpt' data-ref="grantpt" data-ref-filename="grantpt">grantpt</a> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>))</td></tr>
+<tr><th id="67">67</th><td>    <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 67, &quot;grantpt: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"grantpt: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  <b>if</b> (<a class="ref fn" href="../stdlib/stdlib.h.html#unlockpt" title='unlockpt' data-ref="unlockpt" data-ref-filename="unlockpt">unlockpt</a> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>))</td></tr>
+<tr><th id="70">70</th><td>    <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 70, &quot;unlockpt: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"unlockpt: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="73">ifdef</span> <a class="macro" href="../../include/asm-generic/ioctls.h.html#81" data-ref="_M/TIOCGPTPEER">TIOCGPTPEER</a></u></td></tr>
+<tr><th id="74">74</th><td>  <a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a> = <a class="ref fn" href="../misc/sys/ioctl.h.html#ioctl" title='ioctl' data-ref="ioctl" data-ref-filename="ioctl">ioctl</a> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>, <a class="macro" href="../../include/asm-generic/ioctls.h.html#81" title="(((0U) &lt;&lt; (((0+8)+8)+14)) | (((&apos;T&apos;)) &lt;&lt; (0+8)) | (((0x41)) &lt;&lt; 0) | ((0) &lt;&lt; ((0+8)+8)))" data-ref="_M/TIOCGPTPEER">TIOCGPTPEER</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#45" title="02" data-ref="_M/O_RDWR">O_RDWR</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#53" title="0400" data-ref="_M/O_NOCTTY">O_NOCTTY</a>);</td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="73">endif</span></u></td></tr>
+<tr><th id="76">76</th><td>  <b>if</b> (<a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a> == -<var>1</var>)</td></tr>
+<tr><th id="77">77</th><td>    {</td></tr>
+<tr><th id="78">78</th><td>      <i>/* The kernel might not support TIOCGPTPEER, fall back to open</i></td></tr>
+<tr><th id="79">79</th><td><i>         by name.  */</i></td></tr>
+<tr><th id="80">80</th><td>      <a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a> = <a class="tu ref fn" href="#xptsname" title='xptsname' data-use='c' data-ref="xptsname" data-ref-filename="xptsname">xptsname</a> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>);</td></tr>
+<tr><th id="81">81</th><td>      <a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a> = <a class="ref fn" href="../io/fcntl.h.html#open" title='open' data-ref="open" data-ref-filename="open">open</a> (<a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#45" title="02" data-ref="_M/O_RDWR">O_RDWR</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#53" title="0400" data-ref="_M/O_NOCTTY">O_NOCTTY</a>);</td></tr>
+<tr><th id="82">82</th><td>      <b>if</b> (<a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a> == -<var>1</var>)</td></tr>
+<tr><th id="83">83</th><td>        <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 83, &quot;%s: %s&quot;, namebuf, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"%s: %s"</q>, <a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="84">84</th><td>    }</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <b>if</b> (<a class="local col3 ref" href="#13termp" title='termp' data-ref="13termp" data-ref-filename="13termp">termp</a>)</td></tr>
+<tr><th id="87">87</th><td>    {</td></tr>
+<tr><th id="88">88</th><td>      <b>if</b> (<a class="ref fn" href="../termios/termios.h.html#tcsetattr" title='tcsetattr' data-ref="tcsetattr" data-ref-filename="tcsetattr">tcsetattr</a> (<a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/termios.h.html#215" title="2" data-ref="_M/TCSAFLUSH">TCSAFLUSH</a>, <a class="local col3 ref" href="#13termp" title='termp' data-ref="13termp" data-ref-filename="13termp">termp</a>))</td></tr>
+<tr><th id="89">89</th><td>        <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 89, &quot;tcsetattr: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"tcsetattr: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="90">90</th><td>    }</td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="91">ifdef</span> <a class="macro" href="../../include/asm-generic/ioctls.h.html#39" data-ref="_M/TIOCSWINSZ">TIOCSWINSZ</a></u></td></tr>
+<tr><th id="92">92</th><td>  <b>if</b> (<a class="local col4 ref" href="#14winp" title='winp' data-ref="14winp" data-ref-filename="14winp">winp</a>)</td></tr>
+<tr><th id="93">93</th><td>    {</td></tr>
+<tr><th id="94">94</th><td>      <b>if</b> (<a class="ref fn" href="../misc/sys/ioctl.h.html#ioctl" title='ioctl' data-ref="ioctl" data-ref-filename="ioctl">ioctl</a> (<a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a>, <a class="macro" href="../../include/asm-generic/ioctls.h.html#39" title="0x5414" data-ref="_M/TIOCSWINSZ">TIOCSWINSZ</a>, <a class="local col4 ref" href="#14winp" title='winp' data-ref="14winp" data-ref-filename="14winp">winp</a>))</td></tr>
+<tr><th id="95">95</th><td>        <a class="macro" href="check.h.html#39" title="support_exit_failure_impl (1, &quot;/home/fp/glibc/glibc_src/support/support_openpty.c&quot;, 95, &quot;TIOCSWINSZ: %s&quot;, strerror ((*__errno_location ())))" data-ref="_M/FAIL_EXIT1">FAIL_EXIT1</a> (<q>"TIOCSWINSZ: %s"</q>, <a class="ref fn" href="../string/string.h.html#strerror" title='strerror' data-ref="strerror" data-ref-filename="strerror">strerror</a> (<a class="macro" href="../stdlib/errno.h.html#38" title="(*__errno_location ())" data-ref="_M/errno">errno</a>));</td></tr>
+<tr><th id="96">96</th><td>    }</td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="91">endif</span></u></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>  <b>if</b> (<a class="local col2 ref" href="#12a_name" title='a_name' data-ref="12a_name" data-ref-filename="12a_name">a_name</a>)</td></tr>
+<tr><th id="100">100</th><td>    {</td></tr>
+<tr><th id="101">101</th><td>      <b>if</b> (!<a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a>)</td></tr>
+<tr><th id="102">102</th><td>        <a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a> = <a class="tu ref fn" href="#xptsname" title='xptsname' data-use='c' data-ref="xptsname" data-ref-filename="xptsname">xptsname</a> (<a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>);</td></tr>
+<tr><th id="103">103</th><td>      *<a class="local col2 ref" href="#12a_name" title='a_name' data-ref="12a_name" data-ref-filename="12a_name">a_name</a> = <a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a>;</td></tr>
+<tr><th id="104">104</th><td>    }</td></tr>
+<tr><th id="105">105</th><td>  <b>else</b></td></tr>
+<tr><th id="106">106</th><td>    <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col7 ref" href="#17namebuf" title='namebuf' data-ref="17namebuf" data-ref-filename="17namebuf">namebuf</a>);</td></tr>
+<tr><th id="107">107</th><td>  *<a class="local col0 ref" href="#10a_outer" title='a_outer' data-ref="10a_outer" data-ref-filename="10a_outer">a_outer</a> = <a class="local col5 ref" href="#15outer" title='outer' data-ref="15outer" data-ref-filename="15outer">outer</a>;</td></tr>
+<tr><th id="108">108</th><td>  *<a class="local col1 ref" href="#11a_inner" title='a_inner' data-ref="11a_inner" data-ref-filename="11a_inner">a_inner</a> = <a class="local col6 ref" href="#16inner" title='inner' data-ref="16inner" data-ref-filename="16inner">inner</a>;</td></tr>
+<tr><th id="109">109</th><td>}</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

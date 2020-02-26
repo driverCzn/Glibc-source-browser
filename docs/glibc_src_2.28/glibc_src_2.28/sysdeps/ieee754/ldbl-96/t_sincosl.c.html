@@ -1,0 +1,501 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>t_sincosl.c source code [glibc_src_2.28/sysdeps/ieee754/ldbl-96/t_sincosl.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/sysdeps/ieee754/ldbl-96/t_sincosl.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.28</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-96</a>/<a href='t_sincosl.c.html'>t_sincosl.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Extended-precision floating point sine and cosine tables.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1999-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Based on quad-precision tables by Jakub Jelinek &lt;jj@ultra.linux.cz&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/* For 0.1484375 + n/128.0, n=0..82 this table contains</i></td></tr>
+<tr><th id="21">21</th><td><i>   first 64 bits of cosine, then at least 64 additional</i></td></tr>
+<tr><th id="22">22</th><td><i>   bits and the same for sine.</i></td></tr>
+<tr><th id="23">23</th><td><i>   0.1484375+82.0/128.0 is the smallest number among above defined numbers</i></td></tr>
+<tr><th id="24">24</th><td><i>   larger than pi/4.</i></td></tr>
+<tr><th id="25">25</th><td><i>   Computed using MPFR:</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>   #include &lt;stdio.h&gt;</i></td></tr>
+<tr><th id="28">28</th><td><i>   #include &lt;mpfr.h&gt;</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>   int</i></td></tr>
+<tr><th id="31">31</th><td><i>   main (void)</i></td></tr>
+<tr><th id="32">32</th><td><i>   {</i></td></tr>
+<tr><th id="33">33</th><td><i>     int j;</i></td></tr>
+<tr><th id="34">34</th><td><i>     mpfr_t t, b, i, rs, rc, ts, tc, tsl, tcl;</i></td></tr>
+<tr><th id="35">35</th><td><i>     mpfr_init2 (b, 64);</i></td></tr>
+<tr><th id="36">36</th><td><i>     mpfr_init2 (i, 64);</i></td></tr>
+<tr><th id="37">37</th><td><i>     mpfr_init2 (t, 64);</i></td></tr>
+<tr><th id="38">38</th><td><i>     mpfr_set_str (b, "0.1484375", 0, MPFR_RNDN);</i></td></tr>
+<tr><th id="39">39</th><td><i>     mpfr_set_str (i, "0x1p-7", 0, MPFR_RNDN);</i></td></tr>
+<tr><th id="40">40</th><td><i>     mpfr_init2 (rs, 300);</i></td></tr>
+<tr><th id="41">41</th><td><i>     mpfr_init2 (rc, 300);</i></td></tr>
+<tr><th id="42">42</th><td><i>     mpfr_init2 (ts, 64);</i></td></tr>
+<tr><th id="43">43</th><td><i>     mpfr_init2 (tc, 64);</i></td></tr>
+<tr><th id="44">44</th><td><i>     mpfr_init2 (tsl, 64);</i></td></tr>
+<tr><th id="45">45</th><td><i>     mpfr_init2 (tcl, 64);</i></td></tr>
+<tr><th id="46">46</th><td><i>     for (j = 0; j &lt;= 82; j++)</i></td></tr>
+<tr><th id="47">47</th><td><i>       {</i></td></tr>
+<tr><th id="48">48</th><td><i>         mpfr_mul_ui (t, i, j, MPFR_RNDN);</i></td></tr>
+<tr><th id="49">49</th><td><i>         mpfr_add (t, t, b, MPFR_RNDN);</i></td></tr>
+<tr><th id="50">50</th><td><i>         printf ("  /" "* x = 0.1484375 + %d/128.  *" "/\n", j);</i></td></tr>
+<tr><th id="51">51</th><td><i>         mpfr_cos (rc, t, MPFR_RNDN);</i></td></tr>
+<tr><th id="52">52</th><td><i>         mpfr_sin (rs, t, MPFR_RNDN);</i></td></tr>
+<tr><th id="53">53</th><td><i>         mpfr_set (tc, rc, MPFR_RNDN);</i></td></tr>
+<tr><th id="54">54</th><td><i>         mpfr_set (ts, rs, MPFR_RNDN);</i></td></tr>
+<tr><th id="55">55</th><td><i>         mpfr_sub (tcl, rc, tc, MPFR_RNDN);</i></td></tr>
+<tr><th id="56">56</th><td><i>         mpfr_sub (tsl, rs, ts, MPFR_RNDN);</i></td></tr>
+<tr><th id="57">57</th><td><i>         mpfr_printf ("  %.17RaL,\n", tc);</i></td></tr>
+<tr><th id="58">58</th><td><i>         mpfr_printf ("  %.17RaL,\n", tcl);</i></td></tr>
+<tr><th id="59">59</th><td><i>         mpfr_printf ("  %.17RaL,\n", ts);</i></td></tr>
+<tr><th id="60">60</th><td><i>         mpfr_printf ("  %.17RaL,\n", tsl);</i></td></tr>
+<tr><th id="61">61</th><td><i>       }</i></td></tr>
+<tr><th id="62">62</th><td><i>     return 0;</i></td></tr>
+<tr><th id="63">63</th><td><i>   }</i></td></tr>
+<tr><th id="64">64</th><td><i></i></td></tr>
+<tr><th id="65">65</th><td><i>*/</i></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><em>const</em> <em>long</em> <em>double</em> <dfn class="decl def" id="__sincosl_table" title='__sincosl_table' data-ref="__sincosl_table" data-ref-filename="__sincosl_table">__sincosl_table</dfn>[] = {</td></tr>
+<tr><th id="68">68</th><td>  <i>/* x = 0.1484375 + 0/128.  */</i></td></tr>
+<tr><th id="69">69</th><td>  <var>0xf.d2f5320e1b7902100p-4L</var>,</td></tr>
+<tr><th id="70">70</th><td>  -<var>0x6.4b225d06708635580p-68L</var>,</td></tr>
+<tr><th id="71">71</th><td>  <var>0x2.5dc50bc95711d0d80p-4L</var>,</td></tr>
+<tr><th id="72">72</th><td>  <var>0x1.787d108fd438cf5a0p-68L</var>,</td></tr>
+<tr><th id="73">73</th><td>  <i>/* x = 0.1484375 + 1/128.  */</i></td></tr>
+<tr><th id="74">74</th><td>  <var>0xf.ce1a053e621438b00p-4L</var>,</td></tr>
+<tr><th id="75">75</th><td>  <var>0x6.d60c76e8c45bf0a80p-68L</var>,</td></tr>
+<tr><th id="76">76</th><td>  <var>0x2.7d66258bacd96a400p-4L</var>,</td></tr>
+<tr><th id="77">77</th><td>  -<var>0x1.4cca4c9a3782a6bc0p-68L</var>,</td></tr>
+<tr><th id="78">78</th><td>  <i>/* x = 0.1484375 + 2/128.  */</i></td></tr>
+<tr><th id="79">79</th><td>  <var>0xf.c8ffa01ba68074100p-4L</var>,</td></tr>
+<tr><th id="80">80</th><td>  <var>0x7.e05962b0d9fdf2000p-68L</var>,</td></tr>
+<tr><th id="81">81</th><td>  <var>0x2.9cfd49b8be4f66540p-4L</var>,</td></tr>
+<tr><th id="82">82</th><td>  -<var>0x1.89354fe340fbd96c0p-68L</var>,</td></tr>
+<tr><th id="83">83</th><td>  <i>/* x = 0.1484375 + 3/128.  */</i></td></tr>
+<tr><th id="84">84</th><td>  <var>0xf.c3a6170f767ac7300p-4L</var>,</td></tr>
+<tr><th id="85">85</th><td>  <var>0x5.d63d99a9d439e1d80p-68L</var>,</td></tr>
+<tr><th id="86">86</th><td>  <var>0x2.bc89f9f424de54840p-4L</var>,</td></tr>
+<tr><th id="87">87</th><td>  <var>0x1.de7ce03b2514952c0p-68L</var>,</td></tr>
+<tr><th id="88">88</th><td>  <i>/* x = 0.1484375 + 4/128.  */</i></td></tr>
+<tr><th id="89">89</th><td>  <var>0xf.be0d7f7fef11e7100p-4L</var>,</td></tr>
+<tr><th id="90">90</th><td>  -<var>0x5.5bc47540b095ba800p-68L</var>,</td></tr>
+<tr><th id="91">91</th><td>  <var>0x2.dc0bb80b49a97ffc0p-4L</var>,</td></tr>
+<tr><th id="92">92</th><td>  -<var>0xc.b1722e07246208500p-72L</var>,</td></tr>
+<tr><th id="93">93</th><td>  <i>/* x = 0.1484375 + 5/128.  */</i></td></tr>
+<tr><th id="94">94</th><td>  <var>0xf.b835efcf670dd2d00p-4L</var>,</td></tr>
+<tr><th id="95">95</th><td>  -<var>0x1.90186db968115ec20p-68L</var>,</td></tr>
+<tr><th id="96">96</th><td>  <var>0x2.fb8205f75e56a2b40p-4L</var>,</td></tr>
+<tr><th id="97">97</th><td>  <var>0x1.6a1c4792f85625880p-68L</var>,</td></tr>
+<tr><th id="98">98</th><td>  <i>/* x = 0.1484375 + 6/128.  */</i></td></tr>
+<tr><th id="99">99</th><td>  <var>0xf.b21f7f5c156696b00p-4L</var>,</td></tr>
+<tr><th id="100">100</th><td>  <var>0xa.c1fe28ac5fd766700p-76L</var>,</td></tr>
+<tr><th id="101">101</th><td>  <var>0x3.1aec65df552876f80p-4L</var>,</td></tr>
+<tr><th id="102">102</th><td>  <var>0x2.ece9a235671324700p-72L</var>,</td></tr>
+<tr><th id="103">103</th><td>  <i>/* x = 0.1484375 + 7/128.  */</i></td></tr>
+<tr><th id="104">104</th><td>  <var>0xf.abca467fb3cb8f200p-4L</var>,</td></tr>
+<tr><th id="105">105</th><td>  -<var>0x2.f960fe2715cc521c0p-68L</var>,</td></tr>
+<tr><th id="106">106</th><td>  <var>0x3.3a4a5a19d86246700p-4L</var>,</td></tr>
+<tr><th id="107">107</th><td>  <var>0x1.0f602c44df4fa5140p-68L</var>,</td></tr>
+<tr><th id="108">108</th><td>  <i>/* x = 0.1484375 + 8/128.  */</i></td></tr>
+<tr><th id="109">109</th><td>  <var>0xf.a5365e8f1d3ca2800p-4L</var>,</td></tr>
+<tr><th id="110">110</th><td>  -<var>0x4.1e24a289519b26800p-68L</var>,</td></tr>
+<tr><th id="111">111</th><td>  <var>0x3.599b652f40ec999c0p-4L</var>,</td></tr>
+<tr><th id="112">112</th><td>  <var>0x1.f12a0a4c8561de160p-68L</var>,</td></tr>
+<tr><th id="113">113</th><td>  <i>/* x = 0.1484375 + 9/128.  */</i></td></tr>
+<tr><th id="114">114</th><td>  <var>0xf.9e63e1d9e8b6f6f00p-4L</var>,</td></tr>
+<tr><th id="115">115</th><td>  <var>0x2.e296bae5b5ed9c100p-68L</var>,</td></tr>
+<tr><th id="116">116</th><td>  <var>0x3.78df09db8c332ce00p-4L</var>,</td></tr>
+<tr><th id="117">117</th><td>  <var>0xd.2b53d865582e45200p-72L</var>,</td></tr>
+<tr><th id="118">118</th><td>  <i>/* x = 0.1484375 + 10/128.  */</i></td></tr>
+<tr><th id="119">119</th><td>  <var>0xf.9752eba9fff6b9900p-4L</var>,</td></tr>
+<tr><th id="120">120</th><td>  -<var>0x7.bd415254fab56cd00p-68L</var>,</td></tr>
+<tr><th id="121">121</th><td>  <var>0x3.9814cb10513453cc0p-4L</var>,</td></tr>
+<tr><th id="122">122</th><td>  -<var>0x6.84de43e3595cc8500p-72L</var>,</td></tr>
+<tr><th id="123">123</th><td>  <i>/* x = 0.1484375 + 11/128.  */</i></td></tr>
+<tr><th id="124">124</th><td>  <var>0xf.90039843324f9b900p-4L</var>,</td></tr>
+<tr><th id="125">125</th><td>  <var>0x4.0416c1984b6cbed00p-68L</var>,</td></tr>
+<tr><th id="126">126</th><td>  <var>0x3.b73c2bf6b4b9f6680p-4L</var>,</td></tr>
+<tr><th id="127">127</th><td>  <var>0xe.f9499c81f0d965100p-72L</var>,</td></tr>
+<tr><th id="128">128</th><td>  <i>/* x = 0.1484375 + 12/128.  */</i></td></tr>
+<tr><th id="129">129</th><td>  <var>0xf.887604e2c39dbb200p-4L</var>,</td></tr>
+<tr><th id="130">130</th><td>  <var>0xe.4ec5825059a78a000p-72L</var>,</td></tr>
+<tr><th id="131">131</th><td>  <var>0x3.d654aff15cb457a00p-4L</var>,</td></tr>
+<tr><th id="132">132</th><td>  <var>0xf.ca854698aba330400p-72L</var>,</td></tr>
+<tr><th id="133">133</th><td>  <i>/* x = 0.1484375 + 13/128.  */</i></td></tr>
+<tr><th id="134">134</th><td>  <var>0xf.80aa4fbef750ba800p-4L</var>,</td></tr>
+<tr><th id="135">135</th><td>  -<var>0x7.c2cc346a06b075c00p-68L</var>,</td></tr>
+<tr><th id="136">136</th><td>  <var>0x3.f55dda9e62aed7500p-4L</var>,</td></tr>
+<tr><th id="137">137</th><td>  <var>0x1.3bd7b8e6a3d1635e0p-68L</var>,</td></tr>
+<tr><th id="138">138</th><td>  <i>/* x = 0.1484375 + 14/128.  */</i></td></tr>
+<tr><th id="139">139</th><td>  <var>0xf.78a098069792dab00p-4L</var>,</td></tr>
+<tr><th id="140">140</th><td>  -<var>0x4.3611bda6e483a5980p-68L</var>,</td></tr>
+<tr><th id="141">141</th><td>  <var>0x4.14572fd94556e6480p-4L</var>,</td></tr>
+<tr><th id="142">142</th><td>  -<var>0xc.29dfd8ec7722b8400p-72L</var>,</td></tr>
+<tr><th id="143">143</th><td>  <i>/* x = 0.1484375 + 15/128.  */</i></td></tr>
+<tr><th id="144">144</th><td>  <var>0xf.7058fde0788dfc800p-4L</var>,</td></tr>
+<tr><th id="145">145</th><td>  <var>0x5.b8fe88789e4f42500p-72L</var>,</td></tr>
+<tr><th id="146">146</th><td>  <var>0x4.334033bcd90d66080p-4L</var>,</td></tr>
+<tr><th id="147">147</th><td>  -<var>0x3.0a0c93e2b47bbae40p-68L</var>,</td></tr>
+<tr><th id="148">148</th><td>  <i>/* x = 0.1484375 + 16/128.  */</i></td></tr>
+<tr><th id="149">149</th><td>  <var>0xf.67d3a26af7d07aa00p-4L</var>,</td></tr>
+<tr><th id="150">150</th><td>  <var>0x4.bd6d42af8c0068000p-68L</var>,</td></tr>
+<tr><th id="151">151</th><td>  <var>0x4.52186aa5377ab2080p-4L</var>,</td></tr>
+<tr><th id="152">152</th><td>  <var>0x3.bf2524f52e3a06a80p-68L</var>,</td></tr>
+<tr><th id="153">153</th><td>  <i>/* x = 0.1484375 + 17/128.  */</i></td></tr>
+<tr><th id="154">154</th><td>  <var>0xf.5f10a7bb77d3dfa00p-4L</var>,</td></tr>
+<tr><th id="155">155</th><td>  <var>0xc.1da8b578427832800p-72L</var>,</td></tr>
+<tr><th id="156">156</th><td>  <var>0x4.70df5931ae1d94600p-4L</var>,</td></tr>
+<tr><th id="157">157</th><td>  <var>0x7.6fe0dcff47fe31b80p-72L</var>,</td></tr>
+<tr><th id="158">158</th><td>  <i>/* x = 0.1484375 + 18/128.  */</i></td></tr>
+<tr><th id="159">159</th><td>  <var>0xf.561030ddd7a789600p-4L</var>,</td></tr>
+<tr><th id="160">160</th><td>  <var>0xe.a9f4a32c652155500p-72L</var>,</td></tr>
+<tr><th id="161">161</th><td>  <var>0x4.8f948446abcd6b100p-4L</var>,</td></tr>
+<tr><th id="162">162</th><td>  -<var>0x8.0334eff185e4d9100p-72L</var>,</td></tr>
+<tr><th id="163">163</th><td>  <i>/* x = 0.1484375 + 19/128.  */</i></td></tr>
+<tr><th id="164">164</th><td>  <var>0xf.4cd261d3e6c15bb00p-4L</var>,</td></tr>
+<tr><th id="165">165</th><td>  <var>0x3.69c8758630d2ac000p-68L</var>,</td></tr>
+<tr><th id="166">166</th><td>  <var>0x4.ae37710fad27c8a80p-4L</var>,</td></tr>
+<tr><th id="167">167</th><td>  <var>0x2.9c4cf96c03519b9c0p-68L</var>,</td></tr>
+<tr><th id="168">168</th><td>  <i>/* x = 0.1484375 + 20/128.  */</i></td></tr>
+<tr><th id="169">169</th><td>  <var>0xf.43575f94d4f6b2700p-4L</var>,</td></tr>
+<tr><th id="170">170</th><td>  <var>0x2.f5fb76b14d2a64ac0p-68L</var>,</td></tr>
+<tr><th id="171">171</th><td>  <var>0x4.ccc7a50127e1de100p-4L</var>,</td></tr>
+<tr><th id="172">172</th><td>  -<var>0x3.494bf3cfd39ae0840p-68L</var>,</td></tr>
+<tr><th id="173">173</th><td>  <i>/* x = 0.1484375 + 21/128.  */</i></td></tr>
+<tr><th id="174">174</th><td>  <var>0xf.399f500c9e9fd3800p-4L</var>,</td></tr>
+<tr><th id="175">175</th><td>  -<var>0x5.166a8d9c254778900p-68L</var>,</td></tr>
+<tr><th id="176">176</th><td>  <var>0x4.eb44a5da74f600200p-4L</var>,</td></tr>
+<tr><th id="177">177</th><td>  <var>0x7.aaa090f0734e28880p-72L</var>,</td></tr>
+<tr><th id="178">178</th><td>  <i>/* x = 0.1484375 + 22/128.  */</i></td></tr>
+<tr><th id="179">179</th><td>  <var>0xf.2faa5a1b74e82fd00p-4L</var>,</td></tr>
+<tr><th id="180">180</th><td>  <var>0x6.1fa05f9177380e900p-68L</var>,</td></tr>
+<tr><th id="181">181</th><td>  <var>0x5.09adf9a7b9a5a0f80p-4L</var>,</td></tr>
+<tr><th id="182">182</th><td>  -<var>0x1.c75705c59f5e66be0p-68L</var>,</td></tr>
+<tr><th id="183">183</th><td>  <i>/* x = 0.1484375 + 23/128.  */</i></td></tr>
+<tr><th id="184">184</th><td>  <var>0xf.2578a595224dd2e00p-4L</var>,</td></tr>
+<tr><th id="185">185</th><td>  <var>0x6.bfa2eb2f99cc67500p-68L</var>,</td></tr>
+<tr><th id="186">186</th><td>  <var>0x5.280326c3cf4818200p-4L</var>,</td></tr>
+<tr><th id="187">187</th><td>  <var>0x3.ba6bb08eac82c2080p-68L</var>,</td></tr>
+<tr><th id="188">188</th><td>  <i>/* x = 0.1484375 + 24/128.  */</i></td></tr>
+<tr><th id="189">189</th><td>  <var>0xf.1b0a5b406b526d900p-4L</var>,</td></tr>
+<tr><th id="190">190</th><td>  -<var>0x7.93aa0152372f23380p-68L</var>,</td></tr>
+<tr><th id="191">191</th><td>  <var>0x5.4643b3da29de9b380p-4L</var>,</td></tr>
+<tr><th id="192">192</th><td>  -<var>0x2.8eaa110f0ccd04c00p-68L</var>,</td></tr>
+<tr><th id="193">193</th><td>  <i>/* x = 0.1484375 + 25/128.  */</i></td></tr>
+<tr><th id="194">194</th><td>  <var>0xf.105fa4d66b607a600p-4L</var>,</td></tr>
+<tr><th id="195">195</th><td>  <var>0x7.d44e0427252044380p-68L</var>,</td></tr>
+<tr><th id="196">196</th><td>  <var>0x5.646f27e8bd65cbe00p-4L</var>,</td></tr>
+<tr><th id="197">197</th><td>  <var>0x3.a5d61ff0657229100p-68L</var>,</td></tr>
+<tr><th id="198">198</th><td>  <i>/* x = 0.1484375 + 26/128.  */</i></td></tr>
+<tr><th id="199">199</th><td>  <var>0xf.0578ad01ede708000p-4L</var>,</td></tr>
+<tr><th id="200">200</th><td>  -<var>0x5.c63f6239467b50100p-68L</var>,</td></tr>
+<tr><th id="201">201</th><td>  <var>0x5.82850a41e1dd46c80p-4L</var>,</td></tr>
+<tr><th id="202">202</th><td>  -<var>0x9.fd15dbb3244403200p-76L</var>,</td></tr>
+<tr><th id="203">203</th><td>  <i>/* x = 0.1484375 + 27/128.  */</i></td></tr>
+<tr><th id="204">204</th><td>  <var>0xe.fa559f5ec3aec3a00p-4L</var>,</td></tr>
+<tr><th id="205">205</th><td>  <var>0x4.eb03319278a2d4200p-68L</var>,</td></tr>
+<tr><th id="206">206</th><td>  <var>0x5.a084e28e35fda2780p-4L</var>,</td></tr>
+<tr><th id="207">207</th><td>  -<var>0x9.202444aace28b3100p-72L</var>,</td></tr>
+<tr><th id="208">208</th><td>  <i>/* x = 0.1484375 + 28/128.  */</i></td></tr>
+<tr><th id="209">209</th><td>  <var>0xe.eef6a879146af0c00p-4L</var>,</td></tr>
+<tr><th id="210">210</th><td>  -<var>0x6.46a15d15f53f2c200p-72L</var>,</td></tr>
+<tr><th id="211">211</th><td>  <var>0x5.be6e38ce809554280p-4L</var>,</td></tr>
+<tr><th id="212">212</th><td>  <var>0x3.c14ee9da0d3648400p-68L</var>,</td></tr>
+<tr><th id="213">213</th><td>  <i>/* x = 0.1484375 + 29/128.  */</i></td></tr>
+<tr><th id="214">214</th><td>  <var>0xe.e35bf5ccac8905300p-4L</var>,</td></tr>
+<tr><th id="215">215</th><td>  -<var>0x3.26e2248cb2c5b81c0p-68L</var>,</td></tr>
+<tr><th id="216">216</th><td>  <var>0x5.dc40955d9084f4880p-4L</var>,</td></tr>
+<tr><th id="217">217</th><td>  <var>0x2.94675a2498de5d840p-68L</var>,</td></tr>
+<tr><th id="218">218</th><td>  <i>/* x = 0.1484375 + 30/128.  */</i></td></tr>
+<tr><th id="219">219</th><td>  <var>0xe.d785b5c44741b4500p-4L</var>,</td></tr>
+<tr><th id="220">220</th><td>  -<var>0x6.c3a943462cc75eb00p-68L</var>,</td></tr>
+<tr><th id="221">221</th><td>  <var>0x5.f9fb80f21b5364a00p-4L</var>,</td></tr>
+<tr><th id="222">222</th><td>  -<var>0x3.bcdabf5af1dd3ad00p-68L</var>,</td></tr>
+<tr><th id="223">223</th><td>  <i>/* x = 0.1484375 + 31/128.  */</i></td></tr>
+<tr><th id="224">224</th><td>  <var>0xe.cb7417b8d4ee3ff00p-4L</var>,</td></tr>
+<tr><th id="225">225</th><td>  -<var>0x3.c8545bf8c55b70e00p-68L</var>,</td></tr>
+<tr><th id="226">226</th><td>  <var>0x6.179e84a09a5258a80p-4L</var>,</td></tr>
+<tr><th id="227">227</th><td>  -<var>0x3.f164a0531fc1ada00p-68L</var>,</td></tr>
+<tr><th id="228">228</th><td>  <i>/* x = 0.1484375 + 32/128.  */</i></td></tr>
+<tr><th id="229">229</th><td>  <var>0xe.bf274bf0bda4f6200p-4L</var>,</td></tr>
+<tr><th id="230">230</th><td>  <var>0x4.47e56a09362679900p-68L</var>,</td></tr>
+<tr><th id="231">231</th><td>  <var>0x6.352929dd264bd4480p-4L</var>,</td></tr>
+<tr><th id="232">232</th><td>  <var>0x2.02ea766325d8aa8c0p-68L</var>,</td></tr>
+<tr><th id="233">233</th><td>  <i>/* x = 0.1484375 + 33/128.  */</i></td></tr>
+<tr><th id="234">234</th><td>  <var>0xe.b29f839f201fd1400p-4L</var>,</td></tr>
+<tr><th id="235">235</th><td>  -<var>0x4.6c8697d86e9587100p-68L</var>,</td></tr>
+<tr><th id="236">236</th><td>  <var>0x6.529afa7d51b129600p-4L</var>,</td></tr>
+<tr><th id="237">237</th><td>  <var>0x3.1ec197c0a840a11c0p-68L</var>,</td></tr>
+<tr><th id="238">238</th><td>  <i>/* x = 0.1484375 + 34/128.  */</i></td></tr>
+<tr><th id="239">239</th><td>  <var>0xe.a5dcf0e30cf03e700p-4L</var>,</td></tr>
+<tr><th id="240">240</th><td>  -<var>0x6.8910f4e13d9aea080p-68L</var>,</td></tr>
+<tr><th id="241">241</th><td>  <var>0x6.6ff380ba014410a00p-4L</var>,</td></tr>
+<tr><th id="242">242</th><td>  -<var>0x1.c65cdf4f5c05a02a0p-68L</var>,</td></tr>
+<tr><th id="243">243</th><td>  <i>/* x = 0.1484375 + 35/128.  */</i></td></tr>
+<tr><th id="244">244</th><td>  <var>0xe.98dfc6c6be031e600p-4L</var>,</td></tr>
+<tr><th id="245">245</th><td>  <var>0xd.d3089cbdd18a75b00p-72L</var>,</td></tr>
+<tr><th id="246">246</th><td>  <var>0x6.8d324731433279700p-4L</var>,</td></tr>
+<tr><th id="247">247</th><td>  <var>0x3.bc712bcc4ccddc480p-68L</var>,</td></tr>
+<tr><th id="248">248</th><td>  <i>/* x = 0.1484375 + 36/128.  */</i></td></tr>
+<tr><th id="249">249</th><td>  <var>0xe.8ba8393eca7821b00p-4L</var>,</td></tr>
+<tr><th id="250">250</th><td>  -<var>0x5.a9c27cb6e49efee80p-68L</var>,</td></tr>
+<tr><th id="251">251</th><td>  <var>0x6.aa56d8e8249db4e80p-4L</var>,</td></tr>
+<tr><th id="252">252</th><td>  <var>0x3.60a761fe3f9e559c0p-68L</var>,</td></tr>
+<tr><th id="253">253</th><td>  <i>/* x = 0.1484375 + 37/128.  */</i></td></tr>
+<tr><th id="254">254</th><td>  <var>0xe.7e367d2956cfb1700p-4L</var>,</td></tr>
+<tr><th id="255">255</th><td>  -<var>0x4.955ee1abe632ffa80p-68L</var>,</td></tr>
+<tr><th id="256">256</th><td>  <var>0x6.c760c14c8585a5200p-4L</var>,</td></tr>
+<tr><th id="257">257</th><td>  -<var>0x2.42cb99f5193ad5380p-68L</var>,</td></tr>
+<tr><th id="258">258</th><td>  <i>/* x = 0.1484375 + 38/128.  */</i></td></tr>
+<tr><th id="259">259</th><td>  <var>0xe.708ac84d4172a3e00p-4L</var>,</td></tr>
+<tr><th id="260">260</th><td>  <var>0x2.737662213429e1400p-68L</var>,</td></tr>
+<tr><th id="261">261</th><td>  <var>0x6.e44f8c36eb10a1c80p-4L</var>,</td></tr>
+<tr><th id="262">262</th><td>  -<var>0xa.d2f6c3ff0b2b84600p-72L</var>,</td></tr>
+<tr><th id="263">263</th><td>  <i>/* x = 0.1484375 + 39/128.  */</i></td></tr>
+<tr><th id="264">264</th><td>  <var>0xe.62a551594b970a700p-4L</var>,</td></tr>
+<tr><th id="265">265</th><td>  <var>0x7.0b15d41d4c0e48400p-68L</var>,</td></tr>
+<tr><th id="266">266</th><td>  <var>0x7.0122c5ec5028c8d00p-4L</var>,</td></tr>
+<tr><th id="267">267</th><td>  -<var>0xc.c540b02cbf333c800p-76L</var>,</td></tr>
+<tr><th id="268">268</th><td>  <i>/* x = 0.1484375 + 40/128.  */</i></td></tr>
+<tr><th id="269">269</th><td>  <var>0xe.54864fe33e8575d00p-4L</var>,</td></tr>
+<tr><th id="270">270</th><td>  -<var>0x5.40a42f1a30e4e5780p-68L</var>,</td></tr>
+<tr><th id="271">271</th><td>  <var>0x7.1dd9fb1ff46778500p-4L</var>,</td></tr>
+<tr><th id="272">272</th><td>  <var>0x3.acb970a9f6729c700p-68L</var>,</td></tr>
+<tr><th id="273">273</th><td>  <i>/* x = 0.1484375 + 41/128.  */</i></td></tr>
+<tr><th id="274">274</th><td>  <var>0xe.462dfc670d421ab00p-4L</var>,</td></tr>
+<tr><th id="275">275</th><td>  <var>0x3.d1a15901228f146c0p-68L</var>,</td></tr>
+<tr><th id="276">276</th><td>  <var>0x7.3a74b8f52947b6800p-4L</var>,</td></tr>
+<tr><th id="277">277</th><td>  <var>0x1.baf6928eb3fb02180p-68L</var>,</td></tr>
+<tr><th id="278">278</th><td>  <i>/* x = 0.1484375 + 42/128.  */</i></td></tr>
+<tr><th id="279">279</th><td>  <var>0xe.379c9045f29d51800p-4L</var>,</td></tr>
+<tr><th id="280">280</th><td>  -<var>0x3.b7f755b683dfa84c0p-68L</var>,</td></tr>
+<tr><th id="281">281</th><td>  <var>0x7.56f28d011d9852880p-4L</var>,</td></tr>
+<tr><th id="282">282</th><td>  <var>0x2.44a75fc29c779bd80p-68L</var>,</td></tr>
+<tr><th id="283">283</th><td>  <i>/* x = 0.1484375 + 43/128.  */</i></td></tr>
+<tr><th id="284">284</th><td>  <var>0xe.28d245c58baef7200p-4L</var>,</td></tr>
+<tr><th id="285">285</th><td>  <var>0x2.25e232abc003c4380p-68L</var>,</td></tr>
+<tr><th id="286">286</th><td>  <var>0x7.7353054ca72690d80p-4L</var>,</td></tr>
+<tr><th id="287">287</th><td>  -<var>0x3.391e8e0266194c600p-68L</var>,</td></tr>
+<tr><th id="288">288</th><td>  <i>/* x = 0.1484375 + 44/128.  */</i></td></tr>
+<tr><th id="289">289</th><td>  <var>0xe.19cf580eeec046b00p-4L</var>,</td></tr>
+<tr><th id="290">290</th><td>  -<var>0x5.ebdd058b7f8131080p-68L</var>,</td></tr>
+<tr><th id="291">291</th><td>  <var>0x7.8f95b0560a9a3bd80p-4L</var>,</td></tr>
+<tr><th id="292">292</th><td>  -<var>0x1.2084267e23c739ee0p-68L</var>,</td></tr>
+<tr><th id="293">293</th><td>  <i>/* x = 0.1484375 + 45/128.  */</i></td></tr>
+<tr><th id="294">294</th><td>  <var>0xe.0a94032dbea7cee00p-4L</var>,</td></tr>
+<tr><th id="295">295</th><td>  -<var>0x4.222625d0505267a80p-68L</var>,</td></tr>
+<tr><th id="296">296</th><td>  <var>0x7.abba1d12c17bfa200p-4L</var>,</td></tr>
+<tr><th id="297">297</th><td>  -<var>0x2.6d0f26c09f2126680p-68L</var>,</td></tr>
+<tr><th id="298">298</th><td>  <i>/* x = 0.1484375 + 46/128.  */</i></td></tr>
+<tr><th id="299">299</th><td>  <var>0xd.fb20840f3a9b36f00p-4L</var>,</td></tr>
+<tr><th id="300">300</th><td>  <var>0x7.ae2c515342890b600p-68L</var>,</td></tr>
+<tr><th id="301">301</th><td>  <var>0x7.c7bfdaf13e5ed1700p-4L</var>,</td></tr>
+<tr><th id="302">302</th><td>  <var>0x2.12f8a7525bfb113c0p-68L</var>,</td></tr>
+<tr><th id="303">303</th><td>  <i>/* x = 0.1484375 + 47/128.  */</i></td></tr>
+<tr><th id="304">304</th><td>  <var>0xd.eb7518814a7a93200p-4L</var>,</td></tr>
+<tr><th id="305">305</th><td>  -<var>0x4.433773ef632be3b00p-68L</var>,</td></tr>
+<tr><th id="306">306</th><td>  <var>0x7.e3a679daaf25c6780p-4L</var>,</td></tr>
+<tr><th id="307">307</th><td>  -<var>0x1.abd434bfd72f69be0p-68L</var>,</td></tr>
+<tr><th id="308">308</th><td>  <i>/* x = 0.1484375 + 48/128.  */</i></td></tr>
+<tr><th id="309">309</th><td>  <var>0xd.db91ff31879917300p-4L</var>,</td></tr>
+<tr><th id="310">310</th><td>  -<var>0x4.2dbad2f5c7760ae80p-68L</var>,</td></tr>
+<tr><th id="311">311</th><td>  <var>0x7.ff6d8a34bd5e8fa80p-4L</var>,</td></tr>
+<tr><th id="312">312</th><td>  -<var>0x2.b368b7d24aea62100p-68L</var>,</td></tr>
+<tr><th id="313">313</th><td>  <i>/* x = 0.1484375 + 49/128.  */</i></td></tr>
+<tr><th id="314">314</th><td>  <var>0xd.cb7777ac420705100p-4L</var>,</td></tr>
+<tr><th id="315">315</th><td>  <var>0x6.8f31e3eb780ce9c80p-68L</var>,</td></tr>
+<tr><th id="316">316</th><td>  <var>0x8.1b149ce34caa5a500p-4L</var>,</td></tr>
+<tr><th id="317">317</th><td>  -<var>0x1.9af072f602b295580p-68L</var>,</td></tr>
+<tr><th id="318">318</th><td>  <i>/* x = 0.1484375 + 50/128.  */</i></td></tr>
+<tr><th id="319">319</th><td>  <var>0xd.bb25c25b8260c1500p-4L</var>,</td></tr>
+<tr><th id="320">320</th><td>  -<var>0x9.1843671366e48f400p-72L</var>,</td></tr>
+<tr><th id="321">321</th><td>  <var>0x8.369b434a372da7f00p-4L</var>,</td></tr>
+<tr><th id="322">322</th><td>  -<var>0x4.a3758e01c931e1f80p-68L</var>,</td></tr>
+<tr><th id="323">323</th><td>  <i>/* x = 0.1484375 + 51/128.  */</i></td></tr>
+<tr><th id="324">324</th><td>  <var>0xd.aa9d2086082706400p-4L</var>,</td></tr>
+<tr><th id="325">325</th><td>  -<var>0x2.1ae3f617aa166cd00p-72L</var>,</td></tr>
+<tr><th id="326">326</th><td>  <var>0x8.52010f4f080052100p-4L</var>,</td></tr>
+<tr><th id="327">327</th><td>  <var>0x3.78bd8dd614753d080p-68L</var>,</td></tr>
+<tr><th id="328">328</th><td>  <i>/* x = 0.1484375 + 52/128.  */</i></td></tr>
+<tr><th id="329">329</th><td>  <var>0xd.99ddd44e44a43d500p-4L</var>,</td></tr>
+<tr><th id="330">330</th><td>  -<var>0x2.b5c5c126adfbef900p-68L</var>,</td></tr>
+<tr><th id="331">331</th><td>  <var>0x8.6d45935ab396cb500p-4L</var>,</td></tr>
+<tr><th id="332">332</th><td>  -<var>0x1.bde17dd211ab0caa0p-68L</var>,</td></tr>
+<tr><th id="333">333</th><td>  <i>/* x = 0.1484375 + 53/128.  */</i></td></tr>
+<tr><th id="334">334</th><td>  <var>0xd.88e820b1526311e00p-4L</var>,</td></tr>
+<tr><th id="335">335</th><td>  -<var>0x2.a9e1043f3e565ac80p-68L</var>,</td></tr>
+<tr><th id="336">336</th><td>  <var>0x8.8868625b4e1dbb200p-4L</var>,</td></tr>
+<tr><th id="337">337</th><td>  <var>0x3.13310133022527200p-68L</var>,</td></tr>
+<tr><th id="338">338</th><td>  <i>/* x = 0.1484375 + 54/128.  */</i></td></tr>
+<tr><th id="339">339</th><td>  <var>0xd.77bc4985e93a60800p-4L</var>,</td></tr>
+<tr><th id="340">340</th><td>  -<var>0x3.6279746f944394400p-68L</var>,</td></tr>
+<tr><th id="341">341</th><td>  <var>0x8.a3690fc5bfc11c000p-4L</var>,</td></tr>
+<tr><th id="342">342</th><td>  -<var>0x6.aca1d8c657aed0b80p-68L</var>,</td></tr>
+<tr><th id="343">343</th><td>  <i>/* x = 0.1484375 + 55/128.  */</i></td></tr>
+<tr><th id="344">344</th><td>  <var>0xd.665a937b4ef2b1f00p-4L</var>,</td></tr>
+<tr><th id="345">345</th><td>  <var>0x6.d51bad6d988a44180p-68L</var>,</td></tr>
+<tr><th id="346">346</th><td>  <var>0x8.be472f9776d809b00p-4L</var>,</td></tr>
+<tr><th id="347">347</th><td>  -<var>0xd.477e8edbc29c29900p-72L</var>,</td></tr>
+<tr><th id="348">348</th><td>  <i>/* x = 0.1484375 + 56/128.  */</i></td></tr>
+<tr><th id="349">349</th><td>  <var>0xd.54c3441844897fd00p-4L</var>,</td></tr>
+<tr><th id="350">350</th><td>  -<var>0x7.07ac0f9aa0e459680p-68L</var>,</td></tr>
+<tr><th id="351">351</th><td>  <var>0x8.d902565817ee78400p-4L</var>,</td></tr>
+<tr><th id="352">352</th><td>  -<var>0x6.431c32ed7f9fee680p-68L</var>,</td></tr>
+<tr><th id="353">353</th><td>  <i>/* x = 0.1484375 + 57/128.  */</i></td></tr>
+<tr><th id="354">354</th><td>  <var>0xd.42f6a1b9f0168ce00p-4L</var>,</td></tr>
+<tr><th id="355">355</th><td>  -<var>0xf.ce3d09c3726cfb200p-72L</var>,</td></tr>
+<tr><th id="356">356</th><td>  <var>0x8.f39a191b2ba612300p-4L</var>,</td></tr>
+<tr><th id="357">357</th><td>  -<var>0x5.c05b0be2a5c002c00p-68L</var>,</td></tr>
+<tr><th id="358">358</th><td>  <i>/* x = 0.1484375 + 58/128.  */</i></td></tr>
+<tr><th id="359">359</th><td>  <var>0xd.30f4f392c357ab000p-4L</var>,</td></tr>
+<tr><th id="360">360</th><td>  <var>0x6.61c5fa8a7d9b26600p-68L</var>,</td></tr>
+<tr><th id="361">361</th><td>  <var>0x9.0e0e0d81ca6787900p-4L</var>,</td></tr>
+<tr><th id="362">362</th><td>  <var>0x6.cc92c8ea8c2815c00p-68L</var>,</td></tr>
+<tr><th id="363">363</th><td>  <i>/* x = 0.1484375 + 59/128.  */</i></td></tr>
+<tr><th id="364">364</th><td>  <var>0xd.1ebe81a95ee752e00p-4L</var>,</td></tr>
+<tr><th id="365">365</th><td>  <var>0x4.8a26bcd32d6e92300p-68L</var>,</td></tr>
+<tr><th id="366">366</th><td>  <var>0x9.285dc9bc45dd9ea00p-4L</var>,</td></tr>
+<tr><th id="367">367</th><td>  <var>0x3.d02457bcce59c4180p-68L</var>,</td></tr>
+<tr><th id="368">368</th><td>  <i>/* x = 0.1484375 + 60/128.  */</i></td></tr>
+<tr><th id="369">369</th><td>  <var>0xd.0c5394d7722281900p-4L</var>,</td></tr>
+<tr><th id="370">370</th><td>  <var>0x5.e25736c0357470800p-68L</var>,</td></tr>
+<tr><th id="371">371</th><td>  <var>0x9.4288e48bd0335fc00p-4L</var>,</td></tr>
+<tr><th id="372">372</th><td>  <var>0x4.1c4cbd2920497a900p-68L</var>,</td></tr>
+<tr><th id="373">373</th><td>  <i>/* x = 0.1484375 + 61/128.  */</i></td></tr>
+<tr><th id="374">374</th><td>  <var>0xc.f9b476c897c25c600p-4L</var>,</td></tr>
+<tr><th id="375">375</th><td>  -<var>0x4.018af22c0cf715080p-68L</var>,</td></tr>
+<tr><th id="376">376</th><td>  <var>0x9.5c8ef544210ec0c00p-4L</var>,</td></tr>
+<tr><th id="377">377</th><td>  -<var>0x6.e3b642d55f617ae80p-68L</var>,</td></tr>
+<tr><th id="378">378</th><td>  <i>/* x = 0.1484375 + 62/128.  */</i></td></tr>
+<tr><th id="379">379</th><td>  <var>0xc.e6e171f92f2e27f00p-4L</var>,</td></tr>
+<tr><th id="380">380</th><td>  <var>0x3.2225327ec440ddb00p-68L</var>,</td></tr>
+<tr><th id="381">381</th><td>  <var>0x9.766f93cd18413a700p-4L</var>,</td></tr>
+<tr><th id="382">382</th><td>  -<var>0x5.503e303903d754480p-68L</var>,</td></tr>
+<tr><th id="383">383</th><td>  <i>/* x = 0.1484375 + 63/128.  */</i></td></tr>
+<tr><th id="384">384</th><td>  <var>0xc.d3dad1b5328a2e400p-4L</var>,</td></tr>
+<tr><th id="385">385</th><td>  <var>0x5.9f993f4f510881a00p-68L</var>,</td></tr>
+<tr><th id="386">386</th><td>  <var>0x9.902a58a45e27bed00p-4L</var>,</td></tr>
+<tr><th id="387">387</th><td>  <var>0x6.8412b426b675ed500p-68L</var>,</td></tr>
+<tr><th id="388">388</th><td>  <i>/* x = 0.1484375 + 64/128.  */</i></td></tr>
+<tr><th id="389">389</th><td>  <var>0xc.c0a0e21709883a400p-4L</var>,</td></tr>
+<tr><th id="390">390</th><td>  -<var>0xf.f6ee1ee5f811c4300p-76L</var>,</td></tr>
+<tr><th id="391">391</th><td>  <var>0x9.a9bedcdf01b38da00p-4L</var>,</td></tr>
+<tr><th id="392">392</th><td>  -<var>0x6.c0c287df87e21d700p-68L</var>,</td></tr>
+<tr><th id="393">393</th><td>  <i>/* x = 0.1484375 + 65/128.  */</i></td></tr>
+<tr><th id="394">394</th><td>  <var>0xc.ad33f00658fe5e800p-4L</var>,</td></tr>
+<tr><th id="395">395</th><td>  <var>0x2.04bbc0f3a66a0e6c0p-68L</var>,</td></tr>
+<tr><th id="396">396</th><td>  <var>0x9.c32cba2b14156ef00p-4L</var>,</td></tr>
+<tr><th id="397">397</th><td>  <var>0x5.256c4f857991ca680p-72L</var>,</td></tr>
+<tr><th id="398">398</th><td>  <i>/* x = 0.1484375 + 66/128.  */</i></td></tr>
+<tr><th id="399">399</th><td>  <var>0xc.99944936cf48c8900p-4L</var>,</td></tr>
+<tr><th id="400">400</th><td>  <var>0x1.1ff93fe64b3ddb7a0p-68L</var>,</td></tr>
+<tr><th id="401">401</th><td>  <var>0x9.dc738ad14204e6900p-4L</var>,</td></tr>
+<tr><th id="402">402</th><td>  -<var>0x6.53a7d2f07a7d9a700p-68L</var>,</td></tr>
+<tr><th id="403">403</th><td>  <i>/* x = 0.1484375 + 67/128.  */</i></td></tr>
+<tr><th id="404">404</th><td>  <var>0xc.85c23c26ed7b6f000p-4L</var>,</td></tr>
+<tr><th id="405">405</th><td>  <var>0x1.4ef546c4792968220p-68L</var>,</td></tr>
+<tr><th id="406">406</th><td>  <var>0x9.f592e9b66a9cf9000p-4L</var>,</td></tr>
+<tr><th id="407">407</th><td>  <var>0x6.a3c7aa3c101998480p-68L</var>,</td></tr>
+<tr><th id="408">408</th><td>  <i>/* x = 0.1484375 + 68/128.  */</i></td></tr>
+<tr><th id="409">409</th><td>  <var>0xc.71be181ecd6875d00p-4L</var>,</td></tr>
+<tr><th id="410">410</th><td>  -<var>0x1.d25a9ea5fc335df80p-68L</var>,</td></tr>
+<tr><th id="411">411</th><td>  <var>0xa.0e8a725d33c828c00p-4L</var>,</td></tr>
+<tr><th id="412">412</th><td>  <var>0x1.1fa50fd9e9a15ffe0p-68L</var>,</td></tr>
+<tr><th id="413">413</th><td>  <i>/* x = 0.1484375 + 69/128.  */</i></td></tr>
+<tr><th id="414">414</th><td>  <var>0xc.5d882d2ee48030c00p-4L</var>,</td></tr>
+<tr><th id="415">415</th><td>  <var>0x7.c07d28e981e348080p-68L</var>,</td></tr>
+<tr><th id="416">416</th><td>  <var>0xa.2759c0e79c3558200p-4L</var>,</td></tr>
+<tr><th id="417">417</th><td>  <var>0x5.27c32b55f5405c180p-68L</var>,</td></tr>
+<tr><th id="418">418</th><td>  <i>/* x = 0.1484375 + 70/128.  */</i></td></tr>
+<tr><th id="419">419</th><td>  <var>0xc.4920cc2ec38fb8900p-4L</var>,</td></tr>
+<tr><th id="420">420</th><td>  <var>0x1.b38827db08884fc60p-68L</var>,</td></tr>
+<tr><th id="421">421</th><td>  <var>0xa.400072188acf49d00p-4L</var>,</td></tr>
+<tr><th id="422">422</th><td>  -<var>0x2.94e8c7da1fc7cb900p-68L</var>,</td></tr>
+<tr><th id="423">423</th><td>  <i>/* x = 0.1484375 + 71/128.  */</i></td></tr>
+<tr><th id="424">424</th><td>  <var>0xc.348846bbd36313400p-4L</var>,</td></tr>
+<tr><th id="425">425</th><td>  -<var>0x7.001d401622ec7e600p-68L</var>,</td></tr>
+<tr><th id="426">426</th><td>  <var>0xa.587e23555bb080800p-4L</var>,</td></tr>
+<tr><th id="427">427</th><td>  <var>0x6.d02b9c662cdd29300p-68L</var>,</td></tr>
+<tr><th id="428">428</th><td>  <i>/* x = 0.1484375 + 72/128.  */</i></td></tr>
+<tr><th id="429">429</th><td>  <var>0xc.1fbeef380e4ffdd00p-4L</var>,</td></tr>
+<tr><th id="430">430</th><td>  <var>0x5.a613ec8722f644000p-68L</var>,</td></tr>
+<tr><th id="431">431</th><td>  <var>0xa.70d272a76a8d4b700p-4L</var>,</td></tr>
+<tr><th id="432">432</th><td>  -<var>0x2.5f136f8ed448b7480p-68L</var>,</td></tr>
+<tr><th id="433">433</th><td>  <i>/* x = 0.1484375 + 73/128.  */</i></td></tr>
+<tr><th id="434">434</th><td>  <var>0xc.0ac518c8b6ae71100p-4L</var>,</td></tr>
+<tr><th id="435">435</th><td>  -<var>0x4.5c85c1146f34ea500p-68L</var>,</td></tr>
+<tr><th id="436">436</th><td>  <var>0xa.88fcfebd9a8dd4800p-4L</var>,</td></tr>
+<tr><th id="437">437</th><td>  -<var>0x1.d0c3891061dbc66e0p-68L</var>,</td></tr>
+<tr><th id="438">438</th><td>  <i>/* x = 0.1484375 + 74/128.  */</i></td></tr>
+<tr><th id="439">439</th><td>  <var>0xb.f59b17550a4406800p-4L</var>,</td></tr>
+<tr><th id="440">440</th><td>  <var>0x7.5969296567cf3e380p-68L</var>,</td></tr>
+<tr><th id="441">441</th><td>  <var>0xa.a0fd66eddb9212300p-4L</var>,</td></tr>
+<tr><th id="442">442</th><td>  <var>0x2.c28520d3911b8a040p-68L</var>,</td></tr>
+<tr><th id="443">443</th><td>  <i>/* x = 0.1484375 + 75/128.  */</i></td></tr>
+<tr><th id="444">444</th><td>  <var>0xb.e0413f84f2a771c00p-4L</var>,</td></tr>
+<tr><th id="445">445</th><td>  <var>0x6.14946a88cbf4da200p-68L</var>,</td></tr>
+<tr><th id="446">446</th><td>  <var>0xa.b8d34b36acd987200p-4L</var>,</td></tr>
+<tr><th id="447">447</th><td>  <var>0x1.0ed343ec65d7e3ae0p-68L</var>,</td></tr>
+<tr><th id="448">448</th><td>  <i>/* x = 0.1484375 + 76/128.  */</i></td></tr>
+<tr><th id="449">449</th><td>  <var>0xb.cab7e6bfb2a14aa00p-4L</var>,</td></tr>
+<tr><th id="450">450</th><td>  -<var>0x4.edd3a8b5c89413680p-68L</var>,</td></tr>
+<tr><th id="451">451</th><td>  <var>0xa.d07e4c409d08c5000p-4L</var>,</td></tr>
+<tr><th id="452">452</th><td>  -<var>0x5.c56fa844f53db4780p-68L</var>,</td></tr>
+<tr><th id="453">453</th><td>  <i>/* x = 0.1484375 + 77/128.  */</i></td></tr>
+<tr><th id="454">454</th><td>  <var>0xb.b4ff632a908f73f00p-4L</var>,</td></tr>
+<tr><th id="455">455</th><td>  -<var>0x3.eae7c6346266c4b00p-68L</var>,</td></tr>
+<tr><th id="456">456</th><td>  <var>0xa.e7fe0b5fc786b2e00p-4L</var>,</td></tr>
+<tr><th id="457">457</th><td>  -<var>0x6.991e2950ebf5b7780p-68L</var>,</td></tr>
+<tr><th id="458">458</th><td>  <i>/* x = 0.1484375 + 78/128.  */</i></td></tr>
+<tr><th id="459">459</th><td>  <var>0xb.9f180ba77dd075100p-4L</var>,</td></tr>
+<tr><th id="460">460</th><td>  <var>0x6.28e135a9508299000p-68L</var>,</td></tr>
+<tr><th id="461">461</th><td>  <var>0xa.ff522a954f2ba1700p-4L</var>,</td></tr>
+<tr><th id="462">462</th><td>  -<var>0x2.621023be91cc0a180p-68L</var>,</td></tr>
+<tr><th id="463">463</th><td>  <i>/* x = 0.1484375 + 79/128.  */</i></td></tr>
+<tr><th id="464">464</th><td>  <var>0xb.890237d3bb3c28500p-4L</var>,</td></tr>
+<tr><th id="465">465</th><td>  -<var>0x4.9eb5fac6fe9405f00p-68L</var>,</td></tr>
+<tr><th id="466">466</th><td>  <var>0xb.167a4c90d63c42400p-4L</var>,</td></tr>
+<tr><th id="467">467</th><td>  <var>0x4.cf5493b7cc23bd400p-68L</var>,</td></tr>
+<tr><th id="468">468</th><td>  <i>/* x = 0.1484375 + 80/128.  */</i></td></tr>
+<tr><th id="469">469</th><td>  <var>0xb.72be40067aaf2c000p-4L</var>,</td></tr>
+<tr><th id="470">470</th><td>  <var>0x5.0dbdb7a14c3d7d500p-68L</var>,</td></tr>
+<tr><th id="471">471</th><td>  <var>0xb.2d7614b1f3aaa2500p-4L</var>,</td></tr>
+<tr><th id="472">472</th><td>  -<var>0x2.0d291df5881e35c00p-68L</var>,</td></tr>
+<tr><th id="473">473</th><td>  <i>/* x = 0.1484375 + 81/128.  */</i></td></tr>
+<tr><th id="474">474</th><td>  <var>0xb.5c4c7d4f7dae91600p-4L</var>,</td></tr>
+<tr><th id="475">475</th><td>  -<var>0x5.3879330b4e5b67300p-68L</var>,</td></tr>
+<tr><th id="476">476</th><td>  <var>0xb.44452709a59752900p-4L</var>,</td></tr>
+<tr><th id="477">477</th><td>  <var>0x5.913765434a59d1100p-72L</var>,</td></tr>
+<tr><th id="478">478</th><td>  <i>/* x = 0.1484375 + 82/128.  */</i></td></tr>
+<tr><th id="479">479</th><td>  <var>0xb.45ad4975b1294cb00p-4L</var>,</td></tr>
+<tr><th id="480">480</th><td>  -<var>0x2.35b30bf1370dd5980p-68L</var>,</td></tr>
+<tr><th id="481">481</th><td>  <var>0xb.5ae7285bc10cf5100p-4L</var>,</td></tr>
+<tr><th id="482">482</th><td>  <var>0x5.753847e8f8b7a3100p-68L</var>,</td></tr>
+<tr><th id="483">483</th><td>};</td></tr>
+<tr><th id="484">484</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

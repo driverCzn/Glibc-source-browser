@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>assert.c source code [glibc_src_2.28/assert/assert.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/assert/assert.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>assert</a>/<a href='assert.c.html'>assert.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i><a href="../sysdeps/unix/sysv/linux/fatal-prepare.h.html">/* Copyright (C) </a>1991-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/mman.h.html">&lt;sys/mman.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><b>extern</b> <em>const</em> <em>char</em> *<dfn class="decl" id="__progname" title='__progname' data-ref="__progname" data-ref-filename="__progname">__progname</dfn>;</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../libio/iolibio.h.html">&lt;libio/iolibio.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/fflush" data-ref="_M/fflush">fflush</dfn>(s) <a class="ref fn" href="../libio/iolibio.h.html#__GI__IO_fflush" title='_IO_fflush' data-ref="__GI__IO_fflush" data-ref-filename="__GI__IO_fflush">_IO_fflush</a> (s)</u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i>/* This function, when passed a string containing an asserted</i></td></tr>
+<tr><th id="36">36</th><td><i>   expression, a filename, and a line number, prints a message</i></td></tr>
+<tr><th id="37">37</th><td><i>   on the standard error stream of the form:</i></td></tr>
+<tr><th id="38">38</th><td><i>	a.c:10: foobar: Assertion `a == b' failed.</i></td></tr>
+<tr><th id="39">39</th><td><i>   It then aborts program execution via a call to `abort'.  */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="41">ifdef</span> <span class="macro" data-ref="_M/FATAL_PREPARE_INCLUDE">FATAL_PREPARE_INCLUDE</span></u></td></tr>
+<tr><th id="42">42</th><td><u># include <span class="macro" title="&lt;fatal-prepare.h&gt;" data-ref="_M/FATAL_PREPARE_INCLUDE">FATAL_PREPARE_INCLUDE</span></u></td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="41">endif</span></u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>void</em></td></tr>
+<tr><th id="47">47</th><td><dfn class="decl def fn" id="__assert_fail_base" title='__assert_fail_base' data-ref="__assert_fail_base" data-ref-filename="__assert_fail_base">__assert_fail_base</dfn> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="313fmt" title='fmt' data-type='const char *' data-ref="313fmt" data-ref-filename="313fmt">fmt</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="314assertion" title='assertion' data-type='const char *' data-ref="314assertion" data-ref-filename="314assertion">assertion</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="315file" title='file' data-type='const char *' data-ref="315file" data-ref-filename="315file">file</dfn>,</td></tr>
+<tr><th id="48">48</th><td>		    <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="316line" title='line' data-type='unsigned int' data-ref="316line" data-ref-filename="316line">line</dfn>, <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="317function" title='function' data-type='const char *' data-ref="317function" data-ref-filename="317function">function</dfn>)</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>  <em>char</em> *<dfn class="local col8 decl" id="318str" title='str' data-type='char *' data-ref="318str" data-ref-filename="318str">str</dfn>;</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="52">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/fatal-prepare.h.html#22" data-ref="_M/FATAL_PREPARE">FATAL_PREPARE</a></u></td></tr>
+<tr><th id="53">53</th><td>  <a class="macro" href="../sysdeps/unix/sysv/linux/fatal-prepare.h.html#22" title="(__libc_pthread_functions_init ? ({ __typeof (__libc_pthread_functions.ptr___pthread_setcancelstate) __p; __p = __libc_pthread_functions.ptr___pthread_setcancelstate; asm (&quot;ror $2*&quot; &quot;8&quot; &quot;+1, %0\n&quot; &quot;xor %%fs:%c2, %0&quot; : &quot;=r&quot; (__p) : &quot;0&quot; (__p), &quot;i&quot; (__builtin_offsetof(tcbhead_t, pointer_guard))); __p (PTHREAD_CANCEL_DISABLE, ((void*)0)); }) : 0)" data-ref="_M/FATAL_PREPARE">FATAL_PREPARE</a>;</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="52">endif</span></u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  <em>int</em> <dfn class="local col9 decl" id="319total" title='total' data-type='int' data-ref="319total" data-ref-filename="319total">total</dfn>;</td></tr>
+<tr><th id="57">57</th><td>  <b>if</b> (<a class="ref fn" href="../libio/stdio.h.html#__asprintf" title='__asprintf' data-ref="__asprintf" data-ref-filename="__asprintf">__asprintf</a> (&amp;<a class="local col8 ref" href="#318str" title='str' data-ref="318str" data-ref-filename="318str">str</a>, <a class="local col3 ref" href="#313fmt" title='fmt' data-ref="313fmt" data-ref-filename="313fmt">fmt</a>,</td></tr>
+<tr><th id="58">58</th><td>		  <a class="ref" href="#__progname" title='__progname' data-ref="__progname" data-ref-filename="__progname">__progname</a>, <a class="ref" href="#__progname" title='__progname' data-ref="__progname" data-ref-filename="__progname">__progname</a>[<var>0</var>] ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="59">59</th><td>		  <a class="local col5 ref" href="#315file" title='file' data-ref="315file" data-ref-filename="315file">file</a>, <a class="local col6 ref" href="#316line" title='line' data-ref="316line" data-ref-filename="316line">line</a>,</td></tr>
+<tr><th id="60">60</th><td>		  <a class="local col7 ref" href="#317function" title='function' data-ref="317function" data-ref-filename="317function">function</a> ? <a class="local col7 ref" href="#317function" title='function' data-ref="317function" data-ref-filename="317function">function</a> : <q>""</q>, <a class="local col7 ref" href="#317function" title='function' data-ref="317function" data-ref-filename="317function">function</a> ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="61">61</th><td>		  <a class="local col4 ref" href="#314assertion" title='assertion' data-ref="314assertion" data-ref-filename="314assertion">assertion</a>, &amp;<a class="local col9 ref" href="#319total" title='total' data-ref="319total" data-ref-filename="319total">total</a>) &gt;= <var>0</var>)</td></tr>
+<tr><th id="62">62</th><td>    {</td></tr>
+<tr><th id="63">63</th><td>      <i>/* Print the message.  */</i></td></tr>
+<tr><th id="64">64</th><td>      (<em>void</em>) <a class="ref fn" href="../include/stdio.h.html#__fxprintf" title='__fxprintf' data-ref="__fxprintf" data-ref-filename="__fxprintf">__fxprintf</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <q>"%s"</q>, <a class="local col8 ref" href="#318str" title='str' data-ref="318str" data-ref-filename="318str">str</a>);</td></tr>
+<tr><th id="65">65</th><td>      (<em>void</em>) <a class="macro" href="#33" title="_IO_fflush (stderr)" data-ref="_M/fflush">fflush</a> (<a class="macro" href="../libio/stdio.h.html#143" title="stderr" data-ref="_M/stderr">stderr</a>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>      <a class="local col9 ref" href="#319total" title='total' data-ref="319total" data-ref-filename="319total">total</a> = (<a class="local col9 ref" href="#319total" title='total' data-ref="319total" data-ref-filename="319total">total</a> + <var>1</var> + <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#473" title="_rtld_global_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>) &amp; ~(<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#473" title="_rtld_global_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>);</td></tr>
+<tr><th id="68">68</th><td>      <b>struct</b> <a class="type" href="../include/stdlib.h.html#abort_msg_s" title='abort_msg_s' data-ref="abort_msg_s" data-ref-filename="abort_msg_s">abort_msg_s</a> *<dfn class="local col0 decl" id="320buf" title='buf' data-type='struct abort_msg_s *' data-ref="320buf" data-ref-filename="320buf">buf</dfn> = <a class="ref fn" href="../include/sys/mman.h.html#__mmap" title='__mmap' data-ref="__mmap" data-ref-filename="__mmap">__mmap</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <a class="local col9 ref" href="#319total" title='total' data-ref="319total" data-ref-filename="319total">total</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#32" title="0x1" data-ref="_M/PROT_READ">PROT_READ</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#33" title="0x2" data-ref="_M/PROT_WRITE">PROT_WRITE</a>,</td></tr>
+<tr><th id="69">69</th><td>					<a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#59" title="0x20" data-ref="_M/MAP_ANON">MAP_ANON</a> | <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#43" title="0x02" data-ref="_M/MAP_PRIVATE">MAP_PRIVATE</a>, -<var>1</var>, <var>0</var>);</td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect ((buf != ((void *) -1)), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col0 ref" href="#320buf" title='buf' data-ref="320buf" data-ref-filename="320buf">buf</a> != <a class="macro" href="../misc/sys/mman.h.html#44" title="((void *) -1)" data-ref="_M/MAP_FAILED">MAP_FAILED</a>))</td></tr>
+<tr><th id="71">71</th><td>	{</td></tr>
+<tr><th id="72">72</th><td>	  <a class="local col0 ref" href="#320buf" title='buf' data-ref="320buf" data-ref-filename="320buf">buf</a>-&gt;<a class="ref field" href="../include/stdlib.h.html#abort_msg_s::size" title='abort_msg_s::size' data-ref="abort_msg_s::size" data-ref-filename="abort_msg_s..size">size</a> = <a class="local col9 ref" href="#319total" title='total' data-ref="319total" data-ref-filename="319total">total</a>;</td></tr>
+<tr><th id="73">73</th><td>	  <a class="ref fn" href="../string/string.h.html#__GI_strcpy" title='strcpy' data-ref="__GI_strcpy" data-ref-filename="__GI_strcpy">strcpy</a> (<a class="local col0 ref" href="#320buf" title='buf' data-ref="320buf" data-ref-filename="320buf">buf</a>-&gt;<a class="ref field" href="../include/stdlib.h.html#abort_msg_s::msg" title='abort_msg_s::msg' data-ref="abort_msg_s::msg" data-ref-filename="abort_msg_s..msg">msg</a>, <a class="local col8 ref" href="#318str" title='str' data-ref="318str" data-ref-filename="318str">str</a>);</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	  <i>/* We have to free the old buffer since the application might</i></td></tr>
+<tr><th id="76">76</th><td><i>	     catch the SIGABRT signal.  */</i></td></tr>
+<tr><th id="77">77</th><td>	  <b>struct</b> <a class="type" href="../include/stdlib.h.html#abort_msg_s" title='abort_msg_s' data-ref="abort_msg_s" data-ref-filename="abort_msg_s">abort_msg_s</a> *<dfn class="local col1 decl" id="321old" title='old' data-type='struct abort_msg_s *' data-ref="321old" data-ref-filename="321old">old</dfn> = <a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#118" title="({ __typeof (*&amp;__abort_msg) result; if (sizeof (*&amp;__abort_msg) == 1) __asm __volatile (&quot;xchgb %b0, %1&quot; : &quot;=q&quot; (result), &quot;=m&quot; (*&amp;__abort_msg) : &quot;0&quot; (buf), &quot;m&quot; (*&amp;__abort_msg)); else if (sizeof (*&amp;__abort_msg) == 2) __asm __volatile (&quot;xchgw %w0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*&amp;__abort_msg) : &quot;0&quot; (buf), &quot;m&quot; (*&amp;__abort_msg)); else if (sizeof (*&amp;__abort_msg) == 4) __asm __volatile (&quot;xchgl %0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*&amp;__abort_msg) : &quot;0&quot; (buf), &quot;m&quot; (*&amp;__abort_msg)); else __asm __volatile (&quot;xchgq %q0, %1&quot; : &quot;=r&quot; (result), &quot;=m&quot; (*&amp;__abort_msg) : &quot;0&quot; ((atomic64_t) ((__typeof__ (*(0 ? (__typeof__ (0 ? (__typeof__ ((__typeof__ (buf)) 0) *) 0 : (void *) ((__builtin_classify_type ((__typeof__ (buf)) 0) == 5)))) 0 : (__typeof__ (0 ? (intptr_t *) 0 : (void *) (!((__builtin_classify_type ((__typeof__ (buf)) 0) == 5))))) 0))) (buf))), &quot;m&quot; (*&amp;__abort_msg)); result; })" data-ref="_M/atomic_exchange_acq">atomic_exchange_acq</a> (&amp;<a class="ref" href="../include/stdlib.h.html#__abort_msg" title='__abort_msg' data-ref="__abort_msg" data-ref-filename="__abort_msg">__abort_msg</a>, <a class="local col0 ref" href="#320buf" title='buf' data-ref="320buf" data-ref-filename="320buf">buf</a>);</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	  <b>if</b> (<a class="local col1 ref" href="#321old" title='old' data-ref="321old" data-ref-filename="321old">old</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="80">80</th><td>	    <a class="ref fn" href="../include/sys/mman.h.html#__munmap" title='__munmap' data-ref="__munmap" data-ref-filename="__munmap">__munmap</a> (<a class="local col1 ref" href="#321old" title='old' data-ref="321old" data-ref-filename="321old">old</a>, <a class="local col1 ref" href="#321old" title='old' data-ref="321old" data-ref-filename="321old">old</a>-&gt;<a class="ref field" href="../include/stdlib.h.html#abort_msg_s::size" title='abort_msg_s::size' data-ref="abort_msg_s::size" data-ref-filename="abort_msg_s..size">size</a>);</td></tr>
+<tr><th id="81">81</th><td>	}</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col8 ref" href="#318str" title='str' data-ref="318str" data-ref-filename="318str">str</a>);</td></tr>
+<tr><th id="84">84</th><td>    }</td></tr>
+<tr><th id="85">85</th><td>  <b>else</b></td></tr>
+<tr><th id="86">86</th><td>    {</td></tr>
+<tr><th id="87">87</th><td>      <i>/* At least print a minimal message.  */</i></td></tr>
+<tr><th id="88">88</th><td>      <em>static</em> <em>const</em> <em>char</em> <dfn class="local col2 decl" id="322errstr" title='errstr' data-type='const char [19]' data-ref="322errstr" data-ref-filename="322errstr">errstr</dfn>[] = <q>"Unexpected error.\n"</q>;</td></tr>
+<tr><th id="89">89</th><td>      <a class="ref fn" href="../include/unistd.h.html#__libc_write" title='__libc_write' data-ref="__libc_write" data-ref-filename="__libc_write">__libc_write</a> (<a class="macro" href="../posix/unistd.h.html#212" title="2" data-ref="_M/STDERR_FILENO">STDERR_FILENO</a>, <a class="local col2 ref" href="#322errstr" title='errstr' data-ref="322errstr" data-ref-filename="322errstr">errstr</a>, <b>sizeof</b> (<a class="local col2 ref" href="#322errstr" title='errstr' data-ref="322errstr" data-ref-filename="322errstr">errstr</a>) - <var>1</var>);</td></tr>
+<tr><th id="90">90</th><td>    }</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#__GI_abort" title='abort' data-ref="__GI_abort" data-ref-filename="__GI_abort">abort</a> ();</td></tr>
+<tr><th id="93">93</th><td>}</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><u>#undef <span class="macro" data-ref="_M/__assert_fail">__assert_fail</span></u></td></tr>
+<tr><th id="97">97</th><td><em>void</em></td></tr>
+<tr><th id="98">98</th><td><dfn class="decl def fn" id="__assert_fail" title='__assert_fail' data-ref="__assert_fail" data-ref-filename="__assert_fail">__assert_fail</dfn> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="323assertion" title='assertion' data-type='const char *' data-ref="323assertion" data-ref-filename="323assertion">assertion</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="324file" title='file' data-type='const char *' data-ref="324file" data-ref-filename="324file">file</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="325line" title='line' data-type='unsigned int' data-ref="325line" data-ref-filename="325line">line</dfn>,</td></tr>
+<tr><th id="99">99</th><td>	       <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="326function" title='function' data-type='const char *' data-ref="326function" data-ref-filename="326function">function</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>  <a class="ref fn" href="#__assert_fail_base" title='__assert_fail_base' data-ref="__assert_fail_base" data-ref-filename="__assert_fail_base">__assert_fail_base</a> (<a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s%s%s:%u: %s%sAssertion `%s&apos; failed.\n%n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s%s%s:%u: %s%sAssertion `%s' failed.\n%n"</q>),</td></tr>
+<tr><th id="102">102</th><td>		      <a class="local col3 ref" href="#323assertion" title='assertion' data-ref="323assertion" data-ref-filename="323assertion">assertion</a>, <a class="local col4 ref" href="#324file" title='file' data-ref="324file" data-ref-filename="324file">file</a>, <a class="local col5 ref" href="#325line" title='line' data-ref="325line" data-ref-filename="325line">line</a>, <a class="local col6 ref" href="#326function" title='function' data-ref="326function" data-ref-filename="326function">function</a>);</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td><a class="macro" href="../include/libc-symbols.h.html#538" title="extern __typeof (__assert_fail) __EI___assert_fail __asm__(&quot;&quot; &quot;__assert_fail&quot;); extern __typeof (__assert_fail) __EI___assert_fail __attribute__((alias (&quot;&quot; &quot;__GI___assert_fail&quot;)));" data-ref="_M/hidden_def">hidden_def</a>(<a class="ref fn" href="#__assert_fail" title='__assert_fail' data-ref="__assert_fail" data-ref-filename="__assert_fail">__assert_fail</a>)</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

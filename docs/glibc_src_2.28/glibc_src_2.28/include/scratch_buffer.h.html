@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>scratch_buffer.h source code [glibc_src_2.28/include/scratch_buffer.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="scratch_buffer "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/include/scratch_buffer.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>include</a>/<a href='scratch_buffer.h.html'>scratch_buffer.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Variable-sized buffer with on-stack default allocation.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2015-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifndef</span> <span class="macro" data-ref="_M/_SCRATCH_BUFFER_H">_SCRATCH_BUFFER_H</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/_SCRATCH_BUFFER_H" data-ref="_M/_SCRATCH_BUFFER_H">_SCRATCH_BUFFER_H</dfn></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><i>/* Scratch buffers with a default stack allocation and fallback to</i></td></tr>
+<tr><th id="23">23</th><td><i>   heap allocation.  It is expected that this function is used in this</i></td></tr>
+<tr><th id="24">24</th><td><i>   way:</i></td></tr>
+<tr><th id="25">25</th><td><i></i></td></tr>
+<tr><th id="26">26</th><td><i>     struct scratch_buffer tmpbuf;</i></td></tr>
+<tr><th id="27">27</th><td><i>     scratch_buffer_init (&amp;tmpbuf);</i></td></tr>
+<tr><th id="28">28</th><td><i></i></td></tr>
+<tr><th id="29">29</th><td><i>     while (!function_that_uses_buffer (tmpbuf.data, tmpbuf.length))</i></td></tr>
+<tr><th id="30">30</th><td><i>       if (!scratch_buffer_grow (&amp;tmpbuf))</i></td></tr>
+<tr><th id="31">31</th><td><i>	 return -1;</i></td></tr>
+<tr><th id="32">32</th><td><i></i></td></tr>
+<tr><th id="33">33</th><td><i>     scratch_buffer_free (&amp;tmpbuf);</i></td></tr>
+<tr><th id="34">34</th><td><i>     return 0;</i></td></tr>
+<tr><th id="35">35</th><td><i></i></td></tr>
+<tr><th id="36">36</th><td><i>   The allocation functions (scratch_buffer_grow,</i></td></tr>
+<tr><th id="37">37</th><td><i>   scratch_buffer_grow_preserve, scratch_buffer_set_array_size) make</i></td></tr>
+<tr><th id="38">38</th><td><i>   sure that the heap allocation, if any, is freed, so that the code</i></td></tr>
+<tr><th id="39">39</th><td><i>   above does not have a memory leak.  The buffer still remains in a</i></td></tr>
+<tr><th id="40">40</th><td><i>   state that can be deallocated using scratch_buffer_free, so a loop</i></td></tr>
+<tr><th id="41">41</th><td><i>   like this is valid as well:</i></td></tr>
+<tr><th id="42">42</th><td><i></i></td></tr>
+<tr><th id="43">43</th><td><i>     struct scratch_buffer tmpbuf;</i></td></tr>
+<tr><th id="44">44</th><td><i>     scratch_buffer_init (&amp;tmpbuf);</i></td></tr>
+<tr><th id="45">45</th><td><i></i></td></tr>
+<tr><th id="46">46</th><td><i>     while (!function_that_uses_buffer (tmpbuf.data, tmpbuf.length))</i></td></tr>
+<tr><th id="47">47</th><td><i>       if (!scratch_buffer_grow (&amp;tmpbuf))</i></td></tr>
+<tr><th id="48">48</th><td><i>	 break;</i></td></tr>
+<tr><th id="49">49</th><td><i></i></td></tr>
+<tr><th id="50">50</th><td><i>     scratch_buffer_free (&amp;tmpbuf);</i></td></tr>
+<tr><th id="51">51</th><td><i></i></td></tr>
+<tr><th id="52">52</th><td><i>   scratch_buffer_grow and scratch_buffer_grow_preserve are guaranteed</i></td></tr>
+<tr><th id="53">53</th><td><i>   to grow the buffer by at least 512 bytes.  This means that when</i></td></tr>
+<tr><th id="54">54</th><td><i>   using the scratch buffer as a backing store for a non-character</i></td></tr>
+<tr><th id="55">55</th><td><i>   array whose element size, in bytes, is 512 or smaller, the scratch</i></td></tr>
+<tr><th id="56">56</th><td><i>   buffer only has to grow once to make room for at least one more</i></td></tr>
+<tr><th id="57">57</th><td><i>   element.</i></td></tr>
+<tr><th id="58">58</th><td><i>*/</i></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="61">61</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="62">62</th><td><u>#include <a href="stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/* Scratch buffer.  Must be initialized with scratch_buffer_init</i></td></tr>
+<tr><th id="65">65</th><td><i>   before its use.  */</i></td></tr>
+<tr><th id="66">66</th><td><b>struct</b> <dfn class="type def" id="scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</dfn> {</td></tr>
+<tr><th id="67">67</th><td>  <em>void</em> *<dfn class="decl field" id="scratch_buffer::data" title='scratch_buffer::data' data-ref="scratch_buffer::data" data-ref-filename="scratch_buffer..data">data</dfn>;    <i>/* Pointer to the beginning of the scratch area.  */</i></td></tr>
+<tr><th id="68">68</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="scratch_buffer::length" title='scratch_buffer::length' data-ref="scratch_buffer::length" data-ref-filename="scratch_buffer..length">length</dfn>; <i>/* Allocated space at the data pointer, in bytes.  */</i></td></tr>
+<tr><th id="69">69</th><td>  <b>union</b> { <span class='typedef' title='max_align_t' data-type='struct max_align_t' data-ref="max_align_t" data-ref-filename="max_align_t">max_align_t</span> <dfn class="decl field" id="scratch_buffer::(anonymous)::__align" title='scratch_buffer::(anonymous union)::__align' data-ref="scratch_buffer::(anonymous)::__align" data-ref-filename="scratch_buffer..(anonymous)..__align">__align</dfn>; <em>char</em> <dfn class="decl field" id="scratch_buffer::(anonymous)::__c" title='scratch_buffer::(anonymous union)::__c' data-ref="scratch_buffer::(anonymous)::__c" data-ref-filename="scratch_buffer..(anonymous)..__c">__c</dfn>[<var>1024</var>]; } <dfn class="decl field" id="scratch_buffer::__space" title='scratch_buffer::__space' data-ref="scratch_buffer::__space" data-ref-filename="scratch_buffer..__space">__space</dfn>;</td></tr>
+<tr><th id="70">70</th><td>};</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i>/* Initializes *BUFFER so that BUFFER-&gt;data points to BUFFER-&gt;__space</i></td></tr>
+<tr><th id="73">73</th><td><i>   and BUFFER-&gt;length reflects the available space.  */</i></td></tr>
+<tr><th id="74">74</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="75">75</th><td><dfn class="decl def fn" id="scratch_buffer_init" title='scratch_buffer_init' data-ref="scratch_buffer_init" data-ref-filename="scratch_buffer_init">scratch_buffer_init</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col1 decl" id="1buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="1buffer" data-ref-filename="1buffer">buffer</dfn>)</td></tr>
+<tr><th id="76">76</th><td>{</td></tr>
+<tr><th id="77">77</th><td>  <a class="local col1 ref" href="#1buffer" title='buffer' data-ref="1buffer" data-ref-filename="1buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::data" title='scratch_buffer::data' data-ref="scratch_buffer::data" data-ref-filename="scratch_buffer..data">data</a> = <a class="local col1 ref" href="#1buffer" title='buffer' data-ref="1buffer" data-ref-filename="1buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::__space" title='scratch_buffer::__space' data-ref="scratch_buffer::__space" data-ref-filename="scratch_buffer..__space">__space</a>.<a class="ref field" href="#scratch_buffer::(anonymous)::__c" title='scratch_buffer::(anonymous union)::__c' data-ref="scratch_buffer::(anonymous)::__c" data-ref-filename="scratch_buffer..(anonymous)..__c">__c</a>;</td></tr>
+<tr><th id="78">78</th><td>  <a class="local col1 ref" href="#1buffer" title='buffer' data-ref="1buffer" data-ref-filename="1buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::length" title='scratch_buffer::length' data-ref="scratch_buffer::length" data-ref-filename="scratch_buffer..length">length</a> = <b>sizeof</b> (<a class="local col1 ref" href="#1buffer" title='buffer' data-ref="1buffer" data-ref-filename="1buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::__space" title='scratch_buffer::__space' data-ref="scratch_buffer::__space" data-ref-filename="scratch_buffer..__space">__space</a>);</td></tr>
+<tr><th id="79">79</th><td>}</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><i>/* Deallocates *BUFFER (if it was heap-allocated).  */</i></td></tr>
+<tr><th id="82">82</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="83">83</th><td><dfn class="decl def fn" id="scratch_buffer_free" title='scratch_buffer_free' data-ref="scratch_buffer_free" data-ref-filename="scratch_buffer_free">scratch_buffer_free</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col2 decl" id="2buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="2buffer" data-ref-filename="2buffer">buffer</dfn>)</td></tr>
+<tr><th id="84">84</th><td>{</td></tr>
+<tr><th id="85">85</th><td>  <b>if</b> (<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::data" title='scratch_buffer::data' data-ref="scratch_buffer::data" data-ref-filename="scratch_buffer..data">data</a> != <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::__space" title='scratch_buffer::__space' data-ref="scratch_buffer::__space" data-ref-filename="scratch_buffer..__space">__space</a>.<a class="ref field" href="#scratch_buffer::(anonymous)::__c" title='scratch_buffer::(anonymous union)::__c' data-ref="scratch_buffer::(anonymous)::__c" data-ref-filename="scratch_buffer..(anonymous)..__c">__c</a>)</td></tr>
+<tr><th id="86">86</th><td>    <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>-&gt;<a class="ref field" href="#scratch_buffer::data" title='scratch_buffer::data' data-ref="scratch_buffer::data" data-ref-filename="scratch_buffer..data">data</a>);</td></tr>
+<tr><th id="87">87</th><td>}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/* Grow *BUFFER by some arbitrary amount.  The buffer contents is NOT</i></td></tr>
+<tr><th id="90">90</th><td><i>   preserved.  Return true on success, false on allocation failure (in</i></td></tr>
+<tr><th id="91">91</th><td><i>   which case the old buffer is freed).  On success, the new buffer is</i></td></tr>
+<tr><th id="92">92</th><td><i>   larger than the previous size.  On failure, *BUFFER is deallocated,</i></td></tr>
+<tr><th id="93">93</th><td><i>   but remains in a free-able state, and errno is set.  */</i></td></tr>
+<tr><th id="94">94</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_scratch_buffer_grow" title='__libc_scratch_buffer_grow' data-ref="__libc_scratch_buffer_grow" data-ref-filename="__libc_scratch_buffer_grow">__libc_scratch_buffer_grow</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col3 decl" id="3buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="3buffer" data-ref-filename="3buffer">buffer</dfn>);</td></tr>
+<tr><th id="95">95</th><td><a class="macro" href="libc-symbols.h.html#600" title="extern __typeof (__libc_scratch_buffer_grow) __libc_scratch_buffer_grow __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_scratch_buffer_grow" title='__libc_scratch_buffer_grow' data-ref="__libc_scratch_buffer_grow" data-ref-filename="__libc_scratch_buffer_grow"><a class="ref fn" href="#__libc_scratch_buffer_grow" title='__libc_scratch_buffer_grow' data-ref="__libc_scratch_buffer_grow" data-ref-filename="__libc_scratch_buffer_grow">__libc_scratch_buffer_grow</a></a>)</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><i>/* Alias for __libc_scratch_buffer_grow.  */</i></td></tr>
+<tr><th id="98">98</th><td><em>static</em> <a class="macro" href="../misc/sys/cdefs.h.html#319" title="__inline __attribute__ ((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="99">99</th><td><dfn class="decl def fn" id="scratch_buffer_grow" title='scratch_buffer_grow' data-ref="scratch_buffer_grow" data-ref-filename="scratch_buffer_grow">scratch_buffer_grow</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col4 decl" id="4buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="4buffer" data-ref-filename="4buffer">buffer</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>  <b>return</b> <a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect ((__libc_scratch_buffer_grow (buffer)), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="ref fn" href="#__libc_scratch_buffer_grow" title='__libc_scratch_buffer_grow' data-ref="__libc_scratch_buffer_grow" data-ref-filename="__libc_scratch_buffer_grow">__libc_scratch_buffer_grow</a> (<a class="local col4 ref" href="#4buffer" title='buffer' data-ref="4buffer" data-ref-filename="4buffer">buffer</a>));</td></tr>
+<tr><th id="102">102</th><td>}</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><i>/* Like __libc_scratch_buffer_grow, but preserve the old buffer</i></td></tr>
+<tr><th id="105">105</th><td><i>   contents on success, as a prefix of the new buffer.  */</i></td></tr>
+<tr><th id="106">106</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_scratch_buffer_grow_preserve" title='__libc_scratch_buffer_grow_preserve' data-ref="__libc_scratch_buffer_grow_preserve" data-ref-filename="__libc_scratch_buffer_grow_preserve">__libc_scratch_buffer_grow_preserve</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col5 decl" id="5buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="5buffer" data-ref-filename="5buffer">buffer</dfn>);</td></tr>
+<tr><th id="107">107</th><td><a class="macro" href="libc-symbols.h.html#600" title="extern __typeof (__libc_scratch_buffer_grow_preserve) __libc_scratch_buffer_grow_preserve __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_scratch_buffer_grow_preserve" title='__libc_scratch_buffer_grow_preserve' data-ref="__libc_scratch_buffer_grow_preserve" data-ref-filename="__libc_scratch_buffer_grow_preserve"><a class="ref fn" href="#__libc_scratch_buffer_grow_preserve" title='__libc_scratch_buffer_grow_preserve' data-ref="__libc_scratch_buffer_grow_preserve" data-ref-filename="__libc_scratch_buffer_grow_preserve">__libc_scratch_buffer_grow_preserve</a></a>)</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* Alias for __libc_scratch_buffer_grow_preserve.  */</i></td></tr>
+<tr><th id="110">110</th><td><em>static</em> <a class="macro" href="../misc/sys/cdefs.h.html#319" title="__inline __attribute__ ((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="111">111</th><td><dfn class="decl def fn" id="scratch_buffer_grow_preserve" title='scratch_buffer_grow_preserve' data-ref="scratch_buffer_grow_preserve" data-ref-filename="scratch_buffer_grow_preserve">scratch_buffer_grow_preserve</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col6 decl" id="6buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="6buffer" data-ref-filename="6buffer">buffer</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>  <b>return</b> <a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect ((__libc_scratch_buffer_grow_preserve (buffer)), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="ref fn" href="#__libc_scratch_buffer_grow_preserve" title='__libc_scratch_buffer_grow_preserve' data-ref="__libc_scratch_buffer_grow_preserve" data-ref-filename="__libc_scratch_buffer_grow_preserve">__libc_scratch_buffer_grow_preserve</a> (<a class="local col6 ref" href="#6buffer" title='buffer' data-ref="6buffer" data-ref-filename="6buffer">buffer</a>));</td></tr>
+<tr><th id="114">114</th><td>}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* Grow *BUFFER so that it can store at least NELEM elements of SIZE</i></td></tr>
+<tr><th id="117">117</th><td><i>   bytes.  The buffer contents are NOT preserved.  Both NELEM and SIZE</i></td></tr>
+<tr><th id="118">118</th><td><i>   can be zero.  Return true on success, false on allocation failure</i></td></tr>
+<tr><th id="119">119</th><td><i>   (in which case the old buffer is freed, but *BUFFER remains in a</i></td></tr>
+<tr><th id="120">120</th><td><i>   free-able state, and errno is set).  It is unspecified whether this</i></td></tr>
+<tr><th id="121">121</th><td><i>   function can reduce the array size.  */</i></td></tr>
+<tr><th id="122">122</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_scratch_buffer_set_array_size" title='__libc_scratch_buffer_set_array_size' data-ref="__libc_scratch_buffer_set_array_size" data-ref-filename="__libc_scratch_buffer_set_array_size">__libc_scratch_buffer_set_array_size</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col7 decl" id="7buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="7buffer" data-ref-filename="7buffer">buffer</dfn>,</td></tr>
+<tr><th id="123">123</th><td>					   <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8nelem" title='nelem' data-type='size_t' data-ref="8nelem" data-ref-filename="8nelem">nelem</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col9 decl" id="9size" title='size' data-type='size_t' data-ref="9size" data-ref-filename="9size">size</dfn>);</td></tr>
+<tr><th id="124">124</th><td><a class="macro" href="libc-symbols.h.html#600" title="extern __typeof (__libc_scratch_buffer_set_array_size) __libc_scratch_buffer_set_array_size __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_scratch_buffer_set_array_size" title='__libc_scratch_buffer_set_array_size' data-ref="__libc_scratch_buffer_set_array_size" data-ref-filename="__libc_scratch_buffer_set_array_size"><a class="ref fn" href="#__libc_scratch_buffer_set_array_size" title='__libc_scratch_buffer_set_array_size' data-ref="__libc_scratch_buffer_set_array_size" data-ref-filename="__libc_scratch_buffer_set_array_size">__libc_scratch_buffer_set_array_size</a></a>)</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><i>/* Alias for __libc_scratch_set_array_size.  */</i></td></tr>
+<tr><th id="127">127</th><td><em>static</em> <a class="macro" href="../misc/sys/cdefs.h.html#319" title="__inline __attribute__ ((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="128">128</th><td><dfn class="decl def fn" id="scratch_buffer_set_array_size" title='scratch_buffer_set_array_size' data-ref="scratch_buffer_set_array_size" data-ref-filename="scratch_buffer_set_array_size">scratch_buffer_set_array_size</dfn> (<b>struct</b> <a class="type" href="#scratch_buffer" title='scratch_buffer' data-ref="scratch_buffer" data-ref-filename="scratch_buffer">scratch_buffer</a> *<dfn class="local col0 decl" id="10buffer" title='buffer' data-type='struct scratch_buffer *' data-ref="10buffer" data-ref-filename="10buffer">buffer</dfn>,</td></tr>
+<tr><th id="129">129</th><td>			       <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="11nelem" title='nelem' data-type='size_t' data-ref="11nelem" data-ref-filename="11nelem">nelem</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="12size" title='size' data-type='size_t' data-ref="12size" data-ref-filename="12size">size</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>  <b>return</b> <a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect ((__libc_scratch_buffer_set_array_size (buffer, nelem, size)), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="ref fn" href="#__libc_scratch_buffer_set_array_size" title='__libc_scratch_buffer_set_array_size' data-ref="__libc_scratch_buffer_set_array_size" data-ref-filename="__libc_scratch_buffer_set_array_size">__libc_scratch_buffer_set_array_size</a></td></tr>
+<tr><th id="132">132</th><td>			 (<a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>, <a class="local col1 ref" href="#11nelem" title='nelem' data-ref="11nelem" data-ref-filename="11nelem">nelem</a>, <a class="local col2 ref" href="#12size" title='size' data-ref="12size" data-ref-filename="12size">size</a>));</td></tr>
+<tr><th id="133">133</th><td>}</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="19">endif</span> /* _SCRATCH_BUFFER_H */</u></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../elf/dl-deps.c.html'>glibc_src_2.28/elf/dl-deps.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_cond_destroy.c source code [glibc_src_2.28/nptl/pthread_cond_destroy.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/nptl/pthread_cond_destroy.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>nptl</a>/<a href='pthread_cond_destroy.c.html'>pthread_cond_destroy.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2002-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2002.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="pthreadP.h.html">"pthreadP.h"</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stap-probe.h.html">&lt;stap-probe.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/futex-internal.h.html">&lt;futex-internal.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="pthread_cond_common.c.html">"pthread_cond_common.c"</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* See __pthread_cond_wait for a high-level description of the algorithm.</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>   A correct program must make sure that no waiters are blocked on the condvar</i></td></tr>
+<tr><th id="31">31</th><td><i>   when it is destroyed, and that there are no concurrent signals or</i></td></tr>
+<tr><th id="32">32</th><td><i>   broadcasts.  To wake waiters reliably, the program must signal or</i></td></tr>
+<tr><th id="33">33</th><td><i>   broadcast while holding the mutex or after having held the mutex.  It must</i></td></tr>
+<tr><th id="34">34</th><td><i>   also ensure that no signal or broadcast are still pending to unblock</i></td></tr>
+<tr><th id="35">35</th><td><i>   waiters; IOW, because waiters can wake up spuriously, the program must</i></td></tr>
+<tr><th id="36">36</th><td><i>   effectively ensure that destruction happens after the execution of those</i></td></tr>
+<tr><th id="37">37</th><td><i>   signal or broadcast calls.</i></td></tr>
+<tr><th id="38">38</th><td><i>   Thus, we can assume that all waiters that are still accessing the condvar</i></td></tr>
+<tr><th id="39">39</th><td><i>   have been woken.  We wait until they have confirmed to have woken up by</i></td></tr>
+<tr><th id="40">40</th><td><i>   decrementing __wrefs.  */</i></td></tr>
+<tr><th id="41">41</th><td><em>int</em></td></tr>
+<tr><th id="42">42</th><td><dfn class="decl def fn" id="__pthread_cond_destroy" title='__pthread_cond_destroy' data-ref="__pthread_cond_destroy" data-ref-filename="__pthread_cond_destroy">__pthread_cond_destroy</dfn> (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_cond_t" title='pthread_cond_t' data-type='union pthread_cond_t' data-ref="pthread_cond_t" data-ref-filename="pthread_cond_t">pthread_cond_t</a> *<dfn class="local col1 decl" id="1cond" title='cond' data-type='pthread_cond_t *' data-ref="1cond" data-ref-filename="1cond">cond</dfn>)</td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>  <a class="macro" href="../include/stap-probe.h.html#60" title="" data-ref="_M/LIBC_PROBE">LIBC_PROBE</a> (cond_destroy, <var>1</var>, cond);</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>  <i>/* Set the wake request flag.  We could also spin, but destruction that is</i></td></tr>
+<tr><th id="47">47</th><td><i>     concurrent with still-active waiters is probably neither common nor</i></td></tr>
+<tr><th id="48">48</th><td><i>     performance critical.  Acquire MO to synchronize with waiters confirming</i></td></tr>
+<tr><th id="49">49</th><td><i>     that they finished.  */</i></td></tr>
+<tr><th id="50">50</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="2wrefs" title='wrefs' data-type='unsigned int' data-ref="2wrefs" data-ref-filename="2wrefs">wrefs</dfn> = <a class="macro" href="../include/atomic.h.html#643" title="({ if ((sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 4) &amp;&amp; (sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 8)) __atomic_link_error ();; __atomic_fetch_or ((&amp;cond-&gt;__data.__wrefs), (4), 2); })" data-ref="_M/atomic_fetch_or_acquire">atomic_fetch_or_acquire</a> (&amp;<a class="local col1 ref" href="#1cond" title='cond' data-ref="1cond" data-ref-filename="1cond">cond</a>-&gt;<a class="ref field" href="../sysdeps/nptl/bits/pthreadtypes.h.html#(anonymous)::__data" title='(anonymous union)::__data' data-ref="(anonymous)::__data" data-ref-filename="(anonymous)..__data">__data</a>.<a class="ref field" href="../sysdeps/nptl/bits/thread-shared-types.h.html#__pthread_cond_s::__wrefs" title='__pthread_cond_s::__wrefs' data-ref="__pthread_cond_s::__wrefs" data-ref-filename="__pthread_cond_s..__wrefs">__wrefs</a>, <var>4</var>);</td></tr>
+<tr><th id="51">51</th><td>  <em>int</em> <dfn class="local col3 decl" id="3private" title='private' data-type='int' data-ref="3private" data-ref-filename="3private">private</dfn> = <a class="ref fn" href="pthread_cond_common.c.html#__condvar_get_private" title='__condvar_get_private' data-ref="__condvar_get_private" data-ref-filename="__condvar_get_private">__condvar_get_private</a> (<a class="local col2 ref" href="#2wrefs" title='wrefs' data-ref="2wrefs" data-ref-filename="2wrefs">wrefs</a>);</td></tr>
+<tr><th id="52">52</th><td>  <b>while</b> (<a class="local col2 ref" href="#2wrefs" title='wrefs' data-ref="2wrefs" data-ref-filename="2wrefs">wrefs</a> &gt;&gt; <var>3</var> != <var>0</var>)</td></tr>
+<tr><th id="53">53</th><td>    {</td></tr>
+<tr><th id="54">54</th><td>      <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_wait_simple" title='futex_wait_simple' data-ref="futex_wait_simple" data-ref-filename="futex_wait_simple">futex_wait_simple</a> (&amp;<a class="local col1 ref" href="#1cond" title='cond' data-ref="1cond" data-ref-filename="1cond">cond</a>-&gt;<a class="ref field" href="../sysdeps/nptl/bits/pthreadtypes.h.html#(anonymous)::__data" title='(anonymous union)::__data' data-ref="(anonymous)::__data" data-ref-filename="(anonymous)..__data">__data</a>.<a class="ref field" href="../sysdeps/nptl/bits/thread-shared-types.h.html#__pthread_cond_s::__wrefs" title='__pthread_cond_s::__wrefs' data-ref="__pthread_cond_s::__wrefs" data-ref-filename="__pthread_cond_s..__wrefs">__wrefs</a>, <a class="local col2 ref" href="#2wrefs" title='wrefs' data-ref="2wrefs" data-ref-filename="2wrefs">wrefs</a>, <a class="local col3 ref" href="#3private" title='private' data-ref="3private" data-ref-filename="3private">private</a>);</td></tr>
+<tr><th id="55">55</th><td>      <i>/* See above.  */</i></td></tr>
+<tr><th id="56">56</th><td>      <a class="local col2 ref" href="#2wrefs" title='wrefs' data-ref="2wrefs" data-ref-filename="2wrefs">wrefs</a> = <a class="macro" href="../include/atomic.h.html#578" title="({ if ((sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 1) &amp;&amp; (sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 2) &amp;&amp; (sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 4) &amp;&amp; (sizeof (*(&amp;cond-&gt;__data.__wrefs)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;cond-&gt;__data.__wrefs), 2); })" data-ref="_M/atomic_load_acquire">atomic_load_acquire</a> (&amp;<a class="local col1 ref" href="#1cond" title='cond' data-ref="1cond" data-ref-filename="1cond">cond</a>-&gt;<a class="ref field" href="../sysdeps/nptl/bits/pthreadtypes.h.html#(anonymous)::__data" title='(anonymous union)::__data' data-ref="(anonymous)::__data" data-ref-filename="(anonymous)..__data">__data</a>.<a class="ref field" href="../sysdeps/nptl/bits/thread-shared-types.h.html#__pthread_cond_s::__wrefs" title='__pthread_cond_s::__wrefs' data-ref="__pthread_cond_s::__wrefs" data-ref-filename="__pthread_cond_s..__wrefs">__wrefs</a>);</td></tr>
+<tr><th id="57">57</th><td>    }</td></tr>
+<tr><th id="58">58</th><td>  <i>/* The memory the condvar occupies can now be reused.  */</i></td></tr>
+<tr><th id="59">59</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="60">60</th><td>}</td></tr>
+<tr><th id="61">61</th><td><a class="macro" href="../include/shlib-compat.h.html#57" title="__asm__ (&quot;.symver &quot; &quot;__pthread_cond_destroy&quot; &quot;,&quot; &quot;pthread_cond_destroy&quot; &quot;@@&quot; &quot;GLIBC_2.3.2&quot;)" data-ref="_M/versioned_symbol">versioned_symbol</a> (libpthread, __pthread_cond_destroy,</td></tr>
+<tr><th id="62">62</th><td>		  pthread_cond_destroy, GLIBC_2_3_2);</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-sort-maps.c source code [glibc_src_2.28/elf/dl-sort-maps.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/elf/dl-sort-maps.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>elf</a>/<a href='dl-sort-maps.c.html'>dl-sort-maps.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Sort array of link maps according to dependencies.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2017-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><i>/* Sort array MAPS according to dependencies of the contained objects.</i></td></tr>
+<tr><th id="23">23</th><td><i>   Array USED, if non-NULL, is permutated along MAPS.  If FOR_FINI this is</i></td></tr>
+<tr><th id="24">24</th><td><i>   called for finishing an object.  */</i></td></tr>
+<tr><th id="25">25</th><td><em>void</em></td></tr>
+<tr><th id="26">26</th><td><dfn class="decl def fn" id="_dl_sort_maps" title='_dl_sort_maps' data-ref="_dl_sort_maps" data-ref-filename="_dl_sort_maps">_dl_sort_maps</dfn> (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> **<dfn class="local col1 decl" id="1maps" title='maps' data-type='struct link_map **' data-ref="1maps" data-ref-filename="1maps">maps</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="2nmaps" title='nmaps' data-type='unsigned int' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</dfn>, <em>char</em> *<dfn class="local col3 decl" id="3used" title='used' data-type='char *' data-ref="3used" data-ref-filename="3used">used</dfn>,</td></tr>
+<tr><th id="27">27</th><td>	       <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col4 decl" id="4for_fini" title='for_fini' data-type='_Bool' data-ref="4for_fini" data-ref-filename="4for_fini">for_fini</dfn>)</td></tr>
+<tr><th id="28">28</th><td>{</td></tr>
+<tr><th id="29">29</th><td>  <i>/* A list of one element need not be sorted.  */</i></td></tr>
+<tr><th id="30">30</th><td>  <b>if</b> (<a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a> &lt;= <var>1</var>)</td></tr>
+<tr><th id="31">31</th><td>    <b>return</b>;</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="5i" title='i' data-type='unsigned int' data-ref="5i" data-ref-filename="5i">i</dfn> = <var>0</var>;</td></tr>
+<tr><th id="34">34</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint16_t" title='uint16_t' data-type='__uint16_t' data-ref="uint16_t" data-ref-filename="uint16_t">uint16_t</a> <dfn class="local col6 decl" id="6seen" title='seen' data-type='uint16_t [nmaps]' data-ref="6seen" data-ref-filename="6seen">seen</dfn>[<a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a>];</td></tr>
+<tr><th id="35">35</th><td>  <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>, <var>0</var>, <a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a> * <b>sizeof</b> (<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<var>0</var>]));</td></tr>
+<tr><th id="36">36</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="37">37</th><td>    {</td></tr>
+<tr><th id="38">38</th><td>      <i>/* Keep track of which object we looked at this round.  */</i></td></tr>
+<tr><th id="39">39</th><td>      ++<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>];</td></tr>
+<tr><th id="40">40</th><td>      <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="local col7 decl" id="7thisp" title='thisp' data-type='struct link_map *' data-ref="7thisp" data-ref-filename="7thisp">thisp</dfn> = <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>];</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((for_fini), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#4for_fini" title='for_fini' data-ref="4for_fini" data-ref-filename="4for_fini">for_fini</a>))</td></tr>
+<tr><th id="43">43</th><td>	{</td></tr>
+<tr><th id="44">44</th><td>	  <i>/* Do not handle ld.so in secondary namespaces and objects which</i></td></tr>
+<tr><th id="45">45</th><td><i>	     are not removed.  */</i></td></tr>
+<tr><th id="46">46</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a> != <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a> || <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_idx" title='link_map::l_idx' data-ref="link_map::l_idx" data-ref-filename="link_map..l_idx">l_idx</a> == -<var>1</var>)</td></tr>
+<tr><th id="47">47</th><td>	    <b>goto</b> <a class="lbl" href="#8skip" data-ref="8skip" data-ref-filename="8skip">skip</a>;</td></tr>
+<tr><th id="48">48</th><td>	}</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>      <i>/* Find the last object in the list for which the current one is</i></td></tr>
+<tr><th id="51">51</th><td><i>	 a dependency and move the current object behind the object</i></td></tr>
+<tr><th id="52">52</th><td><i>	 with the dependency.  */</i></td></tr>
+<tr><th id="53">53</th><td>      <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="9k" title='k' data-type='unsigned int' data-ref="9k" data-ref-filename="9k">k</dfn> = <a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a> - <var>1</var>;</td></tr>
+<tr><th id="54">54</th><td>      <b>while</b> (<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> &gt; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>)</td></tr>
+<tr><th id="55">55</th><td>	{</td></tr>
+<tr><th id="56">56</th><td>	  <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> **<dfn class="local col0 decl" id="10runp" title='runp' data-type='struct link_map **' data-ref="10runp" data-ref-filename="10runp">runp</dfn> = <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>]-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_initfini" title='link_map::l_initfini' data-ref="link_map::l_initfini" data-ref-filename="link_map..l_initfini">l_initfini</a>;</td></tr>
+<tr><th id="57">57</th><td>	  <b>if</b> (<a class="local col0 ref" href="#10runp" title='runp' data-ref="10runp" data-ref-filename="10runp">runp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="58">58</th><td>	    <i>/* Look through the dependencies of the object.  */</i></td></tr>
+<tr><th id="59">59</th><td>	    <b>while</b> (*<a class="local col0 ref" href="#10runp" title='runp' data-ref="10runp" data-ref-filename="10runp">runp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="60">60</th><td>	      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((*runp++ == thisp), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (*<a class="local col0 ref" href="#10runp" title='runp' data-ref="10runp" data-ref-filename="10runp">runp</a>++ == <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>))</td></tr>
+<tr><th id="61">61</th><td>		{</td></tr>
+<tr><th id="62">62</th><td>		<dfn class="lbl" id="11move" data-ref="11move" data-ref-filename="11move">move</dfn>:</td></tr>
+<tr><th id="63">63</th><td>		  <i>/* Move the current object to the back past the last</i></td></tr>
+<tr><th id="64">64</th><td><i>		     object with it as the dependency.  */</i></td></tr>
+<tr><th id="65">65</th><td>		  <a class="ref fn" href="../string/string.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a> (&amp;<a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>], &amp;<a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> + <var>1</var>],</td></tr>
+<tr><th id="66">66</th><td>			   (<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> - <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>) * <b>sizeof</b> (<a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<var>0</var>]));</td></tr>
+<tr><th id="67">67</th><td>		  <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>] = <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>		  <b>if</b> (<a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="70">70</th><td>		    {</td></tr>
+<tr><th id="71">71</th><td>		      <em>char</em> <dfn class="local col2 decl" id="12here_used" title='here_used' data-type='char' data-ref="12here_used" data-ref-filename="12here_used">here_used</dfn> = <a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>];</td></tr>
+<tr><th id="72">72</th><td>		      <a class="ref fn" href="../string/string.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a> (&amp;<a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>], &amp;<a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> + <var>1</var>],</td></tr>
+<tr><th id="73">73</th><td>			       (<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> - <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>) * <b>sizeof</b> (<a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a>[<var>0</var>]));</td></tr>
+<tr><th id="74">74</th><td>		      <a class="local col3 ref" href="#3used" title='used' data-ref="3used" data-ref-filename="3used">used</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>] = <a class="local col2 ref" href="#12here_used" title='here_used' data-ref="12here_used" data-ref-filename="12here_used">here_used</a>;</td></tr>
+<tr><th id="75">75</th><td>		    }</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>		  <b>if</b> (<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> + <var>1</var>] &gt; <a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a> - <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>)</td></tr>
+<tr><th id="78">78</th><td>		    {</td></tr>
+<tr><th id="79">79</th><td>		      ++<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>;</td></tr>
+<tr><th id="80">80</th><td>		      <b>goto</b> <a class="lbl" href="#13next_clear" data-ref="13next_clear" data-ref-filename="13next_clear">next_clear</a>;</td></tr>
+<tr><th id="81">81</th><td>		    }</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>		  <a class="typedef" href="../bits/stdint-uintn.h.html#uint16_t" title='uint16_t' data-type='__uint16_t' data-ref="uint16_t" data-ref-filename="uint16_t">uint16_t</a> <dfn class="local col4 decl" id="14this_seen" title='this_seen' data-type='uint16_t' data-ref="14this_seen" data-ref-filename="14this_seen">this_seen</dfn> = <a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>];</td></tr>
+<tr><th id="84">84</th><td>		  <a class="ref fn" href="../string/string.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a> (&amp;<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>], &amp;<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> + <var>1</var>], (<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> - <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>) * <b>sizeof</b> (<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<var>0</var>]));</td></tr>
+<tr><th id="85">85</th><td>		  <a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>] = <a class="local col4 ref" href="#14this_seen" title='this_seen' data-ref="14this_seen" data-ref-filename="14this_seen">this_seen</a>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>		  <b>goto</b> <a class="lbl" href="#15next" data-ref="15next" data-ref-filename="15next">next</a>;</td></tr>
+<tr><th id="88">88</th><td>		}</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((for_fini &amp;&amp; maps[k]-&gt;l_reldeps != ((void*)0)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#4for_fini" title='for_fini' data-ref="4for_fini" data-ref-filename="4for_fini">for_fini</a> &amp;&amp; <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>]-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_reldeps" title='link_map::l_reldeps' data-ref="link_map::l_reldeps" data-ref-filename="link_map..l_reldeps">l_reldeps</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>))</td></tr>
+<tr><th id="91">91</th><td>	    {</td></tr>
+<tr><th id="92">92</th><td>	      <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="16m" title='m' data-type='unsigned int' data-ref="16m" data-ref-filename="16m">m</dfn> = <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>]-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_reldeps" title='link_map::l_reldeps' data-ref="link_map::l_reldeps" data-ref-filename="link_map..l_reldeps">l_reldeps</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map_reldeps::act" title='link_map_reldeps::act' data-ref="link_map_reldeps::act" data-ref-filename="link_map_reldeps..act">act</a>;</td></tr>
+<tr><th id="93">93</th><td>	      <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> **<dfn class="local col7 decl" id="17relmaps" title='relmaps' data-type='struct link_map **' data-ref="17relmaps" data-ref-filename="17relmaps">relmaps</dfn> = &amp;<a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>]-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_reldeps" title='link_map::l_reldeps' data-ref="link_map::l_reldeps" data-ref-filename="link_map..l_reldeps">l_reldeps</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map_reldeps::list" title='link_map_reldeps::list' data-ref="link_map_reldeps::list" data-ref-filename="link_map_reldeps..list">list</a>[<var>0</var>];</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>	      <i>/* Look through the relocation dependencies of the object.  */</i></td></tr>
+<tr><th id="96">96</th><td>	      <b>while</b> (<a class="local col6 ref" href="#16m" title='m' data-ref="16m" data-ref-filename="16m">m</a>-- &gt; <var>0</var>)</td></tr>
+<tr><th id="97">97</th><td>		<b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((relmaps[m] == thisp), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col7 ref" href="#17relmaps" title='relmaps' data-ref="17relmaps" data-ref-filename="17relmaps">relmaps</a>[<a class="local col6 ref" href="#16m" title='m' data-ref="16m" data-ref-filename="16m">m</a>] == <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>))</td></tr>
+<tr><th id="98">98</th><td>		  {</td></tr>
+<tr><th id="99">99</th><td>		    <i>/* If a cycle exists with a link time dependency,</i></td></tr>
+<tr><th id="100">100</th><td><i>		       preserve the latter.  */</i></td></tr>
+<tr><th id="101">101</th><td>		    <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> **<dfn class="local col8 decl" id="18runp" title='runp' data-type='struct link_map **' data-ref="18runp" data-ref-filename="18runp">runp</dfn> = <a class="local col7 ref" href="#7thisp" title='thisp' data-ref="7thisp" data-ref-filename="7thisp">thisp</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_initfini" title='link_map::l_initfini' data-ref="link_map::l_initfini" data-ref-filename="link_map..l_initfini">l_initfini</a>;</td></tr>
+<tr><th id="102">102</th><td>		    <b>if</b> (<a class="local col8 ref" href="#18runp" title='runp' data-ref="18runp" data-ref-filename="18runp">runp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="103">103</th><td>		      <b>while</b> (*<a class="local col8 ref" href="#18runp" title='runp' data-ref="18runp" data-ref-filename="18runp">runp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="104">104</th><td>			<b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#402" title="__builtin_expect ((*runp++ == maps[k]), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (*<a class="local col8 ref" href="#18runp" title='runp' data-ref="18runp" data-ref-filename="18runp">runp</a>++ == <a class="local col1 ref" href="#1maps" title='maps' data-ref="1maps" data-ref-filename="1maps">maps</a>[<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>]))</td></tr>
+<tr><th id="105">105</th><td>			  <b>goto</b> <a class="lbl" href="#19ignore" data-ref="19ignore" data-ref-filename="19ignore">ignore</a>;</td></tr>
+<tr><th id="106">106</th><td>		    <b>goto</b> <a class="lbl" href="#11move" data-ref="11move" data-ref-filename="11move">move</a>;</td></tr>
+<tr><th id="107">107</th><td>		  }</td></tr>
+<tr><th id="108">108</th><td>	    <dfn class="lbl" id="19ignore" data-ref="19ignore" data-ref-filename="19ignore">ignore</dfn>:;</td></tr>
+<tr><th id="109">109</th><td>	    }</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	  --<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a>;</td></tr>
+<tr><th id="112">112</th><td>	}</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>    <dfn class="lbl" id="8skip" data-ref="8skip" data-ref-filename="8skip">skip</dfn>:</td></tr>
+<tr><th id="115">115</th><td>      <b>if</b> (++<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> == <a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a>)</td></tr>
+<tr><th id="116">116</th><td>	<b>break</b>;</td></tr>
+<tr><th id="117">117</th><td>    <dfn class="lbl" id="13next_clear" data-ref="13next_clear" data-ref-filename="13next_clear">next_clear</dfn>:</td></tr>
+<tr><th id="118">118</th><td>      <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (&amp;<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>], <var>0</var>, (<a class="local col2 ref" href="#2nmaps" title='nmaps' data-ref="2nmaps" data-ref-filename="2nmaps">nmaps</a> - <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>) * <b>sizeof</b> (<a class="local col6 ref" href="#6seen" title='seen' data-ref="6seen" data-ref-filename="6seen">seen</a>[<var>0</var>]));</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>    <dfn class="lbl" id="15next" data-ref="15next" data-ref-filename="15next">next</dfn>:;</td></tr>
+<tr><th id="121">121</th><td>    }</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

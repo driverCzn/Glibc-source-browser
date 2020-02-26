@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_rwlock_unlock.c source code [glibc_src_2.28/nptl/pthread_rwlock_unlock.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/nptl/pthread_rwlock_unlock.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>nptl</a>/<a href='pthread_rwlock_unlock.c.html'>pthread_rwlock_unlock.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2003-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Martin Schwidefsky &lt;schwidefsky@de.ibm.com&gt;, 2003.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/futex-internal.h.html">&lt;futex-internal.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/pthread.h.html">&lt;pthread.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="pthreadP.h.html">&lt;pthreadP.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/stap-probe.h.html">&lt;stap-probe.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="pthread_rwlock_common.c.html">"pthread_rwlock_common.c"</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* See pthread_rwlock_common.c for an overview.  */</i></td></tr>
+<tr><th id="29">29</th><td><em>int</em></td></tr>
+<tr><th id="30">30</th><td><dfn class="decl def fn" id="__pthread_rwlock_unlock" title='__pthread_rwlock_unlock' data-ref="__pthread_rwlock_unlock" data-ref-filename="__pthread_rwlock_unlock">__pthread_rwlock_unlock</dfn> (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_rwlock_t" title='pthread_rwlock_t' data-type='union pthread_rwlock_t' data-ref="pthread_rwlock_t" data-ref-filename="pthread_rwlock_t">pthread_rwlock_t</a> *<dfn class="local col1 decl" id="1rwlock" title='rwlock' data-type='pthread_rwlock_t *' data-ref="1rwlock" data-ref-filename="1rwlock">rwlock</dfn>)</td></tr>
+<tr><th id="31">31</th><td>{</td></tr>
+<tr><th id="32">32</th><td>  <a class="macro" href="../include/stap-probe.h.html#60" title="" data-ref="_M/LIBC_PROBE">LIBC_PROBE</a> (rwlock_unlock, <var>1</var>, rwlock);</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td>  <i>/* We distinguish between having acquired a read vs. a write lock by looking</i></td></tr>
+<tr><th id="35">35</th><td><i>     at the writer TID.  If it's equal to our TID, we must be the writer</i></td></tr>
+<tr><th id="36">36</th><td><i>     because nobody else can have stored this value.  Also, if we are a</i></td></tr>
+<tr><th id="37">37</th><td><i>     reader, we will read from the wrunlock store with value 0 by the most</i></td></tr>
+<tr><th id="38">38</th><td><i>     recent writer because that writer happens-before us.  */</i></td></tr>
+<tr><th id="39">39</th><td>  <b>if</b> (<a class="macro" href="../include/atomic.h.html#575" title="({ if ((sizeof (*(&amp;rwlock-&gt;__data.__cur_writer)) != 1) &amp;&amp; (sizeof (*(&amp;rwlock-&gt;__data.__cur_writer)) != 2) &amp;&amp; (sizeof (*(&amp;rwlock-&gt;__data.__cur_writer)) != 4) &amp;&amp; (sizeof (*(&amp;rwlock-&gt;__data.__cur_writer)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;rwlock-&gt;__data.__cur_writer), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col1 ref" href="#1rwlock" title='rwlock' data-ref="1rwlock" data-ref-filename="1rwlock">rwlock</a>-&gt;<a class="ref field" href="../sysdeps/nptl/bits/pthreadtypes.h.html#(anonymous)::__data" title='(anonymous union)::__data' data-ref="(anonymous)::__data" data-ref-filename="(anonymous)..__data">__data</a>.<a class="ref field" href="../sysdeps/x86/nptl/bits/pthreadtypes-arch.h.html#__pthread_rwlock_arch_t::__cur_writer" title='__pthread_rwlock_arch_t::__cur_writer' data-ref="__pthread_rwlock_arch_t::__cur_writer" data-ref-filename="__pthread_rwlock_arch_t..__cur_writer">__cur_writer</a>)</td></tr>
+<tr><th id="40">40</th><td>      == <a class="macro" href="../sysdeps/x86_64/nptl/tls.h.html#200" title="({ __typeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;tid) __value; if (sizeof (__value) == 1) asm volatile (&quot;movb %%fs:%P2,%b0&quot; : &quot;=q&quot; (__value) : &quot;0&quot; (0), &quot;i&quot; (__builtin_offsetof(struct pthread, tid))); else if (sizeof (__value) == 4) asm volatile (&quot;movl %%fs:%P1,%0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, tid))); else { if (sizeof (__value) != 8) abort (); asm volatile (&quot;movq %%fs:%P1,%q0&quot; : &quot;=r&quot; (__value) : &quot;i&quot; (__builtin_offsetof(struct pthread, tid))); } __value; })" data-ref="_M/THREAD_GETMEM">THREAD_GETMEM</a> (<a class="macro" href="../sysdeps/x86_64/nptl/tls.h.html#189" title="({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})" data-ref="_M/THREAD_SELF">THREAD_SELF</a>, <a class="ref field" href="descr.h.html#pthread::tid" title='pthread::tid' data-ref="pthread::tid" data-ref-filename="pthread..tid">tid</a>))</td></tr>
+<tr><th id="41">41</th><td>      <a class="ref fn" href="pthread_rwlock_common.c.html#__pthread_rwlock_wrunlock" title='__pthread_rwlock_wrunlock' data-ref="__pthread_rwlock_wrunlock" data-ref-filename="__pthread_rwlock_wrunlock">__pthread_rwlock_wrunlock</a> (<a class="local col1 ref" href="#1rwlock" title='rwlock' data-ref="1rwlock" data-ref-filename="1rwlock">rwlock</a>);</td></tr>
+<tr><th id="42">42</th><td>  <b>else</b></td></tr>
+<tr><th id="43">43</th><td>    <a class="ref fn" href="pthread_rwlock_common.c.html#__pthread_rwlock_rdunlock" title='__pthread_rwlock_rdunlock' data-ref="__pthread_rwlock_rdunlock" data-ref-filename="__pthread_rwlock_rdunlock">__pthread_rwlock_rdunlock</a> (<a class="local col1 ref" href="#1rwlock" title='rwlock' data-ref="1rwlock" data-ref-filename="1rwlock">rwlock</a>);</td></tr>
+<tr><th id="44">44</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="45">45</th><td>}</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><a class="macro" href="../include/libc-symbols.h.html#144" title="extern __typeof (__pthread_rwlock_unlock) pthread_rwlock_unlock __attribute__ ((weak, alias (&quot;__pthread_rwlock_unlock&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__pthread_rwlock_unlock" title='__pthread_rwlock_unlock' data-ref="__pthread_rwlock_unlock" data-ref-filename="__pthread_rwlock_unlock">__pthread_rwlock_unlock</a>, <dfn class="decl def fn" id="pthread_rwlock_unlock" title='pthread_rwlock_unlock' data-ref="pthread_rwlock_unlock" data-ref-filename="pthread_rwlock_unlock">pthread_rwlock_unlock</dfn>)</td></tr>
+<tr><th id="48">48</th><td><a class="macro" href="../include/libc-symbols.h.html#538" title="extern __typeof (__pthread_rwlock_unlock) __EI___pthread_rwlock_unlock __asm__(&quot;&quot; &quot;__pthread_rwlock_unlock&quot;); extern __typeof (__pthread_rwlock_unlock) __EI___pthread_rwlock_unlock __attribute__((alias (&quot;&quot; &quot;__GI___pthread_rwlock_unlock&quot;)));" data-ref="_M/hidden_def">hidden_def</a> (<a class="ref fn" href="#__pthread_rwlock_unlock" title='__pthread_rwlock_unlock' data-ref="__pthread_rwlock_unlock" data-ref-filename="__pthread_rwlock_unlock">__pthread_rwlock_unlock</a>)</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

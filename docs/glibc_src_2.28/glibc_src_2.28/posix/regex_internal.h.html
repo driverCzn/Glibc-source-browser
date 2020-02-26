@@ -1,0 +1,930 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>regex_internal.h source code [glibc_src_2.28/posix/regex_internal.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="bin_tree_storage_t,bin_tree_t,re_backref_cache_entry,re_dfa_t,re_dfastate_t,re_fail_stack_ent_t,re_fail_stack_t,re_state_table_entry,re_string_t "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.28/posix/regex_internal.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.28</a>/<a href='./'>posix</a>/<a href='regex_internal.h.html'>regex_internal.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Extended regular expression matching and search library.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2002-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Isamu Hasegawa &lt;isamu@yamato.ibm.com&gt;.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <span class="macro" data-ref="_M/_REGEX_INTERNAL_H">_REGEX_INTERNAL_H</span></u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/_REGEX_INTERNAL_H" data-ref="_M/_REGEX_INTERNAL_H">_REGEX_INTERNAL_H</dfn> 1</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/langinfo.h.html">&lt;langinfo.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/locale.h.html">&lt;locale.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/wctype.h.html">&lt;wctype.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/* Properties of integers.  Although Gnulib has intprops.h, glibc does</i></td></tr>
+<tr><th id="37">37</th><td><i>   without for now.  */</i></td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="38">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="39">39</th><td><u># include "intprops.h"</u></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="38">else</span></u></td></tr>
+<tr><th id="41">41</th><td><i>/* True if the real type T is signed.  */</i></td></tr>
+<tr><th id="42">42</th><td><u># define <dfn class="macro" id="_M/TYPE_SIGNED" data-ref="_M/TYPE_SIGNED">TYPE_SIGNED</dfn>(t) (! ((t) 0 &lt; (t) -1))</u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><i>/* True if adding the nonnegative Idx values A and B would overflow.</i></td></tr>
+<tr><th id="45">45</th><td><i>   If false, set *R to A + B.  A, B, and R may be evaluated more than</i></td></tr>
+<tr><th id="46">46</th><td><i>   once, or zero times.  Although this is not a full implementation of</i></td></tr>
+<tr><th id="47">47</th><td><i>   Gnulib INT_ADD_WRAPV, it is good enough for glibc regex code.</i></td></tr>
+<tr><th id="48">48</th><td><i>   FIXME: This implementation is a fragile stopgap, and this file would</i></td></tr>
+<tr><th id="49">49</th><td><i>   be simpler and more robust if intprops.h were migrated into glibc.  */</i></td></tr>
+<tr><th id="50">50</th><td><u># define <dfn class="macro" id="_M/INT_ADD_WRAPV" data-ref="_M/INT_ADD_WRAPV">INT_ADD_WRAPV</dfn>(a, b, r) \</u></td></tr>
+<tr><th id="51">51</th><td><u>   (IDX_MAX - (a) &lt; (b) ? true : (*(r) = (a) + (b), false))</u></td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="38">endif</span></u></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="54">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="55">55</th><td><u># include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="56">56</th><td><u># define <dfn class="macro" id="_M/lock_define" data-ref="_M/lock_define">lock_define</dfn>(name) __libc_lock_define (, name)</u></td></tr>
+<tr><th id="57">57</th><td><u># define <dfn class="macro" id="_M/lock_init" data-ref="_M/lock_init">lock_init</dfn>(lock) (__libc_lock_init (lock), 0)</u></td></tr>
+<tr><th id="58">58</th><td><u># define <dfn class="macro" id="_M/lock_fini" data-ref="_M/lock_fini">lock_fini</dfn>(lock) ((void) 0)</u></td></tr>
+<tr><th id="59">59</th><td><u># define <dfn class="macro" id="_M/lock_lock" data-ref="_M/lock_lock">lock_lock</dfn>(lock) __libc_lock_lock (lock)</u></td></tr>
+<tr><th id="60">60</th><td><u># define <dfn class="macro" id="_M/lock_unlock" data-ref="_M/lock_unlock">lock_unlock</dfn>(lock) __libc_lock_unlock (lock)</u></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="54">elif</span> defined GNULIB_LOCK &amp;&amp; !defined USE_UNLOCKED_IO</u></td></tr>
+<tr><th id="62">62</th><td><u># include "glthread/lock.h"</u></td></tr>
+<tr><th id="63">63</th><td>  <i>/* Use gl_lock_define if empty macro arguments are known to work.</i></td></tr>
+<tr><th id="64">64</th><td><i>     Otherwise, fall back on less-portable substitutes.  */</i></td></tr>
+<tr><th id="65">65</th><td><u># if ((defined __GNUC__ &amp;&amp; !defined __STRICT_ANSI__) \</u></td></tr>
+<tr><th id="66">66</th><td><u>      || (defined __STDC_VERSION__ &amp;&amp; 199901L &lt;= __STDC_VERSION__))</u></td></tr>
+<tr><th id="67">67</th><td><u>#  define lock_define(name) gl_lock_define (, name)</u></td></tr>
+<tr><th id="68">68</th><td><u># elif USE_POSIX_THREADS</u></td></tr>
+<tr><th id="69">69</th><td><u>#  define lock_define(name) pthread_mutex_t name;</u></td></tr>
+<tr><th id="70">70</th><td><u># elif USE_PTH_THREADS</u></td></tr>
+<tr><th id="71">71</th><td><u>#  define lock_define(name) pth_mutex_t name;</u></td></tr>
+<tr><th id="72">72</th><td><u># elif USE_SOLARIS_THREADS</u></td></tr>
+<tr><th id="73">73</th><td><u>#  define lock_define(name) mutex_t name;</u></td></tr>
+<tr><th id="74">74</th><td><u># elif USE_WINDOWS_THREADS</u></td></tr>
+<tr><th id="75">75</th><td><u>#  define lock_define(name) gl_lock_t name;</u></td></tr>
+<tr><th id="76">76</th><td><u># else</u></td></tr>
+<tr><th id="77">77</th><td><u>#  define lock_define(name)</u></td></tr>
+<tr><th id="78">78</th><td><u># endif</u></td></tr>
+<tr><th id="79">79</th><td><u># define lock_init(lock) glthread_lock_init (&amp;(lock))</u></td></tr>
+<tr><th id="80">80</th><td><u># define lock_fini(lock) glthread_lock_destroy (&amp;(lock))</u></td></tr>
+<tr><th id="81">81</th><td><u># define lock_lock(lock) glthread_lock_lock (&amp;(lock))</u></td></tr>
+<tr><th id="82">82</th><td><u># define lock_unlock(lock) glthread_lock_unlock (&amp;(lock))</u></td></tr>
+<tr><th id="83">83</th><td><u>#elif defined GNULIB_PTHREAD &amp;&amp; !defined USE_UNLOCKED_IO</u></td></tr>
+<tr><th id="84">84</th><td><u># include &lt;pthread.h&gt;</u></td></tr>
+<tr><th id="85">85</th><td><u># define lock_define(name) pthread_mutex_t name;</u></td></tr>
+<tr><th id="86">86</th><td><u># define lock_init(lock) pthread_mutex_init (&amp;(lock), 0)</u></td></tr>
+<tr><th id="87">87</th><td><u># define lock_fini(lock) pthread_mutex_destroy (&amp;(lock))</u></td></tr>
+<tr><th id="88">88</th><td><u># define lock_lock(lock) pthread_mutex_lock (&amp;(lock))</u></td></tr>
+<tr><th id="89">89</th><td><u># define lock_unlock(lock) pthread_mutex_unlock (&amp;(lock))</u></td></tr>
+<tr><th id="90">90</th><td><u>#else</u></td></tr>
+<tr><th id="91">91</th><td><u># define lock_define(name)</u></td></tr>
+<tr><th id="92">92</th><td><u># define lock_init(lock) 0</u></td></tr>
+<tr><th id="93">93</th><td><u># define lock_fini(lock) ((void) 0)</u></td></tr>
+<tr><th id="94">94</th><td>  <i>/* The 'dfa' avoids an "unused variable 'dfa'" warning from GCC.  */</i></td></tr>
+<tr><th id="95">95</th><td><u># define lock_lock(lock) ((void) dfa)</u></td></tr>
+<tr><th id="96">96</th><td><u># define lock_unlock(lock) ((void) 0)</u></td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* In case that the system doesn't have isblank().  */</i></td></tr>
+<tr><th id="100">100</th><td><u>#<span data-ppcond="100">if</span> !defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a> &amp;&amp; ! (defined <a class="macro" href="../ctype/ctype.h.html#201" data-ref="_M/isblank">isblank</a> || (HAVE_ISBLANK &amp;&amp; HAVE_DECL_ISBLANK))</u></td></tr>
+<tr><th id="101">101</th><td><u># define isblank(ch) ((ch) == ' ' || (ch) == '\t')</u></td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="100">endif</span></u></td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="104">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="105">105</th><td><u># <span data-ppcond="105">ifndef</span> <span class="macro" data-ref="_M/_RE_DEFINE_LOCALE_FUNCTIONS">_RE_DEFINE_LOCALE_FUNCTIONS</span></u></td></tr>
+<tr><th id="106">106</th><td><u>#  define <dfn class="macro" id="_M/_RE_DEFINE_LOCALE_FUNCTIONS" data-ref="_M/_RE_DEFINE_LOCALE_FUNCTIONS">_RE_DEFINE_LOCALE_FUNCTIONS</dfn> 1</u></td></tr>
+<tr><th id="107">107</th><td><u>#   include <a href="../locale/localeinfo.h.html">&lt;locale/localeinfo.h&gt;</a></u></td></tr>
+<tr><th id="108">108</th><td><u>#   include <a href="../locale/coll-lookup.h.html">&lt;locale/coll-lookup.h&gt;</a></u></td></tr>
+<tr><th id="109">109</th><td><u># <span data-ppcond="105">endif</span></u></td></tr>
+<tr><th id="110">110</th><td><u>#<span data-ppcond="104">endif</span></u></td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i>/* This is for other GNU distributions with internationalized messages.  */</i></td></tr>
+<tr><th id="113">113</th><td><u>#<span data-ppcond="113">if</span> (<a class="macro" href="../include/libc-symbols.h.html#109" title="1" data-ref="_M/HAVE_LIBINTL_H">HAVE_LIBINTL_H</a> &amp;&amp; <a class="macro" href="../include/libc-symbols.h.html#112" title="1" data-ref="_M/ENABLE_NLS">ENABLE_NLS</a>) || defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="114">114</th><td><u># include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="115">115</th><td><u># <span data-ppcond="115">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="116">116</th><td><u>#  undef <a class="macro" href="../intl/libintl.h.html#109" data-ref="_M/gettext">gettext</a></u></td></tr>
+<tr><th id="117">117</th><td><u>#  define <dfn class="macro" id="_M/gettext" data-ref="_M/gettext">gettext</dfn>(msgid) \</u></td></tr>
+<tr><th id="118">118</th><td><u>  __dcgettext (_libc_intl_domainname, msgid, LC_MESSAGES)</u></td></tr>
+<tr><th id="119">119</th><td><u># <span data-ppcond="115">endif</span></u></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="113">else</span></u></td></tr>
+<tr><th id="121">121</th><td><u># undef gettext</u></td></tr>
+<tr><th id="122">122</th><td><u># define gettext(msgid) (msgid)</u></td></tr>
+<tr><th id="123">123</th><td><u>#<span data-ppcond="113">endif</span></u></td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><u>#<span data-ppcond="125">ifndef</span> <span class="macro" data-ref="_M/gettext_noop">gettext_noop</span></u></td></tr>
+<tr><th id="126">126</th><td><i>/* This define is so xgettext can find the internationalizable</i></td></tr>
+<tr><th id="127">127</th><td><i>   strings.  */</i></td></tr>
+<tr><th id="128">128</th><td><u># define <dfn class="macro" id="_M/gettext_noop" data-ref="_M/gettext_noop">gettext_noop</dfn>(String) String</u></td></tr>
+<tr><th id="129">129</th><td><u>#<span data-ppcond="125">endif</span></u></td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><u>#<span data-ppcond="131">if</span> (defined <a class="macro" href="../include/stdlib.h.html#285" data-ref="_M/MB_CUR_MAX">MB_CUR_MAX</a> &amp;&amp; <a class="macro" href="../include/libc-symbols.h.html#110" title="1" data-ref="_M/HAVE_WCTYPE_H">HAVE_WCTYPE_H</a> &amp;&amp; <a class="macro" href="../include/libc-symbols.h.html#111" title="1" data-ref="_M/HAVE_ISWCTYPE">HAVE_ISWCTYPE</a>) || <a class="macro" href="../include/libc-symbols.h.html#71" title="1" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="132">132</th><td><u># define <dfn class="macro" id="_M/RE_ENABLE_I18N" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</dfn></u></td></tr>
+<tr><th id="133">133</th><td><u>#<span data-ppcond="131">endif</span></u></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><u>#define <dfn class="macro" id="_M/BE" data-ref="_M/BE">BE</dfn>(expr, val) __builtin_expect (expr, val)</u></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i>/* Number of ASCII characters.  */</i></td></tr>
+<tr><th id="138">138</th><td><u>#define <dfn class="macro" id="_M/ASCII_CHARS" data-ref="_M/ASCII_CHARS">ASCII_CHARS</dfn> 0x80</u></td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><i>/* Number of single byte characters.  */</i></td></tr>
+<tr><th id="141">141</th><td><u>#define <dfn class="macro" id="_M/SBC_MAX" data-ref="_M/SBC_MAX">SBC_MAX</dfn> (UCHAR_MAX + 1)</u></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><u>#define <dfn class="macro" id="_M/COLL_ELEM_LEN_MAX" data-ref="_M/COLL_ELEM_LEN_MAX">COLL_ELEM_LEN_MAX</dfn> 8</u></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><i>/* The character which represents newline.  */</i></td></tr>
+<tr><th id="146">146</th><td><u>#define <dfn class="macro" id="_M/NEWLINE_CHAR" data-ref="_M/NEWLINE_CHAR">NEWLINE_CHAR</dfn> '\n'</u></td></tr>
+<tr><th id="147">147</th><td><u>#define <dfn class="macro" id="_M/WIDE_NEWLINE_CHAR" data-ref="_M/WIDE_NEWLINE_CHAR">WIDE_NEWLINE_CHAR</dfn> L'\n'</u></td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><i>/* Rename to standard API for using out of glibc.  */</i></td></tr>
+<tr><th id="150">150</th><td><u>#<span data-ppcond="150">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="151">151</th><td><u># undef __wctype</u></td></tr>
+<tr><th id="152">152</th><td><u># undef __iswctype</u></td></tr>
+<tr><th id="153">153</th><td><u># define __wctype wctype</u></td></tr>
+<tr><th id="154">154</th><td><u># define __iswalnum iswalnum</u></td></tr>
+<tr><th id="155">155</th><td><u># define __iswctype iswctype</u></td></tr>
+<tr><th id="156">156</th><td><u># define __towlower towlower</u></td></tr>
+<tr><th id="157">157</th><td><u># define __towupper towupper</u></td></tr>
+<tr><th id="158">158</th><td><u># define __btowc btowc</u></td></tr>
+<tr><th id="159">159</th><td><u># define __mbrtowc mbrtowc</u></td></tr>
+<tr><th id="160">160</th><td><u># define __wcrtomb wcrtomb</u></td></tr>
+<tr><th id="161">161</th><td><u># define __regfree regfree</u></td></tr>
+<tr><th id="162">162</th><td><u># define attribute_hidden</u></td></tr>
+<tr><th id="163">163</th><td><u>#<span data-ppcond="150">endif</span> /* not _LIBC */</u></td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><u>#<span data-ppcond="165">if</span> <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> &lt; 3 + (<span class="macro" title="2" data-ref="_M/__GNUC_MINOR__">__GNUC_MINOR__</span> &lt; 1)</u></td></tr>
+<tr><th id="166">166</th><td><u># define __attribute__(arg)</u></td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="165">endif</span></u></td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td><u>#<span data-ppcond="169">ifndef</span> <a class="macro" href="bits/posix1_lim.h.html#169" data-ref="_M/SSIZE_MAX">SSIZE_MAX</a></u></td></tr>
+<tr><th id="170">170</th><td><u># define SSIZE_MAX ((ssize_t) (SIZE_MAX / 2))</u></td></tr>
+<tr><th id="171">171</th><td><u>#<span data-ppcond="169">endif</span></u></td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td><i>/* The type of indexes into strings.  This is signed, not size_t,</i></td></tr>
+<tr><th id="174">174</th><td><i>   since the API requires indexes to fit in regoff_t anyway, and using</i></td></tr>
+<tr><th id="175">175</th><td><i>   signed integers makes the code a bit smaller and presumably faster.</i></td></tr>
+<tr><th id="176">176</th><td><i>   The traditional GNU regex implementation uses int for indexes.</i></td></tr>
+<tr><th id="177">177</th><td><i>   The POSIX-compatible implementation uses a possibly-wider type.</i></td></tr>
+<tr><th id="178">178</th><td><i>   The name 'Idx' is three letters to minimize the hassle of</i></td></tr>
+<tr><th id="179">179</th><td><i>   reindenting a lot of regex code that formerly used 'int'.  */</i></td></tr>
+<tr><th id="180">180</th><td><b>typedef</b> <a class="typedef" href="regex.h.html#regoff_t" title='regoff_t' data-type='int' data-ref="regoff_t" data-ref-filename="regoff_t">regoff_t</a> <dfn class="typedef" id="Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</dfn>;</td></tr>
+<tr><th id="181">181</th><td><u>#<span data-ppcond="181">ifdef</span> <span class="macro" data-ref="_M/_REGEX_LARGE_OFFSETS">_REGEX_LARGE_OFFSETS</span></u></td></tr>
+<tr><th id="182">182</th><td><u># define IDX_MAX SSIZE_MAX</u></td></tr>
+<tr><th id="183">183</th><td><u>#<span data-ppcond="181">else</span></u></td></tr>
+<tr><th id="184">184</th><td><u># define <dfn class="macro" id="_M/IDX_MAX" data-ref="_M/IDX_MAX">IDX_MAX</dfn> INT_MAX</u></td></tr>
+<tr><th id="185">185</th><td><u>#<span data-ppcond="181">endif</span></u></td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td><i>/* A hash value, suitable for computing hash tables.  */</i></td></tr>
+<tr><th id="188">188</th><td><b>typedef</b> <a class="typedef" href="regex.h.html#__re_size_t" title='__re_size_t' data-type='unsigned int' data-ref="__re_size_t" data-ref-filename="__re_size_t">__re_size_t</a> <dfn class="typedef" id="re_hashval_t" title='re_hashval_t' data-type='__re_size_t' data-ref="re_hashval_t" data-ref-filename="re_hashval_t">re_hashval_t</dfn>;</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><i>/* An integer used to represent a set of bits.  It must be unsigned,</i></td></tr>
+<tr><th id="191">191</th><td><i>   and must be at least as wide as unsigned int.  */</i></td></tr>
+<tr><th id="192">192</th><td><b>typedef</b> <em>unsigned</em> <em>long</em> <em>int</em> <dfn class="typedef" id="bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</dfn>;</td></tr>
+<tr><th id="193">193</th><td><i>/* All bits set in a bitset_word_t.  */</i></td></tr>
+<tr><th id="194">194</th><td><u>#define <dfn class="macro" id="_M/BITSET_WORD_MAX" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</dfn> ULONG_MAX</u></td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td><i>/* Number of bits in a bitset_word_t.  For portability to hosts with</i></td></tr>
+<tr><th id="197">197</th><td><i>   padding bits, do not use '(sizeof (bitset_word_t) * CHAR_BIT)';</i></td></tr>
+<tr><th id="198">198</th><td><i>   instead, deduce it directly from BITSET_WORD_MAX.  Avoid</i></td></tr>
+<tr><th id="199">199</th><td><i>   greater-than-32-bit integers and unconditional shifts by more than</i></td></tr>
+<tr><th id="200">200</th><td><i>   31 bits, as they're not portable.  */</i></td></tr>
+<tr><th id="201">201</th><td><u>#<span data-ppcond="201">if</span> <a class="macro" href="#194" title="(9223372036854775807L *2UL+1UL)" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</a> == 0xffffffffUL</u></td></tr>
+<tr><th id="202">202</th><td><u># define BITSET_WORD_BITS 32</u></td></tr>
+<tr><th id="203">203</th><td><u>#<span data-ppcond="201">elif</span> <a class="macro" href="#194" title="(9223372036854775807L *2UL+1UL)" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</a> &gt;&gt; 31 &gt;&gt; 4 == 1</u></td></tr>
+<tr><th id="204">204</th><td><u># define BITSET_WORD_BITS 36</u></td></tr>
+<tr><th id="205">205</th><td><u>#<span data-ppcond="201">elif</span> <a class="macro" href="#194" title="(9223372036854775807L *2UL+1UL)" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</a> &gt;&gt; 31 &gt;&gt; 16 == 1</u></td></tr>
+<tr><th id="206">206</th><td><u># define BITSET_WORD_BITS 48</u></td></tr>
+<tr><th id="207">207</th><td><u>#<span data-ppcond="201">elif</span> <a class="macro" href="#194" title="(9223372036854775807L *2UL+1UL)" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</a> &gt;&gt; 31 &gt;&gt; 28 == 1</u></td></tr>
+<tr><th id="208">208</th><td><u># define BITSET_WORD_BITS 60</u></td></tr>
+<tr><th id="209">209</th><td><u>#<span data-ppcond="201">elif</span> <a class="macro" href="#194" title="(9223372036854775807L *2UL+1UL)" data-ref="_M/BITSET_WORD_MAX">BITSET_WORD_MAX</a> &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 1 == 1</u></td></tr>
+<tr><th id="210">210</th><td><u># define <dfn class="macro" id="_M/BITSET_WORD_BITS" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</dfn> 64</u></td></tr>
+<tr><th id="211">211</th><td><u>#<span data-ppcond="201">elif</span> BITSET_WORD_MAX &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 9 == 1</u></td></tr>
+<tr><th id="212">212</th><td><u># define BITSET_WORD_BITS 72</u></td></tr>
+<tr><th id="213">213</th><td><u>#elif BITSET_WORD_MAX &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 3 == 1</u></td></tr>
+<tr><th id="214">214</th><td><u># define BITSET_WORD_BITS 128</u></td></tr>
+<tr><th id="215">215</th><td><u>#elif BITSET_WORD_MAX &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 7 == 1</u></td></tr>
+<tr><th id="216">216</th><td><u># define BITSET_WORD_BITS 256</u></td></tr>
+<tr><th id="217">217</th><td><u>#elif BITSET_WORD_MAX &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 31 &gt;&gt; 7 &gt; 1</u></td></tr>
+<tr><th id="218">218</th><td><u># define BITSET_WORD_BITS 257 /* any value &gt; SBC_MAX will do here */</u></td></tr>
+<tr><th id="219">219</th><td><u># if BITSET_WORD_BITS &lt;= SBC_MAX</u></td></tr>
+<tr><th id="220">220</th><td><u>#  error "Invalid SBC_MAX"</u></td></tr>
+<tr><th id="221">221</th><td><u># endif</u></td></tr>
+<tr><th id="222">222</th><td><u>#else</u></td></tr>
+<tr><th id="223">223</th><td><u># error "Add case for new bitset_word_t size"</u></td></tr>
+<tr><th id="224">224</th><td><u>#<span data-ppcond="201">endif</span></u></td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td><i>/* Number of bitset_word_t values in a bitset_t.  */</i></td></tr>
+<tr><th id="227">227</th><td><u>#define <dfn class="macro" id="_M/BITSET_WORDS" data-ref="_M/BITSET_WORDS">BITSET_WORDS</dfn> ((SBC_MAX + BITSET_WORD_BITS - 1) / BITSET_WORD_BITS)</u></td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><b>typedef</b> <a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a> <dfn class="typedef" id="bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</dfn>[<a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a>];</td></tr>
+<tr><th id="230">230</th><td><b>typedef</b> <a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a> *<dfn class="typedef" id="re_bitset_ptr_t" title='re_bitset_ptr_t' data-type='bitset_word_t *' data-ref="re_bitset_ptr_t" data-ref-filename="re_bitset_ptr_t">re_bitset_ptr_t</dfn>;</td></tr>
+<tr><th id="231">231</th><td><b>typedef</b> <em>const</em> <a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a> *<dfn class="typedef" id="re_const_bitset_ptr_t" title='re_const_bitset_ptr_t' data-type='const bitset_word_t *' data-ref="re_const_bitset_ptr_t" data-ref-filename="re_const_bitset_ptr_t">re_const_bitset_ptr_t</dfn>;</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><u>#define <dfn class="macro" id="_M/PREV_WORD_CONSTRAINT" data-ref="_M/PREV_WORD_CONSTRAINT">PREV_WORD_CONSTRAINT</dfn> 0x0001</u></td></tr>
+<tr><th id="234">234</th><td><u>#define <dfn class="macro" id="_M/PREV_NOTWORD_CONSTRAINT" data-ref="_M/PREV_NOTWORD_CONSTRAINT">PREV_NOTWORD_CONSTRAINT</dfn> 0x0002</u></td></tr>
+<tr><th id="235">235</th><td><u>#define <dfn class="macro" id="_M/NEXT_WORD_CONSTRAINT" data-ref="_M/NEXT_WORD_CONSTRAINT">NEXT_WORD_CONSTRAINT</dfn> 0x0004</u></td></tr>
+<tr><th id="236">236</th><td><u>#define <dfn class="macro" id="_M/NEXT_NOTWORD_CONSTRAINT" data-ref="_M/NEXT_NOTWORD_CONSTRAINT">NEXT_NOTWORD_CONSTRAINT</dfn> 0x0008</u></td></tr>
+<tr><th id="237">237</th><td><u>#define <dfn class="macro" id="_M/PREV_NEWLINE_CONSTRAINT" data-ref="_M/PREV_NEWLINE_CONSTRAINT">PREV_NEWLINE_CONSTRAINT</dfn> 0x0010</u></td></tr>
+<tr><th id="238">238</th><td><u>#define <dfn class="macro" id="_M/NEXT_NEWLINE_CONSTRAINT" data-ref="_M/NEXT_NEWLINE_CONSTRAINT">NEXT_NEWLINE_CONSTRAINT</dfn> 0x0020</u></td></tr>
+<tr><th id="239">239</th><td><u>#define <dfn class="macro" id="_M/PREV_BEGBUF_CONSTRAINT" data-ref="_M/PREV_BEGBUF_CONSTRAINT">PREV_BEGBUF_CONSTRAINT</dfn> 0x0040</u></td></tr>
+<tr><th id="240">240</th><td><u>#define <dfn class="macro" id="_M/NEXT_ENDBUF_CONSTRAINT" data-ref="_M/NEXT_ENDBUF_CONSTRAINT">NEXT_ENDBUF_CONSTRAINT</dfn> 0x0080</u></td></tr>
+<tr><th id="241">241</th><td><u>#define <dfn class="macro" id="_M/WORD_DELIM_CONSTRAINT" data-ref="_M/WORD_DELIM_CONSTRAINT">WORD_DELIM_CONSTRAINT</dfn> 0x0100</u></td></tr>
+<tr><th id="242">242</th><td><u>#define <dfn class="macro" id="_M/NOT_WORD_DELIM_CONSTRAINT" data-ref="_M/NOT_WORD_DELIM_CONSTRAINT">NOT_WORD_DELIM_CONSTRAINT</dfn> 0x0200</u></td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td><b>typedef</b> <b>enum</b></td></tr>
+<tr><th id="245">245</th><td>{</td></tr>
+<tr><th id="246">246</th><td>  <dfn class="enum" id="INSIDE_WORD" title='INSIDE_WORD' data-ref="INSIDE_WORD" data-ref-filename="INSIDE_WORD">INSIDE_WORD</dfn> = <a class="macro" href="#233" title="0x0001" data-ref="_M/PREV_WORD_CONSTRAINT">PREV_WORD_CONSTRAINT</a> | <a class="macro" href="#235" title="0x0004" data-ref="_M/NEXT_WORD_CONSTRAINT">NEXT_WORD_CONSTRAINT</a>,</td></tr>
+<tr><th id="247">247</th><td>  <dfn class="enum" id="WORD_FIRST" title='WORD_FIRST' data-ref="WORD_FIRST" data-ref-filename="WORD_FIRST">WORD_FIRST</dfn> = <a class="macro" href="#234" title="0x0002" data-ref="_M/PREV_NOTWORD_CONSTRAINT">PREV_NOTWORD_CONSTRAINT</a> | <a class="macro" href="#235" title="0x0004" data-ref="_M/NEXT_WORD_CONSTRAINT">NEXT_WORD_CONSTRAINT</a>,</td></tr>
+<tr><th id="248">248</th><td>  <dfn class="enum" id="WORD_LAST" title='WORD_LAST' data-ref="WORD_LAST" data-ref-filename="WORD_LAST">WORD_LAST</dfn> = <a class="macro" href="#233" title="0x0001" data-ref="_M/PREV_WORD_CONSTRAINT">PREV_WORD_CONSTRAINT</a> | <a class="macro" href="#236" title="0x0008" data-ref="_M/NEXT_NOTWORD_CONSTRAINT">NEXT_NOTWORD_CONSTRAINT</a>,</td></tr>
+<tr><th id="249">249</th><td>  <dfn class="enum" id="INSIDE_NOTWORD" title='INSIDE_NOTWORD' data-ref="INSIDE_NOTWORD" data-ref-filename="INSIDE_NOTWORD">INSIDE_NOTWORD</dfn> = <a class="macro" href="#234" title="0x0002" data-ref="_M/PREV_NOTWORD_CONSTRAINT">PREV_NOTWORD_CONSTRAINT</a> | <a class="macro" href="#236" title="0x0008" data-ref="_M/NEXT_NOTWORD_CONSTRAINT">NEXT_NOTWORD_CONSTRAINT</a>,</td></tr>
+<tr><th id="250">250</th><td>  <dfn class="enum" id="LINE_FIRST" title='LINE_FIRST' data-ref="LINE_FIRST" data-ref-filename="LINE_FIRST">LINE_FIRST</dfn> = <a class="macro" href="#237" title="0x0010" data-ref="_M/PREV_NEWLINE_CONSTRAINT">PREV_NEWLINE_CONSTRAINT</a>,</td></tr>
+<tr><th id="251">251</th><td>  <dfn class="enum" id="LINE_LAST" title='LINE_LAST' data-ref="LINE_LAST" data-ref-filename="LINE_LAST">LINE_LAST</dfn> = <a class="macro" href="#238" title="0x0020" data-ref="_M/NEXT_NEWLINE_CONSTRAINT">NEXT_NEWLINE_CONSTRAINT</a>,</td></tr>
+<tr><th id="252">252</th><td>  <dfn class="enum" id="BUF_FIRST" title='BUF_FIRST' data-ref="BUF_FIRST" data-ref-filename="BUF_FIRST">BUF_FIRST</dfn> = <a class="macro" href="#239" title="0x0040" data-ref="_M/PREV_BEGBUF_CONSTRAINT">PREV_BEGBUF_CONSTRAINT</a>,</td></tr>
+<tr><th id="253">253</th><td>  <dfn class="enum" id="BUF_LAST" title='BUF_LAST' data-ref="BUF_LAST" data-ref-filename="BUF_LAST">BUF_LAST</dfn> = <a class="macro" href="#240" title="0x0080" data-ref="_M/NEXT_ENDBUF_CONSTRAINT">NEXT_ENDBUF_CONSTRAINT</a>,</td></tr>
+<tr><th id="254">254</th><td>  <dfn class="enum" id="WORD_DELIM" title='WORD_DELIM' data-ref="WORD_DELIM" data-ref-filename="WORD_DELIM">WORD_DELIM</dfn> = <a class="macro" href="#241" title="0x0100" data-ref="_M/WORD_DELIM_CONSTRAINT">WORD_DELIM_CONSTRAINT</a>,</td></tr>
+<tr><th id="255">255</th><td>  <dfn class="enum" id="NOT_WORD_DELIM" title='NOT_WORD_DELIM' data-ref="NOT_WORD_DELIM" data-ref-filename="NOT_WORD_DELIM">NOT_WORD_DELIM</dfn> = <a class="macro" href="#242" title="0x0200" data-ref="_M/NOT_WORD_DELIM_CONSTRAINT">NOT_WORD_DELIM_CONSTRAINT</a></td></tr>
+<tr><th id="256">256</th><td>} <dfn class="typedef" id="re_context_type" title='re_context_type' data-type='enum re_context_type' data-ref="re_context_type" data-ref-filename="re_context_type">re_context_type</dfn>;</td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="259">259</th><td>{</td></tr>
+<tr><th id="260">260</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::alloc" title='(anonymous struct)::alloc' data-ref="(anonymous)::alloc" data-ref-filename="(anonymous)..alloc">alloc</dfn>;</td></tr>
+<tr><th id="261">261</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nelem" title='(anonymous struct)::nelem' data-ref="(anonymous)::nelem" data-ref-filename="(anonymous)..nelem">nelem</dfn>;</td></tr>
+<tr><th id="262">262</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> *<dfn class="decl field" id="(anonymous)::elems" title='(anonymous struct)::elems' data-ref="(anonymous)::elems" data-ref-filename="(anonymous)..elems">elems</dfn>;</td></tr>
+<tr><th id="263">263</th><td>} <dfn class="typedef" id="re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</dfn>;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td><b>typedef</b> <b>enum</b></td></tr>
+<tr><th id="266">266</th><td>{</td></tr>
+<tr><th id="267">267</th><td>  <dfn class="enum" id="NON_TYPE" title='NON_TYPE' data-ref="NON_TYPE" data-ref-filename="NON_TYPE">NON_TYPE</dfn> = <var>0</var>,</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>  <i>/* Node type, These are used by token, node, tree.  */</i></td></tr>
+<tr><th id="270">270</th><td>  <dfn class="enum" id="CHARACTER" title='CHARACTER' data-ref="CHARACTER" data-ref-filename="CHARACTER">CHARACTER</dfn> = <var>1</var>,</td></tr>
+<tr><th id="271">271</th><td>  <dfn class="enum" id="END_OF_RE" title='END_OF_RE' data-ref="END_OF_RE" data-ref-filename="END_OF_RE">END_OF_RE</dfn> = <var>2</var>,</td></tr>
+<tr><th id="272">272</th><td>  <dfn class="enum" id="SIMPLE_BRACKET" title='SIMPLE_BRACKET' data-ref="SIMPLE_BRACKET" data-ref-filename="SIMPLE_BRACKET">SIMPLE_BRACKET</dfn> = <var>3</var>,</td></tr>
+<tr><th id="273">273</th><td>  <dfn class="enum" id="OP_BACK_REF" title='OP_BACK_REF' data-ref="OP_BACK_REF" data-ref-filename="OP_BACK_REF">OP_BACK_REF</dfn> = <var>4</var>,</td></tr>
+<tr><th id="274">274</th><td>  <dfn class="enum" id="OP_PERIOD" title='OP_PERIOD' data-ref="OP_PERIOD" data-ref-filename="OP_PERIOD">OP_PERIOD</dfn> = <var>5</var>,</td></tr>
+<tr><th id="275">275</th><td><u>#<span data-ppcond="275">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="276">276</th><td>  <dfn class="enum" id="COMPLEX_BRACKET" title='COMPLEX_BRACKET' data-ref="COMPLEX_BRACKET" data-ref-filename="COMPLEX_BRACKET">COMPLEX_BRACKET</dfn> = <var>6</var>,</td></tr>
+<tr><th id="277">277</th><td>  <dfn class="enum" id="OP_UTF8_PERIOD" title='OP_UTF8_PERIOD' data-ref="OP_UTF8_PERIOD" data-ref-filename="OP_UTF8_PERIOD">OP_UTF8_PERIOD</dfn> = <var>7</var>,</td></tr>
+<tr><th id="278">278</th><td><u>#<span data-ppcond="275">endif</span> /* RE_ENABLE_I18N */</u></td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td>  <i>/* We define EPSILON_BIT as a macro so that OP_OPEN_SUBEXP is used</i></td></tr>
+<tr><th id="281">281</th><td><i>     when the debugger shows values of this enum type.  */</i></td></tr>
+<tr><th id="282">282</th><td><u>#define <dfn class="macro" id="_M/EPSILON_BIT" data-ref="_M/EPSILON_BIT">EPSILON_BIT</dfn> 8</u></td></tr>
+<tr><th id="283">283</th><td>  <dfn class="enum" id="OP_OPEN_SUBEXP" title='OP_OPEN_SUBEXP' data-ref="OP_OPEN_SUBEXP" data-ref-filename="OP_OPEN_SUBEXP">OP_OPEN_SUBEXP</dfn> = <a class="macro" href="#282" title="8" data-ref="_M/EPSILON_BIT">EPSILON_BIT</a> | <var>0</var>,</td></tr>
+<tr><th id="284">284</th><td>  <dfn class="enum" id="OP_CLOSE_SUBEXP" title='OP_CLOSE_SUBEXP' data-ref="OP_CLOSE_SUBEXP" data-ref-filename="OP_CLOSE_SUBEXP">OP_CLOSE_SUBEXP</dfn> = <a class="macro" href="#282" title="8" data-ref="_M/EPSILON_BIT">EPSILON_BIT</a> | <var>1</var>,</td></tr>
+<tr><th id="285">285</th><td>  <dfn class="enum" id="OP_ALT" title='OP_ALT' data-ref="OP_ALT" data-ref-filename="OP_ALT">OP_ALT</dfn> = <a class="macro" href="#282" title="8" data-ref="_M/EPSILON_BIT">EPSILON_BIT</a> | <var>2</var>,</td></tr>
+<tr><th id="286">286</th><td>  <dfn class="enum" id="OP_DUP_ASTERISK" title='OP_DUP_ASTERISK' data-ref="OP_DUP_ASTERISK" data-ref-filename="OP_DUP_ASTERISK">OP_DUP_ASTERISK</dfn> = <a class="macro" href="#282" title="8" data-ref="_M/EPSILON_BIT">EPSILON_BIT</a> | <var>3</var>,</td></tr>
+<tr><th id="287">287</th><td>  <dfn class="enum" id="ANCHOR" title='ANCHOR' data-ref="ANCHOR" data-ref-filename="ANCHOR">ANCHOR</dfn> = <a class="macro" href="#282" title="8" data-ref="_M/EPSILON_BIT">EPSILON_BIT</a> | <var>4</var>,</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td>  <i>/* Tree type, these are used only by tree. */</i></td></tr>
+<tr><th id="290">290</th><td>  <dfn class="enum" id="CONCAT" title='CONCAT' data-ref="CONCAT" data-ref-filename="CONCAT">CONCAT</dfn> = <var>16</var>,</td></tr>
+<tr><th id="291">291</th><td>  <dfn class="enum" id="SUBEXP" title='SUBEXP' data-ref="SUBEXP" data-ref-filename="SUBEXP">SUBEXP</dfn> = <var>17</var>,</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>  <i>/* Token type, these are used only by token.  */</i></td></tr>
+<tr><th id="294">294</th><td>  <dfn class="enum" id="OP_DUP_PLUS" title='OP_DUP_PLUS' data-ref="OP_DUP_PLUS" data-ref-filename="OP_DUP_PLUS">OP_DUP_PLUS</dfn> = <var>18</var>,</td></tr>
+<tr><th id="295">295</th><td>  <dfn class="enum" id="OP_DUP_QUESTION" title='OP_DUP_QUESTION' data-ref="OP_DUP_QUESTION" data-ref-filename="OP_DUP_QUESTION">OP_DUP_QUESTION</dfn>,</td></tr>
+<tr><th id="296">296</th><td>  <dfn class="enum" id="OP_OPEN_BRACKET" title='OP_OPEN_BRACKET' data-ref="OP_OPEN_BRACKET" data-ref-filename="OP_OPEN_BRACKET">OP_OPEN_BRACKET</dfn>,</td></tr>
+<tr><th id="297">297</th><td>  <dfn class="enum" id="OP_CLOSE_BRACKET" title='OP_CLOSE_BRACKET' data-ref="OP_CLOSE_BRACKET" data-ref-filename="OP_CLOSE_BRACKET">OP_CLOSE_BRACKET</dfn>,</td></tr>
+<tr><th id="298">298</th><td>  <dfn class="enum" id="OP_CHARSET_RANGE" title='OP_CHARSET_RANGE' data-ref="OP_CHARSET_RANGE" data-ref-filename="OP_CHARSET_RANGE">OP_CHARSET_RANGE</dfn>,</td></tr>
+<tr><th id="299">299</th><td>  <dfn class="enum" id="OP_OPEN_DUP_NUM" title='OP_OPEN_DUP_NUM' data-ref="OP_OPEN_DUP_NUM" data-ref-filename="OP_OPEN_DUP_NUM">OP_OPEN_DUP_NUM</dfn>,</td></tr>
+<tr><th id="300">300</th><td>  <dfn class="enum" id="OP_CLOSE_DUP_NUM" title='OP_CLOSE_DUP_NUM' data-ref="OP_CLOSE_DUP_NUM" data-ref-filename="OP_CLOSE_DUP_NUM">OP_CLOSE_DUP_NUM</dfn>,</td></tr>
+<tr><th id="301">301</th><td>  <dfn class="enum" id="OP_NON_MATCH_LIST" title='OP_NON_MATCH_LIST' data-ref="OP_NON_MATCH_LIST" data-ref-filename="OP_NON_MATCH_LIST">OP_NON_MATCH_LIST</dfn>,</td></tr>
+<tr><th id="302">302</th><td>  <dfn class="enum" id="OP_OPEN_COLL_ELEM" title='OP_OPEN_COLL_ELEM' data-ref="OP_OPEN_COLL_ELEM" data-ref-filename="OP_OPEN_COLL_ELEM">OP_OPEN_COLL_ELEM</dfn>,</td></tr>
+<tr><th id="303">303</th><td>  <dfn class="enum" id="OP_CLOSE_COLL_ELEM" title='OP_CLOSE_COLL_ELEM' data-ref="OP_CLOSE_COLL_ELEM" data-ref-filename="OP_CLOSE_COLL_ELEM">OP_CLOSE_COLL_ELEM</dfn>,</td></tr>
+<tr><th id="304">304</th><td>  <dfn class="enum" id="OP_OPEN_EQUIV_CLASS" title='OP_OPEN_EQUIV_CLASS' data-ref="OP_OPEN_EQUIV_CLASS" data-ref-filename="OP_OPEN_EQUIV_CLASS">OP_OPEN_EQUIV_CLASS</dfn>,</td></tr>
+<tr><th id="305">305</th><td>  <dfn class="enum" id="OP_CLOSE_EQUIV_CLASS" title='OP_CLOSE_EQUIV_CLASS' data-ref="OP_CLOSE_EQUIV_CLASS" data-ref-filename="OP_CLOSE_EQUIV_CLASS">OP_CLOSE_EQUIV_CLASS</dfn>,</td></tr>
+<tr><th id="306">306</th><td>  <dfn class="enum" id="OP_OPEN_CHAR_CLASS" title='OP_OPEN_CHAR_CLASS' data-ref="OP_OPEN_CHAR_CLASS" data-ref-filename="OP_OPEN_CHAR_CLASS">OP_OPEN_CHAR_CLASS</dfn>,</td></tr>
+<tr><th id="307">307</th><td>  <dfn class="enum" id="OP_CLOSE_CHAR_CLASS" title='OP_CLOSE_CHAR_CLASS' data-ref="OP_CLOSE_CHAR_CLASS" data-ref-filename="OP_CLOSE_CHAR_CLASS">OP_CLOSE_CHAR_CLASS</dfn>,</td></tr>
+<tr><th id="308">308</th><td>  <dfn class="enum" id="OP_WORD" title='OP_WORD' data-ref="OP_WORD" data-ref-filename="OP_WORD">OP_WORD</dfn>,</td></tr>
+<tr><th id="309">309</th><td>  <dfn class="enum" id="OP_NOTWORD" title='OP_NOTWORD' data-ref="OP_NOTWORD" data-ref-filename="OP_NOTWORD">OP_NOTWORD</dfn>,</td></tr>
+<tr><th id="310">310</th><td>  <dfn class="enum" id="OP_SPACE" title='OP_SPACE' data-ref="OP_SPACE" data-ref-filename="OP_SPACE">OP_SPACE</dfn>,</td></tr>
+<tr><th id="311">311</th><td>  <dfn class="enum" id="OP_NOTSPACE" title='OP_NOTSPACE' data-ref="OP_NOTSPACE" data-ref-filename="OP_NOTSPACE">OP_NOTSPACE</dfn>,</td></tr>
+<tr><th id="312">312</th><td>  <dfn class="enum" id="BACK_SLASH" title='BACK_SLASH' data-ref="BACK_SLASH" data-ref-filename="BACK_SLASH">BACK_SLASH</dfn></td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>} <dfn class="typedef" id="re_token_type_t" title='re_token_type_t' data-type='enum re_token_type_t' data-ref="re_token_type_t" data-ref-filename="re_token_type_t">re_token_type_t</dfn>;</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td><u>#<span data-ppcond="316">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="317">317</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="318">318</th><td>{</td></tr>
+<tr><th id="319">319</th><td>  <i>/* Multibyte characters.  */</i></td></tr>
+<tr><th id="320">320</th><td>  <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="decl field" id="(anonymous)::mbchars" title='(anonymous struct)::mbchars' data-ref="(anonymous)::mbchars" data-ref-filename="(anonymous)..mbchars">mbchars</dfn>;</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td>  <i>/* Collating symbols.  */</i></td></tr>
+<tr><th id="323">323</th><td><u># <span data-ppcond="323">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="324">324</th><td>  <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *<dfn class="decl field" id="(anonymous)::coll_syms" title='(anonymous struct)::coll_syms' data-ref="(anonymous)::coll_syms" data-ref-filename="(anonymous)..coll_syms">coll_syms</dfn>;</td></tr>
+<tr><th id="325">325</th><td><u># <span data-ppcond="323">endif</span></u></td></tr>
+<tr><th id="326">326</th><td></td></tr>
+<tr><th id="327">327</th><td>  <i>/* Equivalence classes. */</i></td></tr>
+<tr><th id="328">328</th><td><u># <span data-ppcond="328">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="329">329</th><td>  <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *<dfn class="decl field" id="(anonymous)::equiv_classes" title='(anonymous struct)::equiv_classes' data-ref="(anonymous)::equiv_classes" data-ref-filename="(anonymous)..equiv_classes">equiv_classes</dfn>;</td></tr>
+<tr><th id="330">330</th><td><u># <span data-ppcond="328">endif</span></u></td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>  <i>/* Range expressions. */</i></td></tr>
+<tr><th id="333">333</th><td><u># <span data-ppcond="333">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="334">334</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="decl field" id="(anonymous)::range_starts" title='(anonymous struct)::range_starts' data-ref="(anonymous)::range_starts" data-ref-filename="(anonymous)..range_starts">range_starts</dfn>;</td></tr>
+<tr><th id="335">335</th><td>  <a class="typedef" href="../bits/stdint-uintn.h.html#uint32_t" title='uint32_t' data-type='__uint32_t' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="decl field" id="(anonymous)::range_ends" title='(anonymous struct)::range_ends' data-ref="(anonymous)::range_ends" data-ref-filename="(anonymous)..range_ends">range_ends</dfn>;</td></tr>
+<tr><th id="336">336</th><td><u># <span data-ppcond="333">else</span> /* not _LIBC */</u></td></tr>
+<tr><th id="337">337</th><td>  wchar_t *range_starts;</td></tr>
+<tr><th id="338">338</th><td>  wchar_t *range_ends;</td></tr>
+<tr><th id="339">339</th><td><u># <span data-ppcond="333">endif</span> /* not _LIBC */</u></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>  <i>/* Character classes. */</i></td></tr>
+<tr><th id="342">342</th><td>  <a class="typedef" href="../wctype/bits/wctype-wchar.h.html#wctype_t" title='wctype_t' data-type='unsigned long' data-ref="wctype_t" data-ref-filename="wctype_t">wctype_t</a> *<dfn class="decl field" id="(anonymous)::char_classes" title='(anonymous struct)::char_classes' data-ref="(anonymous)::char_classes" data-ref-filename="(anonymous)..char_classes">char_classes</dfn>;</td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td>  <i>/* If this character set is the non-matching list.  */</i></td></tr>
+<tr><th id="345">345</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::non_match" title='(anonymous struct)::non_match' data-ref="(anonymous)::non_match" data-ref-filename="(anonymous)..non_match">non_match</dfn> : <var>1</var>;</td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td>  <i>/* # of multibyte characters.  */</i></td></tr>
+<tr><th id="348">348</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nmbchars" title='(anonymous struct)::nmbchars' data-ref="(anonymous)::nmbchars" data-ref-filename="(anonymous)..nmbchars">nmbchars</dfn>;</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td>  <i>/* # of collating symbols.  */</i></td></tr>
+<tr><th id="351">351</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::ncoll_syms" title='(anonymous struct)::ncoll_syms' data-ref="(anonymous)::ncoll_syms" data-ref-filename="(anonymous)..ncoll_syms">ncoll_syms</dfn>;</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>  <i>/* # of equivalence classes. */</i></td></tr>
+<tr><th id="354">354</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nequiv_classes" title='(anonymous struct)::nequiv_classes' data-ref="(anonymous)::nequiv_classes" data-ref-filename="(anonymous)..nequiv_classes">nequiv_classes</dfn>;</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>  <i>/* # of range expressions. */</i></td></tr>
+<tr><th id="357">357</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nranges" title='(anonymous struct)::nranges' data-ref="(anonymous)::nranges" data-ref-filename="(anonymous)..nranges">nranges</dfn>;</td></tr>
+<tr><th id="358">358</th><td></td></tr>
+<tr><th id="359">359</th><td>  <i>/* # of character classes. */</i></td></tr>
+<tr><th id="360">360</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nchar_classes" title='(anonymous struct)::nchar_classes' data-ref="(anonymous)::nchar_classes" data-ref-filename="(anonymous)..nchar_classes">nchar_classes</dfn>;</td></tr>
+<tr><th id="361">361</th><td>} <dfn class="typedef" id="re_charset_t" title='re_charset_t' data-type='struct re_charset_t' data-ref="re_charset_t" data-ref-filename="re_charset_t">re_charset_t</dfn>;</td></tr>
+<tr><th id="362">362</th><td><u>#<span data-ppcond="316">endif</span> /* RE_ENABLE_I18N */</u></td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="365">365</th><td>{</td></tr>
+<tr><th id="366">366</th><td>  <b>union</b></td></tr>
+<tr><th id="367">367</th><td>  {</td></tr>
+<tr><th id="368">368</th><td>    <em>unsigned</em> <em>char</em> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::c" title='(anonymous struct)::(anonymous union)::c' data-ref="(anonymousstruct)::(anonymous)::c" data-ref-filename="(anonymousstruct)..(anonymous)..c">c</dfn>;		<i>/* for CHARACTER */</i></td></tr>
+<tr><th id="369">369</th><td>    <a class="typedef" href="#re_bitset_ptr_t" title='re_bitset_ptr_t' data-type='bitset_word_t *' data-ref="re_bitset_ptr_t" data-ref-filename="re_bitset_ptr_t">re_bitset_ptr_t</a> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::sbcset" title='(anonymous struct)::(anonymous union)::sbcset' data-ref="(anonymousstruct)::(anonymous)::sbcset" data-ref-filename="(anonymousstruct)..(anonymous)..sbcset">sbcset</dfn>;	<i>/* for SIMPLE_BRACKET */</i></td></tr>
+<tr><th id="370">370</th><td><u>#<span data-ppcond="370">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="371">371</th><td>    <a class="typedef" href="#re_charset_t" title='re_charset_t' data-type='struct re_charset_t' data-ref="re_charset_t" data-ref-filename="re_charset_t">re_charset_t</a> *<dfn class="decl field" id="(anonymousstruct)::(anonymous)::mbcset" title='(anonymous struct)::(anonymous union)::mbcset' data-ref="(anonymousstruct)::(anonymous)::mbcset" data-ref-filename="(anonymousstruct)..(anonymous)..mbcset">mbcset</dfn>;	<i>/* for COMPLEX_BRACKET */</i></td></tr>
+<tr><th id="372">372</th><td><u>#<span data-ppcond="370">endif</span> /* RE_ENABLE_I18N */</u></td></tr>
+<tr><th id="373">373</th><td>    <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::idx" title='(anonymous struct)::(anonymous union)::idx' data-ref="(anonymousstruct)::(anonymous)::idx" data-ref-filename="(anonymousstruct)..(anonymous)..idx">idx</dfn>;			<i>/* for BACK_REF */</i></td></tr>
+<tr><th id="374">374</th><td>    <a class="typedef" href="#re_context_type" title='re_context_type' data-type='enum re_context_type' data-ref="re_context_type" data-ref-filename="re_context_type">re_context_type</a> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::ctx_type" title='(anonymous struct)::(anonymous union)::ctx_type' data-ref="(anonymousstruct)::(anonymous)::ctx_type" data-ref-filename="(anonymousstruct)..(anonymous)..ctx_type">ctx_type</dfn>;	<i>/* for ANCHOR */</i></td></tr>
+<tr><th id="375">375</th><td>  } <dfn class="decl field" id="(anonymous)::opr" title='(anonymous struct)::opr' data-ref="(anonymous)::opr" data-ref-filename="(anonymous)..opr">opr</dfn>;</td></tr>
+<tr><th id="376">376</th><td><u>#<span data-ppcond="376">if</span> <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> &gt;= 2 &amp;&amp; !defined <span class="macro" data-ref="_M/__STRICT_ANSI__">__STRICT_ANSI__</span></u></td></tr>
+<tr><th id="377">377</th><td>  <a class="typedef" href="#re_token_type_t" title='re_token_type_t' data-type='enum re_token_type_t' data-ref="re_token_type_t" data-ref-filename="re_token_type_t">re_token_type_t</a> <dfn class="decl field" id="(anonymous)::type" title='(anonymous struct)::type' data-ref="(anonymous)::type" data-ref-filename="(anonymous)..type">type</dfn> : <var>8</var>;</td></tr>
+<tr><th id="378">378</th><td><u>#<span data-ppcond="376">else</span></u></td></tr>
+<tr><th id="379">379</th><td>  re_token_type_t type;</td></tr>
+<tr><th id="380">380</th><td><u>#<span data-ppcond="376">endif</span></u></td></tr>
+<tr><th id="381">381</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::constraint" title='(anonymous struct)::constraint' data-ref="(anonymous)::constraint" data-ref-filename="(anonymous)..constraint">constraint</dfn> : <var>10</var>;	<i>/* context constraint */</i></td></tr>
+<tr><th id="382">382</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::duplicated" title='(anonymous struct)::duplicated' data-ref="(anonymous)::duplicated" data-ref-filename="(anonymous)..duplicated">duplicated</dfn> : <var>1</var>;</td></tr>
+<tr><th id="383">383</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::opt_subexp" title='(anonymous struct)::opt_subexp' data-ref="(anonymous)::opt_subexp" data-ref-filename="(anonymous)..opt_subexp">opt_subexp</dfn> : <var>1</var>;</td></tr>
+<tr><th id="384">384</th><td><u>#<span data-ppcond="384">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="385">385</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::accept_mb" title='(anonymous struct)::accept_mb' data-ref="(anonymous)::accept_mb" data-ref-filename="(anonymous)..accept_mb">accept_mb</dfn> : <var>1</var>;</td></tr>
+<tr><th id="386">386</th><td>  <i>/* These 2 bits can be moved into the union if needed (e.g. if running out</i></td></tr>
+<tr><th id="387">387</th><td><i>     of bits; move opr.c to opr.c.c and move the flags to opr.c.flags).  */</i></td></tr>
+<tr><th id="388">388</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::mb_partial" title='(anonymous struct)::mb_partial' data-ref="(anonymous)::mb_partial" data-ref-filename="(anonymous)..mb_partial">mb_partial</dfn> : <var>1</var>;</td></tr>
+<tr><th id="389">389</th><td><u>#<span data-ppcond="384">endif</span></u></td></tr>
+<tr><th id="390">390</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::word_char" title='(anonymous struct)::word_char' data-ref="(anonymous)::word_char" data-ref-filename="(anonymous)..word_char">word_char</dfn> : <var>1</var>;</td></tr>
+<tr><th id="391">391</th><td>} <dfn class="typedef" id="re_token_t" title='re_token_t' data-type='struct re_token_t' data-ref="re_token_t" data-ref-filename="re_token_t">re_token_t</dfn>;</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td><u>#define <dfn class="macro" id="_M/IS_EPSILON_NODE" data-ref="_M/IS_EPSILON_NODE">IS_EPSILON_NODE</dfn>(type) ((type) &amp; EPSILON_BIT)</u></td></tr>
+<tr><th id="394">394</th><td></td></tr>
+<tr><th id="395">395</th><td><b>struct</b> <dfn class="type def" id="re_string_t" title='re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</dfn></td></tr>
+<tr><th id="396">396</th><td>{</td></tr>
+<tr><th id="397">397</th><td>  <i>/* Indicate the raw buffer which is the original string passed as an</i></td></tr>
+<tr><th id="398">398</th><td><i>     argument of regexec(), re_search(), etc..  */</i></td></tr>
+<tr><th id="399">399</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="decl field" id="re_string_t::raw_mbs" title='re_string_t::raw_mbs' data-ref="re_string_t::raw_mbs" data-ref-filename="re_string_t..raw_mbs">raw_mbs</dfn>;</td></tr>
+<tr><th id="400">400</th><td>  <i>/* Store the multibyte string.  In case of "case insensitive mode" like</i></td></tr>
+<tr><th id="401">401</th><td><i>     REG_ICASE, upper cases of the string are stored, otherwise MBS points</i></td></tr>
+<tr><th id="402">402</th><td><i>     the same address that RAW_MBS points.  */</i></td></tr>
+<tr><th id="403">403</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="decl field" id="re_string_t::mbs" title='re_string_t::mbs' data-ref="re_string_t::mbs" data-ref-filename="re_string_t..mbs">mbs</dfn>;</td></tr>
+<tr><th id="404">404</th><td><u>#<span data-ppcond="404">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="405">405</th><td>  <i>/* Store the wide character string which is corresponding to MBS.  */</i></td></tr>
+<tr><th id="406">406</th><td>  <a class="typedef" href="../wcsmbs/bits/types/wint_t.h.html#wint_t" title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</a> *<dfn class="decl field" id="re_string_t::wcs" title='re_string_t::wcs' data-ref="re_string_t::wcs" data-ref-filename="re_string_t..wcs">wcs</dfn>;</td></tr>
+<tr><th id="407">407</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> *<dfn class="decl field" id="re_string_t::offsets" title='re_string_t::offsets' data-ref="re_string_t::offsets" data-ref-filename="re_string_t..offsets">offsets</dfn>;</td></tr>
+<tr><th id="408">408</th><td>  <a class="typedef" href="../wcsmbs/bits/types/mbstate_t.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> <dfn class="decl field" id="re_string_t::cur_state" title='re_string_t::cur_state' data-ref="re_string_t::cur_state" data-ref-filename="re_string_t..cur_state">cur_state</dfn>;</td></tr>
+<tr><th id="409">409</th><td><u>#<span data-ppcond="404">endif</span></u></td></tr>
+<tr><th id="410">410</th><td>  <i>/* Index in RAW_MBS.  Each character mbs[i] corresponds to</i></td></tr>
+<tr><th id="411">411</th><td><i>     raw_mbs[raw_mbs_idx + i].  */</i></td></tr>
+<tr><th id="412">412</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::raw_mbs_idx" title='re_string_t::raw_mbs_idx' data-ref="re_string_t::raw_mbs_idx" data-ref-filename="re_string_t..raw_mbs_idx">raw_mbs_idx</dfn>;</td></tr>
+<tr><th id="413">413</th><td>  <i>/* The length of the valid characters in the buffers.  */</i></td></tr>
+<tr><th id="414">414</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::valid_len" title='re_string_t::valid_len' data-ref="re_string_t::valid_len" data-ref-filename="re_string_t..valid_len">valid_len</dfn>;</td></tr>
+<tr><th id="415">415</th><td>  <i>/* The corresponding number of bytes in raw_mbs array.  */</i></td></tr>
+<tr><th id="416">416</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::valid_raw_len" title='re_string_t::valid_raw_len' data-ref="re_string_t::valid_raw_len" data-ref-filename="re_string_t..valid_raw_len">valid_raw_len</dfn>;</td></tr>
+<tr><th id="417">417</th><td>  <i>/* The length of the buffers MBS and WCS.  */</i></td></tr>
+<tr><th id="418">418</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::bufs_len" title='re_string_t::bufs_len' data-ref="re_string_t::bufs_len" data-ref-filename="re_string_t..bufs_len">bufs_len</dfn>;</td></tr>
+<tr><th id="419">419</th><td>  <i>/* The index in MBS, which is updated by re_string_fetch_byte.  */</i></td></tr>
+<tr><th id="420">420</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::cur_idx" title='re_string_t::cur_idx' data-ref="re_string_t::cur_idx" data-ref-filename="re_string_t..cur_idx">cur_idx</dfn>;</td></tr>
+<tr><th id="421">421</th><td>  <i>/* length of RAW_MBS array.  */</i></td></tr>
+<tr><th id="422">422</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::raw_len" title='re_string_t::raw_len' data-ref="re_string_t::raw_len" data-ref-filename="re_string_t..raw_len">raw_len</dfn>;</td></tr>
+<tr><th id="423">423</th><td>  <i>/* This is RAW_LEN - RAW_MBS_IDX + VALID_LEN - VALID_RAW_LEN.  */</i></td></tr>
+<tr><th id="424">424</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::len" title='re_string_t::len' data-ref="re_string_t::len" data-ref-filename="re_string_t..len">len</dfn>;</td></tr>
+<tr><th id="425">425</th><td>  <i>/* End of the buffer may be shorter than its length in the cases such</i></td></tr>
+<tr><th id="426">426</th><td><i>     as re_match_2, re_search_2.  Then, we use STOP for end of the buffer</i></td></tr>
+<tr><th id="427">427</th><td><i>     instead of LEN.  */</i></td></tr>
+<tr><th id="428">428</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::raw_stop" title='re_string_t::raw_stop' data-ref="re_string_t::raw_stop" data-ref-filename="re_string_t..raw_stop">raw_stop</dfn>;</td></tr>
+<tr><th id="429">429</th><td>  <i>/* This is RAW_STOP - RAW_MBS_IDX adjusted through OFFSETS.  */</i></td></tr>
+<tr><th id="430">430</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_string_t::stop" title='re_string_t::stop' data-ref="re_string_t::stop" data-ref-filename="re_string_t..stop">stop</dfn>;</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td>  <i>/* The context of mbs[0].  We store the context independently, since</i></td></tr>
+<tr><th id="433">433</th><td><i>     the context of mbs[0] may be different from raw_mbs[0], which is</i></td></tr>
+<tr><th id="434">434</th><td><i>     the beginning of the input string.  */</i></td></tr>
+<tr><th id="435">435</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_string_t::tip_context" title='re_string_t::tip_context' data-ref="re_string_t::tip_context" data-ref-filename="re_string_t..tip_context">tip_context</dfn>;</td></tr>
+<tr><th id="436">436</th><td>  <i>/* The translation passed as a part of an argument of re_compile_pattern.  */</i></td></tr>
+<tr><th id="437">437</th><td>  <a class="macro" href="regex.h.html#403" title="unsigned char *" data-ref="_M/RE_TRANSLATE_TYPE">RE_TRANSLATE_TYPE</a> <dfn class="decl field" id="re_string_t::trans" title='re_string_t::trans' data-ref="re_string_t::trans" data-ref-filename="re_string_t..trans">trans</dfn>;</td></tr>
+<tr><th id="438">438</th><td>  <i>/* Copy of re_dfa_t's word_char.  */</i></td></tr>
+<tr><th id="439">439</th><td>  <a class="typedef" href="#re_const_bitset_ptr_t" title='re_const_bitset_ptr_t' data-type='const bitset_word_t *' data-ref="re_const_bitset_ptr_t" data-ref-filename="re_const_bitset_ptr_t">re_const_bitset_ptr_t</a> <dfn class="decl field" id="re_string_t::word_char" title='re_string_t::word_char' data-ref="re_string_t::word_char" data-ref-filename="re_string_t..word_char">word_char</dfn>;</td></tr>
+<tr><th id="440">440</th><td>  <i>/* true if REG_ICASE.  */</i></td></tr>
+<tr><th id="441">441</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::icase" title='re_string_t::icase' data-ref="re_string_t::icase" data-ref-filename="re_string_t..icase">icase</dfn>;</td></tr>
+<tr><th id="442">442</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::is_utf8" title='re_string_t::is_utf8' data-ref="re_string_t::is_utf8" data-ref-filename="re_string_t..is_utf8">is_utf8</dfn>;</td></tr>
+<tr><th id="443">443</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::map_notascii" title='re_string_t::map_notascii' data-ref="re_string_t::map_notascii" data-ref-filename="re_string_t..map_notascii">map_notascii</dfn>;</td></tr>
+<tr><th id="444">444</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::mbs_allocated" title='re_string_t::mbs_allocated' data-ref="re_string_t::mbs_allocated" data-ref-filename="re_string_t..mbs_allocated">mbs_allocated</dfn>;</td></tr>
+<tr><th id="445">445</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::offsets_needed" title='re_string_t::offsets_needed' data-ref="re_string_t::offsets_needed" data-ref-filename="re_string_t..offsets_needed">offsets_needed</dfn>;</td></tr>
+<tr><th id="446">446</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::newline_anchor" title='re_string_t::newline_anchor' data-ref="re_string_t::newline_anchor" data-ref-filename="re_string_t..newline_anchor">newline_anchor</dfn>;</td></tr>
+<tr><th id="447">447</th><td>  <em>unsigned</em> <em>char</em> <dfn class="decl field" id="re_string_t::word_ops_used" title='re_string_t::word_ops_used' data-ref="re_string_t::word_ops_used" data-ref-filename="re_string_t..word_ops_used">word_ops_used</dfn>;</td></tr>
+<tr><th id="448">448</th><td>  <em>int</em> <dfn class="decl field" id="re_string_t::mb_cur_max" title='re_string_t::mb_cur_max' data-ref="re_string_t::mb_cur_max" data-ref-filename="re_string_t..mb_cur_max">mb_cur_max</dfn>;</td></tr>
+<tr><th id="449">449</th><td>};</td></tr>
+<tr><th id="450">450</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#re_string_t" title='re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</a> <dfn class="typedef" id="re_string_t" title='re_string_t' data-type='struct re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</dfn>;</td></tr>
+<tr><th id="451">451</th><td></td></tr>
+<tr><th id="452">452</th><td></td></tr>
+<tr><th id="453">453</th><td><b>struct</b> <a class="type" href="#re_dfa_t" title='re_dfa_t' data-ref="re_dfa_t" data-ref-filename="re_dfa_t">re_dfa_t</a>;</td></tr>
+<tr><th id="454">454</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#re_dfa_t" title='re_dfa_t' data-ref="re_dfa_t" data-ref-filename="re_dfa_t">re_dfa_t</a> <dfn class="typedef" id="re_dfa_t" title='re_dfa_t' data-type='struct re_dfa_t' data-ref="re_dfa_t" data-ref-filename="re_dfa_t">re_dfa_t</dfn>;</td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td><u>#<span data-ppcond="456">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="457">457</th><td><u># define IS_IN(libc) false</u></td></tr>
+<tr><th id="458">458</th><td><u>#<span data-ppcond="456">endif</span></u></td></tr>
+<tr><th id="459">459</th><td></td></tr>
+<tr><th id="460">460</th><td><u>#define <dfn class="macro" id="_M/re_string_peek_byte" data-ref="_M/re_string_peek_byte">re_string_peek_byte</dfn>(pstr, offset) \</u></td></tr>
+<tr><th id="461">461</th><td><u>  ((pstr)-&gt;mbs[(pstr)-&gt;cur_idx + offset])</u></td></tr>
+<tr><th id="462">462</th><td><u>#define <dfn class="macro" id="_M/re_string_fetch_byte" data-ref="_M/re_string_fetch_byte">re_string_fetch_byte</dfn>(pstr) \</u></td></tr>
+<tr><th id="463">463</th><td><u>  ((pstr)-&gt;mbs[(pstr)-&gt;cur_idx++])</u></td></tr>
+<tr><th id="464">464</th><td><u>#define <dfn class="macro" id="_M/re_string_first_byte" data-ref="_M/re_string_first_byte">re_string_first_byte</dfn>(pstr, idx) \</u></td></tr>
+<tr><th id="465">465</th><td><u>  ((idx) == (pstr)-&gt;valid_len || (pstr)-&gt;wcs[idx] != WEOF)</u></td></tr>
+<tr><th id="466">466</th><td><u>#define <dfn class="macro" id="_M/re_string_is_single_byte_char" data-ref="_M/re_string_is_single_byte_char">re_string_is_single_byte_char</dfn>(pstr, idx) \</u></td></tr>
+<tr><th id="467">467</th><td><u>  ((pstr)-&gt;wcs[idx] != WEOF &amp;&amp; ((pstr)-&gt;valid_len == (idx) + 1 \</u></td></tr>
+<tr><th id="468">468</th><td><u>				|| (pstr)-&gt;wcs[(idx) + 1] != WEOF))</u></td></tr>
+<tr><th id="469">469</th><td><u>#define <dfn class="macro" id="_M/re_string_eoi" data-ref="_M/re_string_eoi">re_string_eoi</dfn>(pstr) ((pstr)-&gt;stop &lt;= (pstr)-&gt;cur_idx)</u></td></tr>
+<tr><th id="470">470</th><td><u>#define <dfn class="macro" id="_M/re_string_cur_idx" data-ref="_M/re_string_cur_idx">re_string_cur_idx</dfn>(pstr) ((pstr)-&gt;cur_idx)</u></td></tr>
+<tr><th id="471">471</th><td><u>#define <dfn class="macro" id="_M/re_string_get_buffer" data-ref="_M/re_string_get_buffer">re_string_get_buffer</dfn>(pstr) ((pstr)-&gt;mbs)</u></td></tr>
+<tr><th id="472">472</th><td><u>#define <dfn class="macro" id="_M/re_string_length" data-ref="_M/re_string_length">re_string_length</dfn>(pstr) ((pstr)-&gt;len)</u></td></tr>
+<tr><th id="473">473</th><td><u>#define <dfn class="macro" id="_M/re_string_byte_at" data-ref="_M/re_string_byte_at">re_string_byte_at</dfn>(pstr,idx) ((pstr)-&gt;mbs[idx])</u></td></tr>
+<tr><th id="474">474</th><td><u>#define <dfn class="macro" id="_M/re_string_skip_bytes" data-ref="_M/re_string_skip_bytes">re_string_skip_bytes</dfn>(pstr,idx) ((pstr)-&gt;cur_idx += (idx))</u></td></tr>
+<tr><th id="475">475</th><td><u>#define <dfn class="macro" id="_M/re_string_set_index" data-ref="_M/re_string_set_index">re_string_set_index</dfn>(pstr,idx) ((pstr)-&gt;cur_idx = (idx))</u></td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td><u>#<span data-ppcond="477">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a> || HAVE_ALLOCA</u></td></tr>
+<tr><th id="478">478</th><td><u># include <a href="../include/alloca.h.html">&lt;alloca.h&gt;</a></u></td></tr>
+<tr><th id="479">479</th><td><u>#<span data-ppcond="477">endif</span></u></td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td><u>#<span data-ppcond="481">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="482">482</th><td><u># if HAVE_ALLOCA</u></td></tr>
+<tr><th id="483">483</th><td><i>/* The OS usually guarantees only one guard page at the bottom of the stack,</i></td></tr>
+<tr><th id="484">484</th><td><i>   and a page size can be as small as 4096 bytes.  So we cannot safely</i></td></tr>
+<tr><th id="485">485</th><td><i>   allocate anything larger than 4096 bytes.  Also care for the possibility</i></td></tr>
+<tr><th id="486">486</th><td><i>   of a few compiler-allocated temporary stack slots.  */</i></td></tr>
+<tr><th id="487">487</th><td><u>#  define __libc_use_alloca(n) ((n) &lt; 4032)</u></td></tr>
+<tr><th id="488">488</th><td><u># else</u></td></tr>
+<tr><th id="489">489</th><td><i>/* alloca is implemented with malloc, so just use malloc.  */</i></td></tr>
+<tr><th id="490">490</th><td><u>#  define __libc_use_alloca(n) 0</u></td></tr>
+<tr><th id="491">491</th><td><u>#  undef alloca</u></td></tr>
+<tr><th id="492">492</th><td><u>#  define alloca(n) malloc (n)</u></td></tr>
+<tr><th id="493">493</th><td><u># endif</u></td></tr>
+<tr><th id="494">494</th><td><u>#<span data-ppcond="481">endif</span></u></td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td><u>#<span data-ppcond="496">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="497">497</th><td><u># define <dfn class="macro" id="_M/MALLOC_0_IS_NONNULL" data-ref="_M/MALLOC_0_IS_NONNULL">MALLOC_0_IS_NONNULL</dfn> 1</u></td></tr>
+<tr><th id="498">498</th><td><u>#<span data-ppcond="496">elif</span> !defined MALLOC_0_IS_NONNULL</u></td></tr>
+<tr><th id="499">499</th><td><u># define MALLOC_0_IS_NONNULL 0</u></td></tr>
+<tr><th id="500">500</th><td><u>#<span data-ppcond="496">endif</span></u></td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td><u>#<span data-ppcond="502">ifndef</span> <a class="macro" href="../misc/sys/param.h.html#103" data-ref="_M/MAX">MAX</a></u></td></tr>
+<tr><th id="503">503</th><td><u># define MAX(a,b) ((a) &lt; (b) ? (b) : (a))</u></td></tr>
+<tr><th id="504">504</th><td><u>#<span data-ppcond="502">endif</span></u></td></tr>
+<tr><th id="505">505</th><td><u>#<span data-ppcond="505">ifndef</span> <a class="macro" href="../misc/sys/param.h.html#102" data-ref="_M/MIN">MIN</a></u></td></tr>
+<tr><th id="506">506</th><td><u># define MIN(a,b) ((a) &lt; (b) ? (a) : (b))</u></td></tr>
+<tr><th id="507">507</th><td><u>#<span data-ppcond="505">endif</span></u></td></tr>
+<tr><th id="508">508</th><td></td></tr>
+<tr><th id="509">509</th><td><u>#define <dfn class="macro" id="_M/re_malloc" data-ref="_M/re_malloc">re_malloc</dfn>(t,n) ((t *) malloc ((n) * sizeof (t)))</u></td></tr>
+<tr><th id="510">510</th><td><u>#define <dfn class="macro" id="_M/re_realloc" data-ref="_M/re_realloc">re_realloc</dfn>(p,t,n) ((t *) realloc (p, (n) * sizeof (t)))</u></td></tr>
+<tr><th id="511">511</th><td><u>#define <dfn class="macro" id="_M/re_free" data-ref="_M/re_free">re_free</dfn>(p) free (p)</u></td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td><b>struct</b> <dfn class="type def" id="bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</dfn></td></tr>
+<tr><th id="514">514</th><td>{</td></tr>
+<tr><th id="515">515</th><td>  <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="bin_tree_t::parent" title='bin_tree_t::parent' data-ref="bin_tree_t::parent" data-ref-filename="bin_tree_t..parent">parent</dfn>;</td></tr>
+<tr><th id="516">516</th><td>  <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="bin_tree_t::left" title='bin_tree_t::left' data-ref="bin_tree_t::left" data-ref-filename="bin_tree_t..left">left</dfn>;</td></tr>
+<tr><th id="517">517</th><td>  <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="bin_tree_t::right" title='bin_tree_t::right' data-ref="bin_tree_t::right" data-ref-filename="bin_tree_t..right">right</dfn>;</td></tr>
+<tr><th id="518">518</th><td>  <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="bin_tree_t::first" title='bin_tree_t::first' data-ref="bin_tree_t::first" data-ref-filename="bin_tree_t..first">first</dfn>;</td></tr>
+<tr><th id="519">519</th><td>  <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="bin_tree_t::next" title='bin_tree_t::next' data-ref="bin_tree_t::next" data-ref-filename="bin_tree_t..next">next</dfn>;</td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td>  <a class="typedef" href="#re_token_t" title='re_token_t' data-type='struct re_token_t' data-ref="re_token_t" data-ref-filename="re_token_t">re_token_t</a> <dfn class="decl field" id="bin_tree_t::token" title='bin_tree_t::token' data-ref="bin_tree_t::token" data-ref-filename="bin_tree_t..token">token</dfn>;</td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td>  <i>/* 'node_idx' is the index in dfa-&gt;nodes, if 'type' == 0.</i></td></tr>
+<tr><th id="524">524</th><td><i>     Otherwise 'type' indicate the type of this node.  */</i></td></tr>
+<tr><th id="525">525</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="bin_tree_t::node_idx" title='bin_tree_t::node_idx' data-ref="bin_tree_t::node_idx" data-ref-filename="bin_tree_t..node_idx">node_idx</dfn>;</td></tr>
+<tr><th id="526">526</th><td>};</td></tr>
+<tr><th id="527">527</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#bin_tree_t" title='bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> <dfn class="typedef" id="bin_tree_t" title='bin_tree_t' data-type='struct bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</dfn>;</td></tr>
+<tr><th id="528">528</th><td></td></tr>
+<tr><th id="529">529</th><td><u>#define <dfn class="macro" id="_M/BIN_TREE_STORAGE_SIZE" data-ref="_M/BIN_TREE_STORAGE_SIZE">BIN_TREE_STORAGE_SIZE</dfn> \</u></td></tr>
+<tr><th id="530">530</th><td><u>  ((1024 - sizeof (void *)) / sizeof (<a class="typedef" href="#bin_tree_t" title='bin_tree_t' data-type='struct bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a>))</u></td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td><b>struct</b> <dfn class="type def" id="bin_tree_storage_t" title='bin_tree_storage_t' data-ref="bin_tree_storage_t" data-ref-filename="bin_tree_storage_t">bin_tree_storage_t</dfn></td></tr>
+<tr><th id="533">533</th><td>{</td></tr>
+<tr><th id="534">534</th><td>  <b>struct</b> <a class="type" href="#bin_tree_storage_t" title='bin_tree_storage_t' data-ref="bin_tree_storage_t" data-ref-filename="bin_tree_storage_t">bin_tree_storage_t</a> *<dfn class="decl field" id="bin_tree_storage_t::next" title='bin_tree_storage_t::next' data-ref="bin_tree_storage_t::next" data-ref-filename="bin_tree_storage_t..next">next</dfn>;</td></tr>
+<tr><th id="535">535</th><td>  <a class="typedef" href="#bin_tree_t" title='bin_tree_t' data-type='struct bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> <dfn class="decl field" id="bin_tree_storage_t::data" title='bin_tree_storage_t::data' data-ref="bin_tree_storage_t::data" data-ref-filename="bin_tree_storage_t..data">data</dfn>[<a class="macro" href="#529" title="((1024 - sizeof (void *)) / sizeof (bin_tree_t))" data-ref="_M/BIN_TREE_STORAGE_SIZE">BIN_TREE_STORAGE_SIZE</a>];</td></tr>
+<tr><th id="536">536</th><td>};</td></tr>
+<tr><th id="537">537</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#bin_tree_storage_t" title='bin_tree_storage_t' data-ref="bin_tree_storage_t" data-ref-filename="bin_tree_storage_t">bin_tree_storage_t</a> <dfn class="typedef" id="bin_tree_storage_t" title='bin_tree_storage_t' data-type='struct bin_tree_storage_t' data-ref="bin_tree_storage_t" data-ref-filename="bin_tree_storage_t">bin_tree_storage_t</dfn>;</td></tr>
+<tr><th id="538">538</th><td></td></tr>
+<tr><th id="539">539</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_WORD" data-ref="_M/CONTEXT_WORD">CONTEXT_WORD</dfn> 1</u></td></tr>
+<tr><th id="540">540</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_NEWLINE" data-ref="_M/CONTEXT_NEWLINE">CONTEXT_NEWLINE</dfn> (CONTEXT_WORD &lt;&lt; 1)</u></td></tr>
+<tr><th id="541">541</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_BEGBUF" data-ref="_M/CONTEXT_BEGBUF">CONTEXT_BEGBUF</dfn> (CONTEXT_NEWLINE &lt;&lt; 1)</u></td></tr>
+<tr><th id="542">542</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_ENDBUF" data-ref="_M/CONTEXT_ENDBUF">CONTEXT_ENDBUF</dfn> (CONTEXT_BEGBUF &lt;&lt; 1)</u></td></tr>
+<tr><th id="543">543</th><td></td></tr>
+<tr><th id="544">544</th><td><u>#define <dfn class="macro" id="_M/IS_WORD_CONTEXT" data-ref="_M/IS_WORD_CONTEXT">IS_WORD_CONTEXT</dfn>(c) ((c) &amp; CONTEXT_WORD)</u></td></tr>
+<tr><th id="545">545</th><td><u>#define <dfn class="macro" id="_M/IS_NEWLINE_CONTEXT" data-ref="_M/IS_NEWLINE_CONTEXT">IS_NEWLINE_CONTEXT</dfn>(c) ((c) &amp; CONTEXT_NEWLINE)</u></td></tr>
+<tr><th id="546">546</th><td><u>#define <dfn class="macro" id="_M/IS_BEGBUF_CONTEXT" data-ref="_M/IS_BEGBUF_CONTEXT">IS_BEGBUF_CONTEXT</dfn>(c) ((c) &amp; CONTEXT_BEGBUF)</u></td></tr>
+<tr><th id="547">547</th><td><u>#define <dfn class="macro" id="_M/IS_ENDBUF_CONTEXT" data-ref="_M/IS_ENDBUF_CONTEXT">IS_ENDBUF_CONTEXT</dfn>(c) ((c) &amp; CONTEXT_ENDBUF)</u></td></tr>
+<tr><th id="548">548</th><td><u>#define <dfn class="macro" id="_M/IS_ORDINARY_CONTEXT" data-ref="_M/IS_ORDINARY_CONTEXT">IS_ORDINARY_CONTEXT</dfn>(c) ((c) == 0)</u></td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td><u>#define <dfn class="macro" id="_M/IS_WORD_CHAR" data-ref="_M/IS_WORD_CHAR">IS_WORD_CHAR</dfn>(ch) (isalnum (ch) || (ch) == '_')</u></td></tr>
+<tr><th id="551">551</th><td><u>#define <dfn class="macro" id="_M/IS_NEWLINE" data-ref="_M/IS_NEWLINE">IS_NEWLINE</dfn>(ch) ((ch) == NEWLINE_CHAR)</u></td></tr>
+<tr><th id="552">552</th><td><u>#define <dfn class="macro" id="_M/IS_WIDE_WORD_CHAR" data-ref="_M/IS_WIDE_WORD_CHAR">IS_WIDE_WORD_CHAR</dfn>(ch) (__iswalnum (ch) || (ch) == L'_')</u></td></tr>
+<tr><th id="553">553</th><td><u>#define <dfn class="macro" id="_M/IS_WIDE_NEWLINE" data-ref="_M/IS_WIDE_NEWLINE">IS_WIDE_NEWLINE</dfn>(ch) ((ch) == WIDE_NEWLINE_CHAR)</u></td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td><u>#define <dfn class="macro" id="_M/NOT_SATISFY_PREV_CONSTRAINT" data-ref="_M/NOT_SATISFY_PREV_CONSTRAINT">NOT_SATISFY_PREV_CONSTRAINT</dfn>(constraint,context) \</u></td></tr>
+<tr><th id="556">556</th><td><u> ((((constraint) &amp; PREV_WORD_CONSTRAINT) &amp;&amp; !IS_WORD_CONTEXT (context)) \</u></td></tr>
+<tr><th id="557">557</th><td><u>  || ((constraint &amp; PREV_NOTWORD_CONSTRAINT) &amp;&amp; IS_WORD_CONTEXT (context)) \</u></td></tr>
+<tr><th id="558">558</th><td><u>  || ((constraint &amp; PREV_NEWLINE_CONSTRAINT) &amp;&amp; !IS_NEWLINE_CONTEXT (context))\</u></td></tr>
+<tr><th id="559">559</th><td><u>  || ((constraint &amp; PREV_BEGBUF_CONSTRAINT) &amp;&amp; !IS_BEGBUF_CONTEXT (context)))</u></td></tr>
+<tr><th id="560">560</th><td></td></tr>
+<tr><th id="561">561</th><td><u>#define <dfn class="macro" id="_M/NOT_SATISFY_NEXT_CONSTRAINT" data-ref="_M/NOT_SATISFY_NEXT_CONSTRAINT">NOT_SATISFY_NEXT_CONSTRAINT</dfn>(constraint,context) \</u></td></tr>
+<tr><th id="562">562</th><td><u> ((((constraint) &amp; NEXT_WORD_CONSTRAINT) &amp;&amp; !IS_WORD_CONTEXT (context)) \</u></td></tr>
+<tr><th id="563">563</th><td><u>  || (((constraint) &amp; NEXT_NOTWORD_CONSTRAINT) &amp;&amp; IS_WORD_CONTEXT (context)) \</u></td></tr>
+<tr><th id="564">564</th><td><u>  || (((constraint) &amp; NEXT_NEWLINE_CONSTRAINT) &amp;&amp; !IS_NEWLINE_CONTEXT (context)) \</u></td></tr>
+<tr><th id="565">565</th><td><u>  || (((constraint) &amp; NEXT_ENDBUF_CONSTRAINT) &amp;&amp; !IS_ENDBUF_CONTEXT (context)))</u></td></tr>
+<tr><th id="566">566</th><td></td></tr>
+<tr><th id="567">567</th><td><b>struct</b> <dfn class="type def" id="re_dfastate_t" title='re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</dfn></td></tr>
+<tr><th id="568">568</th><td>{</td></tr>
+<tr><th id="569">569</th><td>  <a class="typedef" href="#re_hashval_t" title='re_hashval_t' data-type='__re_size_t' data-ref="re_hashval_t" data-ref-filename="re_hashval_t">re_hashval_t</a> <dfn class="decl field" id="re_dfastate_t::hash" title='re_dfastate_t::hash' data-ref="re_dfastate_t::hash" data-ref-filename="re_dfastate_t..hash">hash</dfn>;</td></tr>
+<tr><th id="570">570</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> <dfn class="decl field" id="re_dfastate_t::nodes" title='re_dfastate_t::nodes' data-ref="re_dfastate_t::nodes" data-ref-filename="re_dfastate_t..nodes">nodes</dfn>;</td></tr>
+<tr><th id="571">571</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> <dfn class="decl field" id="re_dfastate_t::non_eps_nodes" title='re_dfastate_t::non_eps_nodes' data-ref="re_dfastate_t::non_eps_nodes" data-ref-filename="re_dfastate_t..non_eps_nodes">non_eps_nodes</dfn>;</td></tr>
+<tr><th id="572">572</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> <dfn class="decl field" id="re_dfastate_t::inveclosure" title='re_dfastate_t::inveclosure' data-ref="re_dfastate_t::inveclosure" data-ref-filename="re_dfastate_t..inveclosure">inveclosure</dfn>;</td></tr>
+<tr><th id="573">573</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> *<dfn class="decl field" id="re_dfastate_t::entrance_nodes" title='re_dfastate_t::entrance_nodes' data-ref="re_dfastate_t::entrance_nodes" data-ref-filename="re_dfastate_t..entrance_nodes">entrance_nodes</dfn>;</td></tr>
+<tr><th id="574">574</th><td>  <b>struct</b> <a class="type" href="#re_dfastate_t" title='re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="re_dfastate_t::trtable" title='re_dfastate_t::trtable' data-ref="re_dfastate_t::trtable" data-ref-filename="re_dfastate_t..trtable">trtable</dfn>, **<dfn class="decl field" id="re_dfastate_t::word_trtable" title='re_dfastate_t::word_trtable' data-ref="re_dfastate_t::word_trtable" data-ref-filename="re_dfastate_t..word_trtable">word_trtable</dfn>;</td></tr>
+<tr><th id="575">575</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfastate_t::context" title='re_dfastate_t::context' data-ref="re_dfastate_t::context" data-ref-filename="re_dfastate_t..context">context</dfn> : <var>4</var>;</td></tr>
+<tr><th id="576">576</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfastate_t::halt" title='re_dfastate_t::halt' data-ref="re_dfastate_t::halt" data-ref-filename="re_dfastate_t..halt">halt</dfn> : <var>1</var>;</td></tr>
+<tr><th id="577">577</th><td>  <i>/* If this state can accept "multi byte".</i></td></tr>
+<tr><th id="578">578</th><td><i>     Note that we refer to multibyte characters, and multi character</i></td></tr>
+<tr><th id="579">579</th><td><i>     collating elements as "multi byte".  */</i></td></tr>
+<tr><th id="580">580</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfastate_t::accept_mb" title='re_dfastate_t::accept_mb' data-ref="re_dfastate_t::accept_mb" data-ref-filename="re_dfastate_t..accept_mb">accept_mb</dfn> : <var>1</var>;</td></tr>
+<tr><th id="581">581</th><td>  <i>/* If this state has backreference node(s).  */</i></td></tr>
+<tr><th id="582">582</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfastate_t::has_backref" title='re_dfastate_t::has_backref' data-ref="re_dfastate_t::has_backref" data-ref-filename="re_dfastate_t..has_backref">has_backref</dfn> : <var>1</var>;</td></tr>
+<tr><th id="583">583</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfastate_t::has_constraint" title='re_dfastate_t::has_constraint' data-ref="re_dfastate_t::has_constraint" data-ref-filename="re_dfastate_t..has_constraint">has_constraint</dfn> : <var>1</var>;</td></tr>
+<tr><th id="584">584</th><td>};</td></tr>
+<tr><th id="585">585</th><td><b>typedef</b> <b>struct</b> <a class="type" href="#re_dfastate_t" title='re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> <dfn class="typedef" id="re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</dfn>;</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><b>struct</b> <dfn class="type def" id="re_state_table_entry" title='re_state_table_entry' data-ref="re_state_table_entry" data-ref-filename="re_state_table_entry">re_state_table_entry</dfn></td></tr>
+<tr><th id="588">588</th><td>{</td></tr>
+<tr><th id="589">589</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_state_table_entry::num" title='re_state_table_entry::num' data-ref="re_state_table_entry::num" data-ref-filename="re_state_table_entry..num">num</dfn>;</td></tr>
+<tr><th id="590">590</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_state_table_entry::alloc" title='re_state_table_entry::alloc' data-ref="re_state_table_entry::alloc" data-ref-filename="re_state_table_entry..alloc">alloc</dfn>;</td></tr>
+<tr><th id="591">591</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="re_state_table_entry::array" title='re_state_table_entry::array' data-ref="re_state_table_entry::array" data-ref-filename="re_state_table_entry..array">array</dfn>;</td></tr>
+<tr><th id="592">592</th><td>};</td></tr>
+<tr><th id="593">593</th><td></td></tr>
+<tr><th id="594">594</th><td><i>/* Array type used in re_sub_match_last_t and re_sub_match_top_t.  */</i></td></tr>
+<tr><th id="595">595</th><td></td></tr>
+<tr><th id="596">596</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="597">597</th><td>{</td></tr>
+<tr><th id="598">598</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::next_idx" title='(anonymous struct)::next_idx' data-ref="(anonymous)::next_idx" data-ref-filename="(anonymous)..next_idx">next_idx</dfn>;</td></tr>
+<tr><th id="599">599</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::alloc" title='(anonymous struct)::alloc' data-ref="(anonymous)::alloc" data-ref-filename="(anonymous)..alloc">alloc</dfn>;</td></tr>
+<tr><th id="600">600</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="(anonymous)::array" title='(anonymous struct)::array' data-ref="(anonymous)::array" data-ref-filename="(anonymous)..array">array</dfn>;</td></tr>
+<tr><th id="601">601</th><td>} <dfn class="typedef" id="state_array_t" title='state_array_t' data-type='struct state_array_t' data-ref="state_array_t" data-ref-filename="state_array_t">state_array_t</dfn>;</td></tr>
+<tr><th id="602">602</th><td></td></tr>
+<tr><th id="603">603</th><td><i>/* Store information about the node NODE whose type is OP_CLOSE_SUBEXP.  */</i></td></tr>
+<tr><th id="604">604</th><td></td></tr>
+<tr><th id="605">605</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="606">606</th><td>{</td></tr>
+<tr><th id="607">607</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::node" title='(anonymous struct)::node' data-ref="(anonymous)::node" data-ref-filename="(anonymous)..node">node</dfn>;</td></tr>
+<tr><th id="608">608</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::str_idx" title='(anonymous struct)::str_idx' data-ref="(anonymous)::str_idx" data-ref-filename="(anonymous)..str_idx">str_idx</dfn>; <i>/* The position NODE match at.  */</i></td></tr>
+<tr><th id="609">609</th><td>  <a class="typedef" href="#state_array_t" title='state_array_t' data-type='struct state_array_t' data-ref="state_array_t" data-ref-filename="state_array_t">state_array_t</a> <dfn class="decl field" id="(anonymous)::path" title='(anonymous struct)::path' data-ref="(anonymous)::path" data-ref-filename="(anonymous)..path">path</dfn>;</td></tr>
+<tr><th id="610">610</th><td>} <dfn class="typedef" id="re_sub_match_last_t" title='re_sub_match_last_t' data-type='struct re_sub_match_last_t' data-ref="re_sub_match_last_t" data-ref-filename="re_sub_match_last_t">re_sub_match_last_t</dfn>;</td></tr>
+<tr><th id="611">611</th><td></td></tr>
+<tr><th id="612">612</th><td><i>/* Store information about the node NODE whose type is OP_OPEN_SUBEXP.</i></td></tr>
+<tr><th id="613">613</th><td><i>   And information about the node, whose type is OP_CLOSE_SUBEXP,</i></td></tr>
+<tr><th id="614">614</th><td><i>   corresponding to NODE is stored in LASTS.  */</i></td></tr>
+<tr><th id="615">615</th><td></td></tr>
+<tr><th id="616">616</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="617">617</th><td>{</td></tr>
+<tr><th id="618">618</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::str_idx" title='(anonymous struct)::str_idx' data-ref="(anonymous)::str_idx" data-ref-filename="(anonymous)..str_idx">str_idx</dfn>;</td></tr>
+<tr><th id="619">619</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::node" title='(anonymous struct)::node' data-ref="(anonymous)::node" data-ref-filename="(anonymous)..node">node</dfn>;</td></tr>
+<tr><th id="620">620</th><td>  <a class="typedef" href="#state_array_t" title='state_array_t' data-type='struct state_array_t' data-ref="state_array_t" data-ref-filename="state_array_t">state_array_t</a> *<dfn class="decl field" id="(anonymous)::path" title='(anonymous struct)::path' data-ref="(anonymous)::path" data-ref-filename="(anonymous)..path">path</dfn>;</td></tr>
+<tr><th id="621">621</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::alasts" title='(anonymous struct)::alasts' data-ref="(anonymous)::alasts" data-ref-filename="(anonymous)..alasts">alasts</dfn>; <i>/* Allocation size of LASTS.  */</i></td></tr>
+<tr><th id="622">622</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nlasts" title='(anonymous struct)::nlasts' data-ref="(anonymous)::nlasts" data-ref-filename="(anonymous)..nlasts">nlasts</dfn>; <i>/* The number of LASTS.  */</i></td></tr>
+<tr><th id="623">623</th><td>  <a class="typedef" href="#re_sub_match_last_t" title='re_sub_match_last_t' data-type='struct re_sub_match_last_t' data-ref="re_sub_match_last_t" data-ref-filename="re_sub_match_last_t">re_sub_match_last_t</a> **<dfn class="decl field" id="(anonymous)::lasts" title='(anonymous struct)::lasts' data-ref="(anonymous)::lasts" data-ref-filename="(anonymous)..lasts">lasts</dfn>;</td></tr>
+<tr><th id="624">624</th><td>} <dfn class="typedef" id="re_sub_match_top_t" title='re_sub_match_top_t' data-type='struct re_sub_match_top_t' data-ref="re_sub_match_top_t" data-ref-filename="re_sub_match_top_t">re_sub_match_top_t</dfn>;</td></tr>
+<tr><th id="625">625</th><td></td></tr>
+<tr><th id="626">626</th><td><b>struct</b> <dfn class="type def" id="re_backref_cache_entry" title='re_backref_cache_entry' data-ref="re_backref_cache_entry" data-ref-filename="re_backref_cache_entry">re_backref_cache_entry</dfn></td></tr>
+<tr><th id="627">627</th><td>{</td></tr>
+<tr><th id="628">628</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_backref_cache_entry::node" title='re_backref_cache_entry::node' data-ref="re_backref_cache_entry::node" data-ref-filename="re_backref_cache_entry..node">node</dfn>;</td></tr>
+<tr><th id="629">629</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_backref_cache_entry::str_idx" title='re_backref_cache_entry::str_idx' data-ref="re_backref_cache_entry::str_idx" data-ref-filename="re_backref_cache_entry..str_idx">str_idx</dfn>;</td></tr>
+<tr><th id="630">630</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_backref_cache_entry::subexp_from" title='re_backref_cache_entry::subexp_from' data-ref="re_backref_cache_entry::subexp_from" data-ref-filename="re_backref_cache_entry..subexp_from">subexp_from</dfn>;</td></tr>
+<tr><th id="631">631</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_backref_cache_entry::subexp_to" title='re_backref_cache_entry::subexp_to' data-ref="re_backref_cache_entry::subexp_to" data-ref-filename="re_backref_cache_entry..subexp_to">subexp_to</dfn>;</td></tr>
+<tr><th id="632">632</th><td>  <em>char</em> <dfn class="decl field" id="re_backref_cache_entry::more" title='re_backref_cache_entry::more' data-ref="re_backref_cache_entry::more" data-ref-filename="re_backref_cache_entry..more">more</dfn>;</td></tr>
+<tr><th id="633">633</th><td>  <em>char</em> <dfn class="decl field" id="re_backref_cache_entry::unused" title='re_backref_cache_entry::unused' data-ref="re_backref_cache_entry::unused" data-ref-filename="re_backref_cache_entry..unused">unused</dfn>;</td></tr>
+<tr><th id="634">634</th><td>  <em>unsigned</em> <em>short</em> <em>int</em> <dfn class="decl field" id="re_backref_cache_entry::eps_reachable_subexps_map" title='re_backref_cache_entry::eps_reachable_subexps_map' data-ref="re_backref_cache_entry::eps_reachable_subexps_map" data-ref-filename="re_backref_cache_entry..eps_reachable_subexps_map">eps_reachable_subexps_map</dfn>;</td></tr>
+<tr><th id="635">635</th><td>};</td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="638">638</th><td>{</td></tr>
+<tr><th id="639">639</th><td>  <i>/* The string object corresponding to the input string.  */</i></td></tr>
+<tr><th id="640">640</th><td>  <a class="typedef" href="#re_string_t" title='re_string_t' data-type='struct re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</a> <dfn class="decl field" id="(anonymous)::input" title='(anonymous struct)::input' data-ref="(anonymous)::input" data-ref-filename="(anonymous)..input">input</dfn>;</td></tr>
+<tr><th id="641">641</th><td><u>#<span data-ppcond="641">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a> || (defined <span class="macro" data-ref="_M/__STDC_VERSION__">__STDC_VERSION__</span> &amp;&amp; <span class="macro" title="201112L" data-ref="_M/__STDC_VERSION__">__STDC_VERSION__</span> &gt;= 199901L)</u></td></tr>
+<tr><th id="642">642</th><td>  <em>const</em> <a class="typedef" href="#re_dfa_t" title='re_dfa_t' data-type='struct re_dfa_t' data-ref="re_dfa_t" data-ref-filename="re_dfa_t">re_dfa_t</a> *<em>const</em> <dfn class="decl field" id="(anonymous)::dfa" title='(anonymous struct)::dfa' data-ref="(anonymous)::dfa" data-ref-filename="(anonymous)..dfa">dfa</dfn>;</td></tr>
+<tr><th id="643">643</th><td><u>#<span data-ppcond="641">else</span></u></td></tr>
+<tr><th id="644">644</th><td>  <em>const</em> re_dfa_t *dfa;</td></tr>
+<tr><th id="645">645</th><td><u>#<span data-ppcond="641">endif</span></u></td></tr>
+<tr><th id="646">646</th><td>  <i>/* EFLAGS of the argument of regexec.  */</i></td></tr>
+<tr><th id="647">647</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::eflags" title='(anonymous struct)::eflags' data-ref="(anonymous)::eflags" data-ref-filename="(anonymous)..eflags">eflags</dfn>;</td></tr>
+<tr><th id="648">648</th><td>  <i>/* Where the matching ends.  */</i></td></tr>
+<tr><th id="649">649</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::match_last" title='(anonymous struct)::match_last' data-ref="(anonymous)::match_last" data-ref-filename="(anonymous)..match_last">match_last</dfn>;</td></tr>
+<tr><th id="650">650</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::last_node" title='(anonymous struct)::last_node' data-ref="(anonymous)::last_node" data-ref-filename="(anonymous)..last_node">last_node</dfn>;</td></tr>
+<tr><th id="651">651</th><td>  <i>/* The state log used by the matcher.  */</i></td></tr>
+<tr><th id="652">652</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="(anonymous)::state_log" title='(anonymous struct)::state_log' data-ref="(anonymous)::state_log" data-ref-filename="(anonymous)..state_log">state_log</dfn>;</td></tr>
+<tr><th id="653">653</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::state_log_top" title='(anonymous struct)::state_log_top' data-ref="(anonymous)::state_log_top" data-ref-filename="(anonymous)..state_log_top">state_log_top</dfn>;</td></tr>
+<tr><th id="654">654</th><td>  <i>/* Back reference cache.  */</i></td></tr>
+<tr><th id="655">655</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nbkref_ents" title='(anonymous struct)::nbkref_ents' data-ref="(anonymous)::nbkref_ents" data-ref-filename="(anonymous)..nbkref_ents">nbkref_ents</dfn>;</td></tr>
+<tr><th id="656">656</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::abkref_ents" title='(anonymous struct)::abkref_ents' data-ref="(anonymous)::abkref_ents" data-ref-filename="(anonymous)..abkref_ents">abkref_ents</dfn>;</td></tr>
+<tr><th id="657">657</th><td>  <b>struct</b> <a class="type" href="#re_backref_cache_entry" title='re_backref_cache_entry' data-ref="re_backref_cache_entry" data-ref-filename="re_backref_cache_entry">re_backref_cache_entry</a> *<dfn class="decl field" id="(anonymous)::bkref_ents" title='(anonymous struct)::bkref_ents' data-ref="(anonymous)::bkref_ents" data-ref-filename="(anonymous)..bkref_ents">bkref_ents</dfn>;</td></tr>
+<tr><th id="658">658</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::max_mb_elem_len" title='(anonymous struct)::max_mb_elem_len' data-ref="(anonymous)::max_mb_elem_len" data-ref-filename="(anonymous)..max_mb_elem_len">max_mb_elem_len</dfn>;</td></tr>
+<tr><th id="659">659</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::nsub_tops" title='(anonymous struct)::nsub_tops' data-ref="(anonymous)::nsub_tops" data-ref-filename="(anonymous)..nsub_tops">nsub_tops</dfn>;</td></tr>
+<tr><th id="660">660</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::asub_tops" title='(anonymous struct)::asub_tops' data-ref="(anonymous)::asub_tops" data-ref-filename="(anonymous)..asub_tops">asub_tops</dfn>;</td></tr>
+<tr><th id="661">661</th><td>  <a class="typedef" href="#re_sub_match_top_t" title='re_sub_match_top_t' data-type='struct re_sub_match_top_t' data-ref="re_sub_match_top_t" data-ref-filename="re_sub_match_top_t">re_sub_match_top_t</a> **<dfn class="decl field" id="(anonymous)::sub_tops" title='(anonymous struct)::sub_tops' data-ref="(anonymous)::sub_tops" data-ref-filename="(anonymous)..sub_tops">sub_tops</dfn>;</td></tr>
+<tr><th id="662">662</th><td>} <dfn class="typedef" id="re_match_context_t" title='re_match_context_t' data-type='struct re_match_context_t' data-ref="re_match_context_t" data-ref-filename="re_match_context_t">re_match_context_t</dfn>;</td></tr>
+<tr><th id="663">663</th><td></td></tr>
+<tr><th id="664">664</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="665">665</th><td>{</td></tr>
+<tr><th id="666">666</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="(anonymous)::sifted_states" title='(anonymous struct)::sifted_states' data-ref="(anonymous)::sifted_states" data-ref-filename="(anonymous)..sifted_states">sifted_states</dfn>;</td></tr>
+<tr><th id="667">667</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> **<dfn class="decl field" id="(anonymous)::limited_states" title='(anonymous struct)::limited_states' data-ref="(anonymous)::limited_states" data-ref-filename="(anonymous)..limited_states">limited_states</dfn>;</td></tr>
+<tr><th id="668">668</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::last_node" title='(anonymous struct)::last_node' data-ref="(anonymous)::last_node" data-ref-filename="(anonymous)..last_node">last_node</dfn>;</td></tr>
+<tr><th id="669">669</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="(anonymous)::last_str_idx" title='(anonymous struct)::last_str_idx' data-ref="(anonymous)::last_str_idx" data-ref-filename="(anonymous)..last_str_idx">last_str_idx</dfn>;</td></tr>
+<tr><th id="670">670</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> <dfn class="decl field" id="(anonymous)::limits" title='(anonymous struct)::limits' data-ref="(anonymous)::limits" data-ref-filename="(anonymous)..limits">limits</dfn>;</td></tr>
+<tr><th id="671">671</th><td>} <dfn class="typedef" id="re_sift_context_t" title='re_sift_context_t' data-type='struct re_sift_context_t' data-ref="re_sift_context_t" data-ref-filename="re_sift_context_t">re_sift_context_t</dfn>;</td></tr>
+<tr><th id="672">672</th><td></td></tr>
+<tr><th id="673">673</th><td><b>struct</b> <dfn class="type def" id="re_fail_stack_ent_t" title='re_fail_stack_ent_t' data-ref="re_fail_stack_ent_t" data-ref-filename="re_fail_stack_ent_t">re_fail_stack_ent_t</dfn></td></tr>
+<tr><th id="674">674</th><td>{</td></tr>
+<tr><th id="675">675</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_fail_stack_ent_t::idx" title='re_fail_stack_ent_t::idx' data-ref="re_fail_stack_ent_t::idx" data-ref-filename="re_fail_stack_ent_t..idx">idx</dfn>;</td></tr>
+<tr><th id="676">676</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_fail_stack_ent_t::node" title='re_fail_stack_ent_t::node' data-ref="re_fail_stack_ent_t::node" data-ref-filename="re_fail_stack_ent_t..node">node</dfn>;</td></tr>
+<tr><th id="677">677</th><td>  <a class="typedef" href="regex.h.html#regmatch_t" title='regmatch_t' data-type='struct regmatch_t' data-ref="regmatch_t" data-ref-filename="regmatch_t">regmatch_t</a> *<dfn class="decl field" id="re_fail_stack_ent_t::regs" title='re_fail_stack_ent_t::regs' data-ref="re_fail_stack_ent_t::regs" data-ref-filename="re_fail_stack_ent_t..regs">regs</dfn>;</td></tr>
+<tr><th id="678">678</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> <dfn class="decl field" id="re_fail_stack_ent_t::eps_via_nodes" title='re_fail_stack_ent_t::eps_via_nodes' data-ref="re_fail_stack_ent_t::eps_via_nodes" data-ref-filename="re_fail_stack_ent_t..eps_via_nodes">eps_via_nodes</dfn>;</td></tr>
+<tr><th id="679">679</th><td>};</td></tr>
+<tr><th id="680">680</th><td></td></tr>
+<tr><th id="681">681</th><td><b>struct</b> <dfn class="type def" id="re_fail_stack_t" title='re_fail_stack_t' data-ref="re_fail_stack_t" data-ref-filename="re_fail_stack_t">re_fail_stack_t</dfn></td></tr>
+<tr><th id="682">682</th><td>{</td></tr>
+<tr><th id="683">683</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_fail_stack_t::num" title='re_fail_stack_t::num' data-ref="re_fail_stack_t::num" data-ref-filename="re_fail_stack_t..num">num</dfn>;</td></tr>
+<tr><th id="684">684</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_fail_stack_t::alloc" title='re_fail_stack_t::alloc' data-ref="re_fail_stack_t::alloc" data-ref-filename="re_fail_stack_t..alloc">alloc</dfn>;</td></tr>
+<tr><th id="685">685</th><td>  <b>struct</b> <a class="type" href="#re_fail_stack_ent_t" title='re_fail_stack_ent_t' data-ref="re_fail_stack_ent_t" data-ref-filename="re_fail_stack_ent_t">re_fail_stack_ent_t</a> *<dfn class="decl field" id="re_fail_stack_t::stack" title='re_fail_stack_t::stack' data-ref="re_fail_stack_t::stack" data-ref-filename="re_fail_stack_t..stack">stack</dfn>;</td></tr>
+<tr><th id="686">686</th><td>};</td></tr>
+<tr><th id="687">687</th><td></td></tr>
+<tr><th id="688">688</th><td><b>struct</b> <dfn class="type def" id="re_dfa_t" title='re_dfa_t' data-ref="re_dfa_t" data-ref-filename="re_dfa_t">re_dfa_t</dfn></td></tr>
+<tr><th id="689">689</th><td>{</td></tr>
+<tr><th id="690">690</th><td>  <a class="typedef" href="#re_token_t" title='re_token_t' data-type='struct re_token_t' data-ref="re_token_t" data-ref-filename="re_token_t">re_token_t</a> *<dfn class="decl field" id="re_dfa_t::nodes" title='re_dfa_t::nodes' data-ref="re_dfa_t::nodes" data-ref-filename="re_dfa_t..nodes">nodes</dfn>;</td></tr>
+<tr><th id="691">691</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="re_dfa_t::nodes_alloc" title='re_dfa_t::nodes_alloc' data-ref="re_dfa_t::nodes_alloc" data-ref-filename="re_dfa_t..nodes_alloc">nodes_alloc</dfn>;</td></tr>
+<tr><th id="692">692</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="re_dfa_t::nodes_len" title='re_dfa_t::nodes_len' data-ref="re_dfa_t::nodes_len" data-ref-filename="re_dfa_t..nodes_len">nodes_len</dfn>;</td></tr>
+<tr><th id="693">693</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> *<dfn class="decl field" id="re_dfa_t::nexts" title='re_dfa_t::nexts' data-ref="re_dfa_t::nexts" data-ref-filename="re_dfa_t..nexts">nexts</dfn>;</td></tr>
+<tr><th id="694">694</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> *<dfn class="decl field" id="re_dfa_t::org_indices" title='re_dfa_t::org_indices' data-ref="re_dfa_t::org_indices" data-ref-filename="re_dfa_t..org_indices">org_indices</dfn>;</td></tr>
+<tr><th id="695">695</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> *<dfn class="decl field" id="re_dfa_t::edests" title='re_dfa_t::edests' data-ref="re_dfa_t::edests" data-ref-filename="re_dfa_t..edests">edests</dfn>;</td></tr>
+<tr><th id="696">696</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> *<dfn class="decl field" id="re_dfa_t::eclosures" title='re_dfa_t::eclosures' data-ref="re_dfa_t::eclosures" data-ref-filename="re_dfa_t..eclosures">eclosures</dfn>;</td></tr>
+<tr><th id="697">697</th><td>  <a class="typedef" href="#re_node_set" title='re_node_set' data-type='struct re_node_set' data-ref="re_node_set" data-ref-filename="re_node_set">re_node_set</a> *<dfn class="decl field" id="re_dfa_t::inveclosures" title='re_dfa_t::inveclosures' data-ref="re_dfa_t::inveclosures" data-ref-filename="re_dfa_t..inveclosures">inveclosures</dfn>;</td></tr>
+<tr><th id="698">698</th><td>  <b>struct</b> <a class="type" href="#re_state_table_entry" title='re_state_table_entry' data-ref="re_state_table_entry" data-ref-filename="re_state_table_entry">re_state_table_entry</a> *<dfn class="decl field" id="re_dfa_t::state_table" title='re_dfa_t::state_table' data-ref="re_dfa_t::state_table" data-ref-filename="re_dfa_t..state_table">state_table</dfn>;</td></tr>
+<tr><th id="699">699</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> *<dfn class="decl field" id="re_dfa_t::init_state" title='re_dfa_t::init_state' data-ref="re_dfa_t::init_state" data-ref-filename="re_dfa_t..init_state">init_state</dfn>;</td></tr>
+<tr><th id="700">700</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> *<dfn class="decl field" id="re_dfa_t::init_state_word" title='re_dfa_t::init_state_word' data-ref="re_dfa_t::init_state_word" data-ref-filename="re_dfa_t..init_state_word">init_state_word</dfn>;</td></tr>
+<tr><th id="701">701</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> *<dfn class="decl field" id="re_dfa_t::init_state_nl" title='re_dfa_t::init_state_nl' data-ref="re_dfa_t::init_state_nl" data-ref-filename="re_dfa_t..init_state_nl">init_state_nl</dfn>;</td></tr>
+<tr><th id="702">702</th><td>  <a class="typedef" href="#re_dfastate_t" title='re_dfastate_t' data-type='struct re_dfastate_t' data-ref="re_dfastate_t" data-ref-filename="re_dfastate_t">re_dfastate_t</a> *<dfn class="decl field" id="re_dfa_t::init_state_begbuf" title='re_dfa_t::init_state_begbuf' data-ref="re_dfa_t::init_state_begbuf" data-ref-filename="re_dfa_t..init_state_begbuf">init_state_begbuf</dfn>;</td></tr>
+<tr><th id="703">703</th><td>  <a class="typedef" href="#bin_tree_t" title='bin_tree_t' data-type='struct bin_tree_t' data-ref="bin_tree_t" data-ref-filename="bin_tree_t">bin_tree_t</a> *<dfn class="decl field" id="re_dfa_t::str_tree" title='re_dfa_t::str_tree' data-ref="re_dfa_t::str_tree" data-ref-filename="re_dfa_t..str_tree">str_tree</dfn>;</td></tr>
+<tr><th id="704">704</th><td>  <a class="typedef" href="#bin_tree_storage_t" title='bin_tree_storage_t' data-type='struct bin_tree_storage_t' data-ref="bin_tree_storage_t" data-ref-filename="bin_tree_storage_t">bin_tree_storage_t</a> *<dfn class="decl field" id="re_dfa_t::str_tree_storage" title='re_dfa_t::str_tree_storage' data-ref="re_dfa_t::str_tree_storage" data-ref-filename="re_dfa_t..str_tree_storage">str_tree_storage</dfn>;</td></tr>
+<tr><th id="705">705</th><td>  <a class="typedef" href="#re_bitset_ptr_t" title='re_bitset_ptr_t' data-type='bitset_word_t *' data-ref="re_bitset_ptr_t" data-ref-filename="re_bitset_ptr_t">re_bitset_ptr_t</a> <dfn class="decl field" id="re_dfa_t::sb_char" title='re_dfa_t::sb_char' data-ref="re_dfa_t::sb_char" data-ref-filename="re_dfa_t..sb_char">sb_char</dfn>;</td></tr>
+<tr><th id="706">706</th><td>  <em>int</em> <dfn class="decl field" id="re_dfa_t::str_tree_storage_idx" title='re_dfa_t::str_tree_storage_idx' data-ref="re_dfa_t::str_tree_storage_idx" data-ref-filename="re_dfa_t..str_tree_storage_idx">str_tree_storage_idx</dfn>;</td></tr>
+<tr><th id="707">707</th><td></td></tr>
+<tr><th id="708">708</th><td>  <i>/* number of subexpressions 're_nsub' is in regex_t.  */</i></td></tr>
+<tr><th id="709">709</th><td>  <a class="typedef" href="#re_hashval_t" title='re_hashval_t' data-type='__re_size_t' data-ref="re_hashval_t" data-ref-filename="re_hashval_t">re_hashval_t</a> <dfn class="decl field" id="re_dfa_t::state_hash_mask" title='re_dfa_t::state_hash_mask' data-ref="re_dfa_t::state_hash_mask" data-ref-filename="re_dfa_t..state_hash_mask">state_hash_mask</dfn>;</td></tr>
+<tr><th id="710">710</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_dfa_t::init_node" title='re_dfa_t::init_node' data-ref="re_dfa_t::init_node" data-ref-filename="re_dfa_t..init_node">init_node</dfn>;</td></tr>
+<tr><th id="711">711</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="decl field" id="re_dfa_t::nbackref" title='re_dfa_t::nbackref' data-ref="re_dfa_t::nbackref" data-ref-filename="re_dfa_t..nbackref">nbackref</dfn>; <i>/* The number of backreference in this dfa.  */</i></td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td>  <i>/* Bitmap expressing which backreference is used.  */</i></td></tr>
+<tr><th id="714">714</th><td>  <a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a> <dfn class="decl field" id="re_dfa_t::used_bkref_map" title='re_dfa_t::used_bkref_map' data-ref="re_dfa_t::used_bkref_map" data-ref-filename="re_dfa_t..used_bkref_map">used_bkref_map</dfn>;</td></tr>
+<tr><th id="715">715</th><td>  <a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a> <dfn class="decl field" id="re_dfa_t::completed_bkref_map" title='re_dfa_t::completed_bkref_map' data-ref="re_dfa_t::completed_bkref_map" data-ref-filename="re_dfa_t..completed_bkref_map">completed_bkref_map</dfn>;</td></tr>
+<tr><th id="716">716</th><td></td></tr>
+<tr><th id="717">717</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfa_t::has_plural_match" title='re_dfa_t::has_plural_match' data-ref="re_dfa_t::has_plural_match" data-ref-filename="re_dfa_t..has_plural_match">has_plural_match</dfn> : <var>1</var>;</td></tr>
+<tr><th id="718">718</th><td>  <i>/* If this dfa has "multibyte node", which is a backreference or</i></td></tr>
+<tr><th id="719">719</th><td><i>     a node which can accept multibyte character or multi character</i></td></tr>
+<tr><th id="720">720</th><td><i>     collating element.  */</i></td></tr>
+<tr><th id="721">721</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfa_t::has_mb_node" title='re_dfa_t::has_mb_node' data-ref="re_dfa_t::has_mb_node" data-ref-filename="re_dfa_t..has_mb_node">has_mb_node</dfn> : <var>1</var>;</td></tr>
+<tr><th id="722">722</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfa_t::is_utf8" title='re_dfa_t::is_utf8' data-ref="re_dfa_t::is_utf8" data-ref-filename="re_dfa_t..is_utf8">is_utf8</dfn> : <var>1</var>;</td></tr>
+<tr><th id="723">723</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfa_t::map_notascii" title='re_dfa_t::map_notascii' data-ref="re_dfa_t::map_notascii" data-ref-filename="re_dfa_t..map_notascii">map_notascii</dfn> : <var>1</var>;</td></tr>
+<tr><th id="724">724</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="re_dfa_t::word_ops_used" title='re_dfa_t::word_ops_used' data-ref="re_dfa_t::word_ops_used" data-ref-filename="re_dfa_t..word_ops_used">word_ops_used</dfn> : <var>1</var>;</td></tr>
+<tr><th id="725">725</th><td>  <em>int</em> <dfn class="decl field" id="re_dfa_t::mb_cur_max" title='re_dfa_t::mb_cur_max' data-ref="re_dfa_t::mb_cur_max" data-ref-filename="re_dfa_t..mb_cur_max">mb_cur_max</dfn>;</td></tr>
+<tr><th id="726">726</th><td>  <a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="decl field" id="re_dfa_t::word_char" title='re_dfa_t::word_char' data-ref="re_dfa_t::word_char" data-ref-filename="re_dfa_t..word_char">word_char</dfn>;</td></tr>
+<tr><th id="727">727</th><td>  <a class="typedef" href="regex.h.html#reg_syntax_t" title='reg_syntax_t' data-type='unsigned long' data-ref="reg_syntax_t" data-ref-filename="reg_syntax_t">reg_syntax_t</a> <dfn class="decl field" id="re_dfa_t::syntax" title='re_dfa_t::syntax' data-ref="re_dfa_t::syntax" data-ref-filename="re_dfa_t..syntax">syntax</dfn>;</td></tr>
+<tr><th id="728">728</th><td>  <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> *<dfn class="decl field" id="re_dfa_t::subexp_map" title='re_dfa_t::subexp_map' data-ref="re_dfa_t::subexp_map" data-ref-filename="re_dfa_t..subexp_map">subexp_map</dfn>;</td></tr>
+<tr><th id="729">729</th><td><u>#<span data-ppcond="729">ifdef</span> <span class="macro" data-ref="_M/DEBUG">DEBUG</span></u></td></tr>
+<tr><th id="730">730</th><td>  <em>char</em>* re_str;</td></tr>
+<tr><th id="731">731</th><td><u>#<span data-ppcond="729">endif</span></u></td></tr>
+<tr><th id="732">732</th><td>  <a class="macro" href="#56" title="__libc_lock_t lock;" data-ref="_M/lock_define">lock_define</a> (<dfn class="decl field" id="re_dfa_t::lock" title='re_dfa_t::lock' data-ref="re_dfa_t::lock" data-ref-filename="re_dfa_t..lock">lock</dfn>)</td></tr>
+<tr><th id="733">733</th><td>};</td></tr>
+<tr><th id="734">734</th><td></td></tr>
+<tr><th id="735">735</th><td><u>#define <dfn class="macro" id="_M/re_node_set_init_empty" data-ref="_M/re_node_set_init_empty">re_node_set_init_empty</dfn>(set) memset (set, '\0', sizeof (re_node_set))</u></td></tr>
+<tr><th id="736">736</th><td><u>#define <dfn class="macro" id="_M/re_node_set_remove" data-ref="_M/re_node_set_remove">re_node_set_remove</dfn>(set,id) \</u></td></tr>
+<tr><th id="737">737</th><td><u>  (re_node_set_remove_at (set, re_node_set_contains (set, id) - 1))</u></td></tr>
+<tr><th id="738">738</th><td><u>#define <dfn class="macro" id="_M/re_node_set_empty" data-ref="_M/re_node_set_empty">re_node_set_empty</dfn>(p) ((p)-&gt;nelem = 0)</u></td></tr>
+<tr><th id="739">739</th><td><u>#define <dfn class="macro" id="_M/re_node_set_free" data-ref="_M/re_node_set_free">re_node_set_free</dfn>(set) re_free ((set)-&gt;elems)</u></td></tr>
+<tr><th id="740">740</th><td></td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td><b>typedef</b> <b>enum</b></td></tr>
+<tr><th id="743">743</th><td>{</td></tr>
+<tr><th id="744">744</th><td>  <dfn class="enum" id="SB_CHAR" title='SB_CHAR' data-ref="SB_CHAR" data-ref-filename="SB_CHAR">SB_CHAR</dfn>,</td></tr>
+<tr><th id="745">745</th><td>  <dfn class="enum" id="MB_CHAR" title='MB_CHAR' data-ref="MB_CHAR" data-ref-filename="MB_CHAR">MB_CHAR</dfn>,</td></tr>
+<tr><th id="746">746</th><td>  <dfn class="enum" id="EQUIV_CLASS" title='EQUIV_CLASS' data-ref="EQUIV_CLASS" data-ref-filename="EQUIV_CLASS">EQUIV_CLASS</dfn>,</td></tr>
+<tr><th id="747">747</th><td>  <dfn class="enum" id="COLL_SYM" title='COLL_SYM' data-ref="COLL_SYM" data-ref-filename="COLL_SYM">COLL_SYM</dfn>,</td></tr>
+<tr><th id="748">748</th><td>  <dfn class="enum" id="CHAR_CLASS" title='CHAR_CLASS' data-ref="CHAR_CLASS" data-ref-filename="CHAR_CLASS">CHAR_CLASS</dfn></td></tr>
+<tr><th id="749">749</th><td>} <dfn class="typedef" id="bracket_elem_type" title='bracket_elem_type' data-type='enum bracket_elem_type' data-ref="bracket_elem_type" data-ref-filename="bracket_elem_type">bracket_elem_type</dfn>;</td></tr>
+<tr><th id="750">750</th><td></td></tr>
+<tr><th id="751">751</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="752">752</th><td>{</td></tr>
+<tr><th id="753">753</th><td>  <a class="typedef" href="#bracket_elem_type" title='bracket_elem_type' data-type='enum bracket_elem_type' data-ref="bracket_elem_type" data-ref-filename="bracket_elem_type">bracket_elem_type</a> <dfn class="decl field" id="(anonymous)::type" title='(anonymous struct)::type' data-ref="(anonymous)::type" data-ref-filename="(anonymous)..type">type</dfn>;</td></tr>
+<tr><th id="754">754</th><td>  <b>union</b></td></tr>
+<tr><th id="755">755</th><td>  {</td></tr>
+<tr><th id="756">756</th><td>    <em>unsigned</em> <em>char</em> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::ch" title='(anonymous struct)::(anonymous union)::ch' data-ref="(anonymousstruct)::(anonymous)::ch" data-ref-filename="(anonymousstruct)..(anonymous)..ch">ch</dfn>;</td></tr>
+<tr><th id="757">757</th><td>    <em>unsigned</em> <em>char</em> *<dfn class="decl field" id="(anonymousstruct)::(anonymous)::name" title='(anonymous struct)::(anonymous union)::name' data-ref="(anonymousstruct)::(anonymous)::name" data-ref-filename="(anonymousstruct)..(anonymous)..name">name</dfn>;</td></tr>
+<tr><th id="758">758</th><td>    <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> <dfn class="decl field" id="(anonymousstruct)::(anonymous)::wch" title='(anonymous struct)::(anonymous union)::wch' data-ref="(anonymousstruct)::(anonymous)::wch" data-ref-filename="(anonymousstruct)..(anonymous)..wch">wch</dfn>;</td></tr>
+<tr><th id="759">759</th><td>  } <dfn class="decl field" id="(anonymous)::opr" title='(anonymous struct)::opr' data-ref="(anonymous)::opr" data-ref-filename="(anonymous)..opr">opr</dfn>;</td></tr>
+<tr><th id="760">760</th><td>} <dfn class="typedef" id="bracket_elem_t" title='bracket_elem_t' data-type='struct bracket_elem_t' data-ref="bracket_elem_t" data-ref-filename="bracket_elem_t">bracket_elem_t</dfn>;</td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td></td></tr>
+<tr><th id="763">763</th><td><i>/* Functions for bitset_t operation.  */</i></td></tr>
+<tr><th id="764">764</th><td></td></tr>
+<tr><th id="765">765</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="766">766</th><td><dfn class="decl def fn" id="bitset_set" title='bitset_set' data-ref="bitset_set" data-ref-filename="bitset_set">bitset_set</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col1 decl" id="1set" title='set' data-type='bitset_word_t *' data-ref="1set" data-ref-filename="1set">set</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col2 decl" id="2i" title='i' data-type='Idx' data-ref="2i" data-ref-filename="2i">i</dfn>)</td></tr>
+<tr><th id="767">767</th><td>{</td></tr>
+<tr><th id="768">768</th><td>  <a class="local col1 ref" href="#1set" title='set' data-ref="1set" data-ref-filename="1set">set</a>[<a class="local col2 ref" href="#2i" title='i' data-ref="2i" data-ref-filename="2i">i</a> / <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>] |= (<a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a>) <var>1</var> &lt;&lt; <a class="local col2 ref" href="#2i" title='i' data-ref="2i" data-ref-filename="2i">i</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>;</td></tr>
+<tr><th id="769">769</th><td>}</td></tr>
+<tr><th id="770">770</th><td></td></tr>
+<tr><th id="771">771</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="772">772</th><td><dfn class="decl def fn" id="bitset_clear" title='bitset_clear' data-ref="bitset_clear" data-ref-filename="bitset_clear">bitset_clear</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col3 decl" id="3set" title='set' data-type='bitset_word_t *' data-ref="3set" data-ref-filename="3set">set</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col4 decl" id="4i" title='i' data-type='Idx' data-ref="4i" data-ref-filename="4i">i</dfn>)</td></tr>
+<tr><th id="773">773</th><td>{</td></tr>
+<tr><th id="774">774</th><td>  <a class="local col3 ref" href="#3set" title='set' data-ref="3set" data-ref-filename="3set">set</a>[<a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a> / <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>] &amp;= ~ ((<a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a>) <var>1</var> &lt;&lt; <a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>);</td></tr>
+<tr><th id="775">775</th><td>}</td></tr>
+<tr><th id="776">776</th><td></td></tr>
+<tr><th id="777">777</th><td><em>static</em> <b>inline</b> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="778">778</th><td><dfn class="decl def fn" id="bitset_contain" title='bitset_contain' data-ref="bitset_contain" data-ref-filename="bitset_contain">bitset_contain</dfn> (<em>const</em> <a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col5 decl" id="5set" title='set' data-type='const bitset_word_t *' data-ref="5set" data-ref-filename="5set">set</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col6 decl" id="6i" title='i' data-type='Idx' data-ref="6i" data-ref-filename="6i">i</dfn>)</td></tr>
+<tr><th id="779">779</th><td>{</td></tr>
+<tr><th id="780">780</th><td>  <b>return</b> (<a class="local col5 ref" href="#5set" title='set' data-ref="5set" data-ref-filename="5set">set</a>[<a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> / <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>] &gt;&gt; <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>) &amp; <var>1</var>;</td></tr>
+<tr><th id="781">781</th><td>}</td></tr>
+<tr><th id="782">782</th><td></td></tr>
+<tr><th id="783">783</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="784">784</th><td><dfn class="decl def fn" id="bitset_empty" title='bitset_empty' data-ref="bitset_empty" data-ref-filename="bitset_empty">bitset_empty</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col7 decl" id="7set" title='set' data-type='bitset_word_t *' data-ref="7set" data-ref-filename="7set">set</dfn>)</td></tr>
+<tr><th id="785">785</th><td>{</td></tr>
+<tr><th id="786">786</th><td>  <a class="ref fn" href="../string/string.h.html#__GI_memset" title='memset' data-ref="__GI_memset" data-ref-filename="__GI_memset">memset</a> (<a class="local col7 ref" href="#7set" title='set' data-ref="7set" data-ref-filename="7set">set</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a>));</td></tr>
+<tr><th id="787">787</th><td>}</td></tr>
+<tr><th id="788">788</th><td></td></tr>
+<tr><th id="789">789</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="790">790</th><td><dfn class="decl def fn" id="bitset_set_all" title='bitset_set_all' data-ref="bitset_set_all" data-ref-filename="bitset_set_all">bitset_set_all</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col8 decl" id="8set" title='set' data-type='bitset_word_t *' data-ref="8set" data-ref-filename="8set">set</dfn>)</td></tr>
+<tr><th id="791">791</th><td>{</td></tr>
+<tr><th id="792">792</th><td>  <a class="ref fn" href="../string/string.h.html#__GI_memset" title='memset' data-ref="__GI_memset" data-ref-filename="__GI_memset">memset</a> (<a class="local col8 ref" href="#8set" title='set' data-ref="8set" data-ref-filename="8set">set</a>, -<var>1</var>, <b>sizeof</b> (<a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a>) * (<a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> / <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>));</td></tr>
+<tr><th id="793">793</th><td>  <b>if</b> (<a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a> != <var>0</var>)</td></tr>
+<tr><th id="794">794</th><td>    <a class="local col8 ref" href="#8set" title='set' data-ref="8set" data-ref-filename="8set">set</a>[<a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a> - <var>1</var>] =</td></tr>
+<tr><th id="795">795</th><td>      ((<a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>) - <var>1</var>;</td></tr>
+<tr><th id="796">796</th><td>}</td></tr>
+<tr><th id="797">797</th><td></td></tr>
+<tr><th id="798">798</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="799">799</th><td><dfn class="decl def fn" id="bitset_copy" title='bitset_copy' data-ref="bitset_copy" data-ref-filename="bitset_copy">bitset_copy</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col9 decl" id="9dest" title='dest' data-type='bitset_word_t *' data-ref="9dest" data-ref-filename="9dest">dest</dfn>, <em>const</em> <a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col0 decl" id="10src" title='src' data-type='const bitset_word_t *' data-ref="10src" data-ref-filename="10src">src</dfn>)</td></tr>
+<tr><th id="800">800</th><td>{</td></tr>
+<tr><th id="801">801</th><td>  <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>, <a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a>, <b>sizeof</b> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a>));</td></tr>
+<tr><th id="802">802</th><td>}</td></tr>
+<tr><th id="803">803</th><td></td></tr>
+<tr><th id="804">804</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="805">805</th><td><dfn class="decl def fn" id="bitset_not" title='bitset_not' data-ref="bitset_not" data-ref-filename="bitset_not">bitset_not</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col1 decl" id="11set" title='set' data-type='bitset_word_t *' data-ref="11set" data-ref-filename="11set">set</dfn>)</td></tr>
+<tr><th id="806">806</th><td>{</td></tr>
+<tr><th id="807">807</th><td>  <em>int</em> <dfn class="local col2 decl" id="12bitset_i" title='bitset_i' data-type='int' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</dfn>;</td></tr>
+<tr><th id="808">808</th><td>  <b>for</b> (<a class="local col2 ref" href="#12bitset_i" title='bitset_i' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</a> = <var>0</var>; <a class="local col2 ref" href="#12bitset_i" title='bitset_i' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</a> &lt; <a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> / <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>; ++<a class="local col2 ref" href="#12bitset_i" title='bitset_i' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</a>)</td></tr>
+<tr><th id="809">809</th><td>    <a class="local col1 ref" href="#11set" title='set' data-ref="11set" data-ref-filename="11set">set</a>[<a class="local col2 ref" href="#12bitset_i" title='bitset_i' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</a>] = ~<a class="local col1 ref" href="#11set" title='set' data-ref="11set" data-ref-filename="11set">set</a>[<a class="local col2 ref" href="#12bitset_i" title='bitset_i' data-ref="12bitset_i" data-ref-filename="12bitset_i">bitset_i</a>];</td></tr>
+<tr><th id="810">810</th><td>  <b>if</b> (<a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a> != <var>0</var>)</td></tr>
+<tr><th id="811">811</th><td>    <a class="local col1 ref" href="#11set" title='set' data-ref="11set" data-ref-filename="11set">set</a>[<a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a> - <var>1</var>] =</td></tr>
+<tr><th id="812">812</th><td>      ((((<a class="typedef" href="#bitset_word_t" title='bitset_word_t' data-type='unsigned long' data-ref="bitset_word_t" data-ref-filename="bitset_word_t">bitset_word_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="#141" title="((127*2 +1) + 1)" data-ref="_M/SBC_MAX">SBC_MAX</a> % <a class="macro" href="#210" title="64" data-ref="_M/BITSET_WORD_BITS">BITSET_WORD_BITS</a>) - <var>1</var>)</td></tr>
+<tr><th id="813">813</th><td>       &amp; ~<a class="local col1 ref" href="#11set" title='set' data-ref="11set" data-ref-filename="11set">set</a>[<a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a> - <var>1</var>]);</td></tr>
+<tr><th id="814">814</th><td>}</td></tr>
+<tr><th id="815">815</th><td></td></tr>
+<tr><th id="816">816</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="817">817</th><td><dfn class="decl def fn" id="bitset_merge" title='bitset_merge' data-ref="bitset_merge" data-ref-filename="bitset_merge">bitset_merge</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col3 decl" id="13dest" title='dest' data-type='bitset_word_t *' data-ref="13dest" data-ref-filename="13dest">dest</dfn>, <em>const</em> <a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col4 decl" id="14src" title='src' data-type='const bitset_word_t *' data-ref="14src" data-ref-filename="14src">src</dfn>)</td></tr>
+<tr><th id="818">818</th><td>{</td></tr>
+<tr><th id="819">819</th><td>  <em>int</em> <dfn class="local col5 decl" id="15bitset_i" title='bitset_i' data-type='int' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</dfn>;</td></tr>
+<tr><th id="820">820</th><td>  <b>for</b> (<a class="local col5 ref" href="#15bitset_i" title='bitset_i' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</a> = <var>0</var>; <a class="local col5 ref" href="#15bitset_i" title='bitset_i' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</a> &lt; <a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a>; ++<a class="local col5 ref" href="#15bitset_i" title='bitset_i' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</a>)</td></tr>
+<tr><th id="821">821</th><td>    <a class="local col3 ref" href="#13dest" title='dest' data-ref="13dest" data-ref-filename="13dest">dest</a>[<a class="local col5 ref" href="#15bitset_i" title='bitset_i' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</a>] |= <a class="local col4 ref" href="#14src" title='src' data-ref="14src" data-ref-filename="14src">src</a>[<a class="local col5 ref" href="#15bitset_i" title='bitset_i' data-ref="15bitset_i" data-ref-filename="15bitset_i">bitset_i</a>];</td></tr>
+<tr><th id="822">822</th><td>}</td></tr>
+<tr><th id="823">823</th><td></td></tr>
+<tr><th id="824">824</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="825">825</th><td><dfn class="decl def fn" id="bitset_mask" title='bitset_mask' data-ref="bitset_mask" data-ref-filename="bitset_mask">bitset_mask</dfn> (<a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col6 decl" id="16dest" title='dest' data-type='bitset_word_t *' data-ref="16dest" data-ref-filename="16dest">dest</dfn>, <em>const</em> <a class="typedef" href="#bitset_t" title='bitset_t' data-type='bitset_word_t [4]' data-ref="bitset_t" data-ref-filename="bitset_t">bitset_t</a> <dfn class="local col7 decl" id="17src" title='src' data-type='const bitset_word_t *' data-ref="17src" data-ref-filename="17src">src</dfn>)</td></tr>
+<tr><th id="826">826</th><td>{</td></tr>
+<tr><th id="827">827</th><td>  <em>int</em> <dfn class="local col8 decl" id="18bitset_i" title='bitset_i' data-type='int' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</dfn>;</td></tr>
+<tr><th id="828">828</th><td>  <b>for</b> (<a class="local col8 ref" href="#18bitset_i" title='bitset_i' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</a> = <var>0</var>; <a class="local col8 ref" href="#18bitset_i" title='bitset_i' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</a> &lt; <a class="macro" href="#227" title="((((127*2 +1) + 1) + 64 - 1) / 64)" data-ref="_M/BITSET_WORDS">BITSET_WORDS</a>; ++<a class="local col8 ref" href="#18bitset_i" title='bitset_i' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</a>)</td></tr>
+<tr><th id="829">829</th><td>    <a class="local col6 ref" href="#16dest" title='dest' data-ref="16dest" data-ref-filename="16dest">dest</a>[<a class="local col8 ref" href="#18bitset_i" title='bitset_i' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</a>] &amp;= <a class="local col7 ref" href="#17src" title='src' data-ref="17src" data-ref-filename="17src">src</a>[<a class="local col8 ref" href="#18bitset_i" title='bitset_i' data-ref="18bitset_i" data-ref-filename="18bitset_i">bitset_i</a>];</td></tr>
+<tr><th id="830">830</th><td>}</td></tr>
+<tr><th id="831">831</th><td></td></tr>
+<tr><th id="832">832</th><td><u>#<span data-ppcond="832">ifdef</span> <a class="macro" href="#132" data-ref="_M/RE_ENABLE_I18N">RE_ENABLE_I18N</a></u></td></tr>
+<tr><th id="833">833</th><td><i>/* Functions for re_string.  */</i></td></tr>
+<tr><th id="834">834</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="835">835</th><td><b>__attribute__</b> ((pure, unused))</td></tr>
+<tr><th id="836">836</th><td><dfn class="decl def fn" id="re_string_char_size_at" title='re_string_char_size_at' data-ref="re_string_char_size_at" data-ref-filename="re_string_char_size_at">re_string_char_size_at</dfn> (<em>const</em> <a class="typedef" href="#re_string_t" title='re_string_t' data-type='struct re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</a> *<dfn class="local col9 decl" id="19pstr" title='pstr' data-type='const re_string_t *' data-ref="19pstr" data-ref-filename="19pstr">pstr</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col0 decl" id="20idx" title='idx' data-type='Idx' data-ref="20idx" data-ref-filename="20idx">idx</dfn>)</td></tr>
+<tr><th id="837">837</th><td>{</td></tr>
+<tr><th id="838">838</th><td>  <em>int</em> <dfn class="local col1 decl" id="21byte_idx" title='byte_idx' data-type='int' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</dfn>;</td></tr>
+<tr><th id="839">839</th><td>  <b>if</b> (<a class="local col9 ref" href="#19pstr" title='pstr' data-ref="19pstr" data-ref-filename="19pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::mb_cur_max" title='re_string_t::mb_cur_max' data-ref="re_string_t::mb_cur_max" data-ref-filename="re_string_t..mb_cur_max">mb_cur_max</a> == <var>1</var>)</td></tr>
+<tr><th id="840">840</th><td>    <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="841">841</th><td>  <b>for</b> (<a class="local col1 ref" href="#21byte_idx" title='byte_idx' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</a> = <var>1</var>; <a class="local col0 ref" href="#20idx" title='idx' data-ref="20idx" data-ref-filename="20idx">idx</a> + <a class="local col1 ref" href="#21byte_idx" title='byte_idx' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</a> &lt; <a class="local col9 ref" href="#19pstr" title='pstr' data-ref="19pstr" data-ref-filename="19pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::valid_len" title='re_string_t::valid_len' data-ref="re_string_t::valid_len" data-ref-filename="re_string_t..valid_len">valid_len</a>; ++<a class="local col1 ref" href="#21byte_idx" title='byte_idx' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</a>)</td></tr>
+<tr><th id="842">842</th><td>    <b>if</b> (<a class="local col9 ref" href="#19pstr" title='pstr' data-ref="19pstr" data-ref-filename="19pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::wcs" title='re_string_t::wcs' data-ref="re_string_t::wcs" data-ref-filename="re_string_t..wcs">wcs</a>[<a class="local col0 ref" href="#20idx" title='idx' data-ref="20idx" data-ref-filename="20idx">idx</a> + <a class="local col1 ref" href="#21byte_idx" title='byte_idx' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</a>] != <a class="macro" href="../wcsmbs/wchar.h.html#64" title="(0xffffffffu)" data-ref="_M/WEOF">WEOF</a>)</td></tr>
+<tr><th id="843">843</th><td>      <b>break</b>;</td></tr>
+<tr><th id="844">844</th><td>  <b>return</b> <a class="local col1 ref" href="#21byte_idx" title='byte_idx' data-ref="21byte_idx" data-ref-filename="21byte_idx">byte_idx</a>;</td></tr>
+<tr><th id="845">845</th><td>}</td></tr>
+<tr><th id="846">846</th><td></td></tr>
+<tr><th id="847">847</th><td><em>static</em> <a class="typedef" href="../wcsmbs/bits/types/wint_t.h.html#wint_t" title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</a></td></tr>
+<tr><th id="848">848</th><td><b>__attribute__</b> ((pure, unused))</td></tr>
+<tr><th id="849">849</th><td><dfn class="decl def fn" id="re_string_wchar_at" title='re_string_wchar_at' data-ref="re_string_wchar_at" data-ref-filename="re_string_wchar_at">re_string_wchar_at</dfn> (<em>const</em> <a class="typedef" href="#re_string_t" title='re_string_t' data-type='struct re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</a> *<dfn class="local col2 decl" id="22pstr" title='pstr' data-type='const re_string_t *' data-ref="22pstr" data-ref-filename="22pstr">pstr</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col3 decl" id="23idx" title='idx' data-type='Idx' data-ref="23idx" data-ref-filename="23idx">idx</dfn>)</td></tr>
+<tr><th id="850">850</th><td>{</td></tr>
+<tr><th id="851">851</th><td>  <b>if</b> (<a class="local col2 ref" href="#22pstr" title='pstr' data-ref="22pstr" data-ref-filename="22pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::mb_cur_max" title='re_string_t::mb_cur_max' data-ref="re_string_t::mb_cur_max" data-ref-filename="re_string_t..mb_cur_max">mb_cur_max</a> == <var>1</var>)</td></tr>
+<tr><th id="852">852</th><td>    <b>return</b> (<a class="typedef" href="../wcsmbs/bits/types/wint_t.h.html#wint_t" title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</a>) <a class="local col2 ref" href="#22pstr" title='pstr' data-ref="22pstr" data-ref-filename="22pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::mbs" title='re_string_t::mbs' data-ref="re_string_t::mbs" data-ref-filename="re_string_t..mbs">mbs</a>[<a class="local col3 ref" href="#23idx" title='idx' data-ref="23idx" data-ref-filename="23idx">idx</a>];</td></tr>
+<tr><th id="853">853</th><td>  <b>return</b> (<a class="typedef" href="../wcsmbs/bits/types/wint_t.h.html#wint_t" title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</a>) <a class="local col2 ref" href="#22pstr" title='pstr' data-ref="22pstr" data-ref-filename="22pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::wcs" title='re_string_t::wcs' data-ref="re_string_t::wcs" data-ref-filename="re_string_t..wcs">wcs</a>[<a class="local col3 ref" href="#23idx" title='idx' data-ref="23idx" data-ref-filename="23idx">idx</a>];</td></tr>
+<tr><th id="854">854</th><td>}</td></tr>
+<tr><th id="855">855</th><td></td></tr>
+<tr><th id="856">856</th><td><u># <span data-ppcond="856">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="857">857</th><td><u>#  include <a href="../locale/weight.h.html">&lt;locale/weight.h&gt;</a></u></td></tr>
+<tr><th id="858">858</th><td><u># <span data-ppcond="856">endif</span></u></td></tr>
+<tr><th id="859">859</th><td></td></tr>
+<tr><th id="860">860</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="861">861</th><td><b>__attribute__</b> ((pure, unused))</td></tr>
+<tr><th id="862">862</th><td><dfn class="decl def fn" id="re_string_elem_size_at" title='re_string_elem_size_at' data-ref="re_string_elem_size_at" data-ref-filename="re_string_elem_size_at">re_string_elem_size_at</dfn> (<em>const</em> <a class="typedef" href="#re_string_t" title='re_string_t' data-type='struct re_string_t' data-ref="re_string_t" data-ref-filename="re_string_t">re_string_t</a> *<dfn class="local col4 decl" id="24pstr" title='pstr' data-type='const re_string_t *' data-ref="24pstr" data-ref-filename="24pstr">pstr</dfn>, <a class="typedef" href="#Idx" title='Idx' data-type='regoff_t' data-ref="Idx" data-ref-filename="Idx">Idx</a> <dfn class="local col5 decl" id="25idx" title='idx' data-type='Idx' data-ref="25idx" data-ref-filename="25idx">idx</dfn>)</td></tr>
+<tr><th id="863">863</th><td>{</td></tr>
+<tr><th id="864">864</th><td><u># <span data-ppcond="864">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="865">865</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col6 decl" id="26p" title='p' data-type='const unsigned char *' data-ref="26p" data-ref-filename="26p">p</dfn>, *<dfn class="local col7 decl" id="27extra" title='extra' data-type='const unsigned char *' data-ref="27extra" data-ref-filename="27extra">extra</dfn>;</td></tr>
+<tr><th id="866">866</th><td>  <em>const</em> <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *<dfn class="local col8 decl" id="28table" title='table' data-type='const int32_t *' data-ref="28table" data-ref-filename="28table">table</dfn>, *<dfn class="local col9 decl" id="29indirect" title='indirect' data-type='const int32_t *' data-ref="29indirect" data-ref-filename="29indirect">indirect</dfn>;</td></tr>
+<tr><th id="867">867</th><td>  <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint_fast32_t" title='uint_fast32_t' data-type='unsigned long' data-ref="uint_fast32_t" data-ref-filename="uint_fast32_t">uint_fast32_t</a> <dfn class="local col0 decl" id="30nrules" title='nrules' data-type='uint_fast32_t' data-ref="30nrules" data-ref-filename="30nrules">nrules</dfn> = <a class="macro" href="../locale/localeinfo.h.html#296" title="((uint32_t) (((__libc_tsd_LOCALE))-&gt;__locales[3])-&gt;values[((int) (_NL_COLLATE_NRULES) &amp; 0xffff)].word)" data-ref="_M/_NL_CURRENT_WORD">_NL_CURRENT_WORD</a> (<a class="macro" href="../locale/locale.h.html#38" title="3" data-ref="_M/LC_COLLATE">LC_COLLATE</a>, <a class="enum" href="../locale/langinfo.h.html#_NL_COLLATE_NRULES" title='_NL_COLLATE_NRULES' data-ref="_NL_COLLATE_NRULES" data-ref-filename="_NL_COLLATE_NRULES">_NL_COLLATE_NRULES</a>);</td></tr>
+<tr><th id="868">868</th><td></td></tr>
+<tr><th id="869">869</th><td>  <b>if</b> (<a class="local col0 ref" href="#30nrules" title='nrules' data-ref="30nrules" data-ref-filename="30nrules">nrules</a> != <var>0</var>)</td></tr>
+<tr><th id="870">870</th><td>    {</td></tr>
+<tr><th id="871">871</th><td>      <a class="local col8 ref" href="#28table" title='table' data-ref="28table" data-ref-filename="28table">table</a> = (<em>const</em> <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *) <a class="macro" href="../locale/localeinfo.h.html#288" title="((((__libc_tsd_LOCALE))-&gt;__locales[3])-&gt;values[((int) (_NL_COLLATE_TABLEMB) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (<a class="macro" href="../locale/locale.h.html#38" title="3" data-ref="_M/LC_COLLATE">LC_COLLATE</a>, <a class="enum" href="../locale/langinfo.h.html#_NL_COLLATE_TABLEMB" title='_NL_COLLATE_TABLEMB' data-ref="_NL_COLLATE_TABLEMB" data-ref-filename="_NL_COLLATE_TABLEMB">_NL_COLLATE_TABLEMB</a>);</td></tr>
+<tr><th id="872">872</th><td>      <a class="local col7 ref" href="#27extra" title='extra' data-ref="27extra" data-ref-filename="27extra">extra</a> = (<em>const</em> <em>unsigned</em> <em>char</em> *)</td></tr>
+<tr><th id="873">873</th><td>	<a class="macro" href="../locale/localeinfo.h.html#288" title="((((__libc_tsd_LOCALE))-&gt;__locales[3])-&gt;values[((int) (_NL_COLLATE_EXTRAMB) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (<a class="macro" href="../locale/locale.h.html#38" title="3" data-ref="_M/LC_COLLATE">LC_COLLATE</a>, <a class="enum" href="../locale/langinfo.h.html#_NL_COLLATE_EXTRAMB" title='_NL_COLLATE_EXTRAMB' data-ref="_NL_COLLATE_EXTRAMB" data-ref-filename="_NL_COLLATE_EXTRAMB">_NL_COLLATE_EXTRAMB</a>);</td></tr>
+<tr><th id="874">874</th><td>      <a class="local col9 ref" href="#29indirect" title='indirect' data-ref="29indirect" data-ref-filename="29indirect">indirect</a> = (<em>const</em> <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *) <a class="macro" href="../locale/localeinfo.h.html#288" title="((((__libc_tsd_LOCALE))-&gt;__locales[3])-&gt;values[((int) (_NL_COLLATE_INDIRECTMB) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (<a class="macro" href="../locale/locale.h.html#38" title="3" data-ref="_M/LC_COLLATE">LC_COLLATE</a>,</td></tr>
+<tr><th id="875">875</th><td>						<a class="enum" href="../locale/langinfo.h.html#_NL_COLLATE_INDIRECTMB" title='_NL_COLLATE_INDIRECTMB' data-ref="_NL_COLLATE_INDIRECTMB" data-ref-filename="_NL_COLLATE_INDIRECTMB">_NL_COLLATE_INDIRECTMB</a>);</td></tr>
+<tr><th id="876">876</th><td>      <a class="local col6 ref" href="#26p" title='p' data-ref="26p" data-ref-filename="26p">p</a> = <a class="local col4 ref" href="#24pstr" title='pstr' data-ref="24pstr" data-ref-filename="24pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::mbs" title='re_string_t::mbs' data-ref="re_string_t::mbs" data-ref-filename="re_string_t..mbs">mbs</a> + <a class="local col5 ref" href="#25idx" title='idx' data-ref="25idx" data-ref-filename="25idx">idx</a>;</td></tr>
+<tr><th id="877">877</th><td>      <a class="ref fn" href="../locale/weight.h.html#findidx" title='findidx' data-ref="findidx" data-ref-filename="findidx">findidx</a> (<a class="local col8 ref" href="#28table" title='table' data-ref="28table" data-ref-filename="28table">table</a>, <a class="local col9 ref" href="#29indirect" title='indirect' data-ref="29indirect" data-ref-filename="29indirect">indirect</a>, <a class="local col7 ref" href="#27extra" title='extra' data-ref="27extra" data-ref-filename="27extra">extra</a>, &amp;<a class="local col6 ref" href="#26p" title='p' data-ref="26p" data-ref-filename="26p">p</a>, <a class="local col4 ref" href="#24pstr" title='pstr' data-ref="24pstr" data-ref-filename="24pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::len" title='re_string_t::len' data-ref="re_string_t::len" data-ref-filename="re_string_t..len">len</a> - <a class="local col5 ref" href="#25idx" title='idx' data-ref="25idx" data-ref-filename="25idx">idx</a>);</td></tr>
+<tr><th id="878">878</th><td>      <b>return</b> <a class="local col6 ref" href="#26p" title='p' data-ref="26p" data-ref-filename="26p">p</a> - <a class="local col4 ref" href="#24pstr" title='pstr' data-ref="24pstr" data-ref-filename="24pstr">pstr</a>-&gt;<a class="ref field" href="#re_string_t::mbs" title='re_string_t::mbs' data-ref="re_string_t::mbs" data-ref-filename="re_string_t..mbs">mbs</a> - <a class="local col5 ref" href="#25idx" title='idx' data-ref="25idx" data-ref-filename="25idx">idx</a>;</td></tr>
+<tr><th id="879">879</th><td>    }</td></tr>
+<tr><th id="880">880</th><td>  <b>else</b></td></tr>
+<tr><th id="881">881</th><td><u># <span data-ppcond="864">endif</span> /* _LIBC */</u></td></tr>
+<tr><th id="882">882</th><td>    <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="883">883</th><td>}</td></tr>
+<tr><th id="884">884</th><td><u>#<span data-ppcond="832">endif</span> /* RE_ENABLE_I18N */</u></td></tr>
+<tr><th id="885">885</th><td></td></tr>
+<tr><th id="886">886</th><td><u>#<span data-ppcond="886">ifndef</span> <a class="macro" href="../include/features.h.html#158" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a></u></td></tr>
+<tr><th id="887">887</th><td><u># if defined __GNUC__ &amp;&amp; defined __GNUC_MINOR__</u></td></tr>
+<tr><th id="888">888</th><td><u>#  define __GNUC_PREREQ(maj, min) \</u></td></tr>
+<tr><th id="889">889</th><td><u>         ((__GNUC__ &lt;&lt; 16) + __GNUC_MINOR__ &gt;= ((maj) &lt;&lt; 16) + (min))</u></td></tr>
+<tr><th id="890">890</th><td><u># else</u></td></tr>
+<tr><th id="891">891</th><td><u>#  define __GNUC_PREREQ(maj, min) 0</u></td></tr>
+<tr><th id="892">892</th><td><u># endif</u></td></tr>
+<tr><th id="893">893</th><td><u>#<span data-ppcond="886">endif</span></u></td></tr>
+<tr><th id="894">894</th><td></td></tr>
+<tr><th id="895">895</th><td><u>#<span data-ppcond="895">if</span> <a class="macro" href="../include/features.h.html#158" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (4))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3,4)</u></td></tr>
+<tr><th id="896">896</th><td><u># undef <a class="macro" href="../misc/sys/cdefs.h.html#301" data-ref="_M/__attribute_warn_unused_result__">__attribute_warn_unused_result__</a></u></td></tr>
+<tr><th id="897">897</th><td><u># define <dfn class="macro" id="_M/__attribute_warn_unused_result__" data-ref="_M/__attribute_warn_unused_result__">__attribute_warn_unused_result__</dfn> \</u></td></tr>
+<tr><th id="898">898</th><td><u>   __attribute__ ((__warn_unused_result__))</u></td></tr>
+<tr><th id="899">899</th><td><u>#<span data-ppcond="895">else</span></u></td></tr>
+<tr><th id="900">900</th><td><u># define __attribute_warn_unused_result__ /* empty */</u></td></tr>
+<tr><th id="901">901</th><td><u>#<span data-ppcond="895">endif</span></u></td></tr>
+<tr><th id="902">902</th><td></td></tr>
+<tr><th id="903">903</th><td><u>#<span data-ppcond="903">ifndef</span> <span class="macro" data-ref="_M/FALLTHROUGH">FALLTHROUGH</span></u></td></tr>
+<tr><th id="904">904</th><td><u># <span data-ppcond="904">if</span> <span class="macro" title="4" data-ref="_M/__GNUC__">__GNUC__</span> &lt; 7</u></td></tr>
+<tr><th id="905">905</th><td><u>#  define <dfn class="macro" id="_M/FALLTHROUGH" data-ref="_M/FALLTHROUGH">FALLTHROUGH</dfn> ((void) 0)</u></td></tr>
+<tr><th id="906">906</th><td><u># <span data-ppcond="904">else</span></u></td></tr>
+<tr><th id="907">907</th><td><u>#  define FALLTHROUGH __attribute__ ((__fallthrough__))</u></td></tr>
+<tr><th id="908">908</th><td><u># <span data-ppcond="904">endif</span></u></td></tr>
+<tr><th id="909">909</th><td><u>#<span data-ppcond="903">endif</span></u></td></tr>
+<tr><th id="910">910</th><td></td></tr>
+<tr><th id="911">911</th><td><u>#<span data-ppcond="20">endif</span> /*  _REGEX_INTERNAL_H */</u></td></tr>
+<tr><th id="912">912</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='regex.c.html'>glibc_src_2.28/posix/regex.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.28 revision <em>2.28</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
