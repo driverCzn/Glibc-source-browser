@@ -1,0 +1,27 @@
+<dec f='glibc_src_2.30/locale/programs/3level.h' l='49' type='unsigned int'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='86' u='r' c='collidx_table_get'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='92' u='r' c='collidx_table_get'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='97' u='r' c='collidx_table_get'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='98' u='r' c='collidx_table_get'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='112' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='113' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='114' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='159' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='162' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='163' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='169' u='r' c='collidx_table_add'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='224' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='224' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='225' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='232' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='232' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='233' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='272' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='284' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='286' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='288' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='302' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='305' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/3level.h' l='308' u='r' c='add_locale_collidx_table'/>
+<use f='glibc_src_2.30/locale/programs/ld-collate.c' l='2363' u='w' c='collate_output'/>
+<offset>0</offset>

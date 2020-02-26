@@ -1,0 +1,301 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mq_notify.c source code [glibc_src_2.30/sysdeps/unix/sysv/linux/mq_notify.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="notify_data "/>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sysdeps/unix/sysv/linux/mq_notify.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.30</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='mq_notify.c.html'>mq_notify.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2004-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contribute by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2004.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../include/mqueue.h.html">&lt;mqueue.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../../include/pthread.h.html">&lt;pthread.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../../include/signal.h.html">&lt;signal.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../../../include/sys/socket.h.html">&lt;sys/socket.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="not-cancel.h.html">&lt;not-cancel.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../../../nptl/pthreadP.h.html">&lt;nptl/pthreadP.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="34">ifdef</span> <a class="macro" href="../../../../../include/x86_64-linux-gnu/asm/unistd_64.h.html#248" data-ref="_M/__NR_mq_notify">__NR_mq_notify</a></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/* Defined in the kernel headers: */</i></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/NOTIFY_COOKIE_LEN" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</dfn>	32	/* Length of the cookie used.  */</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/NOTIFY_WOKENUP" data-ref="_M/NOTIFY_WOKENUP">NOTIFY_WOKENUP</dfn>		1	/* Code for notifcation.  */</u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/NOTIFY_REMOVED" data-ref="_M/NOTIFY_REMOVED">NOTIFY_REMOVED</dfn>		2	/* Code for closed message queue</u></td></tr>
+<tr><th id="40">40</th><td><u>					   of de-notifcation.  */</u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/* Data structure for the queued notification requests.  */</i></td></tr>
+<tr><th id="44">44</th><td><b>union</b> <dfn class="type def" id="notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</dfn></td></tr>
+<tr><th id="45">45</th><td>{</td></tr>
+<tr><th id="46">46</th><td>  <b>struct</b></td></tr>
+<tr><th id="47">47</th><td>  {</td></tr>
+<tr><th id="48">48</th><td>    <em>void</em> (*<dfn class="tu decl field" id="notify_data::(anonymous)::fct" title='notify_data::(anonymous struct)::fct' data-type='void (*)(union sigval)' data-ref="notify_data::(anonymous)::fct" data-ref-filename="notify_data..(anonymous)..fct">fct</dfn>) (<b>union</b> <a class="type" href="../../../../signal/bits/types/__sigval_t.h.html#sigval" title='sigval' data-ref="sigval" data-ref-filename="sigval">sigval</a>);	<i  data-doc="notify_data::(anonymous)::fct">/* The function to run.  */</i></td></tr>
+<tr><th id="49">49</th><td>    <b>union</b> <a class="type" href="../../../../signal/bits/types/__sigval_t.h.html#sigval" title='sigval' data-ref="sigval" data-ref-filename="sigval">sigval</a> <dfn class="tu decl field" id="notify_data::(anonymous)::param" title='notify_data::(anonymous struct)::param' data-type='union sigval' data-ref="notify_data::(anonymous)::param" data-ref-filename="notify_data..(anonymous)..param">param</dfn>;		<i  data-doc="notify_data::(anonymous)::param">/* The parameter to pass.  */</i></td></tr>
+<tr><th id="50">50</th><td>    <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_attr_t" title='pthread_attr_t' data-type='union pthread_attr_t' data-ref="pthread_attr_t" data-ref-filename="pthread_attr_t">pthread_attr_t</a> *<dfn class="tu decl field" id="notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-type='pthread_attr_t *' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</dfn>;	<i  data-doc="notify_data::(anonymous)::attr">/* Attributes to create the thread with.  */</i></td></tr>
+<tr><th id="51">51</th><td>    <i>/* NB: on 64-bit machines the struct as a size of 24 bytes.  Which means</i></td></tr>
+<tr><th id="52">52</th><td><i>       byte 31 can still be used for returning the status.  */</i></td></tr>
+<tr><th id="53">53</th><td>  };</td></tr>
+<tr><th id="54">54</th><td>  <em>char</em> <dfn class="tu decl field" id="notify_data::raw" title='notify_data::raw' data-type='char [32]' data-ref="notify_data::raw" data-ref-filename="notify_data..raw">raw</dfn>[<a class="macro" href="#37" title="32" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</a>];</td></tr>
+<tr><th id="55">55</th><td>};</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i  data-doc="once">/* Keep track of the initialization.  */</i></td></tr>
+<tr><th id="59">59</th><td><em>static</em> <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_once_t" title='pthread_once_t' data-type='int' data-ref="pthread_once_t" data-ref-filename="pthread_once_t">pthread_once_t</a> <dfn class="tu decl def" id="once" title='once' data-type='pthread_once_t' data-ref="once" data-ref-filename="once">once</dfn> = <a class="macro" href="../../../nptl/pthread.h.html#218" title="0" data-ref="_M/PTHREAD_ONCE_INIT">PTHREAD_ONCE_INIT</a>;</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><i  data-doc="netlink_socket">/* The netlink socket.  */</i></td></tr>
+<tr><th id="63">63</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="netlink_socket" title='netlink_socket' data-type='int' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i  data-doc="notify_barrier">/* Barrier used to make sure data passed to the new thread is not</i></td></tr>
+<tr><th id="67">67</th><td><i  data-doc="notify_barrier">   resused by the parent.  */</i></td></tr>
+<tr><th id="68">68</th><td><em>static</em> <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_barrier_t" title='pthread_barrier_t' data-type='union pthread_barrier_t' data-ref="pthread_barrier_t" data-ref-filename="pthread_barrier_t">pthread_barrier_t</a> <dfn class="tu decl def" id="notify_barrier" title='notify_barrier' data-type='pthread_barrier_t' data-ref="notify_barrier" data-ref-filename="notify_barrier">notify_barrier</dfn>;</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i  data-doc="change_sigmask">/* Modify the signal mask.  We move this into a separate function so</i></td></tr>
+<tr><th id="72">72</th><td><i  data-doc="change_sigmask">   that the stack space needed for sigset_t is not deducted from what</i></td></tr>
+<tr><th id="73">73</th><td><i  data-doc="change_sigmask">   the thread can use.  */</i></td></tr>
+<tr><th id="74">74</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="75">75</th><td><b>__attribute__</b> ((noinline))</td></tr>
+<tr><th id="76">76</th><td><dfn class="tu decl def fn" id="change_sigmask" title='change_sigmask' data-type='int change_sigmask(int how, sigset_t * oss)' data-ref="change_sigmask" data-ref-filename="change_sigmask">change_sigmask</dfn> (<em>int</em> <dfn class="local col1 decl" id="1how" title='how' data-type='int' data-ref="1how" data-ref-filename="1how">how</dfn>, <a class="typedef" href="../../../../signal/bits/types/sigset_t.h.html#sigset_t" title='sigset_t' data-type='__sigset_t' data-ref="sigset_t" data-ref-filename="sigset_t">sigset_t</a> *<dfn class="local col2 decl" id="2oss" title='oss' data-type='sigset_t *' data-ref="2oss" data-ref-filename="2oss">oss</dfn>)</td></tr>
+<tr><th id="77">77</th><td>{</td></tr>
+<tr><th id="78">78</th><td>  <a class="typedef" href="../../../../signal/bits/types/sigset_t.h.html#sigset_t" title='sigset_t' data-type='__sigset_t' data-ref="sigset_t" data-ref-filename="sigset_t">sigset_t</a> <dfn class="local col3 decl" id="3ss" title='ss' data-type='sigset_t' data-ref="3ss" data-ref-filename="3ss">ss</dfn>;</td></tr>
+<tr><th id="79">79</th><td>  <a class="ref fn" href="../../../../signal/signal.h.html#sigfillset" title='sigfillset' data-ref="sigfillset" data-ref-filename="sigfillset">sigfillset</a> (&amp;<a class="local col3 ref" href="#3ss" title='ss' data-ref="3ss" data-ref-filename="3ss">ss</a>);</td></tr>
+<tr><th id="80">80</th><td>  <b>return</b> <a class="ref fn" href="../../../pthread/bits/sigthread.h.html#pthread_sigmask" title='pthread_sigmask' data-ref="pthread_sigmask" data-ref-filename="pthread_sigmask">pthread_sigmask</a> (<a class="local col1 ref" href="#1how" title='how' data-ref="1how" data-ref-filename="1how">how</a>, &amp;<a class="local col3 ref" href="#3ss" title='ss' data-ref="3ss" data-ref-filename="3ss">ss</a>, <a class="local col2 ref" href="#2oss" title='oss' data-ref="2oss" data-ref-filename="2oss">oss</a>);</td></tr>
+<tr><th id="81">81</th><td>}</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i  data-doc="notification_function">/* The function used for the notification.  */</i></td></tr>
+<tr><th id="85">85</th><td><em>static</em> <em>void</em> *</td></tr>
+<tr><th id="86">86</th><td><dfn class="tu decl def fn" id="notification_function" title='notification_function' data-type='void * notification_function(void * arg)' data-ref="notification_function" data-ref-filename="notification_function">notification_function</dfn> (<em>void</em> *<dfn class="local col4 decl" id="4arg" title='arg' data-type='void *' data-ref="4arg" data-ref-filename="4arg">arg</dfn>)</td></tr>
+<tr><th id="87">87</th><td>{</td></tr>
+<tr><th id="88">88</th><td>  <i>/* Copy the function and parameter so that the parent thread can go</i></td></tr>
+<tr><th id="89">89</th><td><i>     on with its life.  */</i></td></tr>
+<tr><th id="90">90</th><td>  <em>volatile</em> <b>union</b> <a class="type" href="#notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</a> *<dfn class="local col5 decl" id="5data" title='data' data-type='volatile union notify_data *' data-ref="5data" data-ref-filename="5data">data</dfn> = (<em>volatile</em> <b>union</b> <a class="type" href="#notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</a> *) <a class="local col4 ref" href="#4arg" title='arg' data-ref="4arg" data-ref-filename="4arg">arg</a>;</td></tr>
+<tr><th id="91">91</th><td>  <em>void</em> (*<dfn class="local col6 decl" id="6fct" title='fct' data-type='void (*)(union sigval)' data-ref="6fct" data-ref-filename="6fct">fct</dfn>) (<b>union</b> <a class="type" href="../../../../signal/bits/types/__sigval_t.h.html#sigval" title='sigval' data-ref="sigval" data-ref-filename="sigval">sigval</a>) = <a class="local col5 ref" href="#5data" title='data' data-ref="5data" data-ref-filename="5data">data</a>-&gt;<a class="tu ref field" href="#notify_data::(anonymous)::fct" title='notify_data::(anonymous struct)::fct' data-use='r' data-ref="notify_data::(anonymous)::fct" data-ref-filename="notify_data..(anonymous)..fct">fct</a>;</td></tr>
+<tr><th id="92">92</th><td>  <b>union</b> <a class="type" href="../../../../signal/bits/types/__sigval_t.h.html#sigval" title='sigval' data-ref="sigval" data-ref-filename="sigval">sigval</a> <dfn class="local col7 decl" id="7param" title='param' data-type='union sigval' data-ref="7param" data-ref-filename="7param">param</dfn> = <a class="local col5 ref" href="#5data" title='data' data-ref="5data" data-ref-filename="5data">data</a>-&gt;<a class="tu ref field" href="#notify_data::(anonymous)::param" title='notify_data::(anonymous struct)::param' data-use='r' data-ref="notify_data::(anonymous)::param" data-ref-filename="notify_data..(anonymous)..param">param</a>;</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>  <i>/* Let the parent go.  */</i></td></tr>
+<tr><th id="95">95</th><td>  (<em>void</em>) <a class="ref fn" href="../../../../include/pthread.h.html#__pthread_barrier_wait" title='__pthread_barrier_wait' data-ref="__pthread_barrier_wait" data-ref-filename="__pthread_barrier_wait">__pthread_barrier_wait</a> (&amp;<a class="tu ref" href="#notify_barrier" title='notify_barrier' data-use='a' data-ref="notify_barrier" data-ref-filename="notify_barrier">notify_barrier</a>);</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>  <i>/* Make the thread detached.  */</i></td></tr>
+<tr><th id="98">98</th><td>  (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_detach" title='pthread_detach' data-ref="pthread_detach" data-ref-filename="pthread_detach">pthread_detach</a> (<a class="ref fn" href="../../../nptl/pthread.h.html#pthread_self" title='pthread_self' data-ref="pthread_self" data-ref-filename="pthread_self">pthread_self</a> ());</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <i>/* The parent thread has all signals blocked.  This is probably a</i></td></tr>
+<tr><th id="101">101</th><td><i>     bit surprising for this thread.  So we unblock all of them.  */</i></td></tr>
+<tr><th id="102">102</th><td>  (<em>void</em>) <a class="tu ref fn" href="#change_sigmask" title='change_sigmask' data-use='c' data-ref="change_sigmask" data-ref-filename="change_sigmask">change_sigmask</a> (<a class="macro" href="bits/sigaction.h.html#80" title="1" data-ref="_M/SIG_UNBLOCK">SIG_UNBLOCK</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td>  <i>/* Now run the user code.  */</i></td></tr>
+<tr><th id="105">105</th><td>  <a class="local col6 ref" href="#6fct" title='fct' data-ref="6fct" data-ref-filename="6fct">fct</a> (<a class="local col7 ref" href="#7param" title='param' data-ref="7param" data-ref-filename="7param">param</a>);</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>  <i>/* And we are done.  */</i></td></tr>
+<tr><th id="108">108</th><td>  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="109">109</th><td>}</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i  data-doc="helper_thread">/* Helper thread.  */</i></td></tr>
+<tr><th id="113">113</th><td><em>static</em> <em>void</em> *</td></tr>
+<tr><th id="114">114</th><td><dfn class="tu decl def fn" id="helper_thread" title='helper_thread' data-type='void * helper_thread(void * arg)' data-ref="helper_thread" data-ref-filename="helper_thread">helper_thread</dfn> (<em>void</em> *<dfn class="local col8 decl" id="8arg" title='arg' data-type='void *' data-ref="8arg" data-ref-filename="8arg">arg</dfn>)</td></tr>
+<tr><th id="115">115</th><td>{</td></tr>
+<tr><th id="116">116</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="117">117</th><td>    {</td></tr>
+<tr><th id="118">118</th><td>      <b>union</b> <a class="type" href="#notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</a> <dfn class="local col9 decl" id="9data" title='data' data-type='union notify_data' data-ref="9data" data-ref-filename="9data">data</dfn>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>      <a class="typedef" href="../../../../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col0 decl" id="10n" title='n' data-type='ssize_t' data-ref="10n" data-ref-filename="10n">n</dfn> = <a class="ref fn" href="../../../../include/sys/socket.h.html#__recv" title='__recv' data-ref="__recv" data-ref-filename="__recv">__recv</a> (<a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a>, &amp;<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>, <b>sizeof</b> (<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>),</td></tr>
+<tr><th id="121">121</th><td>			  <a class="macro" href="bits/socket.h.html#236" title="MSG_NOSIGNAL" data-ref="_M/MSG_NOSIGNAL">MSG_NOSIGNAL</a> | <a class="macro" href="bits/socket.h.html#224" title="MSG_WAITALL" data-ref="_M/MSG_WAITALL">MSG_WAITALL</a>);</td></tr>
+<tr><th id="122">122</th><td>      <b>if</b> (<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a> &lt; <a class="macro" href="#37" title="32" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</a>)</td></tr>
+<tr><th id="123">123</th><td>	<b>continue</b>;</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>      <b>if</b> (<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>.<a class="tu ref field" href="#notify_data::raw" title='notify_data::raw' data-use='r' data-ref="notify_data::raw" data-ref-filename="notify_data..raw">raw</a>[<a class="macro" href="#37" title="32" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</a> - <var>1</var>] == <a class="macro" href="#38" title="1" data-ref="_M/NOTIFY_WOKENUP">NOTIFY_WOKENUP</a>)</td></tr>
+<tr><th id="126">126</th><td>	{</td></tr>
+<tr><th id="127">127</th><td>	  <i>/* Just create the thread as instructed.  There is no way to</i></td></tr>
+<tr><th id="128">128</th><td><i>	     report a problem with creating a thread.  */</i></td></tr>
+<tr><th id="129">129</th><td>	  <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_t" title='pthread_t' data-type='unsigned long' data-ref="pthread_t" data-ref-filename="pthread_t">pthread_t</a> <dfn class="local col1 decl" id="11th" title='th' data-type='pthread_t' data-ref="11th" data-ref-filename="11th">th</dfn>;</td></tr>
+<tr><th id="130">130</th><td>	  <b>if</b> (<a class="ref fn" href="#130" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref fn" href="../../../nptl/pthread.h.html#pthread_create" title='pthread_create' data-ref="pthread_create" data-ref-filename="pthread_create">pthread_create</a> (&amp;<a class="local col1 ref" href="#11th" title='th' data-ref="11th" data-ref-filename="11th">th</a>, <a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='r' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a>,</td></tr>
+<tr><th id="131">131</th><td>						<a class="tu ref fn" href="#notification_function" title='notification_function' data-use='r' data-ref="notification_function" data-ref-filename="notification_function">notification_function</a>, &amp;<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>)</td></tr>
+<tr><th id="132">132</th><td>				== <var>0</var>, <var>0</var>))</td></tr>
+<tr><th id="133">133</th><td>	    <i>/* Since we passed a pointer to DATA to the new thread we have</i></td></tr>
+<tr><th id="134">134</th><td><i>	       to wait until it is done with it.  */</i></td></tr>
+<tr><th id="135">135</th><td>	    (<em>void</em>) <a class="ref fn" href="../../../../include/pthread.h.html#__pthread_barrier_wait" title='__pthread_barrier_wait' data-ref="__pthread_barrier_wait" data-ref-filename="__pthread_barrier_wait">__pthread_barrier_wait</a> (&amp;<a class="tu ref" href="#notify_barrier" title='notify_barrier' data-use='a' data-ref="notify_barrier" data-ref-filename="notify_barrier">notify_barrier</a>);</td></tr>
+<tr><th id="136">136</th><td>	}</td></tr>
+<tr><th id="137">137</th><td>      <b>else</b> <b>if</b> (<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>.<a class="tu ref field" href="#notify_data::raw" title='notify_data::raw' data-use='r' data-ref="notify_data::raw" data-ref-filename="notify_data..raw">raw</a>[<a class="macro" href="#37" title="32" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</a> - <var>1</var>] == <a class="macro" href="#39" title="2" data-ref="_M/NOTIFY_REMOVED">NOTIFY_REMOVED</a>)</td></tr>
+<tr><th id="138">138</th><td>	<i>/* The only state we keep is the copy of the thread attributes.  */</i></td></tr>
+<tr><th id="139">139</th><td>	<a class="ref fn" href="../../../../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col9 ref" href="#9data" title='data' data-ref="9data" data-ref-filename="9data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='r' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a>);</td></tr>
+<tr><th id="140">140</th><td>    }</td></tr>
+<tr><th id="141">141</th><td>  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="142">142</th><td>}</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="146">146</th><td><dfn class="tu decl def fn" id="reset_once" title='reset_once' data-type='void reset_once()' data-ref="reset_once" data-ref-filename="reset_once">reset_once</dfn> (<em>void</em>)</td></tr>
+<tr><th id="147">147</th><td>{</td></tr>
+<tr><th id="148">148</th><td>  <a class="tu ref" href="#once" title='once' data-use='w' data-ref="once" data-ref-filename="once">once</a> = <a class="macro" href="../../../nptl/pthread.h.html#218" title="0" data-ref="_M/PTHREAD_ONCE_INIT">PTHREAD_ONCE_INIT</a>;</td></tr>
+<tr><th id="149">149</th><td>}</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="153">153</th><td><dfn class="tu decl def fn" id="init_mq_netlink" title='init_mq_netlink' data-type='void init_mq_netlink()' data-ref="init_mq_netlink" data-ref-filename="init_mq_netlink">init_mq_netlink</dfn> (<em>void</em>)</td></tr>
+<tr><th id="154">154</th><td>{</td></tr>
+<tr><th id="155">155</th><td>  <i>/* This code might be called a second time after fork().  The file</i></td></tr>
+<tr><th id="156">156</th><td><i>     descriptor is inherited from the parent.  */</i></td></tr>
+<tr><th id="157">157</th><td>  <b>if</b> (<a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a> == -<var>1</var>)</td></tr>
+<tr><th id="158">158</th><td>    {</td></tr>
+<tr><th id="159">159</th><td>      <i>/* Just a normal netlink socket, not bound.  */</i></td></tr>
+<tr><th id="160">160</th><td>      <a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='w' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a> = <a class="ref fn" href="../../../../include/sys/socket.h.html#__socket" title='__socket' data-ref="__socket" data-ref-filename="__socket">__socket</a> (<a class="macro" href="bits/socket.h.html#110" title="16" data-ref="_M/AF_NETLINK">AF_NETLINK</a>, <a class="macro" href="bits/socket_type.h.html#33" title="SOCK_RAW" data-ref="_M/SOCK_RAW">SOCK_RAW</a> | <a class="macro" href="bits/socket_type.h.html#51" title="SOCK_CLOEXEC" data-ref="_M/SOCK_CLOEXEC">SOCK_CLOEXEC</a>, <var>0</var>);</td></tr>
+<tr><th id="161">161</th><td>      <i>/* No need to do more if we have no socket.  */</i></td></tr>
+<tr><th id="162">162</th><td>      <b>if</b> (<a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a> == -<var>1</var>)</td></tr>
+<tr><th id="163">163</th><td>	<b>return</b>;</td></tr>
+<tr><th id="164">164</th><td>    }</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>  <em>int</em> <dfn class="local col2 decl" id="12err" title='err' data-type='int' data-ref="12err" data-ref-filename="12err">err</dfn> = <var>1</var>;</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>  <i>/* Initialize the barrier.  */</i></td></tr>
+<tr><th id="169">169</th><td>  <b>if</b> (<a class="ref fn" href="#130" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref fn" href="../../../../include/pthread.h.html#__pthread_barrier_init" title='__pthread_barrier_init' data-ref="__pthread_barrier_init" data-ref-filename="__pthread_barrier_init">__pthread_barrier_init</a> (&amp;<a class="tu ref" href="#notify_barrier" title='notify_barrier' data-use='a' data-ref="notify_barrier" data-ref-filename="notify_barrier">notify_barrier</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <var>2</var>) == <var>0</var>,</td></tr>
+<tr><th id="170">170</th><td>			<var>0</var>))</td></tr>
+<tr><th id="171">171</th><td>    {</td></tr>
+<tr><th id="172">172</th><td>      <i>/* Create the helper thread.  */</i></td></tr>
+<tr><th id="173">173</th><td>      <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_attr_t" title='pthread_attr_t' data-type='union pthread_attr_t' data-ref="pthread_attr_t" data-ref-filename="pthread_attr_t">pthread_attr_t</a> <dfn class="local col3 decl" id="13attr" title='attr' data-type='pthread_attr_t' data-ref="13attr" data-ref-filename="13attr">attr</dfn>;</td></tr>
+<tr><th id="174">174</th><td>      (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_attr_init" title='pthread_attr_init' data-ref="pthread_attr_init" data-ref-filename="pthread_attr_init">pthread_attr_init</a> (&amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>);</td></tr>
+<tr><th id="175">175</th><td>      (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_attr_setdetachstate" title='pthread_attr_setdetachstate' data-ref="pthread_attr_setdetachstate" data-ref-filename="pthread_attr_setdetachstate">pthread_attr_setdetachstate</a> (&amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>, <a class="macro" href="../../../nptl/pthread.h.html#38" title="PTHREAD_CREATE_DETACHED" data-ref="_M/PTHREAD_CREATE_DETACHED">PTHREAD_CREATE_DETACHED</a>);</td></tr>
+<tr><th id="176">176</th><td>      <i>/* We do not need much stack space, the bare minimum will be enough.  */</i></td></tr>
+<tr><th id="177">177</th><td>      (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_attr_setstacksize" title='pthread_attr_setstacksize' data-ref="pthread_attr_setstacksize" data-ref-filename="pthread_attr_setstacksize">pthread_attr_setstacksize</a> (&amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>, <a class="ref fn" href="../../../../nptl/pthreadP.h.html#__pthread_get_minstack" title='__pthread_get_minstack' data-ref="__pthread_get_minstack" data-ref-filename="__pthread_get_minstack">__pthread_get_minstack</a> (&amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>));</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>      <i>/* Temporarily block all signals so that the newly created</i></td></tr>
+<tr><th id="180">180</th><td><i>	 thread inherits the mask.  */</i></td></tr>
+<tr><th id="181">181</th><td>      <a class="typedef" href="../../../../signal/bits/types/sigset_t.h.html#sigset_t" title='sigset_t' data-type='__sigset_t' data-ref="sigset_t" data-ref-filename="sigset_t">sigset_t</a> <dfn class="local col4 decl" id="14oss" title='oss' data-type='sigset_t' data-ref="14oss" data-ref-filename="14oss">oss</dfn>;</td></tr>
+<tr><th id="182">182</th><td>      <em>int</em> <dfn class="local col5 decl" id="15have_no_oss" title='have_no_oss' data-type='int' data-ref="15have_no_oss" data-ref-filename="15have_no_oss">have_no_oss</dfn> = <a class="tu ref fn" href="#change_sigmask" title='change_sigmask' data-use='c' data-ref="change_sigmask" data-ref-filename="change_sigmask">change_sigmask</a> (<a class="macro" href="bits/sigaction.h.html#79" title="0" data-ref="_M/SIG_BLOCK">SIG_BLOCK</a>, &amp;<a class="local col4 ref" href="#14oss" title='oss' data-ref="14oss" data-ref-filename="14oss">oss</a>);</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td>      <a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_t" title='pthread_t' data-type='unsigned long' data-ref="pthread_t" data-ref-filename="pthread_t">pthread_t</a> <dfn class="local col6 decl" id="16th" title='th' data-type='pthread_t' data-ref="16th" data-ref-filename="16th">th</dfn>;</td></tr>
+<tr><th id="185">185</th><td>      <a class="local col2 ref" href="#12err" title='err' data-ref="12err" data-ref-filename="12err">err</a> = <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_create" title='pthread_create' data-ref="pthread_create" data-ref-filename="pthread_create">pthread_create</a> (&amp;<a class="local col6 ref" href="#16th" title='th' data-ref="16th" data-ref-filename="16th">th</a>, &amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>, <a class="tu ref fn" href="#helper_thread" title='helper_thread' data-use='r' data-ref="helper_thread" data-ref-filename="helper_thread">helper_thread</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>      <i>/* Reset the signal mask.  */</i></td></tr>
+<tr><th id="188">188</th><td>      <b>if</b> (!<a class="local col5 ref" href="#15have_no_oss" title='have_no_oss' data-ref="15have_no_oss" data-ref-filename="15have_no_oss">have_no_oss</a>)</td></tr>
+<tr><th id="189">189</th><td>	<a class="ref fn" href="../../../pthread/bits/sigthread.h.html#pthread_sigmask" title='pthread_sigmask' data-ref="pthread_sigmask" data-ref-filename="pthread_sigmask">pthread_sigmask</a> (<a class="macro" href="bits/sigaction.h.html#81" title="2" data-ref="_M/SIG_SETMASK">SIG_SETMASK</a>, &amp;<a class="local col4 ref" href="#14oss" title='oss' data-ref="14oss" data-ref-filename="14oss">oss</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>      (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_attr_destroy" title='pthread_attr_destroy' data-ref="pthread_attr_destroy" data-ref-filename="pthread_attr_destroy">pthread_attr_destroy</a> (&amp;<a class="local col3 ref" href="#13attr" title='attr' data-ref="13attr" data-ref-filename="13attr">attr</a>);</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>      <b>if</b> (<a class="local col2 ref" href="#12err" title='err' data-ref="12err" data-ref-filename="12err">err</a> == <var>0</var>)</td></tr>
+<tr><th id="194">194</th><td>	{</td></tr>
+<tr><th id="195">195</th><td>	  <em>static</em> <em>int</em> <dfn class="local col7 decl" id="17added_atfork" title='added_atfork' data-type='int' data-ref="17added_atfork" data-ref-filename="17added_atfork">added_atfork</dfn>;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	  <b>if</b> (<a class="local col7 ref" href="#17added_atfork" title='added_atfork' data-ref="17added_atfork" data-ref-filename="17added_atfork">added_atfork</a> == <var>0</var></td></tr>
+<tr><th id="198">198</th><td>	      &amp;&amp; <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_atfork" title='pthread_atfork' data-ref="pthread_atfork" data-ref-filename="pthread_atfork">pthread_atfork</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <a class="tu ref fn" href="#reset_once" title='reset_once' data-use='r' data-ref="reset_once" data-ref-filename="reset_once">reset_once</a>) != <var>0</var>)</td></tr>
+<tr><th id="199">199</th><td>	    {</td></tr>
+<tr><th id="200">200</th><td>	      <i>/* The child thread will call recv() which is a</i></td></tr>
+<tr><th id="201">201</th><td><i>		 cancellation point.  */</i></td></tr>
+<tr><th id="202">202</th><td>	      (<em>void</em>) <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_cancel" title='pthread_cancel' data-ref="pthread_cancel" data-ref-filename="pthread_cancel">pthread_cancel</a> (<a class="local col6 ref" href="#16th" title='th' data-ref="16th" data-ref-filename="16th">th</a>);</td></tr>
+<tr><th id="203">203</th><td>	      <a class="local col2 ref" href="#12err" title='err' data-ref="12err" data-ref-filename="12err">err</a> = <var>1</var>;</td></tr>
+<tr><th id="204">204</th><td>	    }</td></tr>
+<tr><th id="205">205</th><td>	  <b>else</b></td></tr>
+<tr><th id="206">206</th><td>	    <a class="local col7 ref" href="#17added_atfork" title='added_atfork' data-ref="17added_atfork" data-ref-filename="17added_atfork">added_atfork</a> = <var>1</var>;</td></tr>
+<tr><th id="207">207</th><td>	}</td></tr>
+<tr><th id="208">208</th><td>    }</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>  <b>if</b> (<a class="local col2 ref" href="#12err" title='err' data-ref="12err" data-ref-filename="12err">err</a> != <var>0</var>)</td></tr>
+<tr><th id="211">211</th><td>    {</td></tr>
+<tr><th id="212">212</th><td>      <a class="ref fn" href="not-cancel.h.html#__close_nocancel_nostatus" title='__close_nocancel_nostatus' data-ref="__close_nocancel_nostatus" data-ref-filename="__close_nocancel_nostatus">__close_nocancel_nostatus</a> (<a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a>);</td></tr>
+<tr><th id="213">213</th><td>      <a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='w' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a> = -<var>1</var>;</td></tr>
+<tr><th id="214">214</th><td>    }</td></tr>
+<tr><th id="215">215</th><td>}</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><i>/* Register notification upon message arrival to an empty message queue</i></td></tr>
+<tr><th id="219">219</th><td><i>   MQDES.  */</i></td></tr>
+<tr><th id="220">220</th><td><em>int</em></td></tr>
+<tr><th id="221">221</th><td><dfn class="decl def fn" id="mq_notify" title='mq_notify' data-ref="mq_notify" data-ref-filename="mq_notify">mq_notify</dfn> (<a class="typedef" href="bits/mqueue.h.html#mqd_t" title='mqd_t' data-type='int' data-ref="mqd_t" data-ref-filename="mqd_t">mqd_t</a> <dfn class="local col8 decl" id="18mqdes" title='mqdes' data-type='mqd_t' data-ref="18mqdes" data-ref-filename="18mqdes">mqdes</dfn>, <em>const</em> <b>struct</b> <a class="type" href="bits/types/sigevent_t.h.html#sigevent" title='sigevent' data-ref="sigevent" data-ref-filename="sigevent">sigevent</a> *<dfn class="local col9 decl" id="19notification" title='notification' data-type='const struct sigevent *' data-ref="19notification" data-ref-filename="19notification">notification</dfn>)</td></tr>
+<tr><th id="222">222</th><td>{</td></tr>
+<tr><th id="223">223</th><td>  <i>/* Make sure the type is correctly defined.  */</i></td></tr>
+<tr><th id="224">224</th><td>  <a class="macro" href="../../../../assert/assert.h.html#104" title="((void) sizeof ((sizeof (union notify_data) == 32) ? 1 : 0), __extension__ ({ if (sizeof (union notify_data) == 32) ; else __assert_fail (&quot;sizeof (union notify_data) == NOTIFY_COOKIE_LEN&quot;, &quot;/home/fp/glibc/glibc_src/rt/../sysdeps/unix/sysv/linux/mq_notify.c&quot;, 224, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<b>sizeof</b> (<b>union</b> <a class="type" href="#notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</a>) == <a class="macro" href="#37" title="32" data-ref="_M/NOTIFY_COOKIE_LEN">NOTIFY_COOKIE_LEN</a>);</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>  <i>/* Special treatment needed for SIGEV_THREAD.  */</i></td></tr>
+<tr><th id="227">227</th><td>  <b>if</b> (<a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || <a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>-&gt;<a class="ref field" href="bits/types/sigevent_t.h.html#sigevent::sigev_notify" title='sigevent::sigev_notify' data-ref="sigevent::sigev_notify" data-ref-filename="sigevent..sigev_notify">sigev_notify</a> != <a class="macro" href="bits/sigevent-consts.h.html#34" title="SIGEV_THREAD" data-ref="_M/SIGEV_THREAD">SIGEV_THREAD</a>)</td></tr>
+<tr><th id="228">228</th><td>    <b>return</b> <a class="macro" href="x86_64/sysdep.h.html#196" title="({ unsigned long int resultvar = ({ unsigned long int resultvar; __typeof__ ((notification) - (notification)) __arg2 = ((__typeof__ ((notification) - (notification))) (notification)); __typeof__ ((mqdes) - (mqdes)) __arg1 = ((__typeof__ ((mqdes) - (mqdes))) (mqdes)); register __typeof__ ((notification) - (notification)) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((mqdes) - (mqdes)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (244), &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; })" data-ref="_M/INLINE_SYSCALL">INLINE_SYSCALL</a> (mq_notify, <var>2</var>, <a class="local col8 ref" href="#18mqdes" title='mqdes' data-ref="18mqdes" data-ref-filename="18mqdes">mqdes</a>, <a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>);</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td>  <i>/* The kernel cannot directly start threads.  This will have to be</i></td></tr>
+<tr><th id="231">231</th><td><i>     done at userlevel.  Since we cannot start threads from signal</i></td></tr>
+<tr><th id="232">232</th><td><i>     handlers we have to create a dedicated thread which waits for</i></td></tr>
+<tr><th id="233">233</th><td><i>     notifications for arriving messages and creates threads in</i></td></tr>
+<tr><th id="234">234</th><td><i>     response.  */</i></td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td>  <i>/* Initialize only once.  */</i></td></tr>
+<tr><th id="237">237</th><td>  <a class="ref fn" href="../../../nptl/pthread.h.html#pthread_once" title='pthread_once' data-ref="pthread_once" data-ref-filename="pthread_once">pthread_once</a> (&amp;<a class="tu ref" href="#once" title='once' data-use='a' data-ref="once" data-ref-filename="once">once</a>, <a class="tu ref fn" href="#init_mq_netlink" title='init_mq_netlink' data-use='r' data-ref="init_mq_netlink" data-ref-filename="init_mq_netlink">init_mq_netlink</a>);</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>  <i>/* If we cannot create the netlink socket we cannot provide</i></td></tr>
+<tr><th id="240">240</th><td><i>     SIGEV_THREAD support.  */</i></td></tr>
+<tr><th id="241">241</th><td>  <b>if</b> (<a class="macro" href="../../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((netlink_socket == -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a> == -<var>1</var>))</td></tr>
+<tr><th id="242">242</th><td>    {</td></tr>
+<tr><th id="243">243</th><td>      <a class="macro" href="../../../../include/errno.h.html#37" title="(errno = (38))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../../../include/asm-generic/errno.h.html#18" title="38" data-ref="_M/ENOSYS">ENOSYS</a>);</td></tr>
+<tr><th id="244">244</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="245">245</th><td>    }</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>  <i>/* Create the cookie.  It will hold almost all the state.  */</i></td></tr>
+<tr><th id="248">248</th><td>  <b>union</b> <a class="type" href="#notify_data" title='notify_data' data-ref="notify_data" data-ref-filename="notify_data">notify_data</a> <dfn class="local col0 decl" id="20data" title='data' data-type='union notify_data' data-ref="20data" data-ref-filename="20data">data</dfn>;</td></tr>
+<tr><th id="249">249</th><td>  <a class="ref fn" href="../../../../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (&amp;<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>));</td></tr>
+<tr><th id="250">250</th><td>  <a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::fct" title='notify_data::(anonymous struct)::fct' data-use='w' data-ref="notify_data::(anonymous)::fct" data-ref-filename="notify_data..(anonymous)..fct">fct</a> = <a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>-&gt;<a class="macro" href="bits/types/sigevent_t.h.html#45" title="_sigev_un._sigev_thread._function" data-ref="_M/sigev_notify_function">sigev_notify_function</a>;</td></tr>
+<tr><th id="251">251</th><td>  <a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::param" title='notify_data::(anonymous struct)::param' data-use='w' data-ref="notify_data::(anonymous)::param" data-ref-filename="notify_data..(anonymous)..param">param</a> = <a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>-&gt;<a class="ref field" href="bits/types/sigevent_t.h.html#sigevent::sigev_value" title='sigevent::sigev_value' data-ref="sigevent::sigev_value" data-ref-filename="sigevent..sigev_value">sigev_value</a>;</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>  <b>if</b> (<a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>-&gt;<a class="macro" href="bits/types/sigevent_t.h.html#46" title="_sigev_un._sigev_thread._attribute" data-ref="_M/sigev_notify_attributes">sigev_notify_attributes</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="254">254</th><td>    {</td></tr>
+<tr><th id="255">255</th><td>      <i>/* The thread attribute has to be allocated separately.  */</i></td></tr>
+<tr><th id="256">256</th><td>      <a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='w' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a> = (<a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_attr_t" title='pthread_attr_t' data-type='union pthread_attr_t' data-ref="pthread_attr_t" data-ref-filename="pthread_attr_t">pthread_attr_t</a> *) <a class="ref fn" href="../../../../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<b>sizeof</b> (<a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_attr_t" title='pthread_attr_t' data-type='union pthread_attr_t' data-ref="pthread_attr_t" data-ref-filename="pthread_attr_t">pthread_attr_t</a>));</td></tr>
+<tr><th id="257">257</th><td>      <b>if</b> (<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='r' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="258">258</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>      <a class="ref fn" href="../../../../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='r' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a>, <a class="local col9 ref" href="#19notification" title='notification' data-ref="19notification" data-ref-filename="19notification">notification</a>-&gt;<a class="macro" href="bits/types/sigevent_t.h.html#46" title="_sigev_un._sigev_thread._attribute" data-ref="_M/sigev_notify_attributes">sigev_notify_attributes</a>,</td></tr>
+<tr><th id="261">261</th><td>	      <b>sizeof</b> (<a class="typedef" href="../../../nptl/bits/pthreadtypes.h.html#pthread_attr_t" title='pthread_attr_t' data-type='union pthread_attr_t' data-ref="pthread_attr_t" data-ref-filename="pthread_attr_t">pthread_attr_t</a>));</td></tr>
+<tr><th id="262">262</th><td>    }</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>  <i>/* Construct the new request.  */</i></td></tr>
+<tr><th id="265">265</th><td>  <b>struct</b> <a class="type" href="bits/types/sigevent_t.h.html#sigevent" title='sigevent' data-ref="sigevent" data-ref-filename="sigevent">sigevent</a> <dfn class="local col1 decl" id="21se" title='se' data-type='struct sigevent' data-ref="21se" data-ref-filename="21se">se</dfn>;</td></tr>
+<tr><th id="266">266</th><td>  <a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a>.<a class="ref field" href="bits/types/sigevent_t.h.html#sigevent::sigev_notify" title='sigevent::sigev_notify' data-ref="sigevent::sigev_notify" data-ref-filename="sigevent..sigev_notify">sigev_notify</a> = <a class="macro" href="bits/sigevent-consts.h.html#34" title="SIGEV_THREAD" data-ref="_M/SIGEV_THREAD">SIGEV_THREAD</a>;</td></tr>
+<tr><th id="267">267</th><td>  <a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a>.<a class="ref field" href="bits/types/sigevent_t.h.html#sigevent::sigev_signo" title='sigevent::sigev_signo' data-ref="sigevent::sigev_signo" data-ref-filename="sigevent..sigev_signo">sigev_signo</a> = <a class="tu ref" href="#netlink_socket" title='netlink_socket' data-use='r' data-ref="netlink_socket" data-ref-filename="netlink_socket">netlink_socket</a>;</td></tr>
+<tr><th id="268">268</th><td>  <a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a>.<a class="ref field" href="bits/types/sigevent_t.h.html#sigevent::sigev_value" title='sigevent::sigev_value' data-ref="sigevent::sigev_value" data-ref-filename="sigevent..sigev_value">sigev_value</a>.<a class="ref field" href="../../../../signal/bits/types/__sigval_t.h.html#sigval::sival_ptr" title='sigval::sival_ptr' data-ref="sigval::sival_ptr" data-ref-filename="sigval..sival_ptr">sival_ptr</a> = &amp;<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>;</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td>  <i>/* Tell the kernel.  */</i></td></tr>
+<tr><th id="271">271</th><td>  <em>int</em> <dfn class="local col2 decl" id="22retval" title='retval' data-type='int' data-ref="22retval" data-ref-filename="22retval">retval</dfn> = <a class="macro" href="x86_64/sysdep.h.html#196" title="({ unsigned long int resultvar = ({ unsigned long int resultvar; __typeof__ ((&amp;se) - (&amp;se)) __arg2 = ((__typeof__ ((&amp;se) - (&amp;se))) (&amp;se)); __typeof__ ((mqdes) - (mqdes)) __arg1 = ((__typeof__ ((mqdes) - (mqdes))) (mqdes)); register __typeof__ ((&amp;se) - (&amp;se)) _a2 asm (&quot;rsi&quot;) = __arg2; register __typeof__ ((mqdes) - (mqdes)) _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (244), &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; })" data-ref="_M/INLINE_SYSCALL">INLINE_SYSCALL</a> (mq_notify, <var>2</var>, <a class="local col8 ref" href="#18mqdes" title='mqdes' data-ref="18mqdes" data-ref-filename="18mqdes">mqdes</a>, &amp;<a class="local col1 ref" href="#21se" title='se' data-ref="21se" data-ref-filename="21se">se</a>);</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>  <i>/* If it failed, free the allocated memory.  */</i></td></tr>
+<tr><th id="274">274</th><td>  <b>if</b> (<a class="macro" href="../../../../misc/sys/cdefs.h.html#402" title="__builtin_expect ((retval != 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col2 ref" href="#22retval" title='retval' data-ref="22retval" data-ref-filename="22retval">retval</a> != <var>0</var>))</td></tr>
+<tr><th id="275">275</th><td>    <a class="ref fn" href="../../../../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col0 ref" href="#20data" title='data' data-ref="20data" data-ref-filename="20data">data</a>.<a class="tu ref field" href="#notify_data::(anonymous)::attr" title='notify_data::(anonymous struct)::attr' data-use='r' data-ref="notify_data::(anonymous)::attr" data-ref-filename="notify_data..(anonymous)..attr">attr</a>);</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td>  <b>return</b> <a class="local col2 ref" href="#22retval" title='retval' data-ref="22retval" data-ref-filename="22retval">retval</a>;</td></tr>
+<tr><th id="278">278</th><td>}</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td><u>#<span data-ppcond="34">else</span></u></td></tr>
+<tr><th id="281">281</th><td><u># include &lt;rt/mq_notify.c&gt;</u></td></tr>
+<tr><th id="282">282</th><td><u>#<span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="283">283</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,4 @@
+<dec f='glibc_src_2.30/posix/regex_internal.h' l='736' type='unsigned char'/>
+<use f='glibc_src_2.30/posix/regcomp.c' l='3259' u='r' c='parse_bracket_exp'/>
+<use f='glibc_src_2.30/posix/regcomp.c' l='3430' u='w' c='parse_bracket_element'/>
+<offset>0</offset>

@@ -1,0 +1,426 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>printf-parsemb.c source code [glibc_src_2.30/stdio-common/printf-parsemb.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/stdio-common/printf-parsemb.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.30</a>/<a href='./'>stdio-common</a>/<a href='printf-parsemb.c.html'>printf-parsemb.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Helper functions for parsing printf format strings.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of th GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/wctype.h.html">&lt;wctype.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">ifndef</span> <span class="macro" data-ref="_M/COMPILE_WPRINTF">COMPILE_WPRINTF</span></u></td></tr>
+<tr><th id="28">28</th><td><u># define <dfn class="macro" id="_M/CHAR_T" data-ref="_M/CHAR_T">CHAR_T</dfn>		char</u></td></tr>
+<tr><th id="29">29</th><td><u># define <dfn class="macro" id="_M/UCHAR_T" data-ref="_M/UCHAR_T">UCHAR_T</dfn>	unsigned char</u></td></tr>
+<tr><th id="30">30</th><td><u># define <dfn class="macro" id="_M/INT_T" data-ref="_M/INT_T">INT_T</dfn>		int</u></td></tr>
+<tr><th id="31">31</th><td><u># define <dfn class="macro" id="_M/L_" data-ref="_M/L_">L_</dfn>(Str)	Str</u></td></tr>
+<tr><th id="32">32</th><td><u># define <dfn class="macro" id="_M/ISDIGIT" data-ref="_M/ISDIGIT">ISDIGIT</dfn>(Ch)	isdigit (Ch)</u></td></tr>
+<tr><th id="33">33</th><td><u># define <dfn class="macro" id="_M/HANDLE_REGISTERED_MODIFIER" data-ref="_M/HANDLE_REGISTERED_MODIFIER">HANDLE_REGISTERED_MODIFIER</dfn> <a class="ref fn" href="printf-parse.h.html#__handle_registered_modifier_mb" title='__handle_registered_modifier_mb' data-ref="__handle_registered_modifier_mb" data-ref-filename="__handle_registered_modifier_mb">__handle_registered_modifier_mb</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="27">else</span></u></td></tr>
+<tr><th id="35">35</th><td><u># define CHAR_T		wchar_t</u></td></tr>
+<tr><th id="36">36</th><td><u># define UCHAR_T	unsigned int</u></td></tr>
+<tr><th id="37">37</th><td><u># define INT_T		wint_t</u></td></tr>
+<tr><th id="38">38</th><td><u># define L_(Str)	L##Str</u></td></tr>
+<tr><th id="39">39</th><td><u># define ISDIGIT(Ch)	iswdigit (Ch)</u></td></tr>
+<tr><th id="40">40</th><td><u># define HANDLE_REGISTERED_MODIFIER __handle_registered_modifier_wc</u></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="printf-parse.h.html">"printf-parse.h"</a></u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><u>#define <dfn class="macro" id="_M/NDEBUG" data-ref="_M/NDEBUG">NDEBUG</dfn> 1</u></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/* FORMAT must point to a '%' at the beginning of a spec.  Fills in *SPEC</i></td></tr>
+<tr><th id="51">51</th><td><i>   with the parsed details.  POSN is the number of arguments already</i></td></tr>
+<tr><th id="52">52</th><td><i>   consumed.  At most MAXTYPES - POSN types are filled in TYPES.  Return</i></td></tr>
+<tr><th id="53">53</th><td><i>   the number of args consumed by this spec; *MAX_REF_ARG is updated so it</i></td></tr>
+<tr><th id="54">54</th><td><i>   remains the highest argument index used.  */</i></td></tr>
+<tr><th id="55">55</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="56">56</th><td><a class="macro" href="../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a></td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="57">ifdef</span> <span class="macro" data-ref="_M/COMPILE_WPRINTF">COMPILE_WPRINTF</span></u></td></tr>
+<tr><th id="58">58</th><td>__parse_one_specwc (<em>const</em> UCHAR_T *format, size_t posn,</td></tr>
+<tr><th id="59">59</th><td>		    <b>struct</b> printf_spec *spec, size_t *max_ref_arg)</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="57">else</span></u></td></tr>
+<tr><th id="61">61</th><td><dfn class="decl def fn" id="__parse_one_specmb" title='__parse_one_specmb' data-ref="__parse_one_specmb" data-ref-filename="__parse_one_specmb">__parse_one_specmb</dfn> (<em>const</em> <a class="macro" href="#29" title="unsigned char" data-ref="_M/UCHAR_T">UCHAR_T</a> *<dfn class="local col8 decl" id="18format" title='format' data-type='const unsigned char *' data-ref="18format" data-ref-filename="18format">format</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col9 decl" id="19posn" title='posn' data-type='size_t' data-ref="19posn" data-ref-filename="19posn">posn</dfn>,</td></tr>
+<tr><th id="62">62</th><td>		    <b>struct</b> <a class="type" href="printf-parse.h.html#printf_spec" title='printf_spec' data-ref="printf_spec" data-ref-filename="printf_spec">printf_spec</a> *<dfn class="local col0 decl" id="20spec" title='spec' data-type='struct printf_spec *' data-ref="20spec" data-ref-filename="20spec">spec</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col1 decl" id="21max_ref_arg" title='max_ref_arg' data-type='size_t *' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</dfn>)</td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="57">endif</span></u></td></tr>
+<tr><th id="64">64</th><td>{</td></tr>
+<tr><th id="65">65</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="22n" title='n' data-type='unsigned int' data-ref="22n" data-ref-filename="22n">n</dfn>;</td></tr>
+<tr><th id="66">66</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="23nargs" title='nargs' data-type='size_t' data-ref="23nargs" data-ref-filename="23nargs">nargs</dfn> = <var>0</var>;</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>  <i>/* Skip the '%'.  */</i></td></tr>
+<tr><th id="69">69</th><td>  ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>  <i>/* Clear information structure.  */</i></td></tr>
+<tr><th id="72">72</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg" title='printf_spec::data_arg' data-ref="printf_spec::data_arg" data-ref-filename="printf_spec..data_arg">data_arg</a> = -<var>1</var>;</td></tr>
+<tr><th id="73">73</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::alt" title='printf_info::alt' data-ref="printf_info::alt" data-ref-filename="printf_info..alt">alt</a> = <var>0</var>;</td></tr>
+<tr><th id="74">74</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::space" title='printf_info::space' data-ref="printf_info::space" data-ref-filename="printf_info..space">space</a> = <var>0</var>;</td></tr>
+<tr><th id="75">75</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::left" title='printf_info::left' data-ref="printf_info::left" data-ref-filename="printf_info..left">left</a> = <var>0</var>;</td></tr>
+<tr><th id="76">76</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::showsign" title='printf_info::showsign' data-ref="printf_info::showsign" data-ref-filename="printf_info..showsign">showsign</a> = <var>0</var>;</td></tr>
+<tr><th id="77">77</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::group" title='printf_info::group' data-ref="printf_info::group" data-ref-filename="printf_info..group">group</a> = <var>0</var>;</td></tr>
+<tr><th id="78">78</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::i18n" title='printf_info::i18n' data-ref="printf_info::i18n" data-ref-filename="printf_info..i18n">i18n</a> = <var>0</var>;</td></tr>
+<tr><th id="79">79</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::extra" title='printf_info::extra' data-ref="printf_info::extra" data-ref-filename="printf_info..extra">extra</a> = <var>0</var>;</td></tr>
+<tr><th id="80">80</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::pad" title='printf_info::pad' data-ref="printf_info::pad" data-ref-filename="printf_info..pad">pad</a> = <kbd>' '</kbd>;</td></tr>
+<tr><th id="81">81</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::wide" title='printf_info::wide' data-ref="printf_info::wide" data-ref-filename="printf_info..wide">wide</a> = <b>sizeof</b> (<a class="macro" href="#29" title="unsigned char" data-ref="_M/UCHAR_T">UCHAR_T</a>) &gt; <var>1</var>;</td></tr>
+<tr><th id="82">82</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_binary128" title='printf_info::is_binary128' data-ref="printf_info::is_binary128" data-ref-filename="printf_info..is_binary128">is_binary128</a> = <var>0</var>;</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <i>/* Test for positional argument.  */</i></td></tr>
+<tr><th id="85">85</th><td>  <b>if</b> (<a class="macro" href="#32" title="({ int __c = (*format); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/ISDIGIT">ISDIGIT</a> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>))</td></tr>
+<tr><th id="86">86</th><td>    {</td></tr>
+<tr><th id="87">87</th><td>      <em>const</em> <a class="macro" href="#29" title="unsigned char" data-ref="_M/UCHAR_T">UCHAR_T</a> *<dfn class="local col4 decl" id="24begin" title='begin' data-type='const unsigned char *' data-ref="24begin" data-ref-filename="24begin">begin</dfn> = <a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>      <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> = <a class="ref fn" href="printf-parse.h.html#read_int" title='read_int' data-ref="read_int" data-ref-filename="read_int">read_int</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>      <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != <var>0</var> &amp;&amp; *<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;$&apos;" data-ref="_M/L_">L_</a>(<kbd>'$'</kbd>))</td></tr>
+<tr><th id="92">92</th><td>	<i>/* Is positional parameter.  */</i></td></tr>
+<tr><th id="93">93</th><td>	{</td></tr>
+<tr><th id="94">94</th><td>	  ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;		<i>/* Skip the '$'.  */</i></td></tr>
+<tr><th id="95">95</th><td>	  <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != -<var>1</var>)</td></tr>
+<tr><th id="96">96</th><td>	    {</td></tr>
+<tr><th id="97">97</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg" title='printf_spec::data_arg' data-ref="printf_spec::data_arg" data-ref-filename="printf_spec..data_arg">data_arg</a> = <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> - <var>1</var>;</td></tr>
+<tr><th id="98">98</th><td>	      *<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a> = <a class="macro" href="../misc/sys/param.h.html#103" title="(((*max_ref_arg)&gt;(n))?(*max_ref_arg):(n))" data-ref="_M/MAX">MAX</a> (*<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a>, <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a>);</td></tr>
+<tr><th id="99">99</th><td>	    }</td></tr>
+<tr><th id="100">100</th><td>	}</td></tr>
+<tr><th id="101">101</th><td>      <b>else</b></td></tr>
+<tr><th id="102">102</th><td>	<i>/* Oops; that was actually the width and/or 0 padding flag.</i></td></tr>
+<tr><th id="103">103</th><td><i>	   Step back and read it again.  */</i></td></tr>
+<tr><th id="104">104</th><td>	<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> = <a class="local col4 ref" href="#24begin" title='begin' data-ref="24begin" data-ref-filename="24begin">begin</a>;</td></tr>
+<tr><th id="105">105</th><td>    }</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>  <i>/* Check for spec modifiers.  */</i></td></tr>
+<tr><th id="108">108</th><td>  <b>do</b></td></tr>
+<tr><th id="109">109</th><td>    {</td></tr>
+<tr><th id="110">110</th><td>      <b>switch</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>)</td></tr>
+<tr><th id="111">111</th><td>	{</td></tr>
+<tr><th id="112">112</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos; &apos;" data-ref="_M/L_">L_</a>(<kbd>' '</kbd>):</td></tr>
+<tr><th id="113">113</th><td>	  <i>/* Output a space in place of a sign, when there is no sign.  */</i></td></tr>
+<tr><th id="114">114</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::space" title='printf_info::space' data-ref="printf_info::space" data-ref-filename="printf_info..space">space</a> = <var>1</var>;</td></tr>
+<tr><th id="115">115</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="116">116</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;+&apos;" data-ref="_M/L_">L_</a>(<kbd>'+'</kbd>):</td></tr>
+<tr><th id="117">117</th><td>	  <i>/* Always output + or - for numbers.  */</i></td></tr>
+<tr><th id="118">118</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::showsign" title='printf_info::showsign' data-ref="printf_info::showsign" data-ref-filename="printf_info..showsign">showsign</a> = <var>1</var>;</td></tr>
+<tr><th id="119">119</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="120">120</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;-&apos;" data-ref="_M/L_">L_</a>(<kbd>'-'</kbd>):</td></tr>
+<tr><th id="121">121</th><td>	  <i>/* Left-justify things.  */</i></td></tr>
+<tr><th id="122">122</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::left" title='printf_info::left' data-ref="printf_info::left" data-ref-filename="printf_info..left">left</a> = <var>1</var>;</td></tr>
+<tr><th id="123">123</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="124">124</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;#&apos;" data-ref="_M/L_">L_</a>(<kbd>'#'</kbd>):</td></tr>
+<tr><th id="125">125</th><td>	  <i>/* Use the "alternate form":</i></td></tr>
+<tr><th id="126">126</th><td><i>	     Hex has 0x or 0X, FP always has a decimal point.  */</i></td></tr>
+<tr><th id="127">127</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::alt" title='printf_info::alt' data-ref="printf_info::alt" data-ref-filename="printf_info..alt">alt</a> = <var>1</var>;</td></tr>
+<tr><th id="128">128</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="129">129</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;0&apos;" data-ref="_M/L_">L_</a>(<kbd>'0'</kbd>):</td></tr>
+<tr><th id="130">130</th><td>	  <i>/* Pad with 0s.  */</i></td></tr>
+<tr><th id="131">131</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::pad" title='printf_info::pad' data-ref="printf_info::pad" data-ref-filename="printf_info..pad">pad</a> = <kbd>'0'</kbd>;</td></tr>
+<tr><th id="132">132</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="133">133</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;\&apos;&apos;" data-ref="_M/L_">L_</a>(<kbd>'\''</kbd>):</td></tr>
+<tr><th id="134">134</th><td>	  <i>/* Show grouping in numbers if the locale information</i></td></tr>
+<tr><th id="135">135</th><td><i>	     indicates any.  */</i></td></tr>
+<tr><th id="136">136</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::group" title='printf_info::group' data-ref="printf_info::group" data-ref-filename="printf_info..group">group</a> = <var>1</var>;</td></tr>
+<tr><th id="137">137</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="138">138</th><td>	<b>case</b> <a class="macro" href="#31" title="&apos;I&apos;" data-ref="_M/L_">L_</a>(<kbd>'I'</kbd>):</td></tr>
+<tr><th id="139">139</th><td>	  <i>/* Use the internationalized form of the output.  Currently</i></td></tr>
+<tr><th id="140">140</th><td><i>	     means to use the `outdigits' of the current locale.  */</i></td></tr>
+<tr><th id="141">141</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::i18n" title='printf_info::i18n' data-ref="printf_info::i18n" data-ref-filename="printf_info..i18n">i18n</a> = <var>1</var>;</td></tr>
+<tr><th id="142">142</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="143">143</th><td>	<b>default</b>:</td></tr>
+<tr><th id="144">144</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="145">145</th><td>	}</td></tr>
+<tr><th id="146">146</th><td>      <b>break</b>;</td></tr>
+<tr><th id="147">147</th><td>    }</td></tr>
+<tr><th id="148">148</th><td>  <b>while</b> (*++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>  <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::left" title='printf_info::left' data-ref="printf_info::left" data-ref-filename="printf_info..left">left</a>)</td></tr>
+<tr><th id="151">151</th><td>    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::pad" title='printf_info::pad' data-ref="printf_info::pad" data-ref-filename="printf_info..pad">pad</a> = <kbd>' '</kbd>;</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <i>/* Get the field width.  */</i></td></tr>
+<tr><th id="154">154</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::width_arg" title='printf_spec::width_arg' data-ref="printf_spec::width_arg" data-ref-filename="printf_spec..width_arg">width_arg</a> = -<var>1</var>;</td></tr>
+<tr><th id="155">155</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::width" title='printf_info::width' data-ref="printf_info::width" data-ref-filename="printf_info..width">width</a> = <var>0</var>;</td></tr>
+<tr><th id="156">156</th><td>  <b>if</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;*&apos;" data-ref="_M/L_">L_</a>(<kbd>'*'</kbd>))</td></tr>
+<tr><th id="157">157</th><td>    {</td></tr>
+<tr><th id="158">158</th><td>      <i>/* The field width is given in an argument.</i></td></tr>
+<tr><th id="159">159</th><td><i>	 A negative field width indicates left justification.  */</i></td></tr>
+<tr><th id="160">160</th><td>      <em>const</em> <a class="macro" href="#29" title="unsigned char" data-ref="_M/UCHAR_T">UCHAR_T</a> *<dfn class="local col5 decl" id="25begin" title='begin' data-type='const unsigned char *' data-ref="25begin" data-ref-filename="25begin">begin</dfn> = ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>      <b>if</b> (<a class="macro" href="#32" title="({ int __c = (*format); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/ISDIGIT">ISDIGIT</a> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>))</td></tr>
+<tr><th id="163">163</th><td>	{</td></tr>
+<tr><th id="164">164</th><td>	  <i>/* The width argument might be found in a positional parameter.  */</i></td></tr>
+<tr><th id="165">165</th><td>	  <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> = <a class="ref fn" href="printf-parse.h.html#read_int" title='read_int' data-ref="read_int" data-ref-filename="read_int">read_int</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>	  <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != <var>0</var> &amp;&amp; *<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;$&apos;" data-ref="_M/L_">L_</a>(<kbd>'$'</kbd>))</td></tr>
+<tr><th id="168">168</th><td>	    {</td></tr>
+<tr><th id="169">169</th><td>	      <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != -<var>1</var>)</td></tr>
+<tr><th id="170">170</th><td>		{</td></tr>
+<tr><th id="171">171</th><td>		  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::width_arg" title='printf_spec::width_arg' data-ref="printf_spec::width_arg" data-ref-filename="printf_spec..width_arg">width_arg</a> = <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> - <var>1</var>;</td></tr>
+<tr><th id="172">172</th><td>		  *<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a> = <a class="macro" href="../misc/sys/param.h.html#103" title="(((*max_ref_arg)&gt;(n))?(*max_ref_arg):(n))" data-ref="_M/MAX">MAX</a> (*<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a>, <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a>);</td></tr>
+<tr><th id="173">173</th><td>		}</td></tr>
+<tr><th id="174">174</th><td>	      ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;		<i>/* Skip '$'.  */</i></td></tr>
+<tr><th id="175">175</th><td>	    }</td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>      <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::width_arg" title='printf_spec::width_arg' data-ref="printf_spec::width_arg" data-ref-filename="printf_spec..width_arg">width_arg</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="179">179</th><td>	{</td></tr>
+<tr><th id="180">180</th><td>	  <i>/* Not in a positional parameter.  Consume one argument.  */</i></td></tr>
+<tr><th id="181">181</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::width_arg" title='printf_spec::width_arg' data-ref="printf_spec::width_arg" data-ref-filename="printf_spec..width_arg">width_arg</a> = <a class="local col9 ref" href="#19posn" title='posn' data-ref="19posn" data-ref-filename="19posn">posn</a>++;</td></tr>
+<tr><th id="182">182</th><td>	  ++<a class="local col3 ref" href="#23nargs" title='nargs' data-ref="23nargs" data-ref-filename="23nargs">nargs</a>;</td></tr>
+<tr><th id="183">183</th><td>	  <a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> = <a class="local col5 ref" href="#25begin" title='begin' data-ref="25begin" data-ref-filename="25begin">begin</a>;	<i>/* Step back and reread.  */</i></td></tr>
+<tr><th id="184">184</th><td>	}</td></tr>
+<tr><th id="185">185</th><td>    }</td></tr>
+<tr><th id="186">186</th><td>  <b>else</b> <b>if</b> (<a class="macro" href="#32" title="({ int __c = (*format); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/ISDIGIT">ISDIGIT</a> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>))</td></tr>
+<tr><th id="187">187</th><td>    {</td></tr>
+<tr><th id="188">188</th><td>      <em>int</em> <dfn class="local col6 decl" id="26n" title='n' data-type='int' data-ref="26n" data-ref-filename="26n">n</dfn> = <a class="ref fn" href="printf-parse.h.html#read_int" title='read_int' data-ref="read_int" data-ref-filename="read_int">read_int</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>      <i>/* Constant width specification.  */</i></td></tr>
+<tr><th id="191">191</th><td>      <b>if</b> (<a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a> != -<var>1</var>)</td></tr>
+<tr><th id="192">192</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::width" title='printf_info::width' data-ref="printf_info::width" data-ref-filename="printf_info..width">width</a> = <a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a>;</td></tr>
+<tr><th id="193">193</th><td>    }</td></tr>
+<tr><th id="194">194</th><td>  <i>/* Get the precision.  */</i></td></tr>
+<tr><th id="195">195</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::prec_arg" title='printf_spec::prec_arg' data-ref="printf_spec::prec_arg" data-ref-filename="printf_spec..prec_arg">prec_arg</a> = -<var>1</var>;</td></tr>
+<tr><th id="196">196</th><td>  <i>/* -1 means none given; 0 means explicit 0.  */</i></td></tr>
+<tr><th id="197">197</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::prec" title='printf_info::prec' data-ref="printf_info::prec" data-ref-filename="printf_info..prec">prec</a> = -<var>1</var>;</td></tr>
+<tr><th id="198">198</th><td>  <b>if</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;.&apos;" data-ref="_M/L_">L_</a>(<kbd>'.'</kbd>))</td></tr>
+<tr><th id="199">199</th><td>    {</td></tr>
+<tr><th id="200">200</th><td>      ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="201">201</th><td>      <b>if</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;*&apos;" data-ref="_M/L_">L_</a>(<kbd>'*'</kbd>))</td></tr>
+<tr><th id="202">202</th><td>	{</td></tr>
+<tr><th id="203">203</th><td>	  <i>/* The precision is given in an argument.  */</i></td></tr>
+<tr><th id="204">204</th><td>	  <em>const</em> <a class="macro" href="#29" title="unsigned char" data-ref="_M/UCHAR_T">UCHAR_T</a> *<dfn class="local col7 decl" id="27begin" title='begin' data-type='const unsigned char *' data-ref="27begin" data-ref-filename="27begin">begin</dfn> = ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	  <b>if</b> (<a class="macro" href="#32" title="({ int __c = (*format); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/ISDIGIT">ISDIGIT</a> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>))</td></tr>
+<tr><th id="207">207</th><td>	    {</td></tr>
+<tr><th id="208">208</th><td>	      <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> = <a class="ref fn" href="printf-parse.h.html#read_int" title='read_int' data-ref="read_int" data-ref-filename="read_int">read_int</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	      <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != <var>0</var> &amp;&amp; *<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> == <a class="macro" href="#31" title="&apos;$&apos;" data-ref="_M/L_">L_</a>(<kbd>'$'</kbd>))</td></tr>
+<tr><th id="211">211</th><td>		{</td></tr>
+<tr><th id="212">212</th><td>		  <b>if</b> (<a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> != -<var>1</var>)</td></tr>
+<tr><th id="213">213</th><td>		    {</td></tr>
+<tr><th id="214">214</th><td>		      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::prec_arg" title='printf_spec::prec_arg' data-ref="printf_spec::prec_arg" data-ref-filename="printf_spec..prec_arg">prec_arg</a> = <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a> - <var>1</var>;</td></tr>
+<tr><th id="215">215</th><td>		      *<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a> = <a class="macro" href="../misc/sys/param.h.html#103" title="(((*max_ref_arg)&gt;(n))?(*max_ref_arg):(n))" data-ref="_M/MAX">MAX</a> (*<a class="local col1 ref" href="#21max_ref_arg" title='max_ref_arg' data-ref="21max_ref_arg" data-ref-filename="21max_ref_arg">max_ref_arg</a>, <a class="local col2 ref" href="#22n" title='n' data-ref="22n" data-ref-filename="22n">n</a>);</td></tr>
+<tr><th id="216">216</th><td>		    }</td></tr>
+<tr><th id="217">217</th><td>		  ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="218">218</th><td>		}</td></tr>
+<tr><th id="219">219</th><td>	    }</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>	  <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::prec_arg" title='printf_spec::prec_arg' data-ref="printf_spec::prec_arg" data-ref-filename="printf_spec..prec_arg">prec_arg</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="222">222</th><td>	    {</td></tr>
+<tr><th id="223">223</th><td>	      <i>/* Not in a positional parameter.  */</i></td></tr>
+<tr><th id="224">224</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::prec_arg" title='printf_spec::prec_arg' data-ref="printf_spec::prec_arg" data-ref-filename="printf_spec..prec_arg">prec_arg</a> = <a class="local col9 ref" href="#19posn" title='posn' data-ref="19posn" data-ref-filename="19posn">posn</a>++;</td></tr>
+<tr><th id="225">225</th><td>	      ++<a class="local col3 ref" href="#23nargs" title='nargs' data-ref="23nargs" data-ref-filename="23nargs">nargs</a>;</td></tr>
+<tr><th id="226">226</th><td>	      <a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> = <a class="local col7 ref" href="#27begin" title='begin' data-ref="27begin" data-ref-filename="27begin">begin</a>;</td></tr>
+<tr><th id="227">227</th><td>	    }</td></tr>
+<tr><th id="228">228</th><td>	}</td></tr>
+<tr><th id="229">229</th><td>      <b>else</b> <b>if</b> (<a class="macro" href="#32" title="({ int __c = (*format); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/ISDIGIT">ISDIGIT</a> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>))</td></tr>
+<tr><th id="230">230</th><td>	{</td></tr>
+<tr><th id="231">231</th><td>	  <em>int</em> <dfn class="local col8 decl" id="28n" title='n' data-type='int' data-ref="28n" data-ref-filename="28n">n</dfn> = <a class="ref fn" href="printf-parse.h.html#read_int" title='read_int' data-ref="read_int" data-ref-filename="read_int">read_int</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td>	  <b>if</b> (<a class="local col8 ref" href="#28n" title='n' data-ref="28n" data-ref-filename="28n">n</a> != -<var>1</var>)</td></tr>
+<tr><th id="234">234</th><td>	    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::prec" title='printf_info::prec' data-ref="printf_info::prec" data-ref-filename="printf_info..prec">prec</a> = <a class="local col8 ref" href="#28n" title='n' data-ref="28n" data-ref-filename="28n">n</a>;</td></tr>
+<tr><th id="235">235</th><td>	}</td></tr>
+<tr><th id="236">236</th><td>      <b>else</b></td></tr>
+<tr><th id="237">237</th><td>	<i>/* "%.?" is treated like "%.0?".  */</i></td></tr>
+<tr><th id="238">238</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::prec" title='printf_info::prec' data-ref="printf_info::prec" data-ref-filename="printf_info..prec">prec</a> = <var>0</var>;</td></tr>
+<tr><th id="239">239</th><td>    }</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>  <i>/* Check for type modifiers.  */</i></td></tr>
+<tr><th id="242">242</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long_double" title='printf_info::is_long_double' data-ref="printf_info::is_long_double" data-ref-filename="printf_info..is_long_double">is_long_double</a> = <var>0</var>;</td></tr>
+<tr><th id="243">243</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_short" title='printf_info::is_short' data-ref="printf_info::is_short" data-ref-filename="printf_info..is_short">is_short</a> = <var>0</var>;</td></tr>
+<tr><th id="244">244</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a> = <var>0</var>;</td></tr>
+<tr><th id="245">245</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_char" title='printf_info::is_char' data-ref="printf_info::is_char" data-ref-filename="printf_info..is_char">is_char</a> = <var>0</var>;</td></tr>
+<tr><th id="246">246</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::user" title='printf_info::user' data-ref="printf_info::user" data-ref-filename="printf_info..user">user</a> = <var>0</var>;</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>  <b>if</b> (<a class="ref fn" href="#248" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref" href="printf-parse.h.html#__printf_modifier_table" title='__printf_modifier_table' data-ref="__printf_modifier_table" data-ref-filename="__printf_modifier_table">__printf_modifier_table</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <var>1</var>)</td></tr>
+<tr><th id="249">249</th><td>      || <a class="ref" href="printf-parse.h.html#__printf_modifier_table" title='__printf_modifier_table' data-ref="__printf_modifier_table" data-ref-filename="__printf_modifier_table">__printf_modifier_table</a>[*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>] == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="250">250</th><td>      || <a class="macro" href="#33" title="__handle_registered_modifier_mb" data-ref="_M/HANDLE_REGISTERED_MODIFIER">HANDLE_REGISTERED_MODIFIER</a> (&amp;<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>, &amp;<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>) != <var>0</var>)</td></tr>
+<tr><th id="251">251</th><td>    <b>switch</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>++)</td></tr>
+<tr><th id="252">252</th><td>      {</td></tr>
+<tr><th id="253">253</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;h&apos;" data-ref="_M/L_">L_</a>(<kbd>'h'</kbd>):</td></tr>
+<tr><th id="254">254</th><td>	<i>/* ints are short ints or chars.  */</i></td></tr>
+<tr><th id="255">255</th><td>	<b>if</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> != <a class="macro" href="#31" title="&apos;h&apos;" data-ref="_M/L_">L_</a>(<kbd>'h'</kbd>))</td></tr>
+<tr><th id="256">256</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_short" title='printf_info::is_short' data-ref="printf_info::is_short" data-ref-filename="printf_info..is_short">is_short</a> = <var>1</var>;</td></tr>
+<tr><th id="257">257</th><td>	<b>else</b></td></tr>
+<tr><th id="258">258</th><td>	  {</td></tr>
+<tr><th id="259">259</th><td>	    ++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="260">260</th><td>	    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_char" title='printf_info::is_char' data-ref="printf_info::is_char" data-ref-filename="printf_info..is_char">is_char</a> = <var>1</var>;</td></tr>
+<tr><th id="261">261</th><td>	  }</td></tr>
+<tr><th id="262">262</th><td>	<b>break</b>;</td></tr>
+<tr><th id="263">263</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;l&apos;" data-ref="_M/L_">L_</a>(<kbd>'l'</kbd>):</td></tr>
+<tr><th id="264">264</th><td>	<i>/* ints are long ints.  */</i></td></tr>
+<tr><th id="265">265</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a> = <var>1</var>;</td></tr>
+<tr><th id="266">266</th><td>	<b>if</b> (*<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> != <a class="macro" href="#31" title="&apos;l&apos;" data-ref="_M/L_">L_</a>(<kbd>'l'</kbd>))</td></tr>
+<tr><th id="267">267</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="268">268</th><td>	++<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="269">269</th><td>	<i>/* FALLTHROUGH */</i></td></tr>
+<tr><th id="270">270</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;L&apos;" data-ref="_M/L_">L_</a>(<kbd>'L'</kbd>):</td></tr>
+<tr><th id="271">271</th><td>	<i>/* doubles are long doubles, and ints are long long ints.  */</i></td></tr>
+<tr><th id="272">272</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;q&apos;" data-ref="_M/L_">L_</a>(<kbd>'q'</kbd>):</td></tr>
+<tr><th id="273">273</th><td>	<i>/* 4.4 uses this for long long.  */</i></td></tr>
+<tr><th id="274">274</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long_double" title='printf_info::is_long_double' data-ref="printf_info::is_long_double" data-ref-filename="printf_info..is_long_double">is_long_double</a> = <var>1</var>;</td></tr>
+<tr><th id="275">275</th><td>	<b>break</b>;</td></tr>
+<tr><th id="276">276</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;z&apos;" data-ref="_M/L_">L_</a>(<kbd>'z'</kbd>):</td></tr>
+<tr><th id="277">277</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;Z&apos;" data-ref="_M/L_">L_</a>(<kbd>'Z'</kbd>):</td></tr>
+<tr><th id="278">278</th><td>	<i>/* ints are size_ts.  */</i></td></tr>
+<tr><th id="279">279</th><td>	<a class="macro" href="../assert/assert.h.html#50" title="((void) (0))" data-ref="_M/assert">assert</a> (<b>sizeof</b> (size_t) &lt;= <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="280">280</th><td><u>#<span data-ppcond="280">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="9223372036854775807LL" data-ref="_M/LONG_LONG_MAX">LONG_LONG_MAX</span></u></td></tr>
+<tr><th id="281">281</th><td>	spec-&gt;info.is_long_double = (<b>sizeof</b> (size_t)</td></tr>
+<tr><th id="282">282</th><td>				     &gt; <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="283">283</th><td><u>#<span data-ppcond="280">endif</span></u></td></tr>
+<tr><th id="284">284</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a> = <b>sizeof</b> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) &gt; <b>sizeof</b> (<em>unsigned</em> <em>int</em>);</td></tr>
+<tr><th id="285">285</th><td>	<b>break</b>;</td></tr>
+<tr><th id="286">286</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;t&apos;" data-ref="_M/L_">L_</a>(<kbd>'t'</kbd>):</td></tr>
+<tr><th id="287">287</th><td>	<a class="macro" href="../assert/assert.h.html#50" title="((void) (0))" data-ref="_M/assert">assert</a> (<b>sizeof</b> (ptrdiff_t) &lt;= <b>sizeof</b> (<em>long</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="288">288</th><td><u>#<span data-ppcond="288">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="9223372036854775807LL" data-ref="_M/LONG_LONG_MAX">LONG_LONG_MAX</span></u></td></tr>
+<tr><th id="289">289</th><td>	spec-&gt;info.is_long_double = (<b>sizeof</b> (ptrdiff_t) &gt; <b>sizeof</b> (<em>long</em> <em>int</em>));</td></tr>
+<tr><th id="290">290</th><td><u>#<span data-ppcond="288">endif</span></u></td></tr>
+<tr><th id="291">291</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a> = <b>sizeof</b> (<span class='typedef' title='ptrdiff_t' data-type='long' data-ref="ptrdiff_t" data-ref-filename="ptrdiff_t">ptrdiff_t</span>) &gt; <b>sizeof</b> (<em>int</em>);</td></tr>
+<tr><th id="292">292</th><td>	<b>break</b>;</td></tr>
+<tr><th id="293">293</th><td>      <b>case</b> <a class="macro" href="#31" title="&apos;j&apos;" data-ref="_M/L_">L_</a>(<kbd>'j'</kbd>):</td></tr>
+<tr><th id="294">294</th><td>	<a class="macro" href="../assert/assert.h.html#50" title="((void) (0))" data-ref="_M/assert">assert</a> (<b>sizeof</b> (uintmax_t) &lt;= <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="295">295</th><td><u>#<span data-ppcond="295">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="9223372036854775807LL" data-ref="_M/LONG_LONG_MAX">LONG_LONG_MAX</span></u></td></tr>
+<tr><th id="296">296</th><td>	spec-&gt;info.is_long_double = (<b>sizeof</b> (uintmax_t)</td></tr>
+<tr><th id="297">297</th><td>				     &gt; <b>sizeof</b> (<em>unsigned</em> <em>long</em> <em>int</em>));</td></tr>
+<tr><th id="298">298</th><td><u>#<span data-ppcond="295">endif</span></u></td></tr>
+<tr><th id="299">299</th><td>	<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a> = <b>sizeof</b> (<a class="typedef" href="../stdlib/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a>) &gt; <b>sizeof</b> (<em>unsigned</em> <em>int</em>);</td></tr>
+<tr><th id="300">300</th><td>	<b>break</b>;</td></tr>
+<tr><th id="301">301</th><td>      <b>default</b>:</td></tr>
+<tr><th id="302">302</th><td>	<i>/* Not a recognized modifier.  Backup.  */</i></td></tr>
+<tr><th id="303">303</th><td>	--<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="304">304</th><td>	<b>break</b>;</td></tr>
+<tr><th id="305">305</th><td>      }</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>  <i>/* Get the format specification.  */</i></td></tr>
+<tr><th id="308">308</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a> = (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>) *<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>++;</td></tr>
+<tr><th id="309">309</th><td>  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::size" title='printf_spec::size' data-ref="printf_spec::size" data-ref-filename="printf_spec..size">size</a> = -<var>1</var>;</td></tr>
+<tr><th id="310">310</th><td>  <b>if</b> (<a class="ref fn" href="#248" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref" href="printf-parse.h.html#__printf_function_table" title='__printf_function_table' data-ref="__printf_function_table" data-ref-filename="__printf_function_table">__printf_function_table</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <var>1</var>)</td></tr>
+<tr><th id="311">311</th><td>      || <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a> &gt; <span class="macro" title="(127*2 +1)" data-ref="_M/UCHAR_MAX">UCHAR_MAX</span></td></tr>
+<tr><th id="312">312</th><td>      || <a class="ref" href="printf-parse.h.html#__printf_arginfo_table" title='__printf_arginfo_table' data-ref="__printf_arginfo_table" data-ref-filename="__printf_arginfo_table">__printf_arginfo_table</a>[<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a>] == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="313">313</th><td>      <i>/* We don't try to get the types for all arguments if the format</i></td></tr>
+<tr><th id="314">314</th><td><i>	 uses more than one.  The normal case is covered though.  If</i></td></tr>
+<tr><th id="315">315</th><td><i>	 the call returns -1 we continue with the normal specifiers.  */</i></td></tr>
+<tr><th id="316">316</th><td>      || (<em>int</em>) (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::ndata_args" title='printf_spec::ndata_args' data-ref="printf_spec::ndata_args" data-ref-filename="printf_spec..ndata_args">ndata_args</a> = (*<a class="ref" href="printf-parse.h.html#__printf_arginfo_table" title='__printf_arginfo_table' data-ref="__printf_arginfo_table" data-ref-filename="__printf_arginfo_table">__printf_arginfo_table</a>[<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a>])</td></tr>
+<tr><th id="317">317</th><td>				   (&amp;<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>, <var>1</var>, &amp;<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a>,</td></tr>
+<tr><th id="318">318</th><td>				    &amp;<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::size" title='printf_spec::size' data-ref="printf_spec::size" data-ref-filename="printf_spec..size">size</a>)) &lt; <var>0</var>)</td></tr>
+<tr><th id="319">319</th><td>    {</td></tr>
+<tr><th id="320">320</th><td>      <i>/* Find the data argument types of a built-in spec.  */</i></td></tr>
+<tr><th id="321">321</th><td>      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::ndata_args" title='printf_spec::ndata_args' data-ref="printf_spec::ndata_args" data-ref-filename="printf_spec..ndata_args">ndata_args</a> = <var>1</var>;</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td>      <b>switch</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a>)</td></tr>
+<tr><th id="324">324</th><td>	{</td></tr>
+<tr><th id="325">325</th><td>	<b>case</b> L<kbd>'i'</kbd>:</td></tr>
+<tr><th id="326">326</th><td>	<b>case</b> L<kbd>'d'</kbd>:</td></tr>
+<tr><th id="327">327</th><td>	<b>case</b> L<kbd>'u'</kbd>:</td></tr>
+<tr><th id="328">328</th><td>	<b>case</b> L<kbd>'o'</kbd>:</td></tr>
+<tr><th id="329">329</th><td>	<b>case</b> L<kbd>'X'</kbd>:</td></tr>
+<tr><th id="330">330</th><td>	<b>case</b> L<kbd>'x'</kbd>:</td></tr>
+<tr><th id="331">331</th><td><u>#<span data-ppcond="331">if</span> <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> != <span class="macro" title="9223372036854775807LL" data-ref="_M/LONG_LONG_MAX">LONG_LONG_MAX</span></u></td></tr>
+<tr><th id="332">332</th><td>	  <b>if</b> (spec-&gt;info.is_long_double)</td></tr>
+<tr><th id="333">333</th><td>	    spec-&gt;data_arg_type = PA_INT|PA_FLAG_LONG_LONG;</td></tr>
+<tr><th id="334">334</th><td>	  <b>else</b></td></tr>
+<tr><th id="335">335</th><td><u>#<span data-ppcond="331">endif</span></u></td></tr>
+<tr><th id="336">336</th><td>	    <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long" title='printf_info::is_long' data-ref="printf_info::is_long" data-ref-filename="printf_info..is_long">is_long</a>)</td></tr>
+<tr><th id="337">337</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_INT" title='PA_INT' data-ref="PA_INT" data-ref-filename="PA_INT">PA_INT</a>|<a class="macro" href="printf.h.html#164" title="(1 &lt;&lt; 9)" data-ref="_M/PA_FLAG_LONG">PA_FLAG_LONG</a>;</td></tr>
+<tr><th id="338">338</th><td>	    <b>else</b> <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_short" title='printf_info::is_short' data-ref="printf_info::is_short" data-ref-filename="printf_info..is_short">is_short</a>)</td></tr>
+<tr><th id="339">339</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_INT" title='PA_INT' data-ref="PA_INT" data-ref-filename="PA_INT">PA_INT</a>|<a class="macro" href="printf.h.html#165" title="(1 &lt;&lt; 10)" data-ref="_M/PA_FLAG_SHORT">PA_FLAG_SHORT</a>;</td></tr>
+<tr><th id="340">340</th><td>	    <b>else</b> <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_char" title='printf_info::is_char' data-ref="printf_info::is_char" data-ref-filename="printf_info..is_char">is_char</a>)</td></tr>
+<tr><th id="341">341</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_CHAR" title='PA_CHAR' data-ref="PA_CHAR" data-ref-filename="PA_CHAR">PA_CHAR</a>;</td></tr>
+<tr><th id="342">342</th><td>	    <b>else</b></td></tr>
+<tr><th id="343">343</th><td>	      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_INT" title='PA_INT' data-ref="PA_INT" data-ref-filename="PA_INT">PA_INT</a>;</td></tr>
+<tr><th id="344">344</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="345">345</th><td>	<b>case</b> L<kbd>'e'</kbd>:</td></tr>
+<tr><th id="346">346</th><td>	<b>case</b> L<kbd>'E'</kbd>:</td></tr>
+<tr><th id="347">347</th><td>	<b>case</b> L<kbd>'f'</kbd>:</td></tr>
+<tr><th id="348">348</th><td>	<b>case</b> L<kbd>'F'</kbd>:</td></tr>
+<tr><th id="349">349</th><td>	<b>case</b> L<kbd>'g'</kbd>:</td></tr>
+<tr><th id="350">350</th><td>	<b>case</b> L<kbd>'G'</kbd>:</td></tr>
+<tr><th id="351">351</th><td>	<b>case</b> L<kbd>'a'</kbd>:</td></tr>
+<tr><th id="352">352</th><td>	<b>case</b> L<kbd>'A'</kbd>:</td></tr>
+<tr><th id="353">353</th><td>	  <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::is_long_double" title='printf_info::is_long_double' data-ref="printf_info::is_long_double" data-ref-filename="printf_info..is_long_double">is_long_double</a>)</td></tr>
+<tr><th id="354">354</th><td>	    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_DOUBLE" title='PA_DOUBLE' data-ref="PA_DOUBLE" data-ref-filename="PA_DOUBLE">PA_DOUBLE</a>|<a class="macro" href="printf.h.html#163" title="(1 &lt;&lt; 8)" data-ref="_M/PA_FLAG_LONG_DOUBLE">PA_FLAG_LONG_DOUBLE</a>;</td></tr>
+<tr><th id="355">355</th><td>	  <b>else</b></td></tr>
+<tr><th id="356">356</th><td>	    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_DOUBLE" title='PA_DOUBLE' data-ref="PA_DOUBLE" data-ref-filename="PA_DOUBLE">PA_DOUBLE</a>;</td></tr>
+<tr><th id="357">357</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="358">358</th><td>	<b>case</b> L<kbd>'c'</kbd>:</td></tr>
+<tr><th id="359">359</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_CHAR" title='PA_CHAR' data-ref="PA_CHAR" data-ref-filename="PA_CHAR">PA_CHAR</a>;</td></tr>
+<tr><th id="360">360</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="361">361</th><td>	<b>case</b> L<kbd>'C'</kbd>:</td></tr>
+<tr><th id="362">362</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_WCHAR" title='PA_WCHAR' data-ref="PA_WCHAR" data-ref-filename="PA_WCHAR">PA_WCHAR</a>;</td></tr>
+<tr><th id="363">363</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="364">364</th><td>	<b>case</b> L<kbd>'s'</kbd>:</td></tr>
+<tr><th id="365">365</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_STRING" title='PA_STRING' data-ref="PA_STRING" data-ref-filename="PA_STRING">PA_STRING</a>;</td></tr>
+<tr><th id="366">366</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="367">367</th><td>	<b>case</b> L<kbd>'S'</kbd>:</td></tr>
+<tr><th id="368">368</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_WSTRING" title='PA_WSTRING' data-ref="PA_WSTRING" data-ref-filename="PA_WSTRING">PA_WSTRING</a>;</td></tr>
+<tr><th id="369">369</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="370">370</th><td>	<b>case</b> L<kbd>'p'</kbd>:</td></tr>
+<tr><th id="371">371</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_POINTER" title='PA_POINTER' data-ref="PA_POINTER" data-ref-filename="PA_POINTER">PA_POINTER</a>;</td></tr>
+<tr><th id="372">372</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="373">373</th><td>	<b>case</b> L<kbd>'n'</kbd>:</td></tr>
+<tr><th id="374">374</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg_type" title='printf_spec::data_arg_type' data-ref="printf_spec::data_arg_type" data-ref-filename="printf_spec..data_arg_type">data_arg_type</a> = <a class="enum" href="printf.h.html#PA_INT" title='PA_INT' data-ref="PA_INT" data-ref-filename="PA_INT">PA_INT</a>|<a class="macro" href="printf.h.html#166" title="(1 &lt;&lt; 11)" data-ref="_M/PA_FLAG_PTR">PA_FLAG_PTR</a>;</td></tr>
+<tr><th id="375">375</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td>	<b>case</b> L<kbd>'m'</kbd>:</td></tr>
+<tr><th id="378">378</th><td>	<b>default</b>:</td></tr>
+<tr><th id="379">379</th><td>	  <i>/* An unknown spec will consume no args.  */</i></td></tr>
+<tr><th id="380">380</th><td>	  <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::ndata_args" title='printf_spec::ndata_args' data-ref="printf_spec::ndata_args" data-ref-filename="printf_spec..ndata_args">ndata_args</a> = <var>0</var>;</td></tr>
+<tr><th id="381">381</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="382">382</th><td>	}</td></tr>
+<tr><th id="383">383</th><td>    }</td></tr>
+<tr><th id="384">384</th><td></td></tr>
+<tr><th id="385">385</th><td>  <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg" title='printf_spec::data_arg' data-ref="printf_spec::data_arg" data-ref-filename="printf_spec..data_arg">data_arg</a> == -<var>1</var> &amp;&amp; <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::ndata_args" title='printf_spec::ndata_args' data-ref="printf_spec::ndata_args" data-ref-filename="printf_spec..ndata_args">ndata_args</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="386">386</th><td>    {</td></tr>
+<tr><th id="387">387</th><td>      <i>/* There are args consumed, but no positional spec.  Use the</i></td></tr>
+<tr><th id="388">388</th><td><i>	 next sequential arg position.  */</i></td></tr>
+<tr><th id="389">389</th><td>      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::data_arg" title='printf_spec::data_arg' data-ref="printf_spec::data_arg" data-ref-filename="printf_spec..data_arg">data_arg</a> = <a class="local col9 ref" href="#19posn" title='posn' data-ref="19posn" data-ref-filename="19posn">posn</a>;</td></tr>
+<tr><th id="390">390</th><td>      <a class="local col3 ref" href="#23nargs" title='nargs' data-ref="23nargs" data-ref-filename="23nargs">nargs</a> += <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::ndata_args" title='printf_spec::ndata_args' data-ref="printf_spec::ndata_args" data-ref-filename="printf_spec..ndata_args">ndata_args</a>;</td></tr>
+<tr><th id="391">391</th><td>    }</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td>  <b>if</b> (<a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::info" title='printf_spec::info' data-ref="printf_spec::info" data-ref-filename="printf_spec..info">info</a>.<a class="ref field" href="printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a> == L<kbd>'\0'</kbd>)</td></tr>
+<tr><th id="394">394</th><td>    <i>/* Format ended before this spec was complete.  */</i></td></tr>
+<tr><th id="395">395</th><td>    <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::end_of_fmt" title='printf_spec::end_of_fmt' data-ref="printf_spec::end_of_fmt" data-ref-filename="printf_spec..end_of_fmt">end_of_fmt</a> = <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::next_fmt" title='printf_spec::next_fmt' data-ref="printf_spec::next_fmt" data-ref-filename="printf_spec..next_fmt">next_fmt</a> = <a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a> - <var>1</var>;</td></tr>
+<tr><th id="396">396</th><td>  <b>else</b></td></tr>
+<tr><th id="397">397</th><td>    {</td></tr>
+<tr><th id="398">398</th><td>      <i>/* Find the next format spec.  */</i></td></tr>
+<tr><th id="399">399</th><td>      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::end_of_fmt" title='printf_spec::end_of_fmt' data-ref="printf_spec::end_of_fmt" data-ref-filename="printf_spec..end_of_fmt">end_of_fmt</a> = <a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>;</td></tr>
+<tr><th id="400">400</th><td><u>#<span data-ppcond="400">ifdef</span> <span class="macro" data-ref="_M/COMPILE_WPRINTF">COMPILE_WPRINTF</span></u></td></tr>
+<tr><th id="401">401</th><td>      spec-&gt;next_fmt = __find_specwc (format);</td></tr>
+<tr><th id="402">402</th><td><u>#<span data-ppcond="400">else</span></u></td></tr>
+<tr><th id="403">403</th><td>      <a class="local col0 ref" href="#20spec" title='spec' data-ref="20spec" data-ref-filename="20spec">spec</a>-&gt;<a class="ref field" href="printf-parse.h.html#printf_spec::next_fmt" title='printf_spec::next_fmt' data-ref="printf_spec::next_fmt" data-ref-filename="printf_spec..next_fmt">next_fmt</a> = <a class="ref fn" href="printf-parse.h.html#__find_specmb" title='__find_specmb' data-ref="__find_specmb" data-ref-filename="__find_specmb">__find_specmb</a> (<a class="local col8 ref" href="#18format" title='format' data-ref="18format" data-ref-filename="18format">format</a>);</td></tr>
+<tr><th id="404">404</th><td><u>#<span data-ppcond="400">endif</span></u></td></tr>
+<tr><th id="405">405</th><td>    }</td></tr>
+<tr><th id="406">406</th><td></td></tr>
+<tr><th id="407">407</th><td>  <b>return</b> <a class="local col3 ref" href="#23nargs" title='nargs' data-ref="23nargs" data-ref-filename="23nargs">nargs</a>;</td></tr>
+<tr><th id="408">408</th><td>}</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

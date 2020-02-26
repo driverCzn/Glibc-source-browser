@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>svml_s_sinf8_core_avx2.S source code [glibc_src_2.30/sysdeps/x86_64/fpu/multiarch/svml_s_sinf8_core_avx2.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sysdeps/x86_64/fpu/multiarch/svml_s_sinf8_core_avx2.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.30</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>x86_64</a>/<a href='..'>fpu</a>/<a href='./'>multiarch</a>/<a href='svml_s_sinf8_core_avx2.S.html'>svml_s_sinf8_core_avx2.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Function sinf vectorized with AVX2.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2014-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../svml_s_trig_data.h.html">"svml_s_trig_data.h"</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td>	.text</td></tr>
+<tr><th id="23">23</th><td><a class="macro" href="../../../x86/sysdep.h.html#76" title=".globl _ZGVdN8v_sinf_avx2; .type _ZGVdN8v_sinf_avx2,@function; .align 1&lt;&lt;4; _ZGVdN8v_sinf_avx2: .cfi_startproc; ;" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="_ZGVdN8v_sinf_avx2" title='_ZGVdN8v_sinf_avx2' data-ref="_ZGVdN8v_sinf_avx2" data-ref-filename="_ZGVdN8v_sinf_avx2">_ZGVdN8v_sinf_avx2</dfn></span>)</td></tr>
+<tr><th id="24">24</th><td><i>/*</i></td></tr>
+<tr><th id="25">25</th><td><i>   ALGORITHM DESCRIPTION:</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>   1) Range reduction to [-Pi/2; +Pi/2] interval</i></td></tr>
+<tr><th id="28">28</th><td><i>      a) Grab sign from source argument and save it.</i></td></tr>
+<tr><th id="29">29</th><td><i>      b) Remove sign using AND operation</i></td></tr>
+<tr><th id="30">30</th><td><i>      c) Getting octant Y by 1/Pi multiplication</i></td></tr>
+<tr><th id="31">31</th><td><i>      d) Add "Right Shifter" value</i></td></tr>
+<tr><th id="32">32</th><td><i>      e) Treat obtained value as integer for destination sign setting.</i></td></tr>
+<tr><th id="33">33</th><td><i>         Shift first bit of this value to the last (sign) position</i></td></tr>
+<tr><th id="34">34</th><td><i>      f) Change destination sign if source sign is negative</i></td></tr>
+<tr><th id="35">35</th><td><i>         using XOR operation.</i></td></tr>
+<tr><th id="36">36</th><td><i>      g) Subtract "Right Shifter" value</i></td></tr>
+<tr><th id="37">37</th><td><i>      h) Subtract Y*PI from X argument, where PI divided to 4 parts:</i></td></tr>
+<tr><th id="38">38</th><td><i>         X = X - Y*PI1 - Y*PI2 - Y*PI3 - Y*PI4;</i></td></tr>
+<tr><th id="39">39</th><td><i>   2) Polynomial (minimax for sin within [-Pi/2; +Pi/2] interval)</i></td></tr>
+<tr><th id="40">40</th><td><i>      a) Calculate X^2 = X * X</i></td></tr>
+<tr><th id="41">41</th><td><i>      b) Calculate polynomial:</i></td></tr>
+<tr><th id="42">42</th><td><i>         R = X + X * X^2 * (A3 + x^2 * (A5 + ......</i></td></tr>
+<tr><th id="43">43</th><td><i>   3) Destination sign setting</i></td></tr>
+<tr><th id="44">44</th><td><i>      a) Set shifted destination sign using XOR operation:</i></td></tr>
+<tr><th id="45">45</th><td><i>         R = XOR( R, S );</i></td></tr>
+<tr><th id="46">46</th><td><i> */</i></td></tr>
+<tr><th id="47">47</th><td>        <span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>     <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="48">48</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="49">49</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbp, 0" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbp, <var>0</var>)</td></tr>
+<tr><th id="50">50</th><td>        movq      %rsp, %rbp</td></tr>
+<tr><th id="51">51</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rbp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rbp)</td></tr>
+<tr><th id="52">52</th><td>        andq      $-<var>64</var>, %rsp</td></tr>
+<tr><th id="53">53</th><td>        subq      $<var>448</var>, %rsp</td></tr>
+<tr><th id="54">54</th><td>        movq      __svml_s_trig_data@GOTPCREL(%rip), %rax</td></tr>
+<tr><th id="55">55</th><td>        vmovdqa   %ymm0, %ymm5</td></tr>
+<tr><th id="56">56</th><td>        vmovups <a class="macro" href="../svml_s_trig_data.h.html#31" title="0" data-ref="_M/__sAbsMask">__sAbsMask</a>(%rax), %ymm3</td></tr>
+<tr><th id="57">57</th><td>        vmovups <a class="macro" href="../svml_s_trig_data.h.html#52" title="64*21" data-ref="_M/__sInvPI">__sInvPI</a>(%rax), %ymm7</td></tr>
+<tr><th id="58">58</th><td>        vmovups <a class="macro" href="../svml_s_trig_data.h.html#53" title="64*22" data-ref="_M/__sRShifter">__sRShifter</a>(%rax), %ymm0</td></tr>
+<tr><th id="59">59</th><td>        vmovups <a class="macro" href="../svml_s_trig_data.h.html#42" title="64*11" data-ref="_M/__sPI1_FMA">__sPI1_FMA</a>(%rax), %ymm1</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* b) Remove sign using AND operation */</i></td></tr>
+<tr><th id="62">62</th><td>        vandps    %ymm3, %ymm5, %ymm4</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/*</i></td></tr>
+<tr><th id="65">65</th><td><i>  c) Getting octant Y by 1/Pi multiplication</i></td></tr>
+<tr><th id="66">66</th><td><i>  d) Add "Right Shifter" value</i></td></tr>
+<tr><th id="67">67</th><td><i> */</i></td></tr>
+<tr><th id="68">68</th><td>        vfmadd213ps %ymm0, %ymm4, %ymm7</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><i>/* g) Subtract "Right Shifter" value */</i></td></tr>
+<tr><th id="71">71</th><td>        vsubps    %ymm0, %ymm7, %ymm2</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><i>/*</i></td></tr>
+<tr><th id="74">74</th><td><i>  e) Treat obtained value as integer for destination sign setting.</i></td></tr>
+<tr><th id="75">75</th><td><i>  Shift first bit of this value to the last (sign) position</i></td></tr>
+<tr><th id="76">76</th><td><i> */</i></td></tr>
+<tr><th id="77">77</th><td>        vpslld    $<var>31</var>, %ymm7, %ymm6</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><i>/*</i></td></tr>
+<tr><th id="80">80</th><td><i>  h) Subtract Y*PI from X argument, where PI divided to 4 parts:</i></td></tr>
+<tr><th id="81">81</th><td><i>  X = X - Y*PI1 - Y*PI2 - Y*PI3;</i></td></tr>
+<tr><th id="82">82</th><td><i> */</i></td></tr>
+<tr><th id="83">83</th><td>        vmovdqa   %ymm4, %ymm0</td></tr>
+<tr><th id="84">84</th><td>        vfnmadd231ps %ymm2, %ymm1, %ymm0</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><i>/* Check for large and special values */</i></td></tr>
+<tr><th id="87">87</th><td>        vcmpnle_uqps <a class="macro" href="../svml_s_trig_data.h.html#32" title="64" data-ref="_M/__sRangeReductionVal">__sRangeReductionVal</a>(%rax), %ymm4, %ymm4</td></tr>
+<tr><th id="88">88</th><td>        vfnmadd231ps <a class="macro" href="../svml_s_trig_data.h.html#43" title="64*12" data-ref="_M/__sPI2_FMA">__sPI2_FMA</a>(%rax), %ymm2, %ymm0</td></tr>
+<tr><th id="89">89</th><td>        vfnmadd132ps <a class="macro" href="../svml_s_trig_data.h.html#44" title="64*13" data-ref="_M/__sPI3_FMA">__sPI3_FMA</a>(%rax), %ymm0, %ymm2</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><i>/*</i></td></tr>
+<tr><th id="92">92</th><td><i>  2) Polynomial (minimax for sin within [-Pi/2; +Pi/2] interval)</i></td></tr>
+<tr><th id="93">93</th><td><i>  a) Calculate X^2 = X * X</i></td></tr>
+<tr><th id="94">94</th><td><i>  b) Calculate polynomial:</i></td></tr>
+<tr><th id="95">95</th><td><i>  R = X + X * X^2 * (A3 + x^2 * (A5 + ......</i></td></tr>
+<tr><th id="96">96</th><td><i> */</i></td></tr>
+<tr><th id="97">97</th><td>        vmulps    %ymm2, %ymm2, %ymm1</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/*</i></td></tr>
+<tr><th id="100">100</th><td><i>  f) Change destination sign if source sign is negative</i></td></tr>
+<tr><th id="101">101</th><td><i>  using XOR operation.</i></td></tr>
+<tr><th id="102">102</th><td><i> */</i></td></tr>
+<tr><th id="103">103</th><td>        vandnps   %ymm5, %ymm3, %ymm0</td></tr>
+<tr><th id="104">104</th><td>        vxorps    %ymm6, %ymm2, %ymm3</td></tr>
+<tr><th id="105">105</th><td>        vmovups <a class="macro" href="../svml_s_trig_data.h.html#48" title="64*17" data-ref="_M/__sA9">__sA9</a>(%rax), %ymm2</td></tr>
+<tr><th id="106">106</th><td>        vfmadd213ps <a class="macro" href="../svml_s_trig_data.h.html#47" title="64*16" data-ref="_M/__sA7">__sA7</a>(%rax), %ymm1, %ymm2</td></tr>
+<tr><th id="107">107</th><td>        vfmadd213ps <a class="macro" href="../svml_s_trig_data.h.html#46" title="64*15" data-ref="_M/__sA5">__sA5</a>(%rax), %ymm1, %ymm2</td></tr>
+<tr><th id="108">108</th><td>        vfmadd213ps <a class="macro" href="../svml_s_trig_data.h.html#45" title="64*14" data-ref="_M/__sA3">__sA3</a>(%rax), %ymm1, %ymm2</td></tr>
+<tr><th id="109">109</th><td>        vmulps    %ymm1, %ymm2, %ymm6</td></tr>
+<tr><th id="110">110</th><td>        vfmadd213ps %ymm3, %ymm3, %ymm6</td></tr>
+<tr><th id="111">111</th><td>        vmovmskps %ymm4, %ecx</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i>/*</i></td></tr>
+<tr><th id="114">114</th><td><i>  3) Destination sign setting</i></td></tr>
+<tr><th id="115">115</th><td><i>  a) Set shifted destination sign using XOR operation:</i></td></tr>
+<tr><th id="116">116</th><td><i>  R = XOR( R, S );</i></td></tr>
+<tr><th id="117">117</th><td><i> */</i></td></tr>
+<tr><th id="118">118</th><td>        vxorps    %ymm0, %ymm6, %ymm0</td></tr>
+<tr><th id="119">119</th><td>        testl     %ecx, %ecx</td></tr>
+<tr><th id="120">120</th><td>        jne       .LBL_1_3</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>.LBL_1_2:</td></tr>
+<tr><th id="123">123</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="124">124</th><td>        movq      %rbp, %rsp</td></tr>
+<tr><th id="125">125</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#43" title=".cfi_def_cfa_register %rsp" data-ref="_M/cfi_def_cfa_register">cfi_def_cfa_register</a> (%rsp)</td></tr>
+<tr><th id="126">126</th><td>        popq      %rbp</td></tr>
+<tr><th id="127">127</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="128">128</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %rbp" data-ref="_M/cfi_restore">cfi_restore</a> (%rbp)</td></tr>
+<tr><th id="129">129</th><td>        ret</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>.LBL_1_3:</td></tr>
+<tr><th id="132">132</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="133">133</th><td>        vmovups   %ymm5, <var>320</var>(%rsp)</td></tr>
+<tr><th id="134">134</th><td>        vmovups   %ymm0, <var>384</var>(%rsp)</td></tr>
+<tr><th id="135">135</th><td>        je        .LBL_1_2</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>        xorb      %dl, %dl</td></tr>
+<tr><th id="138">138</th><td>        xorl      %eax, %eax</td></tr>
+<tr><th id="139">139</th><td>        vmovups   %ymm8, <var>224</var>(%rsp)</td></tr>
+<tr><th id="140">140</th><td>        vmovups   %ymm9, <var>192</var>(%rsp)</td></tr>
+<tr><th id="141">141</th><td>        vmovups   %ymm10, <var>160</var>(%rsp)</td></tr>
+<tr><th id="142">142</th><td>        vmovups   %ymm11, <var>128</var>(%rsp)</td></tr>
+<tr><th id="143">143</th><td>        vmovups   %ymm12, <var>96</var>(%rsp)</td></tr>
+<tr><th id="144">144</th><td>        vmovups   %ymm13, <var>64</var>(%rsp)</td></tr>
+<tr><th id="145">145</th><td>        vmovups   %ymm14, <var>32</var>(%rsp)</td></tr>
+<tr><th id="146">146</th><td>        vmovups   %ymm15, (%rsp)</td></tr>
+<tr><th id="147">147</th><td>        movq      %rsi, <var>264</var>(%rsp)</td></tr>
+<tr><th id="148">148</th><td>        movq      %rdi, <var>256</var>(%rsp)</td></tr>
+<tr><th id="149">149</th><td>        movq      %r12, <var>296</var>(%rsp)</td></tr>
+<tr><th id="150">150</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 12, 0x4, 0x13, 0x77, 296 &amp; 0x7F | 0x80, 296 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>12</var>, <var>296</var>)</td></tr>
+<tr><th id="151">151</th><td>        movb      %dl, %r12b</td></tr>
+<tr><th id="152">152</th><td>        movq      %r13, <var>288</var>(%rsp)</td></tr>
+<tr><th id="153">153</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 13, 0x4, 0x13, 0x77, 288 &amp; 0x7F | 0x80, 288 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>13</var>, <var>288</var>)</td></tr>
+<tr><th id="154">154</th><td>        movl      %ecx, %r13d</td></tr>
+<tr><th id="155">155</th><td>        movq      %r14, <var>280</var>(%rsp)</td></tr>
+<tr><th id="156">156</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 14, 0x4, 0x13, 0x77, 280 &amp; 0x7F | 0x80, 280 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>14</var>, <var>280</var>)</td></tr>
+<tr><th id="157">157</th><td>        movl      %eax, %r14d</td></tr>
+<tr><th id="158">158</th><td>        movq      %r15, <var>272</var>(%rsp)</td></tr>
+<tr><th id="159">159</th><td>        <a class="macro" href="../../sysdep.h.html#32" title=".cfi_escape 0x10, 15, 0x4, 0x13, 0x77, 272 &amp; 0x7F | 0x80, 272 &gt;&gt; 7" data-ref="_M/cfi_offset_rel_rsp">cfi_offset_rel_rsp</a> (<var>15</var>, <var>272</var>)</td></tr>
+<tr><th id="160">160</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#53" title=".cfi_remember_state" data-ref="_M/cfi_remember_state">cfi_remember_state</a></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>.LBL_1_6:</td></tr>
+<tr><th id="163">163</th><td>        btl       %r14d, %r13d</td></tr>
+<tr><th id="164">164</th><td>        jc        .LBL_1_12</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>.LBL_1_7:</td></tr>
+<tr><th id="167">167</th><td>        lea       <var>1</var>(%r14), %esi</td></tr>
+<tr><th id="168">168</th><td>        btl       %esi, %r13d</td></tr>
+<tr><th id="169">169</th><td>        jc        .LBL_1_10</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td>.LBL_1_8:</td></tr>
+<tr><th id="172">172</th><td>        incb      %r12b</td></tr>
+<tr><th id="173">173</th><td>        addl      $<var>2</var>, %r14d</td></tr>
+<tr><th id="174">174</th><td>        cmpb      $<var>16</var>, %r12b</td></tr>
+<tr><th id="175">175</th><td>        jb        .LBL_1_6</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>        vmovups   <var>224</var>(%rsp), %ymm8</td></tr>
+<tr><th id="178">178</th><td>        vmovups   <var>192</var>(%rsp), %ymm9</td></tr>
+<tr><th id="179">179</th><td>        vmovups   <var>160</var>(%rsp), %ymm10</td></tr>
+<tr><th id="180">180</th><td>        vmovups   <var>128</var>(%rsp), %ymm11</td></tr>
+<tr><th id="181">181</th><td>        vmovups   <var>96</var>(%rsp), %ymm12</td></tr>
+<tr><th id="182">182</th><td>        vmovups   <var>64</var>(%rsp), %ymm13</td></tr>
+<tr><th id="183">183</th><td>        vmovups   <var>32</var>(%rsp), %ymm14</td></tr>
+<tr><th id="184">184</th><td>        vmovups   (%rsp), %ymm15</td></tr>
+<tr><th id="185">185</th><td>        vmovups   <var>384</var>(%rsp), %ymm0</td></tr>
+<tr><th id="186">186</th><td>        movq      <var>264</var>(%rsp), %rsi</td></tr>
+<tr><th id="187">187</th><td>        movq      <var>256</var>(%rsp), %rdi</td></tr>
+<tr><th id="188">188</th><td>        movq      <var>296</var>(%rsp), %r12</td></tr>
+<tr><th id="189">189</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="190">190</th><td>        movq      <var>288</var>(%rsp), %r13</td></tr>
+<tr><th id="191">191</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="192">192</th><td>        movq      <var>280</var>(%rsp), %r14</td></tr>
+<tr><th id="193">193</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="194">194</th><td>        movq      <var>272</var>(%rsp), %r15</td></tr>
+<tr><th id="195">195</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#50" title=".cfi_restore %r15" data-ref="_M/cfi_restore">cfi_restore</a> (%r15)</td></tr>
+<tr><th id="196">196</th><td>        jmp       .LBL_1_2</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>.LBL_1_10:</td></tr>
+<tr><th id="199">199</th><td>        <a class="macro" href="../../../generic/sysdep.h.html#54" title=".cfi_restore_state" data-ref="_M/cfi_restore_state">cfi_restore_state</a></td></tr>
+<tr><th id="200">200</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="201">201</th><td>        vmovss    <var>324</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="202">202</th><td>        vzeroupper</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="sinf@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sinf)</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>        vmovss    %xmm0, <var>388</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="207">207</th><td>        jmp       .LBL_1_8</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>.LBL_1_12:</td></tr>
+<tr><th id="210">210</th><td>        movzbl    %r12b, %r15d</td></tr>
+<tr><th id="211">211</th><td>        vmovss    <var>320</var>(%rsp,%r15,<var>8</var>), %xmm0</td></tr>
+<tr><th id="212">212</th><td>        vzeroupper</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>        call      <a class="macro" href="../../sysdep.h.html#64" title="sinf@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(sinf)</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>        vmovss    %xmm0, <var>384</var>(%rsp,%r15,<var>8</var>)</td></tr>
+<tr><th id="217">217</th><td>        jmp       .LBL_1_7</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><a class="macro" href="../../../x86/sysdep.h.html#86" title=".cfi_endproc; .size _ZGVdN8v_sinf_avx2,.-_ZGVdN8v_sinf_avx2;" data-ref="_M/END">END</a>(_ZGVdN8v_sinf_avx2)</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

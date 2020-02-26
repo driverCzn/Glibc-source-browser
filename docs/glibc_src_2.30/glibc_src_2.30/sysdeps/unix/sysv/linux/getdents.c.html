@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>getdents.c source code [glibc_src_2.30/sysdeps/unix/sysv/linux/getdents.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sysdeps/unix/sysv/linux/getdents.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.30</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='getdents.c.html'>getdents.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Get directory entries.  Linux non-LFS version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1993-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library.  If not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/dirent.h.html">&lt;dirent.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#<span data-ppcond="21">if</span> !<a class="macro" href="bits/dirent.h.html#56" title="1" data-ref="_M/_DIRENT_MATCHES_DIRENT64">_DIRENT_MATCHES_DIRENT64</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u># include &lt;unistd.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u># include &lt;string.h&gt;</u></td></tr>
+<tr><th id="25">25</th><td><u># include &lt;errno.h&gt;</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u># ifndef DIRENT_SET_DP_INO</u></td></tr>
+<tr><th id="28">28</th><td><u>#  define DIRENT_SET_DP_INO(dp, value) (dp)-&gt;d_ino = (value)</u></td></tr>
+<tr><th id="29">29</th><td><u># endif</u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><i>/* Pack the dirent64 struct down into 32-bit offset/inode fields, and</i></td></tr>
+<tr><th id="32">32</th><td><i>   ensure that no overflow occurs.  */</i></td></tr>
+<tr><th id="33">33</th><td>ssize_t</td></tr>
+<tr><th id="34">34</th><td>__getdents (<em>int</em> fd, <em>void</em> *buf0, size_t nbytes)</td></tr>
+<tr><th id="35">35</th><td>{</td></tr>
+<tr><th id="36">36</th><td>  <em>char</em> *buf = buf0;</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td>  <b>union</b></td></tr>
+<tr><th id="39">39</th><td>  {</td></tr>
+<tr><th id="40">40</th><td>    <i>/* For !_DIRENT_MATCHES_DIRENT64 kernel 'linux_dirent64' has the same</i></td></tr>
+<tr><th id="41">41</th><td><i>       layout of 'struct dirent64'.  */</i></td></tr>
+<tr><th id="42">42</th><td>    <b>struct</b> dirent64 k;</td></tr>
+<tr><th id="43">43</th><td>    <b>struct</b> dirent u;</td></tr>
+<tr><th id="44">44</th><td>    <em>char</em> b[<var>1</var>];</td></tr>
+<tr><th id="45">45</th><td>  } *kbuf = (<em>void</em> *) buf, *outp, *inp;</td></tr>
+<tr><th id="46">46</th><td>  size_t kbytes = nbytes;</td></tr>
+<tr><th id="47">47</th><td>  off64_t last_offset = -<var>1</var>;</td></tr>
+<tr><th id="48">48</th><td>  ssize_t retval;</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><u># define size_diff (offsetof (struct dirent64, d_name) \</u></td></tr>
+<tr><th id="51">51</th><td><u>		    - offsetof (struct dirent, d_name))</u></td></tr>
+<tr><th id="52">52</th><td>  <em>char</em> kbuftmp[<b>sizeof</b> (<b>struct</b> dirent) + size_diff];</td></tr>
+<tr><th id="53">53</th><td>  <b>if</b> (nbytes &lt;= <b>sizeof</b> (<b>struct</b> dirent))</td></tr>
+<tr><th id="54">54</th><td>    kbuf = (<em>void</em>*) kbuftmp;</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  retval = INLINE_SYSCALL_CALL (getdents64, fd, kbuf, kbytes);</td></tr>
+<tr><th id="57">57</th><td>  <b>if</b> (retval == -<var>1</var>)</td></tr>
+<tr><th id="58">58</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* These two pointers might alias the same memory buffer.</i></td></tr>
+<tr><th id="61">61</th><td><i>     Standard C requires that we always use the same type for them,</i></td></tr>
+<tr><th id="62">62</th><td><i>     so we must use the union type.  */</i></td></tr>
+<tr><th id="63">63</th><td>  inp = kbuf;</td></tr>
+<tr><th id="64">64</th><td>  outp = (<em>void</em> *) buf;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <b>while</b> (&amp;inp-&gt;b &lt; &amp;kbuf-&gt;b + retval)</td></tr>
+<tr><th id="67">67</th><td>    {</td></tr>
+<tr><th id="68">68</th><td>      <em>const</em> size_t alignment = <b>_Alignof</b> (<b>struct</b> dirent);</td></tr>
+<tr><th id="69">69</th><td>      <i>/* Since inp-&gt;k.d_reclen is already aligned for the kernel</i></td></tr>
+<tr><th id="70">70</th><td><i>         structure this may compute a value that is bigger</i></td></tr>
+<tr><th id="71">71</th><td><i>         than necessary.  */</i></td></tr>
+<tr><th id="72">72</th><td>      size_t old_reclen = inp-&gt;k.d_reclen;</td></tr>
+<tr><th id="73">73</th><td>      size_t new_reclen = ((old_reclen - size_diff + alignment - <var>1</var>)</td></tr>
+<tr><th id="74">74</th><td>                           &amp; ~(alignment - <var>1</var>));</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>      <i>/* Copy the data out of the old structure into temporary space.</i></td></tr>
+<tr><th id="77">77</th><td><i>         Then copy the name, which may overlap if BUF == KBUF.  */</i></td></tr>
+<tr><th id="78">78</th><td>      <em>const</em> uint64_t d_ino = inp-&gt;k.d_ino;</td></tr>
+<tr><th id="79">79</th><td>      <em>const</em> int64_t d_off = inp-&gt;k.d_off;</td></tr>
+<tr><th id="80">80</th><td>      <em>const</em> uint8_t d_type = inp-&gt;k.d_type;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>      memmove (outp-&gt;u.d_name, inp-&gt;k.d_name,</td></tr>
+<tr><th id="83">83</th><td>               old_reclen - offsetof (<b>struct</b> dirent64, d_name));</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>      <i>/* Now we have copied the data from INP and access only OUTP.  */</i></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>      DIRENT_SET_DP_INO (&amp;outp-&gt;u, d_ino);</td></tr>
+<tr><th id="88">88</th><td>      outp-&gt;u.d_off = d_off;</td></tr>
+<tr><th id="89">89</th><td>      <b>if</b> ((<b>sizeof</b> (outp-&gt;u.d_ino) != <b>sizeof</b> (inp-&gt;k.d_ino)</td></tr>
+<tr><th id="90">90</th><td>           &amp;&amp; outp-&gt;u.d_ino != d_ino)</td></tr>
+<tr><th id="91">91</th><td>          || (<b>sizeof</b> (outp-&gt;u.d_off) != <b>sizeof</b> (inp-&gt;k.d_off)</td></tr>
+<tr><th id="92">92</th><td>              &amp;&amp; outp-&gt;u.d_off != d_off))</td></tr>
+<tr><th id="93">93</th><td>        {</td></tr>
+<tr><th id="94">94</th><td>          <i>/* Overflow.  If there was at least one entry before this one,</i></td></tr>
+<tr><th id="95">95</th><td><i>             return them without error, otherwise signal overflow.  */</i></td></tr>
+<tr><th id="96">96</th><td>          <b>if</b> (last_offset != -<var>1</var>)</td></tr>
+<tr><th id="97">97</th><td>            {</td></tr>
+<tr><th id="98">98</th><td>              __lseek64 (fd, last_offset, SEEK_SET);</td></tr>
+<tr><th id="99">99</th><td>              <b>return</b> outp-&gt;b - buf;</td></tr>
+<tr><th id="100">100</th><td>            }</td></tr>
+<tr><th id="101">101</th><td>	  <b>return</b> INLINE_SYSCALL_ERROR_RETURN_VALUE (EOVERFLOW);</td></tr>
+<tr><th id="102">102</th><td>        }</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td>      last_offset = d_off;</td></tr>
+<tr><th id="105">105</th><td>      outp-&gt;u.d_reclen = new_reclen;</td></tr>
+<tr><th id="106">106</th><td>      outp-&gt;u.d_type = d_type;</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td>      inp = (<em>void</em> *) inp + old_reclen;</td></tr>
+<tr><th id="109">109</th><td>      outp = (<em>void</em> *) outp + new_reclen;</td></tr>
+<tr><th id="110">110</th><td>    }</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>  <b>return</b> outp-&gt;b - buf;</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><u># undef DIRENT_SET_DP_INO</u></td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="21">endif</span> /* _DIRENT_MATCHES_DIRENT64  */</u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

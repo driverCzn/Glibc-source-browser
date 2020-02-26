@@ -1,0 +1,195 @@
+<def f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='217' ll='221' type='int __pthread_rwlock_get_private(pthread_rwlock_t * rwlock)'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='226' u='c' c='__pthread_rwlock_rdunlock'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='332' u='c' c='__pthread_rwlock_rdlock_full'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='416' u='c' c='__pthread_rwlock_rdlock_full'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='454' u='c' c='__pthread_rwlock_rdlock_full'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='529' u='c' c='__pthread_rwlock_wrunlock'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='705' u='c' c='__pthread_rwlock_wrlock_full'/>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='825' u='c' c='__pthread_rwlock_wrlock_full'/>
+<doc f='glibc_src_2.30/nptl/pthread_rwlock_common.c' l='29'>/* A reader--writer lock that fulfills the POSIX requirements (but operations
+   on this lock are not necessarily full barriers, as one may interpret the
+   POSIX requirement about &quot;synchronizing memory&quot;).  All critical sections are
+   in a total order, writers synchronize with prior writers and readers, and
+   readers synchronize with prior writers.
+
+   A thread is allowed to acquire a read lock recursively (i.e., have rdlock
+   critical sections that overlap in sequenced-before) unless the kind of the
+   rwlock is set to PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP.
+
+   This lock is built so that workloads of mostly readers can be executed with
+   low runtime overheads.  This matches that the default kind of the lock is
+   PTHREAD_RWLOCK_PREFER_READER_NP.  Acquiring a read lock requires a single
+   atomic addition if the lock is or was previously acquired by other
+   readers; releasing the lock is a single CAS if there are no concurrent
+   writers.
+   Workloads consisting of mostly writers are of secondary importance.
+   An uncontended write lock acquisition is as fast as for a normal
+   exclusive mutex but writer contention is somewhat more costly due to
+   keeping track of the exact number of writers.  If the rwlock kind requests
+   writers to be preferred (i.e., PTHREAD_RWLOCK_PREFER_WRITER_NP or the
+   no-recursive-readers variant of it), then writer--to--writer lock ownership
+   hand-over is fairly fast and bypasses lock acquisition attempts by readers.
+   The costs of lock ownership transfer between readers and writers vary.  If
+   the program asserts that there are no recursive readers and writers are
+   preferred, then write lock acquisition attempts will block subsequent read
+   lock acquisition attempts, so that new incoming readers do not prolong a
+   phase in which readers have acquired the lock.
+
+   The main components of the rwlock are a writer-only lock that allows only
+   one of the concurrent writers to be the primary writer, and a
+   single-writer-multiple-readers lock that decides between read phases, in
+   which readers have acquired the rwlock, and write phases in which a primary
+   writer or a sequence of different primary writers have acquired the rwlock.
+
+   The single-writer-multiple-readers lock is the central piece of state
+   describing the rwlock and is encoded in the __readers field (see below for
+   a detailed explanation):
+
+   State WP  WL  R   RW  Notes
+   ---------------------------
+   #1    0   0   0   0   Lock is idle (and in a read phase).
+   #2    0   0   &gt;0  0   Readers have acquired the lock.
+   #3    0   1   0   0   Lock is not acquired; a writer will try to start a
+			 write phase.
+   #4    0   1   &gt;0  0   Readers have acquired the lock; a writer is waiting
+			 and explicit hand-over to the writer is required.
+   #4a   0   1   &gt;0  1   Same as #4 except that there are further readers
+			 waiting because the writer is to be preferred.
+   #5    1   0   0   0   Lock is idle (and in a write phase).
+   #6    1   0   &gt;0  0   Write phase; readers will try to start a read phase
+			 (requires explicit hand-over to all readers that
+			 do not start the read phase).
+   #7    1   1   0   0   Lock is acquired by a writer.
+   #8    1   1   &gt;0  0   Lock acquired by a writer and readers are waiting;
+			 explicit hand-over to the readers is required.
+
+   WP (PTHREAD_RWLOCK_WRPHASE) is true if the lock is in a write phase, so
+   potentially acquired by a primary writer.
+   WL (PTHREAD_RWLOCK_WRLOCKED) is true if there is a primary writer (i.e.,
+   the thread that was able to set this bit from false to true).
+   R (all bits in __readers except the number of least-significant bits
+   denoted in PTHREAD_RWLOCK_READER_SHIFT) is the number of readers that have
+   or are trying to acquired the lock.  There may be more readers waiting if
+   writers are preferred and there will be no recursive readers, in which
+   case RW (PTHREAD_RWLOCK_RWAITING) is true in state #4a.
+
+   We want to block using futexes but using __readers as a futex word directly
+   is not a good solution.  First, we want to wait on different conditions
+   such as waiting for a phase change vs. waiting for the primary writer to
+   release the writer-only lock.  Second, the number of readers could change
+   frequently, which would make it likely that a writer&apos;s futex_wait fails
+   frequently too because the expected value does not match the value of
+   __readers anymore.
+   Therefore, we split out the futex words into the __wrphase_futex and
+   __writers_futex fields.  The former tracks the value of the WP bit and is
+   changed after changing WP by the thread that changes WP.  However, because
+   of the POSIX requirements regarding mutex/rwlock destruction (i.e., that
+   destroying a rwlock is allowed as soon as no thread has acquired or will
+   acquire the lock), we have to be careful and hand over lock ownership (via
+   a phase change) carefully to those threads waiting.  Specifically, we must
+   prevent a situation in which we are not quite sure whether we still have
+   to unblock another thread through a change to memory (executing a
+   futex_wake on a former futex word that is now used for something else is
+   fine).
+   The scheme we use for __wrphase_futex is that waiting threads that may
+   use the futex word to block now all have to use the futex word to block; it
+   is not allowed to take the short-cut and spin-wait on __readers because
+   then the waking thread cannot just make one final change to memory to
+   unblock all potentially waiting threads.  If, for example, a reader
+   increments R in states #7 or #8, it has to then block until __wrphase_futex
+   is 0 and it can confirm that the value of 0 was stored by the primary
+   writer; in turn, the primary writer has to change to a read phase too when
+   releasing WL (i.e., to state #2), and it must change __wrphase_futex to 0
+   as the next step.  This ensures that the waiting reader will not be able to
+   acquire, release, and then destroy the lock concurrently with the pending
+   futex unblock operations by the former primary writer.  This scheme is
+   called explicit hand-over in what follows.
+   Note that waiting threads can cancel waiting only if explicit hand-over has
+   not yet started (e.g., if __readers is still in states #7 or #8 in the
+   example above).
+
+   Writers determine the primary writer through WL.  Blocking using futexes
+   is performed using __writers_futex as a futex word; primary writers will
+   enable waiting on this futex by setting it to 1 after they acquired the WL
+   bit and will disable waiting by setting it to 0 before they release WL.
+   This leaves small windows where blocking using futexes is not possible
+   although a primary writer exists, but in turn decreases complexity of the
+   writer--writer synchronization and does not affect correctness.
+   If writers are preferred, writers can hand over WL directly to other
+   waiting writers that registered by incrementing __writers:  If the primary
+   writer can CAS __writers from a non-zero value to the same value with the
+   PTHREAD_RWLOCK_WRHANDOVER bit set, it effectively transfers WL ownership
+   to one of the registered waiting writers and does not reset WL; in turn,
+   a registered writer that can clear PTHREAD_RWLOCK_WRHANDOVER using a CAS
+   then takes over WL.  Note that registered waiting writers can cancel
+   waiting by decrementing __writers, but the last writer to unregister must
+   become the primary writer if PTHREAD_RWLOCK_WRHANDOVER is set.
+   Also note that adding another state/bit to signal potential writer--writer
+   contention (e.g., as done in the normal mutex algorithm) would not be
+   helpful because we would have to conservatively assume that there is in
+   fact no other writer, and wake up readers too.
+
+   To avoid having to call futex_wake when no thread uses __wrphase_futex or
+   __writers_futex, threads will set the PTHREAD_RWLOCK_FUTEX_USED bit in the
+   respective futex words before waiting on it (using a CAS so it will only be
+   set if in a state in which waiting would be possible).  In the case of
+   __writers_futex, we wake only one thread but several threads may share
+   PTHREAD_RWLOCK_FUTEX_USED, so we must assume that there are still others.
+   This is similar to what we do in pthread_mutex_lock.  We do not need to
+   do this for __wrphase_futex because there, we always wake all waiting
+   threads.
+
+   Blocking in the state #4a simply uses __readers as futex word.  This
+   simplifies the algorithm but suffers from some of the drawbacks discussed
+   before, though not to the same extent because R can only decrease in this
+   state, so the number of potentially failing futex_wait attempts will be
+   bounded.  All threads moving from state #4a to another state must wake
+   up threads blocked on the __readers futex.
+
+   The ordering invariants that we have to take care of in the implementation
+   are primarily those necessary for a reader--writer lock; this is rather
+   straightforward and happens during write/read phase switching (potentially
+   through explicit hand-over), and between writers through synchronization
+   involving the PTHREAD_RWLOCK_WRLOCKED or PTHREAD_RWLOCK_WRHANDOVER bits.
+   Additionally, we need to take care that modifications of __writers_futex
+   and __wrphase_futex (e.g., by otherwise unordered readers) take place in
+   the writer critical sections or read/write phases, respectively, and that
+   explicit hand-over observes stores from the previous phase.  How this is
+   done is explained in more detail in comments in the code.
+
+   Many of the accesses to the futex words just need relaxed MO.  This is
+   possible because we essentially drive both the core rwlock synchronization
+   and the futex synchronization in parallel.  For example, an unlock will
+   unlock the rwlock and take part in the futex synchronization (using
+   PTHREAD_RWLOCK_FUTEX_USED, see above); even if they are not tightly
+   ordered in some way, the futex synchronization ensures that there are no
+   lost wake-ups, and woken threads will then eventually see the most recent
+   state of the rwlock.  IOW, waiting threads will always be woken up, while
+   not being able to wait using futexes (which can happen) is harmless; in
+   turn, this means that waiting threads don&apos;t need special ordering wrt.
+   waking threads.
+
+   The futex synchronization consists of the three-state futex word:
+   (1) cannot block on it, (2) can block on it, and (3) there might be a
+   thread blocked on it (i.e., with PTHREAD_RWLOCK_FUTEX_USED set).
+   Relaxed-MO atomic read-modify-write operations are sufficient to maintain
+   this (e.g., using a CAS to go from (2) to (3) but not from (1) to (3)),
+   but we need ordering of the futex word modifications by the waking threads
+   so that they collectively make correct state changes between (1)-(3).
+   The futex-internal synchronization (i.e., the conceptual critical sections
+   around futex operations in the kernel) then ensures that even an
+   unconstrained load (i.e., relaxed MO) inside of futex_wait will not lead to
+   lost wake-ups because either the waiting thread will see the change from
+   (3) to (1) when a futex_wake came first, or this futex_wake will wake this
+   waiting thread because the waiting thread came first.
+
+
+   POSIX allows but does not require rwlock acquisitions to be a cancellation
+   point.  We do not support cancellation.
+
+   TODO We do not try to elide any read or write lock acquisitions currently.
+   While this would be possible, it is unclear whether HTM performance is
+   currently predictable enough and our runtime tuning is good enough at
+   deciding when to use elision so that enabling it would lead to consistently
+   better performance.  */</doc>
+<use f='glibc_src_2.30/nptl/pthread_rwlock_tryrdlock.c' l='110' u='c' c='__pthread_rwlock_tryrdlock'/>

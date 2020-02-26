@@ -1,0 +1,366 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>tls.h source code [glibc_src_2.30/sysdeps/x86_64/nptl/tls.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sysdeps/x86_64/nptl/tls.h'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.30</a>/<a href='../..'>sysdeps</a>/<a href='..'>x86_64</a>/<a href='./'>nptl</a>/<a href='tls.h.html'>tls.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Definition for thread-local data handling.  nptl/x86_64 version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2002-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifndef</span> <span class="macro" data-ref="_M/_TLS_H">_TLS_H</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/_TLS_H" data-ref="_M/_TLS_H">_TLS_H</dfn>	1</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="22">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLER__">__ASSEMBLER__</span></u></td></tr>
+<tr><th id="23">23</th><td><u># include <a href="../../unix/sysv/linux/x86/include/asm/prctl.h.html">&lt;asm/prctl.h&gt;</a>	/* For ARCH_SET_FS.  */</u></td></tr>
+<tr><th id="24">24</th><td><u># include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="25">25</th><td><u># include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="26">26</th><td><u># include <a href="../../../include/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u># include <a href="../../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u># include <a href="../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u># include <a href="../../../include/libc-pointer-arith.h.html">&lt;libc-pointer-arith.h&gt;</a> /* For cast_to_integer.  */</u></td></tr>
+<tr><th id="30">30</th><td><u># include <a href="../../unix/sysv/linux/x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u># include <a href="../../generic/dl-dtv.h.html">&lt;dl-dtv.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* Replacement type for __m128 since this file is included by ld.so,</i></td></tr>
+<tr><th id="34">34</th><td><i>   which is compiled with -mno-sse.  It must not change the alignment</i></td></tr>
+<tr><th id="35">35</th><td><i>   of rtld_savespace_sse.  */</i></td></tr>
+<tr><th id="36">36</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="37">37</th><td>{</td></tr>
+<tr><th id="38">38</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::i" title='(anonymous struct)::i' data-ref="(anonymous)::i" data-ref-filename="(anonymous)..i">i</dfn>[<var>4</var>];</td></tr>
+<tr><th id="39">39</th><td>} <dfn class="typedef" id="__128bits" title='__128bits' data-type='struct __128bits' data-ref="__128bits" data-ref-filename="__128bits">__128bits</dfn>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><b>typedef</b> <b>struct</b></td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>  <em>void</em> *<dfn class="decl field" id="(anonymous)::tcb" title='(anonymous struct)::tcb' data-ref="(anonymous)::tcb" data-ref-filename="(anonymous)..tcb">tcb</dfn>;		<i>/* Pointer to the TCB.  Not necessarily the</i></td></tr>
+<tr><th id="45">45</th><td><i>			   thread descriptor used by libpthread.  */</i></td></tr>
+<tr><th id="46">46</th><td>  <a class="typedef" href="../../generic/dl-dtv.h.html#dtv_t" title='dtv_t' data-type='union dtv' data-ref="dtv_t" data-ref-filename="dtv_t">dtv_t</a> *<dfn class="decl field" id="(anonymous)::dtv" title='(anonymous struct)::dtv' data-ref="(anonymous)::dtv" data-ref-filename="(anonymous)..dtv">dtv</dfn>;</td></tr>
+<tr><th id="47">47</th><td>  <em>void</em> *<dfn class="decl field" id="(anonymous)::self" title='(anonymous struct)::self' data-ref="(anonymous)::self" data-ref-filename="(anonymous)..self">self</dfn>;		<i>/* Pointer to the thread descriptor.  */</i></td></tr>
+<tr><th id="48">48</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::multiple_threads" title='(anonymous struct)::multiple_threads' data-ref="(anonymous)::multiple_threads" data-ref-filename="(anonymous)..multiple_threads">multiple_threads</dfn>;</td></tr>
+<tr><th id="49">49</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::gscope_flag" title='(anonymous struct)::gscope_flag' data-ref="(anonymous)::gscope_flag" data-ref-filename="(anonymous)..gscope_flag">gscope_flag</dfn>;</td></tr>
+<tr><th id="50">50</th><td>  <a class="typedef" href="../../../stdlib/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="decl field" id="(anonymous)::sysinfo" title='(anonymous struct)::sysinfo' data-ref="(anonymous)::sysinfo" data-ref-filename="(anonymous)..sysinfo">sysinfo</dfn>;</td></tr>
+<tr><th id="51">51</th><td>  <a class="typedef" href="../../../stdlib/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="decl field" id="(anonymous)::stack_guard" title='(anonymous struct)::stack_guard' data-ref="(anonymous)::stack_guard" data-ref-filename="(anonymous)..stack_guard">stack_guard</dfn>;</td></tr>
+<tr><th id="52">52</th><td>  <a class="typedef" href="../../../stdlib/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="decl field" id="(anonymous)::pointer_guard" title='(anonymous struct)::pointer_guard' data-ref="(anonymous)::pointer_guard" data-ref-filename="(anonymous)..pointer_guard">pointer_guard</dfn>;</td></tr>
+<tr><th id="53">53</th><td>  <em>unsigned</em> <em>long</em> <em>int</em> <dfn class="decl field" id="(anonymous)::vgetcpu_cache" title='(anonymous struct)::vgetcpu_cache' data-ref="(anonymous)::vgetcpu_cache" data-ref-filename="(anonymous)..vgetcpu_cache">vgetcpu_cache</dfn>[<var>2</var>];</td></tr>
+<tr><th id="54">54</th><td>  <i>/* Bit 0: X86_FEATURE_1_IBT.</i></td></tr>
+<tr><th id="55">55</th><td><i>     Bit 1: X86_FEATURE_1_SHSTK.</i></td></tr>
+<tr><th id="56">56</th><td><i>   */</i></td></tr>
+<tr><th id="57">57</th><td>  <em>unsigned</em> <em>int</em> <dfn class="decl field" id="(anonymous)::feature_1" title='(anonymous struct)::feature_1' data-ref="(anonymous)::feature_1" data-ref-filename="(anonymous)..feature_1">feature_1</dfn>;</td></tr>
+<tr><th id="58">58</th><td>  <em>int</em> <dfn class="decl field" id="(anonymous)::__glibc_unused1" title='(anonymous struct)::__glibc_unused1' data-ref="(anonymous)::__glibc_unused1" data-ref-filename="(anonymous)..__glibc_unused1">__glibc_unused1</dfn>;</td></tr>
+<tr><th id="59">59</th><td>  <i>/* Reservation of some values for the TM ABI.  */</i></td></tr>
+<tr><th id="60">60</th><td>  <em>void</em> *<dfn class="decl field" id="(anonymous)::__private_tm" title='(anonymous struct)::__private_tm' data-ref="(anonymous)::__private_tm" data-ref-filename="(anonymous)..__private_tm">__private_tm</dfn>[<var>4</var>];</td></tr>
+<tr><th id="61">61</th><td>  <i>/* GCC split stack support.  */</i></td></tr>
+<tr><th id="62">62</th><td>  <em>void</em> *<dfn class="decl field" id="(anonymous)::__private_ss" title='(anonymous struct)::__private_ss' data-ref="(anonymous)::__private_ss" data-ref-filename="(anonymous)..__private_ss">__private_ss</dfn>;</td></tr>
+<tr><th id="63">63</th><td>  <i>/* The lowest address of shadow stack,  */</i></td></tr>
+<tr><th id="64">64</th><td>  <em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> <dfn class="decl field" id="(anonymous)::ssp_base" title='(anonymous struct)::ssp_base' data-ref="(anonymous)::ssp_base" data-ref-filename="(anonymous)..ssp_base">ssp_base</dfn>;</td></tr>
+<tr><th id="65">65</th><td>  <i>/* Must be kept even if it is no longer used by glibc since programs,</i></td></tr>
+<tr><th id="66">66</th><td><i>     like AddressSanitizer, depend on the size of tcbhead_t.  */</i></td></tr>
+<tr><th id="67">67</th><td>  <a class="typedef" href="#__128bits" title='__128bits' data-type='struct __128bits' data-ref="__128bits" data-ref-filename="__128bits">__128bits</a> <dfn class="decl field" id="(anonymous)::__glibc_unused2" title='(anonymous struct)::__glibc_unused2' data-ref="(anonymous)::__glibc_unused2" data-ref-filename="(anonymous)..__glibc_unused2">__glibc_unused2</dfn>[<var>8</var>][<var>4</var>] <b>__attribute__</b> ((aligned (<var>32</var>)));</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  <em>void</em> *<dfn class="decl field" id="(anonymous)::__padding" title='(anonymous struct)::__padding' data-ref="(anonymous)::__padding" data-ref-filename="(anonymous)..__padding">__padding</dfn>[<var>8</var>];</td></tr>
+<tr><th id="70">70</th><td>} <dfn class="typedef" id="tcbhead_t" title='tcbhead_t' data-type='struct tcbhead_t' data-ref="tcbhead_t" data-ref-filename="tcbhead_t">tcbhead_t</dfn>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><u># <span data-ppcond="72">ifdef</span> <span class="macro" data-ref="_M/__ILP32__">__ILP32__</span></u></td></tr>
+<tr><th id="73">73</th><td><i>/* morestack.S in libgcc uses offset 0x40 to access __private_ss,   */</i></td></tr>
+<tr><th id="74">74</th><td><b>_Static_assert</b> (offsetof (tcbhead_t, __private_ss) == <var>0x40</var>,</td></tr>
+<tr><th id="75">75</th><td>		<q>"offset of __private_ss != 0x40"</q>);</td></tr>
+<tr><th id="76">76</th><td><i>/* NB: ssp_base used to be "long int __glibc_reserved2", which was</i></td></tr>
+<tr><th id="77">77</th><td><i>   changed from 32 bits to 64 bits.  Make sure that the offset of the</i></td></tr>
+<tr><th id="78">78</th><td><i>   next field, __glibc_unused2, is unchanged.  */</i></td></tr>
+<tr><th id="79">79</th><td><b>_Static_assert</b> (offsetof (tcbhead_t, __glibc_unused2) == <var>0x60</var>,</td></tr>
+<tr><th id="80">80</th><td>		<q>"offset of __glibc_unused2 != 0x60"</q>);</td></tr>
+<tr><th id="81">81</th><td><u># <span data-ppcond="72">else</span></u></td></tr>
+<tr><th id="82">82</th><td><i>/* morestack.S in libgcc uses offset 0x70 to access __private_ss,   */</i></td></tr>
+<tr><th id="83">83</th><td><b>_Static_assert</b> (<span class="macro" title="__builtin_offsetof(tcbhead_t, __private_ss)" data-ref="_M/offsetof">offsetof</span> (<a class="typedef" href="#tcbhead_t" title='tcbhead_t' data-type='struct tcbhead_t' data-ref="tcbhead_t" data-ref-filename="tcbhead_t">tcbhead_t</a>, __private_ss) == <var>0x70</var>,</td></tr>
+<tr><th id="84">84</th><td>		<q>"offset of __private_ss != 0x70"</q>);</td></tr>
+<tr><th id="85">85</th><td><b>_Static_assert</b> (<span class="macro" title="__builtin_offsetof(tcbhead_t, __glibc_unused2)" data-ref="_M/offsetof">offsetof</span> (<a class="typedef" href="#tcbhead_t" title='tcbhead_t' data-type='struct tcbhead_t' data-ref="tcbhead_t" data-ref-filename="tcbhead_t">tcbhead_t</a>, __glibc_unused2) == <var>0x80</var>,</td></tr>
+<tr><th id="86">86</th><td>		<q>"offset of __glibc_unused2 != 0x80"</q>);</td></tr>
+<tr><th id="87">87</th><td><u># <span data-ppcond="72">endif</span></u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><u>#<span data-ppcond="22">else</span> /* __ASSEMBLER__ */</u></td></tr>
+<tr><th id="90">90</th><td><u># include &lt;tcb-offsets.h&gt;</u></td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="22">endif</span></u></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><i>/* Alignment requirement for the stack.  */</i></td></tr>
+<tr><th id="95">95</th><td><u>#define <dfn class="macro" id="_M/STACK_ALIGN" data-ref="_M/STACK_ALIGN">STACK_ALIGN</dfn>	16</u></td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u>#<span data-ppcond="98">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLER__">__ASSEMBLER__</span></u></td></tr>
+<tr><th id="99">99</th><td><i>/* Get system call information.  */</i></td></tr>
+<tr><th id="100">100</th><td><u># include <a href="../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="102">ifndef</span> <span class="macro" data-ref="_M/LOCK_PREFIX">LOCK_PREFIX</span></u></td></tr>
+<tr><th id="103">103</th><td><u># <span data-ppcond="103">ifdef</span> <span class="macro" data-ref="_M/UP">UP</span></u></td></tr>
+<tr><th id="104">104</th><td><u>#  define LOCK_PREFIX	/* nothing */</u></td></tr>
+<tr><th id="105">105</th><td><u># <span data-ppcond="103">else</span></u></td></tr>
+<tr><th id="106">106</th><td><u>#  define <dfn class="macro" id="_M/LOCK_PREFIX" data-ref="_M/LOCK_PREFIX">LOCK_PREFIX</dfn>	"lock;"</u></td></tr>
+<tr><th id="107">107</th><td><u># <span data-ppcond="103">endif</span></u></td></tr>
+<tr><th id="108">108</th><td><u>#<span data-ppcond="102">endif</span></u></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><i>/* This is the size of the initial TCB.  Can't be just sizeof (tcbhead_t),</i></td></tr>
+<tr><th id="111">111</th><td><i>   because NPTL getpid, __libc_alloca_cutoff etc. need (almost) the whole</i></td></tr>
+<tr><th id="112">112</th><td><i>   struct pthread even when not linked with -lpthread.  */</i></td></tr>
+<tr><th id="113">113</th><td><u># define <dfn class="macro" id="_M/TLS_INIT_TCB_SIZE" data-ref="_M/TLS_INIT_TCB_SIZE">TLS_INIT_TCB_SIZE</dfn> sizeof (struct pthread)</u></td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><i>/* Alignment requirements for the initial TCB.  */</i></td></tr>
+<tr><th id="116">116</th><td><u># define <dfn class="macro" id="_M/TLS_INIT_TCB_ALIGN" data-ref="_M/TLS_INIT_TCB_ALIGN">TLS_INIT_TCB_ALIGN</dfn> __alignof__ (struct pthread)</u></td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td><i>/* This is the size of the TCB.  */</i></td></tr>
+<tr><th id="119">119</th><td><u># define <dfn class="macro" id="_M/TLS_TCB_SIZE" data-ref="_M/TLS_TCB_SIZE">TLS_TCB_SIZE</dfn> sizeof (struct pthread)</u></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><i>/* Alignment requirements for the TCB.  */</i></td></tr>
+<tr><th id="122">122</th><td><u># define <dfn class="macro" id="_M/TLS_TCB_ALIGN" data-ref="_M/TLS_TCB_ALIGN">TLS_TCB_ALIGN</dfn> __alignof__ (struct pthread)</u></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>/* The TCB can have any size and the memory following the address the</i></td></tr>
+<tr><th id="125">125</th><td><i>   thread pointer points to is unspecified.  Allocate the TCB there.  */</i></td></tr>
+<tr><th id="126">126</th><td><u># define <dfn class="macro" id="_M/TLS_TCB_AT_TP" data-ref="_M/TLS_TCB_AT_TP">TLS_TCB_AT_TP</dfn>	1</u></td></tr>
+<tr><th id="127">127</th><td><u># define <dfn class="macro" id="_M/TLS_DTV_AT_TP" data-ref="_M/TLS_DTV_AT_TP">TLS_DTV_AT_TP</dfn>	0</u></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><i>/* Get the thread descriptor definition.  */</i></td></tr>
+<tr><th id="130">130</th><td><u># include <a href="../../../nptl/descr.h.html">&lt;nptl/descr.h&gt;</a></u></td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><i>/* Install the dtv pointer.  The pointer passed is to the element with</i></td></tr>
+<tr><th id="134">134</th><td><i>   index -1 which contain the length.  */</i></td></tr>
+<tr><th id="135">135</th><td><u># define <dfn class="macro" id="_M/INSTALL_DTV" data-ref="_M/INSTALL_DTV">INSTALL_DTV</dfn>(descr, dtvp) \</u></td></tr>
+<tr><th id="136">136</th><td><u>  ((tcbhead_t *) (descr))-&gt;dtv = (dtvp) + 1</u></td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><i>/* Install new dtv for current thread.  */</i></td></tr>
+<tr><th id="139">139</th><td><u># define <dfn class="macro" id="_M/INSTALL_NEW_DTV" data-ref="_M/INSTALL_NEW_DTV">INSTALL_NEW_DTV</dfn>(dtvp) \</u></td></tr>
+<tr><th id="140">140</th><td><u>  ({ struct pthread *__pd;						      \</u></td></tr>
+<tr><th id="141">141</th><td><u>     THREAD_SETMEM (__pd, header.dtv, (dtvp)); })</u></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i>/* Return dtv of given thread descriptor.  */</i></td></tr>
+<tr><th id="144">144</th><td><u># define <dfn class="macro" id="_M/GET_DTV" data-ref="_M/GET_DTV">GET_DTV</dfn>(descr) \</u></td></tr>
+<tr><th id="145">145</th><td><u>  (((tcbhead_t *) (descr))-&gt;dtv)</u></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><i>/* Code to initially initialize the thread pointer.  This might need</i></td></tr>
+<tr><th id="149">149</th><td><i>   special attention since 'errno' is not yet available and if the</i></td></tr>
+<tr><th id="150">150</th><td><i>   operation can cause a failure 'errno' must not be touched.</i></td></tr>
+<tr><th id="151">151</th><td><i></i></td></tr>
+<tr><th id="152">152</th><td><i>   We have to make the syscall for both uses of the macro since the</i></td></tr>
+<tr><th id="153">153</th><td><i>   address might be (and probably is) different.  */</i></td></tr>
+<tr><th id="154">154</th><td><u># define <dfn class="macro" id="_M/TLS_INIT_TP" data-ref="_M/TLS_INIT_TP">TLS_INIT_TP</dfn>(thrdescr) \</u></td></tr>
+<tr><th id="155">155</th><td><u>  ({ void *_thrdescr = (thrdescr);					      \</u></td></tr>
+<tr><th id="156">156</th><td><u>     tcbhead_t *_head = _thrdescr;					      \</u></td></tr>
+<tr><th id="157">157</th><td><u>     int _result;							      \</u></td></tr>
+<tr><th id="158">158</th><td><u>									      \</u></td></tr>
+<tr><th id="159">159</th><td><u>     _head-&gt;tcb = _thrdescr;						      \</u></td></tr>
+<tr><th id="160">160</th><td><u>     /* For now the thread descriptor is at the same address.  */	      \</u></td></tr>
+<tr><th id="161">161</th><td><u>     _head-&gt;self = _thrdescr;						      \</u></td></tr>
+<tr><th id="162">162</th><td><u>									      \</u></td></tr>
+<tr><th id="163">163</th><td><u>     /* It is a simple syscall to set the %fs value for the thread.  */	      \</u></td></tr>
+<tr><th id="164">164</th><td><u>     asm volatile ("syscall"						      \</u></td></tr>
+<tr><th id="165">165</th><td><u>		   : "=a" (_result)					      \</u></td></tr>
+<tr><th id="166">166</th><td><u>		   : "0" ((unsigned long int) __NR_arch_prctl),		      \</u></td></tr>
+<tr><th id="167">167</th><td><u>		     "D" ((unsigned long int) ARCH_SET_FS),		      \</u></td></tr>
+<tr><th id="168">168</th><td><u>		     "S" (_thrdescr)					      \</u></td></tr>
+<tr><th id="169">169</th><td><u>		   : "memory", "cc", "r11", "cx");			      \</u></td></tr>
+<tr><th id="170">170</th><td><u>									      \</u></td></tr>
+<tr><th id="171">171</th><td><u>    _result ? "cannot set %fs base address for thread-local storage" : 0;     \</u></td></tr>
+<tr><th id="172">172</th><td><u>  })</u></td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><u># define <dfn class="macro" id="_M/TLS_DEFINE_INIT_TP" data-ref="_M/TLS_DEFINE_INIT_TP">TLS_DEFINE_INIT_TP</dfn>(tp, pd) void *tp = (pd)</u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/* Return the address of the dtv for the current thread.  */</i></td></tr>
+<tr><th id="178">178</th><td><u># define <dfn class="macro" id="_M/THREAD_DTV" data-ref="_M/THREAD_DTV">THREAD_DTV</dfn>() \</u></td></tr>
+<tr><th id="179">179</th><td><u>  ({ struct pthread *__pd;						      \</u></td></tr>
+<tr><th id="180">180</th><td><u>     THREAD_GETMEM (__pd, header.dtv); })</u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><i>/* Return the thread descriptor for the current thread.</i></td></tr>
+<tr><th id="184">184</th><td><i></i></td></tr>
+<tr><th id="185">185</th><td><i>   The contained asm must *not* be marked volatile since otherwise</i></td></tr>
+<tr><th id="186">186</th><td><i>   assignments like</i></td></tr>
+<tr><th id="187">187</th><td><i>	pthread_descr self = thread_self();</i></td></tr>
+<tr><th id="188">188</th><td><i>   do not get optimized away.  */</i></td></tr>
+<tr><th id="189">189</th><td><u># define <dfn class="macro" id="_M/THREAD_SELF" data-ref="_M/THREAD_SELF">THREAD_SELF</dfn> \</u></td></tr>
+<tr><th id="190">190</th><td><u>  ({ struct pthread *__self;						      \</u></td></tr>
+<tr><th id="191">191</th><td><u>     asm ("mov %%fs:%c1,%0" : "=r" (__self)				      \</u></td></tr>
+<tr><th id="192">192</th><td><u>	  : "i" (offsetof (struct pthread, header.self)));	 	      \</u></td></tr>
+<tr><th id="193">193</th><td><u>     __self;})</u></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><i>/* Magic for libthread_db to know how to do THREAD_SELF.  */</i></td></tr>
+<tr><th id="196">196</th><td><u># define <dfn class="macro" id="_M/DB_THREAD_SELF_INCLUDE" data-ref="_M/DB_THREAD_SELF_INCLUDE">DB_THREAD_SELF_INCLUDE</dfn>  &lt;sys/reg.h&gt; /* For the FS constant.  */</u></td></tr>
+<tr><th id="197">197</th><td><u># define <dfn class="macro" id="_M/DB_THREAD_SELF" data-ref="_M/DB_THREAD_SELF">DB_THREAD_SELF</dfn> CONST_THREAD_AREA (64, FS)</u></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i>/* Read member of the thread descriptor directly.  */</i></td></tr>
+<tr><th id="200">200</th><td><u># define <dfn class="macro" id="_M/THREAD_GETMEM" data-ref="_M/THREAD_GETMEM">THREAD_GETMEM</dfn>(descr, member) \</u></td></tr>
+<tr><th id="201">201</th><td><u>  ({ __typeof (descr-&gt;member) __value;					      \</u></td></tr>
+<tr><th id="202">202</th><td><u>     if (sizeof (__value) == 1)						      \</u></td></tr>
+<tr><th id="203">203</th><td><u>       asm volatile ("movb %%fs:%P2,%b0"				      \</u></td></tr>
+<tr><th id="204">204</th><td><u>		     : "=q" (__value)					      \</u></td></tr>
+<tr><th id="205">205</th><td><u>		     : "0" (0), "i" (offsetof (struct pthread, member)));     \</u></td></tr>
+<tr><th id="206">206</th><td><u>     else if (sizeof (__value) == 4)					      \</u></td></tr>
+<tr><th id="207">207</th><td><u>       asm volatile ("movl %%fs:%P1,%0"					      \</u></td></tr>
+<tr><th id="208">208</th><td><u>		     : "=r" (__value)					      \</u></td></tr>
+<tr><th id="209">209</th><td><u>		     : "i" (offsetof (struct pthread, member)));	      \</u></td></tr>
+<tr><th id="210">210</th><td><u>     else								      \</u></td></tr>
+<tr><th id="211">211</th><td><u>       {								      \</u></td></tr>
+<tr><th id="212">212</th><td><u>	 if (sizeof (__value) != 8)					      \</u></td></tr>
+<tr><th id="213">213</th><td><u>	   /* There should not be any value with a size other than 1,	      \</u></td></tr>
+<tr><th id="214">214</th><td><u>	      4 or 8.  */						      \</u></td></tr>
+<tr><th id="215">215</th><td><u>	   abort ();							      \</u></td></tr>
+<tr><th id="216">216</th><td><u>									      \</u></td></tr>
+<tr><th id="217">217</th><td><u>	 asm volatile ("movq %%fs:%P1,%q0"				      \</u></td></tr>
+<tr><th id="218">218</th><td><u>		       : "=r" (__value)					      \</u></td></tr>
+<tr><th id="219">219</th><td><u>		       : "i" (offsetof (struct pthread, member)));	      \</u></td></tr>
+<tr><th id="220">220</th><td><u>       }								      \</u></td></tr>
+<tr><th id="221">221</th><td><u>     __value; })</u></td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><i>/* Same as THREAD_GETMEM, but the member offset can be non-constant.  */</i></td></tr>
+<tr><th id="225">225</th><td><u># define <dfn class="macro" id="_M/THREAD_GETMEM_NC" data-ref="_M/THREAD_GETMEM_NC">THREAD_GETMEM_NC</dfn>(descr, member, idx) \</u></td></tr>
+<tr><th id="226">226</th><td><u>  ({ __typeof (descr-&gt;member[0]) __value;				      \</u></td></tr>
+<tr><th id="227">227</th><td><u>     if (sizeof (__value) == 1)						      \</u></td></tr>
+<tr><th id="228">228</th><td><u>       asm volatile ("movb %%fs:%P2(%q3),%b0"				      \</u></td></tr>
+<tr><th id="229">229</th><td><u>		     : "=q" (__value)					      \</u></td></tr>
+<tr><th id="230">230</th><td><u>		     : "0" (0), "i" (offsetof (struct pthread, member[0])),   \</u></td></tr>
+<tr><th id="231">231</th><td><u>		       "r" (idx));					      \</u></td></tr>
+<tr><th id="232">232</th><td><u>     else if (sizeof (__value) == 4)					      \</u></td></tr>
+<tr><th id="233">233</th><td><u>       asm volatile ("movl %%fs:%P1(,%q2,4),%0"				      \</u></td></tr>
+<tr><th id="234">234</th><td><u>		     : "=r" (__value)					      \</u></td></tr>
+<tr><th id="235">235</th><td><u>		     : "i" (offsetof (struct pthread, member[0])), "r" (idx));\</u></td></tr>
+<tr><th id="236">236</th><td><u>     else								      \</u></td></tr>
+<tr><th id="237">237</th><td><u>       {								      \</u></td></tr>
+<tr><th id="238">238</th><td><u>	 if (sizeof (__value) != 8)					      \</u></td></tr>
+<tr><th id="239">239</th><td><u>	   /* There should not be any value with a size other than 1,	      \</u></td></tr>
+<tr><th id="240">240</th><td><u>	      4 or 8.  */						      \</u></td></tr>
+<tr><th id="241">241</th><td><u>	   abort ();							      \</u></td></tr>
+<tr><th id="242">242</th><td><u>									      \</u></td></tr>
+<tr><th id="243">243</th><td><u>	 asm volatile ("movq %%fs:%P1(,%q2,8),%q0"			      \</u></td></tr>
+<tr><th id="244">244</th><td><u>		       : "=r" (__value)					      \</u></td></tr>
+<tr><th id="245">245</th><td><u>		       : "i" (offsetof (struct pthread, member[0])),	      \</u></td></tr>
+<tr><th id="246">246</th><td><u>			 "r" (idx));					      \</u></td></tr>
+<tr><th id="247">247</th><td><u>       }								      \</u></td></tr>
+<tr><th id="248">248</th><td><u>     __value; })</u></td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td><i>/* Loading addresses of objects on x86-64 needs to be treated special</i></td></tr>
+<tr><th id="252">252</th><td><i>   when generating PIC code.  */</i></td></tr>
+<tr><th id="253">253</th><td><u>#<span data-ppcond="253">ifdef</span> <span class="macro" data-ref="_M/__pic__">__pic__</span></u></td></tr>
+<tr><th id="254">254</th><td><u># define <dfn class="macro" id="_M/IMM_MODE" data-ref="_M/IMM_MODE">IMM_MODE</dfn> "nr"</u></td></tr>
+<tr><th id="255">255</th><td><u>#<span data-ppcond="253">else</span></u></td></tr>
+<tr><th id="256">256</th><td><u># define IMM_MODE "ir"</u></td></tr>
+<tr><th id="257">257</th><td><u>#<span data-ppcond="253">endif</span></u></td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><i>/* Set member of the thread descriptor directly.  */</i></td></tr>
+<tr><th id="261">261</th><td><u># define <dfn class="macro" id="_M/THREAD_SETMEM" data-ref="_M/THREAD_SETMEM">THREAD_SETMEM</dfn>(descr, member, value) \</u></td></tr>
+<tr><th id="262">262</th><td><u>  ({ if (sizeof (descr-&gt;member) == 1)					      \</u></td></tr>
+<tr><th id="263">263</th><td><u>       asm volatile ("movb %b0,%%fs:%P1" :				      \</u></td></tr>
+<tr><th id="264">264</th><td><u>		     : "iq" (value),					      \</u></td></tr>
+<tr><th id="265">265</th><td><u>		       "i" (offsetof (struct pthread, member)));	      \</u></td></tr>
+<tr><th id="266">266</th><td><u>     else if (sizeof (descr-&gt;member) == 4)				      \</u></td></tr>
+<tr><th id="267">267</th><td><u>       asm volatile ("movl %0,%%fs:%P1" :				      \</u></td></tr>
+<tr><th id="268">268</th><td><u>		     : IMM_MODE (value),				      \</u></td></tr>
+<tr><th id="269">269</th><td><u>		       "i" (offsetof (struct pthread, member)));	      \</u></td></tr>
+<tr><th id="270">270</th><td><u>     else								      \</u></td></tr>
+<tr><th id="271">271</th><td><u>       {								      \</u></td></tr>
+<tr><th id="272">272</th><td><u>	 if (sizeof (descr-&gt;member) != 8)				      \</u></td></tr>
+<tr><th id="273">273</th><td><u>	   /* There should not be any value with a size other than 1,	      \</u></td></tr>
+<tr><th id="274">274</th><td><u>	      4 or 8.  */						      \</u></td></tr>
+<tr><th id="275">275</th><td><u>	   abort ();							      \</u></td></tr>
+<tr><th id="276">276</th><td><u>									      \</u></td></tr>
+<tr><th id="277">277</th><td><u>	 asm volatile ("movq %q0,%%fs:%P1" :				      \</u></td></tr>
+<tr><th id="278">278</th><td><u>		       : IMM_MODE ((uint64_t) cast_to_integer (value)),	      \</u></td></tr>
+<tr><th id="279">279</th><td><u>			 "i" (offsetof (struct pthread, member)));	      \</u></td></tr>
+<tr><th id="280">280</th><td><u>       }})</u></td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td><i>/* Same as THREAD_SETMEM, but the member offset can be non-constant.  */</i></td></tr>
+<tr><th id="284">284</th><td><u># define <dfn class="macro" id="_M/THREAD_SETMEM_NC" data-ref="_M/THREAD_SETMEM_NC">THREAD_SETMEM_NC</dfn>(descr, member, idx, value) \</u></td></tr>
+<tr><th id="285">285</th><td><u>  ({ if (sizeof (descr-&gt;member[0]) == 1)				      \</u></td></tr>
+<tr><th id="286">286</th><td><u>       asm volatile ("movb %b0,%%fs:%P1(%q2)" :				      \</u></td></tr>
+<tr><th id="287">287</th><td><u>		     : "iq" (value),					      \</u></td></tr>
+<tr><th id="288">288</th><td><u>		       "i" (offsetof (struct pthread, member[0])),	      \</u></td></tr>
+<tr><th id="289">289</th><td><u>		       "r" (idx));					      \</u></td></tr>
+<tr><th id="290">290</th><td><u>     else if (sizeof (descr-&gt;member[0]) == 4)				      \</u></td></tr>
+<tr><th id="291">291</th><td><u>       asm volatile ("movl %0,%%fs:%P1(,%q2,4)" :			      \</u></td></tr>
+<tr><th id="292">292</th><td><u>		     : IMM_MODE (value),				      \</u></td></tr>
+<tr><th id="293">293</th><td><u>		       "i" (offsetof (struct pthread, member[0])),	      \</u></td></tr>
+<tr><th id="294">294</th><td><u>		       "r" (idx));					      \</u></td></tr>
+<tr><th id="295">295</th><td><u>     else								      \</u></td></tr>
+<tr><th id="296">296</th><td><u>       {								      \</u></td></tr>
+<tr><th id="297">297</th><td><u>	 if (sizeof (descr-&gt;member[0]) != 8)				      \</u></td></tr>
+<tr><th id="298">298</th><td><u>	   /* There should not be any value with a size other than 1,	      \</u></td></tr>
+<tr><th id="299">299</th><td><u>	      4 or 8.  */						      \</u></td></tr>
+<tr><th id="300">300</th><td><u>	   abort ();							      \</u></td></tr>
+<tr><th id="301">301</th><td><u>									      \</u></td></tr>
+<tr><th id="302">302</th><td><u>	 asm volatile ("movq %q0,%%fs:%P1(,%q2,8)" :			      \</u></td></tr>
+<tr><th id="303">303</th><td><u>		       : IMM_MODE ((uint64_t) cast_to_integer (value)),	      \</u></td></tr>
+<tr><th id="304">304</th><td><u>			 "i" (offsetof (struct pthread, member[0])),	      \</u></td></tr>
+<tr><th id="305">305</th><td><u>			 "r" (idx));					      \</u></td></tr>
+<tr><th id="306">306</th><td><u>       }})</u></td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td><i>/* Set the stack guard field in TCB head.  */</i></td></tr>
+<tr><th id="310">310</th><td><u># define <dfn class="macro" id="_M/THREAD_SET_STACK_GUARD" data-ref="_M/THREAD_SET_STACK_GUARD">THREAD_SET_STACK_GUARD</dfn>(value) \</u></td></tr>
+<tr><th id="311">311</th><td><u>    THREAD_SETMEM (THREAD_SELF, header.stack_guard, value)</u></td></tr>
+<tr><th id="312">312</th><td><u># define <dfn class="macro" id="_M/THREAD_COPY_STACK_GUARD" data-ref="_M/THREAD_COPY_STACK_GUARD">THREAD_COPY_STACK_GUARD</dfn>(descr) \</u></td></tr>
+<tr><th id="313">313</th><td><u>    ((descr)-&gt;header.stack_guard					      \</u></td></tr>
+<tr><th id="314">314</th><td><u>     = THREAD_GETMEM (THREAD_SELF, header.stack_guard))</u></td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><i>/* Set the pointer guard field in the TCB head.  */</i></td></tr>
+<tr><th id="318">318</th><td><u># define <dfn class="macro" id="_M/THREAD_SET_POINTER_GUARD" data-ref="_M/THREAD_SET_POINTER_GUARD">THREAD_SET_POINTER_GUARD</dfn>(value) \</u></td></tr>
+<tr><th id="319">319</th><td><u>  THREAD_SETMEM (THREAD_SELF, header.pointer_guard, value)</u></td></tr>
+<tr><th id="320">320</th><td><u># define <dfn class="macro" id="_M/THREAD_COPY_POINTER_GUARD" data-ref="_M/THREAD_COPY_POINTER_GUARD">THREAD_COPY_POINTER_GUARD</dfn>(descr) \</u></td></tr>
+<tr><th id="321">321</th><td><u>  ((descr)-&gt;header.pointer_guard					      \</u></td></tr>
+<tr><th id="322">322</th><td><u>   = THREAD_GETMEM (THREAD_SELF, header.pointer_guard))</u></td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td><i>/* Get and set the global scope generation counter in the TCB head.  */</i></td></tr>
+<tr><th id="326">326</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_IN_TCB" data-ref="_M/THREAD_GSCOPE_IN_TCB">THREAD_GSCOPE_IN_TCB</dfn>      1</u></td></tr>
+<tr><th id="327">327</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_FLAG_UNUSED" data-ref="_M/THREAD_GSCOPE_FLAG_UNUSED">THREAD_GSCOPE_FLAG_UNUSED</dfn> 0</u></td></tr>
+<tr><th id="328">328</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_FLAG_USED" data-ref="_M/THREAD_GSCOPE_FLAG_USED">THREAD_GSCOPE_FLAG_USED</dfn>   1</u></td></tr>
+<tr><th id="329">329</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_FLAG_WAIT" data-ref="_M/THREAD_GSCOPE_FLAG_WAIT">THREAD_GSCOPE_FLAG_WAIT</dfn>   2</u></td></tr>
+<tr><th id="330">330</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_RESET_FLAG" data-ref="_M/THREAD_GSCOPE_RESET_FLAG">THREAD_GSCOPE_RESET_FLAG</dfn>() \</u></td></tr>
+<tr><th id="331">331</th><td><u>  do									      \</u></td></tr>
+<tr><th id="332">332</th><td><u>    { int __res;							      \</u></td></tr>
+<tr><th id="333">333</th><td><u>      asm volatile ("xchgl %0, %%fs:%P1"				      \</u></td></tr>
+<tr><th id="334">334</th><td><u>		    : "=r" (__res)					      \</u></td></tr>
+<tr><th id="335">335</th><td><u>		    : "i" (offsetof (struct pthread, header.gscope_flag)),    \</u></td></tr>
+<tr><th id="336">336</th><td><u>		      "0" (THREAD_GSCOPE_FLAG_UNUSED));			      \</u></td></tr>
+<tr><th id="337">337</th><td><u>      if (__res == THREAD_GSCOPE_FLAG_WAIT)				      \</u></td></tr>
+<tr><th id="338">338</th><td><u>	lll_futex_wake (&amp;THREAD_SELF-&gt;header.gscope_flag, 1, LLL_PRIVATE);    \</u></td></tr>
+<tr><th id="339">339</th><td><u>    }									      \</u></td></tr>
+<tr><th id="340">340</th><td><u>  while (0)</u></td></tr>
+<tr><th id="341">341</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_SET_FLAG" data-ref="_M/THREAD_GSCOPE_SET_FLAG">THREAD_GSCOPE_SET_FLAG</dfn>() \</u></td></tr>
+<tr><th id="342">342</th><td><u>  THREAD_SETMEM (THREAD_SELF, header.gscope_flag, THREAD_GSCOPE_FLAG_USED)</u></td></tr>
+<tr><th id="343">343</th><td><u># define <dfn class="macro" id="_M/THREAD_GSCOPE_WAIT" data-ref="_M/THREAD_GSCOPE_WAIT">THREAD_GSCOPE_WAIT</dfn>() \</u></td></tr>
+<tr><th id="344">344</th><td><u>  GL(dl_wait_lookup_done) ()</u></td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><u>#<span data-ppcond="98">endif</span> /* __ASSEMBLER__ */</u></td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td><u>#<span data-ppcond="19">endif</span>	/* tls.h */</u></td></tr>
+<tr><th id="349">349</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../../argp/argp-eexst.c.html'>glibc_src_2.30/argp/argp-eexst.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

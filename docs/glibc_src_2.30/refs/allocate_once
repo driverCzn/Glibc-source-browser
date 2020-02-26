@@ -1,0 +1,47 @@
+<def f='glibc_src_2.30/include/allocate_once.h' l='76' ll='89' type='void * allocate_once(void ** __place, void *(*)(void *) __allocate, void (*)(void *, void *) __deallocate, void * __closure)'/>
+<use f='glibc_src_2.30/inet/idna.c' l='97' u='c' c='get_functions'/>
+<doc f='glibc_src_2.30/include/allocate_once.h' l='31'>/* Return an a pointer to an allocated and initialized data structure.
+   If this function returns a non-NULL value, the caller can assume
+   that pointed-to data has been initialized according to the ALLOCATE
+   function.
+
+   It is expected that callers define an inline helper function which
+   adds type safety, like this.
+
+   struct foo { ... };
+   struct foo *global_foo;
+   static void *allocate_foo (void *closure);
+   static void *deallocate_foo (void *closure, void *ptr);
+
+   static inline struct foo *
+   get_foo (void)
+   {
+     return allocate_once (&amp;global_foo, allocate_foo, free_foo, NULL);
+   }
+
+   (Note that the global_foo variable is initialized to zero.)
+   Usage of this helper function looks like this:
+
+   struct foo *local_foo = get_foo ();
+   if (local_foo == NULL)
+      report_allocation_failure ();
+
+   allocate_once first performs an acquire MO load on *PLACE.  If the
+   result is not null, it is returned.  Otherwise, ALLOCATE (CLOSURE)
+   is called, yielding a value RESULT.  If RESULT equals NULL,
+   allocate_once returns NULL, and does not modify *PLACE (but another
+   thread may concurrently perform an allocation which succeeds,
+   updating *PLACE).  If RESULT does not equal NULL, the function uses
+   a CAS with acquire-release MO to update the NULL value in *PLACE
+   with the RESULT value.  If it turns out that *PLACE was updated
+   concurrently, allocate_once calls DEALLOCATE (CLOSURE, RESULT) to
+   undo the effect of ALLOCATE, and returns the new value of *PLACE
+   (after an acquire MO load).  If DEALLOCATE is NULL, free (RESULT)
+   is called instead.
+
+   Compared to __libc_once, allocate_once has the advantage that it
+   does not need separate space for a control variable, and that it is
+   safe with regards to cancellation and other forms of exception
+   handling if the supplied callback functions are safe in that
+   regard.  allocate_once passes a closure parameter to the allocation
+   function, too.  */</doc>

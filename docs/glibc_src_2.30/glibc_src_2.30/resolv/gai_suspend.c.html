@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>gai_suspend.c source code [glibc_src_2.30/resolv/gai_suspend.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/resolv/gai_suspend.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.30</a>/<a href='./'>resolv</a>/<a href='gai_suspend.c.html'>gai_suspend.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2001-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2001.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/netdb.h.html">&lt;netdb.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/pthread.h.html">&lt;pthread.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/sys/time.h.html">&lt;sys/time.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/nptl/gai_misc.h.html">&lt;gai_misc.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><em>int</em></td></tr>
+<tr><th id="29">29</th><td><dfn class="decl def fn" id="gai_suspend" title='gai_suspend' data-ref="gai_suspend" data-ref-filename="gai_suspend">gai_suspend</dfn> (<em>const</em> <b>struct</b> <a class="type" href="netdb.h.html#gaicb" title='gaicb' data-ref="gaicb" data-ref-filename="gaicb">gaicb</a> *<em>const</em> <dfn class="local col1 decl" id="1list" title='list' data-type='const struct gaicb *const *' data-ref="1list" data-ref-filename="1list">list</dfn>[], <em>int</em> <dfn class="local col2 decl" id="2ent" title='ent' data-type='int' data-ref="2ent" data-ref-filename="2ent">ent</dfn>,</td></tr>
+<tr><th id="30">30</th><td>	     <em>const</em> <b>struct</b> <a class="type" href="../time/bits/types/struct_timespec.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col3 decl" id="3timeout" title='timeout' data-type='const struct timespec *' data-ref="3timeout" data-ref-filename="3timeout">timeout</dfn>)</td></tr>
+<tr><th id="31">31</th><td>{</td></tr>
+<tr><th id="32">32</th><td>  <b>struct</b> <a class="type" href="gai_misc.h.html#waitlist" title='waitlist' data-ref="waitlist" data-ref-filename="waitlist">waitlist</a> <dfn class="local col4 decl" id="4waitlist" title='waitlist' data-type='struct waitlist [ent]' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</dfn>[<a class="local col2 ref" href="#2ent" title='ent' data-ref="2ent" data-ref-filename="2ent">ent</a>];</td></tr>
+<tr><th id="33">33</th><td>  <b>struct</b> <a class="type" href="gai_misc.h.html#requestlist" title='requestlist' data-ref="requestlist" data-ref-filename="requestlist">requestlist</a> *<dfn class="local col5 decl" id="5requestlist" title='requestlist' data-type='struct requestlist *[ent]' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</dfn>[<a class="local col2 ref" href="#2ent" title='ent' data-ref="2ent" data-ref-filename="2ent">ent</a>];</td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="34">ifndef</span> <a class="macro" href="../sysdeps/nptl/gai_misc.h.html#28" data-ref="_M/DONT_NEED_GAI_MISC_COND">DONT_NEED_GAI_MISC_COND</a></u></td></tr>
+<tr><th id="35">35</th><td>  pthread_cond_t cond = PTHREAD_COND_INITIALIZER;</td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="37">37</th><td>  <em>int</em> <dfn class="local col6 decl" id="6cnt" title='cnt' data-type='int' data-ref="6cnt" data-ref-filename="6cnt">cnt</dfn>;</td></tr>
+<tr><th id="38">38</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="7cntr" title='cntr' data-type='unsigned int' data-ref="7cntr" data-ref-filename="7cntr">cntr</dfn> = <var>1</var>;</td></tr>
+<tr><th id="39">39</th><td>  <em>int</em> <dfn class="local col8 decl" id="8none" title='none' data-type='int' data-ref="8none" data-ref-filename="8none">none</dfn> = <var>1</var>;</td></tr>
+<tr><th id="40">40</th><td>  <em>int</em> <dfn class="local col9 decl" id="9result" title='result' data-type='int' data-ref="9result" data-ref-filename="9result">result</dfn>;</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>  <i>/* Request the mutex.  */</i></td></tr>
+<tr><th id="43">43</th><td>  <a class="ref fn" href="../sysdeps/nptl/pthread.h.html#pthread_mutex_lock" title='pthread_mutex_lock' data-ref="pthread_mutex_lock" data-ref-filename="pthread_mutex_lock">pthread_mutex_lock</a> (&amp;<a class="ref" href="gai_misc.h.html#__gai_requests_mutex" title='__gai_requests_mutex' data-ref="__gai_requests_mutex" data-ref-filename="__gai_requests_mutex">__gai_requests_mutex</a>);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>  <i>/* There is not yet a finished request.  Signal the request that</i></td></tr>
+<tr><th id="46">46</th><td><i>     we are working for it.  */</i></td></tr>
+<tr><th id="47">47</th><td>  <b>for</b> (<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a> = <var>0</var>; <a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a> &lt; <a class="local col2 ref" href="#2ent" title='ent' data-ref="2ent" data-ref-filename="2ent">ent</a>; ++<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>)</td></tr>
+<tr><th id="48">48</th><td>    <b>if</b> (<a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>] != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; <a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]-&gt;<a class="ref field" href="netdb.h.html#gaicb::__return" title='gaicb::__return' data-ref="gaicb::__return" data-ref-filename="gaicb..__return">__return</a> == <a class="macro" href="netdb.h.html#629" title="-100" data-ref="_M/EAI_INPROGRESS">EAI_INPROGRESS</a>)</td></tr>
+<tr><th id="49">49</th><td>      {</td></tr>
+<tr><th id="50">50</th><td>	<a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>] = <a class="ref fn" href="gai_misc.h.html#__gai_find_request" title='__gai_find_request' data-ref="__gai_find_request" data-ref-filename="__gai_find_request">__gai_find_request</a> (<a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]);</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<b>if</b> (<a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>] != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="53">53</th><td>	  {</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="54">ifndef</span> <a class="macro" href="../sysdeps/nptl/gai_misc.h.html#28" data-ref="_M/DONT_NEED_GAI_MISC_COND">DONT_NEED_GAI_MISC_COND</a></u></td></tr>
+<tr><th id="55">55</th><td>	    waitlist[cnt].cond = &amp;cond;</td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="57">57</th><td>	    <a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>].<a class="ref field" href="gai_misc.h.html#waitlist::next" title='waitlist::next' data-ref="waitlist::next" data-ref-filename="waitlist..next">next</a> = <a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]-&gt;<a class="ref field" href="gai_misc.h.html#requestlist::waiting" title='requestlist::waiting' data-ref="requestlist::waiting" data-ref-filename="requestlist..waiting">waiting</a>;</td></tr>
+<tr><th id="58">58</th><td>	    <a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>].<a class="ref field" href="gai_misc.h.html#waitlist::counterp" title='waitlist::counterp' data-ref="waitlist::counterp" data-ref-filename="waitlist..counterp">counterp</a> = &amp;<a class="local col7 ref" href="#7cntr" title='cntr' data-ref="7cntr" data-ref-filename="7cntr">cntr</a>;</td></tr>
+<tr><th id="59">59</th><td>	    <a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>].<a class="ref field" href="gai_misc.h.html#waitlist::sigevp" title='waitlist::sigevp' data-ref="waitlist::sigevp" data-ref-filename="waitlist..sigevp">sigevp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="60">60</th><td>	    <a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>].<a class="ref field" href="gai_misc.h.html#waitlist::caller_pid" title='waitlist::caller_pid' data-ref="waitlist::caller_pid" data-ref-filename="waitlist..caller_pid">caller_pid</a> = <var>0</var>;	<i>/* Not needed.  */</i></td></tr>
+<tr><th id="61">61</th><td>	    <a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]-&gt;<a class="ref field" href="gai_misc.h.html#requestlist::waiting" title='requestlist::waiting' data-ref="requestlist::waiting" data-ref-filename="requestlist..waiting">waiting</a> = &amp;<a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>];</td></tr>
+<tr><th id="62">62</th><td>	    <a class="local col8 ref" href="#8none" title='none' data-ref="8none" data-ref-filename="8none">none</a> = <var>0</var>;</td></tr>
+<tr><th id="63">63</th><td>	  }</td></tr>
+<tr><th id="64">64</th><td>      }</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <b>if</b> (<a class="local col8 ref" href="#8none" title='none' data-ref="8none" data-ref-filename="8none">none</a>)</td></tr>
+<tr><th id="67">67</th><td>    {</td></tr>
+<tr><th id="68">68</th><td>      <b>if</b> (<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a> &lt; <a class="local col2 ref" href="#2ent" title='ent' data-ref="2ent" data-ref-filename="2ent">ent</a>)</td></tr>
+<tr><th id="69">69</th><td>	<i>/* There is an entry which is finished.  */</i></td></tr>
+<tr><th id="70">70</th><td>	<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <var>0</var>;</td></tr>
+<tr><th id="71">71</th><td>      <b>else</b></td></tr>
+<tr><th id="72">72</th><td>	<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <a class="macro" href="netdb.h.html#632" title="-103" data-ref="_M/EAI_ALLDONE">EAI_ALLDONE</a>;</td></tr>
+<tr><th id="73">73</th><td>    }</td></tr>
+<tr><th id="74">74</th><td>  <b>else</b></td></tr>
+<tr><th id="75">75</th><td>    {</td></tr>
+<tr><th id="76">76</th><td>      <i>/* There is no request done but some are still being worked on.  */</i></td></tr>
+<tr><th id="77">77</th><td>      <em>int</em> <dfn class="local col0 decl" id="10oldstate" title='oldstate' data-type='int' data-ref="10oldstate" data-ref-filename="10oldstate">oldstate</dfn>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>      <i>/* Since `pthread_cond_wait'/`pthread_cond_timedwait' are cancelation</i></td></tr>
+<tr><th id="80">80</th><td><i>	 points we must be careful.  We added entries to the waiting lists</i></td></tr>
+<tr><th id="81">81</th><td><i>	 which we must remove.  So defer cancelation for now.  */</i></td></tr>
+<tr><th id="82">82</th><td>      <a class="ref fn" href="../sysdeps/nptl/pthread.h.html#pthread_setcancelstate" title='pthread_setcancelstate' data-ref="pthread_setcancelstate" data-ref-filename="pthread_setcancelstate">pthread_setcancelstate</a> (<a class="macro" href="../sysdeps/nptl/pthread.h.html#205" title="PTHREAD_CANCEL_DISABLE" data-ref="_M/PTHREAD_CANCEL_DISABLE">PTHREAD_CANCEL_DISABLE</a>, &amp;<a class="local col0 ref" href="#10oldstate" title='oldstate' data-ref="10oldstate" data-ref-filename="10oldstate">oldstate</a>);</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="84">ifdef</span> <a class="macro" href="../sysdeps/nptl/gai_misc.h.html#28" data-ref="_M/DONT_NEED_GAI_MISC_COND">DONT_NEED_GAI_MISC_COND</a></u></td></tr>
+<tr><th id="85">85</th><td>      <a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <var>0</var>;</td></tr>
+<tr><th id="86">86</th><td>      <a class="macro" href="../sysdeps/nptl/gai_misc.h.html#36" title="do { volatile unsigned int *futexaddr = &amp;cntr; unsigned int oldval = cntr; if (oldval != 0) { pthread_mutex_unlock (&amp;__gai_requests_mutex); int status; do { if (1) status = futex_reltimed_wait_cancelable ( (unsigned int *) futexaddr, oldval, timeout, 0); else status = futex_reltimed_wait ((unsigned int *) futexaddr, oldval, timeout, 0); if (status != 11) break; oldval = *futexaddr; } while (oldval != 0); if (status == 4) result = 4; else if (status == 110) result = 11; else ((void) sizeof ((status == 0 || status == 11) ? 1 : 0), __extension__ ({ if (status == 0 || status == 11) ; else __assert_fail (&quot;status == 0 || status == EAGAIN&quot;, &quot;/home/fp/glibc/glibc_src/resolv/gai_suspend.c&quot;, 86, __extension__ __PRETTY_FUNCTION__); })); pthread_mutex_lock (&amp;__gai_requests_mutex); } } while (0)" data-ref="_M/GAI_MISC_WAIT">GAI_MISC_WAIT</a> (<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a>, <a class="local col7 ref" href="#7cntr" title='cntr' data-ref="7cntr" data-ref-filename="7cntr">cntr</a>, <a class="local col3 ref" href="#3timeout" title='timeout' data-ref="3timeout" data-ref-filename="3timeout">timeout</a>, <var>1</var>);</td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="84">else</span></u></td></tr>
+<tr><th id="88">88</th><td>      <b>if</b> (timeout == NULL)</td></tr>
+<tr><th id="89">89</th><td>	result = pthread_cond_wait (&amp;cond, &amp;__gai_requests_mutex);</td></tr>
+<tr><th id="90">90</th><td>      <b>else</b></td></tr>
+<tr><th id="91">91</th><td>	{</td></tr>
+<tr><th id="92">92</th><td>	  <i>/* We have to convert the relative timeout value into an</i></td></tr>
+<tr><th id="93">93</th><td><i>	     absolute time value with pthread_cond_timedwait expects.  */</i></td></tr>
+<tr><th id="94">94</th><td>	  <b>struct</b> timeval now;</td></tr>
+<tr><th id="95">95</th><td>	  <b>struct</b> timespec abstime;</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>	  __gettimeofday (&amp;now, NULL);</td></tr>
+<tr><th id="98">98</th><td>	  abstime.tv_nsec = timeout-&gt;tv_nsec + now.tv_usec * <var>1000</var>;</td></tr>
+<tr><th id="99">99</th><td>	  abstime.tv_sec = timeout-&gt;tv_sec + now.tv_sec;</td></tr>
+<tr><th id="100">100</th><td>	  <b>if</b> (abstime.tv_nsec &gt;= <var>1000000000</var>)</td></tr>
+<tr><th id="101">101</th><td>	    {</td></tr>
+<tr><th id="102">102</th><td>	      abstime.tv_nsec -= <var>1000000000</var>;</td></tr>
+<tr><th id="103">103</th><td>	      abstime.tv_sec += <var>1</var>;</td></tr>
+<tr><th id="104">104</th><td>	    }</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	  result = pthread_cond_timedwait (&amp;cond, &amp;__gai_requests_mutex,</td></tr>
+<tr><th id="107">107</th><td>					   &amp;abstime);</td></tr>
+<tr><th id="108">108</th><td>	}</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="84">endif</span></u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>      <i>/* Now remove the entry in the waiting list for all requests</i></td></tr>
+<tr><th id="112">112</th><td><i>	 which didn't terminate.  */</i></td></tr>
+<tr><th id="113">113</th><td>      <b>for</b> (<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a> = <var>0</var>; <a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a> &lt; <a class="local col2 ref" href="#2ent" title='ent' data-ref="2ent" data-ref-filename="2ent">ent</a>; ++<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>)</td></tr>
+<tr><th id="114">114</th><td>	<b>if</b> (<a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>] != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; <a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]-&gt;<a class="ref field" href="netdb.h.html#gaicb::__return" title='gaicb::__return' data-ref="gaicb::__return" data-ref-filename="gaicb..__return">__return</a> == <a class="macro" href="netdb.h.html#629" title="-100" data-ref="_M/EAI_INPROGRESS">EAI_INPROGRESS</a></td></tr>
+<tr><th id="115">115</th><td>	    &amp;&amp; <a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>] != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="116">116</th><td>	  {</td></tr>
+<tr><th id="117">117</th><td>	    <b>struct</b> <a class="type" href="gai_misc.h.html#waitlist" title='waitlist' data-ref="waitlist" data-ref-filename="waitlist">waitlist</a> **<dfn class="local col1 decl" id="11listp" title='listp' data-type='struct waitlist **' data-ref="11listp" data-ref-filename="11listp">listp</dfn> = &amp;<a class="local col5 ref" href="#5requestlist" title='requestlist' data-ref="5requestlist" data-ref-filename="5requestlist">requestlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>]-&gt;<a class="ref field" href="gai_misc.h.html#requestlist::waiting" title='requestlist::waiting' data-ref="requestlist::waiting" data-ref-filename="requestlist..waiting">waiting</a>;</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	    <i>/* There is the chance that we cannot find our entry anymore.</i></td></tr>
+<tr><th id="120">120</th><td><i>	       This could happen if the request terminated and restarted</i></td></tr>
+<tr><th id="121">121</th><td><i>	       again.  */</i></td></tr>
+<tr><th id="122">122</th><td>	    <b>while</b> (*<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; *<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a> != &amp;<a class="local col4 ref" href="#4waitlist" title='waitlist' data-ref="4waitlist" data-ref-filename="4waitlist">waitlist</a>[<a class="local col6 ref" href="#6cnt" title='cnt' data-ref="6cnt" data-ref-filename="6cnt">cnt</a>])</td></tr>
+<tr><th id="123">123</th><td>	      <a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a> = &amp;(*<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a>)-&gt;<a class="ref field" href="gai_misc.h.html#waitlist::next" title='waitlist::next' data-ref="waitlist::next" data-ref-filename="waitlist..next">next</a>;</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	    <b>if</b> (*<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="126">126</th><td>	      *<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a> = (*<a class="local col1 ref" href="#11listp" title='listp' data-ref="11listp" data-ref-filename="11listp">listp</a>)-&gt;<a class="ref field" href="gai_misc.h.html#waitlist::next" title='waitlist::next' data-ref="waitlist::next" data-ref-filename="waitlist..next">next</a>;</td></tr>
+<tr><th id="127">127</th><td>	  }</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>      <i>/* Now it's time to restore the cancelation state.  */</i></td></tr>
+<tr><th id="130">130</th><td>      <a class="ref fn" href="../sysdeps/nptl/pthread.h.html#pthread_setcancelstate" title='pthread_setcancelstate' data-ref="pthread_setcancelstate" data-ref-filename="pthread_setcancelstate">pthread_setcancelstate</a> (<a class="local col0 ref" href="#10oldstate" title='oldstate' data-ref="10oldstate" data-ref-filename="10oldstate">oldstate</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="132">ifndef</span> <a class="macro" href="../sysdeps/nptl/gai_misc.h.html#28" data-ref="_M/DONT_NEED_GAI_MISC_COND">DONT_NEED_GAI_MISC_COND</a></u></td></tr>
+<tr><th id="133">133</th><td>      <i>/* Release the conditional variable.  */</i></td></tr>
+<tr><th id="134">134</th><td>      <b>if</b> (pthread_cond_destroy (&amp;cond) != <var>0</var>)</td></tr>
+<tr><th id="135">135</th><td>	<i>/* This must never happen.  */</i></td></tr>
+<tr><th id="136">136</th><td>	abort ();</td></tr>
+<tr><th id="137">137</th><td><u>#<span data-ppcond="132">endif</span></u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>      <b>if</b> (<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> != <var>0</var>)</td></tr>
+<tr><th id="140">140</th><td>	{</td></tr>
+<tr><th id="141">141</th><td>	  <i>/* An error occurred.  Possibly it's EINTR.  We have to translate</i></td></tr>
+<tr><th id="142">142</th><td><i>	     the timeout error report of `pthread_cond_timedwait' to the</i></td></tr>
+<tr><th id="143">143</th><td><i>	     form expected from `gai_suspend'.  */</i></td></tr>
+<tr><th id="144">144</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#403" title="__builtin_expect ((result == 110), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> == <a class="macro" href="../../include/asm-generic/errno.h.html#93" title="110" data-ref="_M/ETIMEDOUT">ETIMEDOUT</a>))</td></tr>
+<tr><th id="145">145</th><td>	    <a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <a class="macro" href="netdb.h.html#618" title="-3" data-ref="_M/EAI_AGAIN">EAI_AGAIN</a>;</td></tr>
+<tr><th id="146">146</th><td>	  <b>else</b> <b>if</b> (<a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#8" title="4" data-ref="_M/EINTR">EINTR</a>)</td></tr>
+<tr><th id="147">147</th><td>	    <a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <a class="macro" href="netdb.h.html#633" title="-104" data-ref="_M/EAI_INTR">EAI_INTR</a>;</td></tr>
+<tr><th id="148">148</th><td>	  <b>else</b></td></tr>
+<tr><th id="149">149</th><td>	    <a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a> = <a class="macro" href="netdb.h.html#624" title="-11" data-ref="_M/EAI_SYSTEM">EAI_SYSTEM</a>;</td></tr>
+<tr><th id="150">150</th><td>	}</td></tr>
+<tr><th id="151">151</th><td>    }</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <i>/* Release the mutex.  */</i></td></tr>
+<tr><th id="154">154</th><td>  <a class="ref fn" href="../sysdeps/nptl/pthread.h.html#pthread_mutex_unlock" title='pthread_mutex_unlock' data-ref="pthread_mutex_unlock" data-ref-filename="pthread_mutex_unlock">pthread_mutex_unlock</a> (&amp;<a class="ref" href="gai_misc.h.html#__gai_requests_mutex" title='__gai_requests_mutex' data-ref="__gai_requests_mutex" data-ref-filename="__gai_requests_mutex">__gai_requests_mutex</a>);</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>  <b>return</b> <a class="local col9 ref" href="#9result" title='result' data-ref="9result" data-ref-filename="9result">result</a>;</td></tr>
+<tr><th id="157">157</th><td>}</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

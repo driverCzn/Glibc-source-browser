@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>readline.c source code [glibc_src_2.30/libio/readline.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/libio/readline.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.30</a>/<a href='./'>libio</a>/<a href='readline.c.html'>readline.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* fgets with ERANGE error reporting and size_t buffer length.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2018-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="libioP.h.html">"libioP.h"</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i  data-doc="fail_no_erange">/* Return -1 and set errno to EINVAL if it is ERANGE.  */</i></td></tr>
+<tr><th id="27">27</th><td><em>static</em> <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a></td></tr>
+<tr><th id="28">28</th><td><dfn class="tu decl def fn" id="fail_no_erange" title='fail_no_erange' data-type='ssize_t fail_no_erange()' data-ref="fail_no_erange" data-ref-filename="fail_no_erange">fail_no_erange</dfn> (<em>void</em>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>  <b>if</b> (<a class="macro" href="../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>)</td></tr>
+<tr><th id="31">31</th><td>    <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="32">32</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="33">33</th><td>}</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i  data-doc="readline_slow">/* Slow path for reading the line.  Called with no data in the stream</i></td></tr>
+<tr><th id="36">36</th><td><i  data-doc="readline_slow">   read buffer.  Write data to [BUFFER, BUFFER_END).  */</i></td></tr>
+<tr><th id="37">37</th><td><em>static</em> <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a></td></tr>
+<tr><th id="38">38</th><td><dfn class="tu decl def fn" id="readline_slow" title='readline_slow' data-type='ssize_t readline_slow(FILE * fp, char * buffer, char * buffer_end)' data-ref="readline_slow" data-ref-filename="readline_slow">readline_slow</dfn> (<a class="typedef" href="bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col1 decl" id="1fp" title='fp' data-type='FILE *' data-ref="1fp" data-ref-filename="1fp">fp</dfn>, <em>char</em> *<dfn class="local col2 decl" id="2buffer" title='buffer' data-type='char *' data-ref="2buffer" data-ref-filename="2buffer">buffer</dfn>, <em>char</em> *<dfn class="local col3 decl" id="3buffer_end" title='buffer_end' data-type='char *' data-ref="3buffer_end" data-ref-filename="3buffer_end">buffer_end</dfn>)</td></tr>
+<tr><th id="39">39</th><td>{</td></tr>
+<tr><th id="40">40</th><td>  <em>char</em> *<dfn class="local col4 decl" id="4start" title='start' data-type='char *' data-ref="4start" data-ref-filename="4start">start</dfn> = <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>;</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>  <b>while</b> (<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a> &lt; <a class="local col3 ref" href="#3buffer_end" title='buffer_end' data-ref="3buffer_end" data-ref-filename="3buffer_end">buffer_end</a>)</td></tr>
+<tr><th id="43">43</th><td>    {</td></tr>
+<tr><th id="44">44</th><td>      <b>if</b> (<a class="ref fn" href="libio.h.html#__underflow" title='__underflow' data-ref="__underflow" data-ref-filename="__underflow">__underflow</a> (<a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>) == <a class="macro" href="stdio.h.html#104" title="(-1)" data-ref="_M/EOF">EOF</a>)</td></tr>
+<tr><th id="45">45</th><td>        {</td></tr>
+<tr><th id="46">46</th><td>          <b>if</b> (<a class="macro" href="libio.h.html#189" title="(((fp)-&gt;_flags &amp; 0x0020) != 0)" data-ref="_M/_IO_ferror_unlocked">_IO_ferror_unlocked</a> (<a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>))</td></tr>
+<tr><th id="47">47</th><td>            <i>/* If the EOF was caused by a read error, report it.  */</i></td></tr>
+<tr><th id="48">48</th><td>            <b>return</b> <a class="tu ref fn" href="#fail_no_erange" title='fail_no_erange' data-use='c' data-ref="fail_no_erange" data-ref-filename="fail_no_erange">fail_no_erange</a> ();</td></tr>
+<tr><th id="49">49</th><td>          *<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="50">50</th><td>          <i>/* Do not include the null terminator.  */</i></td></tr>
+<tr><th id="51">51</th><td>          <b>return</b> <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a> - <a class="local col4 ref" href="#4start" title='start' data-ref="4start" data-ref-filename="4start">start</a>;</td></tr>
+<tr><th id="52">52</th><td>        }</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>      <i>/* __underflow has filled the buffer.  */</i></td></tr>
+<tr><th id="55">55</th><td>      <em>char</em> *<dfn class="local col5 decl" id="5readptr" title='readptr' data-type='char *' data-ref="5readptr" data-ref-filename="5readptr">readptr</dfn> = <a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a>;</td></tr>
+<tr><th id="56">56</th><td>      <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col6 decl" id="6readlen" title='readlen' data-type='ssize_t' data-ref="6readlen" data-ref-filename="6readlen">readlen</dfn> = <a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_end" title='_IO_FILE::_IO_read_end' data-ref="_IO_FILE::_IO_read_end" data-ref-filename="_IO_FILE.._IO_read_end">_IO_read_end</a> - <a class="local col5 ref" href="#5readptr" title='readptr' data-ref="5readptr" data-ref-filename="5readptr">readptr</a>;</td></tr>
+<tr><th id="57">57</th><td>      <i>/* Make sure that __underflow really has acquired some data.  */</i></td></tr>
+<tr><th id="58">58</th><td>      <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((readlen &gt; 0) ? 1 : 0), __extension__ ({ if (readlen &gt; 0) ; else __assert_fail (&quot;readlen &gt; 0&quot;, &quot;/home/fp/glibc/glibc_src/libio/readline.c&quot;, 58, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col6 ref" href="#6readlen" title='readlen' data-ref="6readlen" data-ref-filename="6readlen">readlen</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="59">59</th><td>      <em>char</em> *<dfn class="local col7 decl" id="7pnl" title='pnl' data-type='char *' data-ref="7pnl" data-ref-filename="7pnl">pnl</dfn> = <a class="ref fn" href="../string/string.h.html#__GI_memchr" title='memchr' data-ref="__GI_memchr" data-ref-filename="__GI_memchr">memchr</a> (<a class="local col5 ref" href="#5readptr" title='readptr' data-ref="5readptr" data-ref-filename="5readptr">readptr</a>, <kbd>'\n'</kbd>, <a class="local col6 ref" href="#6readlen" title='readlen' data-ref="6readlen" data-ref-filename="6readlen">readlen</a>);</td></tr>
+<tr><th id="60">60</th><td>      <b>if</b> (<a class="local col7 ref" href="#7pnl" title='pnl' data-ref="7pnl" data-ref-filename="7pnl">pnl</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="61">61</th><td>        {</td></tr>
+<tr><th id="62">62</th><td>          <i>/* We found the terminator.  */</i></td></tr>
+<tr><th id="63">63</th><td>          <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8line_length" title='line_length' data-type='size_t' data-ref="8line_length" data-ref-filename="8line_length">line_length</dfn> = <a class="local col7 ref" href="#7pnl" title='pnl' data-ref="7pnl" data-ref-filename="7pnl">pnl</a> - <a class="local col5 ref" href="#5readptr" title='readptr' data-ref="5readptr" data-ref-filename="5readptr">readptr</a>;</td></tr>
+<tr><th id="64">64</th><td>          <b>if</b> (<a class="local col8 ref" href="#8line_length" title='line_length' data-ref="8line_length" data-ref-filename="8line_length">line_length</a> + <var>2</var> &gt; <a class="local col3 ref" href="#3buffer_end" title='buffer_end' data-ref="3buffer_end" data-ref-filename="3buffer_end">buffer_end</a> - <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>)</td></tr>
+<tr><th id="65">65</th><td>            <i>/* Not enough room in the caller-supplied buffer.  */</i></td></tr>
+<tr><th id="66">66</th><td>            <b>break</b>;</td></tr>
+<tr><th id="67">67</th><td>          <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>, <a class="local col5 ref" href="#5readptr" title='readptr' data-ref="5readptr" data-ref-filename="5readptr">readptr</a>, <a class="local col8 ref" href="#8line_length" title='line_length' data-ref="8line_length" data-ref-filename="8line_length">line_length</a> + <var>1</var>);</td></tr>
+<tr><th id="68">68</th><td>          <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>[<a class="local col8 ref" href="#8line_length" title='line_length' data-ref="8line_length" data-ref-filename="8line_length">line_length</a> + <var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="69">69</th><td>          <a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a> = <a class="local col7 ref" href="#7pnl" title='pnl' data-ref="7pnl" data-ref-filename="7pnl">pnl</a> + <var>1</var>;</td></tr>
+<tr><th id="70">70</th><td>          <i>/* Do not include the null terminator.  */</i></td></tr>
+<tr><th id="71">71</th><td>          <b>return</b> <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a> - <a class="local col4 ref" href="#4start" title='start' data-ref="4start" data-ref-filename="4start">start</a> + <a class="local col8 ref" href="#8line_length" title='line_length' data-ref="8line_length" data-ref-filename="8line_length">line_length</a> + <var>1</var>;</td></tr>
+<tr><th id="72">72</th><td>        }</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>      <b>if</b> (<a class="local col6 ref" href="#6readlen" title='readlen' data-ref="6readlen" data-ref-filename="6readlen">readlen</a> &gt;= <a class="local col3 ref" href="#3buffer_end" title='buffer_end' data-ref="3buffer_end" data-ref-filename="3buffer_end">buffer_end</a> - <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>)</td></tr>
+<tr><th id="75">75</th><td>        <i>/* Not enough room in the caller-supplied buffer.  */</i></td></tr>
+<tr><th id="76">76</th><td>        <b>break</b>;</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>      <i>/* Save and consume the stream buffer.  */</i></td></tr>
+<tr><th id="79">79</th><td>      <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a>, <a class="local col5 ref" href="#5readptr" title='readptr' data-ref="5readptr" data-ref-filename="5readptr">readptr</a>, <a class="local col6 ref" href="#6readlen" title='readlen' data-ref="6readlen" data-ref-filename="6readlen">readlen</a>);</td></tr>
+<tr><th id="80">80</th><td>      <a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a> = <a class="local col1 ref" href="#1fp" title='fp' data-ref="1fp" data-ref-filename="1fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_end" title='_IO_FILE::_IO_read_end' data-ref="_IO_FILE::_IO_read_end" data-ref-filename="_IO_FILE.._IO_read_end">_IO_read_end</a>;</td></tr>
+<tr><th id="81">81</th><td>      <a class="local col2 ref" href="#2buffer" title='buffer' data-ref="2buffer" data-ref-filename="2buffer">buffer</a> += <a class="local col6 ref" href="#6readlen" title='readlen' data-ref="6readlen" data-ref-filename="6readlen">readlen</a>;</td></tr>
+<tr><th id="82">82</th><td>    }</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <i>/* The line does not fit into the buffer.  */</i></td></tr>
+<tr><th id="85">85</th><td>  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="86">86</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="87">87</th><td>}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a></td></tr>
+<tr><th id="90">90</th><td><dfn class="decl def fn" id="__libc_readline_unlocked" title='__libc_readline_unlocked' data-ref="__libc_readline_unlocked" data-ref-filename="__libc_readline_unlocked">__libc_readline_unlocked</dfn> (<a class="typedef" href="bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col9 decl" id="9fp" title='fp' data-type='FILE *' data-ref="9fp" data-ref-filename="9fp">fp</dfn>, <em>char</em> *<dfn class="local col0 decl" id="10buffer" title='buffer' data-type='char *' data-ref="10buffer" data-ref-filename="10buffer">buffer</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="11buffer_length" title='buffer_length' data-type='size_t' data-ref="11buffer_length" data-ref-filename="11buffer_length">buffer_length</dfn>)</td></tr>
+<tr><th id="91">91</th><td>{</td></tr>
+<tr><th id="92">92</th><td>  <em>char</em> *<dfn class="local col2 decl" id="12buffer_end" title='buffer_end' data-type='char *' data-ref="12buffer_end" data-ref-filename="12buffer_end">buffer_end</dfn> = <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a> + <a class="local col1 ref" href="#11buffer_length" title='buffer_length' data-ref="11buffer_length" data-ref-filename="11buffer_length">buffer_length</a>;</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>  <i>/* Orient the stream.  */</i></td></tr>
+<tr><th id="95">95</th><td>  <b>if</b> (<a class="ref fn" href="#95" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_mode" title='_IO_FILE::_mode' data-ref="_IO_FILE::_mode" data-ref-filename="_IO_FILE.._mode">_mode</a>, -<var>1</var>) == <var>0</var>)</td></tr>
+<tr><th id="96">96</th><td>    <a class="macro" href="libio.h.html#246" title="({ int __result = (-1); if (__result &lt; 0 &amp;&amp; ! (0)) { if ((fp)-&gt;_mode == 0) (fp)-&gt;_mode = -1; __result = (fp)-&gt;_mode; } else if (__builtin_constant_p (-1) &amp;&amp; (-1) == 0) __result = (0) ? -1 : (fp)-&gt;_mode; else __result = _IO_fwide (fp, __result); __result; })" data-ref="_M/_IO_fwide">_IO_fwide</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>, -<var>1</var>);</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>  <i>/* Fast path: The line terminator is found in the buffer.  */</i></td></tr>
+<tr><th id="99">99</th><td>  <em>char</em> *<dfn class="local col3 decl" id="13readptr" title='readptr' data-type='char *' data-ref="13readptr" data-ref-filename="13readptr">readptr</dfn> = <a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a>;</td></tr>
+<tr><th id="100">100</th><td>  <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col4 decl" id="14readlen" title='readlen' data-type='ssize_t' data-ref="14readlen" data-ref-filename="14readlen">readlen</dfn> = <a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_end" title='_IO_FILE::_IO_read_end' data-ref="_IO_FILE::_IO_read_end" data-ref-filename="_IO_FILE.._IO_read_end">_IO_read_end</a> - <a class="local col3 ref" href="#13readptr" title='readptr' data-ref="13readptr" data-ref-filename="13readptr">readptr</a>;</td></tr>
+<tr><th id="101">101</th><td>  <a class="typedef" href="../posix/sys/types.h.html#off64_t" title='off64_t' data-type='__off64_t' data-ref="off64_t" data-ref-filename="off64_t">off64_t</a> <dfn class="local col5 decl" id="15start_offset" title='start_offset' data-type='off64_t' data-ref="15start_offset" data-ref-filename="15start_offset">start_offset</dfn>;         <i>/* File offset before reading anything.  */</i></td></tr>
+<tr><th id="102">102</th><td>  <b>if</b> (<a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="103">103</th><td>    {</td></tr>
+<tr><th id="104">104</th><td>      <em>char</em> *<dfn class="local col6 decl" id="16pnl" title='pnl' data-type='char *' data-ref="16pnl" data-ref-filename="16pnl">pnl</dfn> = <a class="ref fn" href="../string/string.h.html#__GI_memchr" title='memchr' data-ref="__GI_memchr" data-ref-filename="__GI_memchr">memchr</a> (<a class="local col3 ref" href="#13readptr" title='readptr' data-ref="13readptr" data-ref-filename="13readptr">readptr</a>, <kbd>'\n'</kbd>, <a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a>);</td></tr>
+<tr><th id="105">105</th><td>      <b>if</b> (<a class="local col6 ref" href="#16pnl" title='pnl' data-ref="16pnl" data-ref-filename="16pnl">pnl</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="106">106</th><td>        {</td></tr>
+<tr><th id="107">107</th><td>          <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="17line_length" title='line_length' data-type='size_t' data-ref="17line_length" data-ref-filename="17line_length">line_length</dfn> = <a class="local col6 ref" href="#16pnl" title='pnl' data-ref="16pnl" data-ref-filename="16pnl">pnl</a> - <a class="local col3 ref" href="#13readptr" title='readptr' data-ref="13readptr" data-ref-filename="13readptr">readptr</a>;</td></tr>
+<tr><th id="108">108</th><td>          <i>/* Account for line and null terminators.  */</i></td></tr>
+<tr><th id="109">109</th><td>          <b>if</b> (<a class="local col7 ref" href="#17line_length" title='line_length' data-ref="17line_length" data-ref-filename="17line_length">line_length</a> + <var>2</var> &gt; <a class="local col1 ref" href="#11buffer_length" title='buffer_length' data-ref="11buffer_length" data-ref-filename="11buffer_length">buffer_length</a>)</td></tr>
+<tr><th id="110">110</th><td>            {</td></tr>
+<tr><th id="111">111</th><td>              <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="112">112</th><td>              <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="113">113</th><td>            }</td></tr>
+<tr><th id="114">114</th><td>          <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>, <a class="local col3 ref" href="#13readptr" title='readptr' data-ref="13readptr" data-ref-filename="13readptr">readptr</a>, <a class="local col7 ref" href="#17line_length" title='line_length' data-ref="17line_length" data-ref-filename="17line_length">line_length</a> + <var>1</var>);</td></tr>
+<tr><th id="115">115</th><td>          <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>[<a class="local col7 ref" href="#17line_length" title='line_length' data-ref="17line_length" data-ref-filename="17line_length">line_length</a> + <var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="116">116</th><td>          <i>/* Consume the entire line.  */</i></td></tr>
+<tr><th id="117">117</th><td>          <a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a> = <a class="local col6 ref" href="#16pnl" title='pnl' data-ref="16pnl" data-ref-filename="16pnl">pnl</a> + <var>1</var>;</td></tr>
+<tr><th id="118">118</th><td>          <b>return</b> <a class="local col7 ref" href="#17line_length" title='line_length' data-ref="17line_length" data-ref-filename="17line_length">line_length</a> + <var>1</var>;</td></tr>
+<tr><th id="119">119</th><td>        }</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>      <i>/* If the buffer does not have enough space for what is pending</i></td></tr>
+<tr><th id="122">122</th><td><i>         in the stream (plus a NUL terminator), the buffer is too</i></td></tr>
+<tr><th id="123">123</th><td><i>         small.  */</i></td></tr>
+<tr><th id="124">124</th><td>      <b>if</b> (<a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a> + <var>1</var> &gt; <a class="local col1 ref" href="#11buffer_length" title='buffer_length' data-ref="11buffer_length" data-ref-filename="11buffer_length">buffer_length</a>)</td></tr>
+<tr><th id="125">125</th><td>        {</td></tr>
+<tr><th id="126">126</th><td>          <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="127">127</th><td>          <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="128">128</th><td>        }</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>      <i>/* End of line not found.  We need all the buffered data.  Fall</i></td></tr>
+<tr><th id="131">131</th><td><i>         through to the slow path.  */</i></td></tr>
+<tr><th id="132">132</th><td>      <a class="ref fn" href="../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (<a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>, <a class="local col3 ref" href="#13readptr" title='readptr' data-ref="13readptr" data-ref-filename="13readptr">readptr</a>, <a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a>);</td></tr>
+<tr><th id="133">133</th><td>      <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a> += <a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a>;</td></tr>
+<tr><th id="134">134</th><td>      <i>/* The original length is invalid after this point.  Use</i></td></tr>
+<tr><th id="135">135</th><td><i>         buffer_end instead.  */</i></td></tr>
+<tr><th id="136">136</th><td><u>#pragma GCC poison buffer_length</u></td></tr>
+<tr><th id="137">137</th><td>      <i>/* Read the old offset before updating the read pointer.  */</i></td></tr>
+<tr><th id="138">138</th><td>      <a class="local col5 ref" href="#15start_offset" title='start_offset' data-ref="15start_offset" data-ref-filename="15start_offset">start_offset</a> = <a class="ref fn" href="../include/stdio.h.html#__ftello64" title='__ftello64' data-ref="__ftello64" data-ref-filename="__ftello64">__ftello64</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>);</td></tr>
+<tr><th id="139">139</th><td>      <a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_ptr" title='_IO_FILE::_IO_read_ptr' data-ref="_IO_FILE::_IO_read_ptr" data-ref-filename="_IO_FILE.._IO_read_ptr">_IO_read_ptr</a> = <a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>-&gt;<a class="ref field" href="bits/types/struct_FILE.h.html#_IO_FILE::_IO_read_end" title='_IO_FILE::_IO_read_end' data-ref="_IO_FILE::_IO_read_end" data-ref-filename="_IO_FILE.._IO_read_end">_IO_read_end</a>;</td></tr>
+<tr><th id="140">140</th><td>    }</td></tr>
+<tr><th id="141">141</th><td>  <b>else</b></td></tr>
+<tr><th id="142">142</th><td>    {</td></tr>
+<tr><th id="143">143</th><td>      <a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a> = <var>0</var>;</td></tr>
+<tr><th id="144">144</th><td>      <a class="local col5 ref" href="#15start_offset" title='start_offset' data-ref="15start_offset" data-ref-filename="15start_offset">start_offset</a> = <a class="ref fn" href="../include/stdio.h.html#__ftello64" title='__ftello64' data-ref="__ftello64" data-ref-filename="__ftello64">__ftello64</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>);</td></tr>
+<tr><th id="145">145</th><td>    }</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>  <i>/* Slow path: Read more data from the underlying file.  We need to</i></td></tr>
+<tr><th id="148">148</th><td><i>     restore the file pointer if the buffer is too small.  First,</i></td></tr>
+<tr><th id="149">149</th><td><i>     check if the __ftello64 call above failed.  */</i></td></tr>
+<tr><th id="150">150</th><td>  <b>if</b> (<a class="local col5 ref" href="#15start_offset" title='start_offset' data-ref="15start_offset" data-ref-filename="15start_offset">start_offset</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="151">151</th><td>    <b>return</b> <a class="tu ref fn" href="#fail_no_erange" title='fail_no_erange' data-use='c' data-ref="fail_no_erange" data-ref-filename="fail_no_erange">fail_no_erange</a> ();</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col8 decl" id="18result" title='result' data-type='ssize_t' data-ref="18result" data-ref-filename="18result">result</dfn> = <a class="tu ref fn" href="#readline_slow" title='readline_slow' data-use='c' data-ref="readline_slow" data-ref-filename="readline_slow">readline_slow</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>, <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>, <a class="local col2 ref" href="#12buffer_end" title='buffer_end' data-ref="12buffer_end" data-ref-filename="12buffer_end">buffer_end</a>);</td></tr>
+<tr><th id="154">154</th><td>  <b>if</b> (<a class="local col8 ref" href="#18result" title='result' data-ref="18result" data-ref-filename="18result">result</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="155">155</th><td>    {</td></tr>
+<tr><th id="156">156</th><td>      <b>if</b> (<a class="macro" href="../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>)</td></tr>
+<tr><th id="157">157</th><td>        {</td></tr>
+<tr><th id="158">158</th><td>          <i>/* Restore the file pointer so that the caller may read the</i></td></tr>
+<tr><th id="159">159</th><td><i>             same line again.  */</i></td></tr>
+<tr><th id="160">160</th><td>          <b>if</b> (<a class="ref fn" href="../include/stdio.h.html#__fseeko64" title='__fseeko64' data-ref="__fseeko64" data-ref-filename="__fseeko64">__fseeko64</a> (<a class="local col9 ref" href="#9fp" title='fp' data-ref="9fp" data-ref-filename="9fp">fp</a>, <a class="local col5 ref" href="#15start_offset" title='start_offset' data-ref="15start_offset" data-ref-filename="15start_offset">start_offset</a>, <a class="macro" href="../io/fcntl.h.html#137" title="0" data-ref="_M/SEEK_SET">SEEK_SET</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="161">161</th><td>            <b>return</b> <a class="tu ref fn" href="#fail_no_erange" title='fail_no_erange' data-use='c' data-ref="fail_no_erange" data-ref-filename="fail_no_erange">fail_no_erange</a> ();</td></tr>
+<tr><th id="162">162</th><td>          <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="163">163</th><td>        }</td></tr>
+<tr><th id="164">164</th><td>      <i>/* Do not restore the file position on other errors; it is</i></td></tr>
+<tr><th id="165">165</th><td><i>         likely that the __fseeko64 call would fail, too.  */</i></td></tr>
+<tr><th id="166">166</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="167">167</th><td>    }</td></tr>
+<tr><th id="168">168</th><td>  <b>return</b> <a class="local col4 ref" href="#14readlen" title='readlen' data-ref="14readlen" data-ref-filename="14readlen">readlen</a> + <a class="local col8 ref" href="#18result" title='result' data-ref="18result" data-ref-filename="18result">result</a>;</td></tr>
+<tr><th id="169">169</th><td>}</td></tr>
+<tr><th id="170">170</th><td><a class="macro" href="../include/libc-symbols.h.html#619" title="extern __typeof (__libc_readline_unlocked) __EI___libc_readline_unlocked __asm__(&quot;&quot; &quot;__libc_readline_unlocked&quot;); extern __typeof (__libc_readline_unlocked) __EI___libc_readline_unlocked __attribute__((alias (&quot;&quot; &quot;__GI___libc_readline_unlocked&quot;))) ;" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (<a class="ref fn" href="#__libc_readline_unlocked" title='__libc_readline_unlocked' data-ref="__libc_readline_unlocked" data-ref-filename="__libc_readline_unlocked">__libc_readline_unlocked</a>)</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

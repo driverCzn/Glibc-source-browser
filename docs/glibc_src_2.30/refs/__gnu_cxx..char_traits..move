@@ -1,0 +1,2 @@
+<dec f='include/c++/7/bits/char_traits.h' l='117' type='static __gnu_cxx::char_traits::char_type * __gnu_cxx::char_traits::move(__gnu_cxx::char_traits::char_type * __s1, const __gnu_cxx::char_traits::char_type * __s2, std::size_t __n)'/>
+<def f='include/c++/7/bits/char_traits.h' l='181' ll='188' type='static typename char_traits&lt;_CharT&gt;::char_type * __gnu_cxx::char_traits::move(__gnu_cxx::char_traits::char_type * __s1, const __gnu_cxx::char_traits::char_type * __s2, std::size_t __n)'/>

@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>xdr_sizeof.c source code [glibc_src_2.30/sunrpc/xdr_sizeof.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sunrpc/xdr_sizeof.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.30</a>/<a href='./'>sunrpc</a>/<a href='xdr_sizeof.c.html'>xdr_sizeof.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * xdr_sizeof.c</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright (c) 2010, Oracle America, Inc.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Redistribution and use in source and binary forms, with or without</i></td></tr>
+<tr><th id="7">7</th><td><i> * modification, are permitted provided that the following conditions are</i></td></tr>
+<tr><th id="8">8</th><td><i> * met:</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> *     * Redistributions of source code must retain the above copyright</i></td></tr>
+<tr><th id="11">11</th><td><i> *       notice, this list of conditions and the following disclaimer.</i></td></tr>
+<tr><th id="12">12</th><td><i> *     * Redistributions in binary form must reproduce the above</i></td></tr>
+<tr><th id="13">13</th><td><i> *       copyright notice, this list of conditions and the following</i></td></tr>
+<tr><th id="14">14</th><td><i> *       disclaimer in the documentation and/or other materials</i></td></tr>
+<tr><th id="15">15</th><td><i> *       provided with the distribution.</i></td></tr>
+<tr><th id="16">16</th><td><i> *     * Neither the name of the "Oracle America, Inc." nor the names of its</i></td></tr>
+<tr><th id="17">17</th><td><i> *       contributors may be used to endorse or promote products derived</i></td></tr>
+<tr><th id="18">18</th><td><i> *       from this software without specific prior written permission.</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</i></td></tr>
+<tr><th id="21">21</th><td><i> *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</i></td></tr>
+<tr><th id="22">22</th><td><i> *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</i></td></tr>
+<tr><th id="23">23</th><td><i> *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE</i></td></tr>
+<tr><th id="24">24</th><td><i> *   COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,</i></td></tr>
+<tr><th id="25">25</th><td><i> *   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</i></td></tr>
+<tr><th id="26">26</th><td><i> *   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE</i></td></tr>
+<tr><th id="27">27</th><td><i> *   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS</i></td></tr>
+<tr><th id="28">28</th><td><i> *   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,</i></td></tr>
+<tr><th id="29">29</th><td><i> *   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</i></td></tr>
+<tr><th id="30">30</th><td><i> *   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</i></td></tr>
+<tr><th id="31">31</th><td><i> *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</i></td></tr>
+<tr><th id="32">32</th><td><i> *</i></td></tr>
+<tr><th id="33">33</th><td><i> * General purpose routine to see how much space something will use</i></td></tr>
+<tr><th id="34">34</th><td><i> * when serialized using XDR.</i></td></tr>
+<tr><th id="35">35</th><td><i> */</i></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../include/rpc/types.h.html">&lt;rpc/types.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../include/rpc/xdr.h.html">&lt;rpc/xdr.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i  data-doc="x_putlong">/* ARGSUSED */</i></td></tr>
+<tr><th id="44">44</th><td><em>static</em> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a></td></tr>
+<tr><th id="45">45</th><td><dfn class="tu decl def fn" id="x_putlong" title='x_putlong' data-type='bool_t x_putlong(XDR * xdrs, const long * longp)' data-ref="x_putlong" data-ref-filename="x_putlong">x_putlong</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col1 decl" id="1xdrs" title='xdrs' data-type='XDR *' data-ref="1xdrs" data-ref-filename="1xdrs">xdrs</dfn>, <em>const</em> <em>long</em> *<dfn class="local col2 decl" id="2longp" title='longp' data-type='const long *' data-ref="2longp" data-ref-filename="2longp">longp</dfn>)</td></tr>
+<tr><th id="46">46</th><td>{</td></tr>
+<tr><th id="47">47</th><td>  <a class="local col1 ref" href="#1xdrs" title='xdrs' data-ref="1xdrs" data-ref-filename="1xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> += <a class="macro" href="rpc/xdr.h.html#90" title="(4)" data-ref="_M/BYTES_PER_XDR_UNIT">BYTES_PER_XDR_UNIT</a>;</td></tr>
+<tr><th id="48">48</th><td>  <b>return</b> <a class="macro" href="rpc/types.h.html#53" title="(1)" data-ref="_M/TRUE">TRUE</a>;</td></tr>
+<tr><th id="49">49</th><td>}</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><i  data-doc="x_putbytes">/* ARGSUSED */</i></td></tr>
+<tr><th id="52">52</th><td><em>static</em> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a></td></tr>
+<tr><th id="53">53</th><td><dfn class="tu decl def fn" id="x_putbytes" title='x_putbytes' data-type='bool_t x_putbytes(XDR * xdrs, const char * bp, u_int len)' data-ref="x_putbytes" data-ref-filename="x_putbytes">x_putbytes</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col3 decl" id="3xdrs" title='xdrs' data-type='XDR *' data-ref="3xdrs" data-ref-filename="3xdrs">xdrs</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4bp" title='bp' data-type='const char *' data-ref="4bp" data-ref-filename="4bp">bp</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col5 decl" id="5len" title='len' data-type='u_int' data-ref="5len" data-ref-filename="5len">len</dfn>)</td></tr>
+<tr><th id="54">54</th><td>{</td></tr>
+<tr><th id="55">55</th><td>  <a class="local col3 ref" href="#3xdrs" title='xdrs' data-ref="3xdrs" data-ref-filename="3xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> += <a class="local col5 ref" href="#5len" title='len' data-ref="5len" data-ref-filename="5len">len</a>;</td></tr>
+<tr><th id="56">56</th><td>  <b>return</b> <a class="macro" href="rpc/types.h.html#53" title="(1)" data-ref="_M/TRUE">TRUE</a>;</td></tr>
+<tr><th id="57">57</th><td>}</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td><em>static</em> <a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a></td></tr>
+<tr><th id="60">60</th><td><dfn class="tu decl def fn" id="x_getpostn" title='x_getpostn' data-type='u_int x_getpostn(const XDR * xdrs)' data-ref="x_getpostn" data-ref-filename="x_getpostn">x_getpostn</dfn> (<em>const</em> <a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col6 decl" id="6xdrs" title='xdrs' data-type='const XDR *' data-ref="6xdrs" data-ref-filename="6xdrs">xdrs</dfn>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>  <b>return</b> <a class="local col6 ref" href="#6xdrs" title='xdrs' data-ref="6xdrs" data-ref-filename="6xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a>;</td></tr>
+<tr><th id="63">63</th><td>}</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><i  data-doc="x_setpostn">/* ARGSUSED */</i></td></tr>
+<tr><th id="66">66</th><td><em>static</em> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a></td></tr>
+<tr><th id="67">67</th><td><dfn class="tu decl def fn" id="x_setpostn" title='x_setpostn' data-type='bool_t x_setpostn(XDR * xdrs, u_int len)' data-ref="x_setpostn" data-ref-filename="x_setpostn">x_setpostn</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col7 decl" id="7xdrs" title='xdrs' data-type='XDR *' data-ref="7xdrs" data-ref-filename="7xdrs">xdrs</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col8 decl" id="8len" title='len' data-type='u_int' data-ref="8len" data-ref-filename="8len">len</dfn>)</td></tr>
+<tr><th id="68">68</th><td>{</td></tr>
+<tr><th id="69">69</th><td>  <i>/* This is not allowed */</i></td></tr>
+<tr><th id="70">70</th><td>  <b>return</b> <a class="macro" href="rpc/types.h.html#49" title="(0)" data-ref="_M/FALSE">FALSE</a>;</td></tr>
+<tr><th id="71">71</th><td>}</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><em>static</em> <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *</td></tr>
+<tr><th id="74">74</th><td><dfn class="tu decl def fn" id="x_inline" title='x_inline' data-type='int32_t * x_inline(XDR * xdrs, u_int len)' data-ref="x_inline" data-ref-filename="x_inline">x_inline</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col9 decl" id="9xdrs" title='xdrs' data-type='XDR *' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col0 decl" id="10len" title='len' data-type='u_int' data-ref="10len" data-ref-filename="10len">len</dfn>)</td></tr>
+<tr><th id="75">75</th><td>{</td></tr>
+<tr><th id="76">76</th><td>  <b>if</b> (<a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a> == <var>0</var>)</td></tr>
+<tr><th id="77">77</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="78">78</th><td>  <b>if</b> (<a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_op" title='XDR::x_op' data-ref="XDR::x_op" data-ref-filename="XDR..x_op">x_op</a> != <a class="enum" href="rpc/xdr.h.html#XDR_ENCODE" title='XDR_ENCODE' data-ref="XDR_ENCODE" data-ref-filename="XDR_ENCODE">XDR_ENCODE</a>)</td></tr>
+<tr><th id="79">79</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="80">80</th><td>  <b>if</b> (<a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a> &lt; (<a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a>) (<em>long</em> <em>int</em>) <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_base" title='XDR::x_base' data-ref="XDR::x_base" data-ref-filename="XDR..x_base">x_base</a>)</td></tr>
+<tr><th id="81">81</th><td>    {</td></tr>
+<tr><th id="82">82</th><td>      <i>/* x_private was already allocated */</i></td></tr>
+<tr><th id="83">83</th><td>      <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> += <a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a>;</td></tr>
+<tr><th id="84">84</th><td>      <b>return</b> (<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *) <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>;</td></tr>
+<tr><th id="85">85</th><td>    }</td></tr>
+<tr><th id="86">86</th><td>  <b>else</b></td></tr>
+<tr><th id="87">87</th><td>    {</td></tr>
+<tr><th id="88">88</th><td>      <i>/* Free the earlier space and allocate new area */</i></td></tr>
+<tr><th id="89">89</th><td>      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>);</td></tr>
+<tr><th id="90">90</th><td>      <b>if</b> ((<a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a> = (<a class="typedef" href="../posix/sys/types.h.html#caddr_t" title='caddr_t' data-type='__caddr_t' data-ref="caddr_t" data-ref-filename="caddr_t">caddr_t</a>) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a>)) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="91">91</th><td>	{</td></tr>
+<tr><th id="92">92</th><td>	  <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_base" title='XDR::x_base' data-ref="XDR::x_base" data-ref-filename="XDR..x_base">x_base</a> = <var>0</var>;</td></tr>
+<tr><th id="93">93</th><td>	  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="94">94</th><td>	}</td></tr>
+<tr><th id="95">95</th><td>      <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_base" title='XDR::x_base' data-ref="XDR::x_base" data-ref-filename="XDR..x_base">x_base</a> = (<em>void</em> *) (<em>long</em>) <a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a>;</td></tr>
+<tr><th id="96">96</th><td>      <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> += <a class="local col0 ref" href="#10len" title='len' data-ref="10len" data-ref-filename="10len">len</a>;</td></tr>
+<tr><th id="97">97</th><td>      <b>return</b> (<a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *) <a class="local col9 ref" href="#9xdrs" title='xdrs' data-ref="9xdrs" data-ref-filename="9xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>;</td></tr>
+<tr><th id="98">98</th><td>    }</td></tr>
+<tr><th id="99">99</th><td>}</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="102">102</th><td><dfn class="tu decl def fn" id="harmless" title='harmless' data-type='int harmless()' data-ref="harmless" data-ref-filename="harmless">harmless</dfn> (<em>void</em>)</td></tr>
+<tr><th id="103">103</th><td>{</td></tr>
+<tr><th id="104">104</th><td>  <i>/* Always return FALSE/NULL, as the case may be */</i></td></tr>
+<tr><th id="105">105</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="106">106</th><td>}</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="109">109</th><td><dfn class="tu decl def fn" id="x_destroy" title='x_destroy' data-type='void x_destroy(XDR * xdrs)' data-ref="x_destroy" data-ref-filename="x_destroy">x_destroy</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col1 decl" id="11xdrs" title='xdrs' data-type='XDR *' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</dfn>)</td></tr>
+<tr><th id="110">110</th><td>{</td></tr>
+<tr><th id="111">111</th><td>  <a class="local col1 ref" href="#11xdrs" title='xdrs' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> = <var>0</var>;</td></tr>
+<tr><th id="112">112</th><td>  <a class="local col1 ref" href="#11xdrs" title='xdrs' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_base" title='XDR::x_base' data-ref="XDR::x_base" data-ref-filename="XDR..x_base">x_base</a> = <var>0</var>;</td></tr>
+<tr><th id="113">113</th><td>  <b>if</b> (<a class="local col1 ref" href="#11xdrs" title='xdrs' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>)</td></tr>
+<tr><th id="114">114</th><td>    {</td></tr>
+<tr><th id="115">115</th><td>      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col1 ref" href="#11xdrs" title='xdrs' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>);</td></tr>
+<tr><th id="116">116</th><td>      <a class="local col1 ref" href="#11xdrs" title='xdrs' data-ref="11xdrs" data-ref-filename="11xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="117">117</th><td>    }</td></tr>
+<tr><th id="118">118</th><td>  <b>return</b>;</td></tr>
+<tr><th id="119">119</th><td>}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><em>static</em> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a></td></tr>
+<tr><th id="122">122</th><td><dfn class="tu decl def fn" id="x_putint32" title='x_putint32' data-type='bool_t x_putint32(XDR * xdrs, const int32_t * int32p)' data-ref="x_putint32" data-ref-filename="x_putint32">x_putint32</dfn> (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *<dfn class="local col2 decl" id="12xdrs" title='xdrs' data-type='XDR *' data-ref="12xdrs" data-ref-filename="12xdrs">xdrs</dfn>, <em>const</em> <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *<dfn class="local col3 decl" id="13int32p" title='int32p' data-type='const int32_t *' data-ref="13int32p" data-ref-filename="13int32p">int32p</dfn>)</td></tr>
+<tr><th id="123">123</th><td>{</td></tr>
+<tr><th id="124">124</th><td>  <a class="local col2 ref" href="#12xdrs" title='xdrs' data-ref="12xdrs" data-ref-filename="12xdrs">xdrs</a>-&gt;<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> += <a class="macro" href="rpc/xdr.h.html#90" title="(4)" data-ref="_M/BYTES_PER_XDR_UNIT">BYTES_PER_XDR_UNIT</a>;</td></tr>
+<tr><th id="125">125</th><td>  <b>return</b> <a class="macro" href="rpc/types.h.html#53" title="(1)" data-ref="_M/TRUE">TRUE</a>;</td></tr>
+<tr><th id="126">126</th><td>}</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="129">129</th><td><dfn class="decl def fn" id="__GI_xdr_sizeof" title='xdr_sizeof' data-ref="__GI_xdr_sizeof" data-ref-filename="__GI_xdr_sizeof">xdr_sizeof</dfn> (<a class="typedef" href="rpc/xdr.h.html#xdrproc_t" title='xdrproc_t' data-type='bool_t (*)(XDR *, void *, ...)' data-ref="xdrproc_t" data-ref-filename="xdrproc_t">xdrproc_t</a> <dfn class="local col4 decl" id="14func" title='func' data-type='xdrproc_t' data-ref="14func" data-ref-filename="14func">func</dfn>, <em>void</em> *<dfn class="local col5 decl" id="15data" title='data' data-type='void *' data-ref="15data" data-ref-filename="15data">data</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>  <a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> <dfn class="local col6 decl" id="16x" title='x' data-type='XDR' data-ref="16x" data-ref-filename="16x">x</dfn>;</td></tr>
+<tr><th id="132">132</th><td>  <b>struct</b> <a class="type" href="rpc/xdr.h.html#xdr_ops" title='xdr_ops' data-ref="xdr_ops" data-ref-filename="xdr_ops">xdr_ops</a> <dfn class="local col7 decl" id="17ops" title='ops' data-type='struct xdr_ops' data-ref="17ops" data-ref-filename="17ops">ops</dfn>;</td></tr>
+<tr><th id="133">133</th><td>  <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a> <dfn class="local col8 decl" id="18stat" title='stat' data-type='bool_t' data-ref="18stat" data-ref-filename="18stat">stat</dfn>;</td></tr>
+<tr><th id="134">134</th><td>  <i>/* to stop ANSI-C compiler from complaining */</i></td></tr>
+<tr><th id="135">135</th><td>  <b>typedef</b> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a> (*<dfn class="local col9 typedef" id="19dummyfunc1" title='dummyfunc1' data-type='bool_t (*)(XDR *, long *)' data-ref="19dummyfunc1" data-ref-filename="19dummyfunc1">dummyfunc1</dfn>) (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *, <em>long</em> *);</td></tr>
+<tr><th id="136">136</th><td>  <b>typedef</b> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a> (*<dfn class="local col0 typedef" id="20dummyfunc2" title='dummyfunc2' data-type='bool_t (*)(XDR *, caddr_t, u_int)' data-ref="20dummyfunc2" data-ref-filename="20dummyfunc2">dummyfunc2</dfn>) (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *, <a class="typedef" href="../posix/sys/types.h.html#caddr_t" title='caddr_t' data-type='__caddr_t' data-ref="caddr_t" data-ref-filename="caddr_t">caddr_t</a>, <a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a>);</td></tr>
+<tr><th id="137">137</th><td>  <b>typedef</b> <a class="typedef" href="rpc/types.h.html#bool_t" title='bool_t' data-type='int' data-ref="bool_t" data-ref-filename="bool_t">bool_t</a> (*<dfn class="local col1 typedef" id="21dummyfunc3" title='dummyfunc3' data-type='bool_t (*)(XDR *, int32_t *)' data-ref="21dummyfunc3" data-ref-filename="21dummyfunc3">dummyfunc3</dfn>) (<a class="typedef" href="rpc/xdr.h.html#XDR" title='XDR' data-type='struct XDR' data-ref="XDR" data-ref-filename="XDR">XDR</a> *, <a class="typedef" href="../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> *);</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_putlong" title='xdr_ops::x_putlong' data-ref="xdr_ops::x_putlong" data-ref-filename="xdr_ops..x_putlong">x_putlong</a> = <a class="tu ref fn" href="#x_putlong" title='x_putlong' data-use='r' data-ref="x_putlong" data-ref-filename="x_putlong">x_putlong</a>;</td></tr>
+<tr><th id="140">140</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_putbytes" title='xdr_ops::x_putbytes' data-ref="xdr_ops::x_putbytes" data-ref-filename="xdr_ops..x_putbytes">x_putbytes</a> = <a class="tu ref fn" href="#x_putbytes" title='x_putbytes' data-use='r' data-ref="x_putbytes" data-ref-filename="x_putbytes">x_putbytes</a>;</td></tr>
+<tr><th id="141">141</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_inline" title='xdr_ops::x_inline' data-ref="xdr_ops::x_inline" data-ref-filename="xdr_ops..x_inline">x_inline</a> = <a class="tu ref fn" href="#x_inline" title='x_inline' data-use='r' data-ref="x_inline" data-ref-filename="x_inline">x_inline</a>;</td></tr>
+<tr><th id="142">142</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_getpostn" title='xdr_ops::x_getpostn' data-ref="xdr_ops::x_getpostn" data-ref-filename="xdr_ops..x_getpostn">x_getpostn</a> = <a class="tu ref fn" href="#x_getpostn" title='x_getpostn' data-use='r' data-ref="x_getpostn" data-ref-filename="x_getpostn">x_getpostn</a>;</td></tr>
+<tr><th id="143">143</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_setpostn" title='xdr_ops::x_setpostn' data-ref="xdr_ops::x_setpostn" data-ref-filename="xdr_ops..x_setpostn">x_setpostn</a> = <a class="tu ref fn" href="#x_setpostn" title='x_setpostn' data-use='r' data-ref="x_setpostn" data-ref-filename="x_setpostn">x_setpostn</a>;</td></tr>
+<tr><th id="144">144</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_destroy" title='xdr_ops::x_destroy' data-ref="xdr_ops::x_destroy" data-ref-filename="xdr_ops..x_destroy">x_destroy</a> = <a class="tu ref fn" href="#x_destroy" title='x_destroy' data-use='r' data-ref="x_destroy" data-ref-filename="x_destroy">x_destroy</a>;</td></tr>
+<tr><th id="145">145</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_putint32" title='xdr_ops::x_putint32' data-ref="xdr_ops::x_putint32" data-ref-filename="xdr_ops..x_putint32">x_putint32</a> = <a class="tu ref fn" href="#x_putint32" title='x_putint32' data-use='r' data-ref="x_putint32" data-ref-filename="x_putint32">x_putint32</a>;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>  <i>/* the other harmless ones */</i></td></tr>
+<tr><th id="148">148</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_getlong" title='xdr_ops::x_getlong' data-ref="xdr_ops::x_getlong" data-ref-filename="xdr_ops..x_getlong">x_getlong</a> = (<a class="local col9 typedef" href="#19dummyfunc1" title='dummyfunc1' data-type='bool_t (*)(XDR *, long *)' data-ref="19dummyfunc1" data-ref-filename="19dummyfunc1">dummyfunc1</a>) <a class="tu ref fn" href="#harmless" title='harmless' data-use='r' data-ref="harmless" data-ref-filename="harmless">harmless</a>;</td></tr>
+<tr><th id="149">149</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_getbytes" title='xdr_ops::x_getbytes' data-ref="xdr_ops::x_getbytes" data-ref-filename="xdr_ops..x_getbytes">x_getbytes</a> = (<a class="local col0 typedef" href="#20dummyfunc2" title='dummyfunc2' data-type='bool_t (*)(XDR *, caddr_t, u_int)' data-ref="20dummyfunc2" data-ref-filename="20dummyfunc2">dummyfunc2</a>) <a class="tu ref fn" href="#harmless" title='harmless' data-use='r' data-ref="harmless" data-ref-filename="harmless">harmless</a>;</td></tr>
+<tr><th id="150">150</th><td>  <a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>.<a class="ref field" href="rpc/xdr.h.html#xdr_ops::x_getint32" title='xdr_ops::x_getint32' data-ref="xdr_ops::x_getint32" data-ref-filename="xdr_ops..x_getint32">x_getint32</a> = (<a class="local col1 typedef" href="#21dummyfunc3" title='dummyfunc3' data-type='bool_t (*)(XDR *, int32_t *)' data-ref="21dummyfunc3" data-ref-filename="21dummyfunc3">dummyfunc3</a>) <a class="tu ref fn" href="#harmless" title='harmless' data-use='r' data-ref="harmless" data-ref-filename="harmless">harmless</a>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>  <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_op" title='XDR::x_op' data-ref="XDR::x_op" data-ref-filename="XDR..x_op">x_op</a> = <a class="enum" href="rpc/xdr.h.html#XDR_ENCODE" title='XDR_ENCODE' data-ref="XDR_ENCODE" data-ref-filename="XDR_ENCODE">XDR_ENCODE</a>;</td></tr>
+<tr><th id="153">153</th><td>  <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_ops" title='XDR::x_ops' data-ref="XDR::x_ops" data-ref-filename="XDR..x_ops">x_ops</a> = &amp;<a class="local col7 ref" href="#17ops" title='ops' data-ref="17ops" data-ref-filename="17ops">ops</a>;</td></tr>
+<tr><th id="154">154</th><td>  <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> = <var>0</var>;</td></tr>
+<tr><th id="155">155</th><td>  <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a> = (<a class="typedef" href="../posix/sys/types.h.html#caddr_t" title='caddr_t' data-type='__caddr_t' data-ref="caddr_t" data-ref-filename="caddr_t">caddr_t</a>) <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="156">156</th><td>  <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_base" title='XDR::x_base' data-ref="XDR::x_base" data-ref-filename="XDR..x_base">x_base</a> = (<a class="typedef" href="../posix/sys/types.h.html#caddr_t" title='caddr_t' data-type='__caddr_t' data-ref="caddr_t" data-ref-filename="caddr_t">caddr_t</a>) <var>0</var>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>  <a class="local col8 ref" href="#18stat" title='stat' data-ref="18stat" data-ref-filename="18stat">stat</a> = <a class="local col4 ref" href="#14func" title='func' data-ref="14func" data-ref-filename="14func">func</a> (&amp;<a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>, <a class="local col5 ref" href="#15data" title='data' data-ref="15data" data-ref-filename="15data">data</a>);</td></tr>
+<tr><th id="159">159</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_private" title='XDR::x_private' data-ref="XDR::x_private" data-ref-filename="XDR..x_private">x_private</a>);</td></tr>
+<tr><th id="160">160</th><td>  <b>return</b> <a class="local col8 ref" href="#18stat" title='stat' data-ref="18stat" data-ref-filename="18stat">stat</a> == <a class="macro" href="rpc/types.h.html#53" title="(1)" data-ref="_M/TRUE">TRUE</a> ? <a class="local col6 ref" href="#16x" title='x' data-ref="16x" data-ref-filename="16x">x</a>.<a class="ref field" href="rpc/xdr.h.html#XDR::x_handy" title='XDR::x_handy' data-ref="XDR::x_handy" data-ref-filename="XDR..x_handy">x_handy</a> : <var>0</var>;</td></tr>
+<tr><th id="161">161</th><td>}</td></tr>
+<tr><th id="162">162</th><td><u>#<span data-ppcond="162">ifdef</span> <span class="macro" data-ref="_M/EXPORT_RPC_SYMBOLS">EXPORT_RPC_SYMBOLS</span></u></td></tr>
+<tr><th id="163">163</th><td><a class="macro" href="../include/libc-symbols.h.html#619" title="extern __typeof (xdr_sizeof) __EI_xdr_sizeof __asm__(&quot;&quot; &quot;xdr_sizeof&quot;); extern __typeof (xdr_sizeof) __EI_xdr_sizeof __attribute__((alias (&quot;&quot; &quot;__GI_xdr_sizeof&quot;))) ;" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (<a class="ref fn" href="#__GI_xdr_sizeof" title='xdr_sizeof' data-ref="__GI_xdr_sizeof" data-ref-filename="__GI_xdr_sizeof">xdr_sizeof</a>)</td></tr>
+<tr><th id="164">164</th><td><u>#<span data-ppcond="162">else</span></u></td></tr>
+<tr><th id="165">165</th><td>libc_hidden_nolink_sunrpc (xdr_sizeof, GLIBC_2_1)</td></tr>
+<tr><th id="166">166</th><td><u>#<span data-ppcond="162">endif</span></u></td></tr>
+<tr><th id="167">167</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,403 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>cpu-tunables.c source code [glibc_src_2.30/sysdeps/x86/cpu-tunables.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/sysdeps/x86/cpu-tunables.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.30</a>/<a href='..'>sysdeps</a>/<a href='./'>x86</a>/<a href='cpu-tunables.c.html'>cpu-tunables.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* x86 CPU feature tuning.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Copyright (C) 2017-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">if</span> <span class="macro" title="1" data-ref="_M/HAVE_TUNABLES">HAVE_TUNABLES</span></u></td></tr>
+<tr><th id="20">20</th><td><u># define <dfn class="macro" id="_M/TUNABLE_NAMESPACE" data-ref="_M/TUNABLE_NAMESPACE">TUNABLE_NAMESPACE</dfn> cpu</u></td></tr>
+<tr><th id="21">21</th><td><u># include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u># include <a href="../../include/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u># include <a href="../../include/unistd.h.html">&lt;unistd.h&gt;</a>		/* Get STDOUT_FILENO for _dl_printf.  */</u></td></tr>
+<tr><th id="24">24</th><td><u># include <a href="../../elf/dl-tunables.h.html">&lt;elf/dl-tunables.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u># include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u># include <a href="cpu-features.h.html">&lt;cpu-features.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u># include <a href="../unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/* We can't use IFUNC memcmp nor strlen in init_cpu_features from libc.a</i></td></tr>
+<tr><th id="30">30</th><td><i>   since IFUNC must be set up by init_cpu_features.  */</i></td></tr>
+<tr><th id="31">31</th><td><u># <span data-ppcond="31">if</span> defined <span class="macro" data-ref="_M/USE_MULTIARCH">USE_MULTIARCH</span> &amp;&amp; !defined <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="32">32</th><td><u>#  <span data-ppcond="32">ifdef</span> <span class="macro" data-ref="_M/__x86_64__">__x86_64__</span></u></td></tr>
+<tr><th id="33">33</th><td><u>#   define <dfn class="macro" id="_M/DEFAULT_MEMCMP" data-ref="_M/DEFAULT_MEMCMP">DEFAULT_MEMCMP</dfn>	<dfn class="decl fn" id="__memcmp_sse2" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2"><a class="ref fn" href="#37" title='__memcmp_sse2' data-ref="__memcmp_sse2" data-ref-filename="__memcmp_sse2">__memcmp_sse2</a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></dfn></u></td></tr>
+<tr><th id="34">34</th><td><u>#  <span data-ppcond="32">else</span></u></td></tr>
+<tr><th id="35">35</th><td><u>#   define DEFAULT_MEMCMP	__memcmp_ia32</u></td></tr>
+<tr><th id="36">36</th><td><u>#  <span data-ppcond="32">endif</span></u></td></tr>
+<tr><th id="37">37</th><td><b>extern</b> <b>__typeof</b> (<a class="ref fn" href="../../string/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a>) <a class="macro" href="#33" title="__memcmp_sse2" data-ref="_M/DEFAULT_MEMCMP">DEFAULT_MEMCMP</a>;</td></tr>
+<tr><th id="38">38</th><td><u># <span data-ppcond="31">else</span></u></td></tr>
+<tr><th id="39">39</th><td><u>#  define DEFAULT_MEMCMP	memcmp</u></td></tr>
+<tr><th id="40">40</th><td><u># <span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><u># define <dfn class="macro" id="_M/CHECK_GLIBC_IFUNC_CPU_OFF" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</dfn>(f, cpu_features, name, len)		\</u></td></tr>
+<tr><th id="43">43</th><td><u>  _Static_assert (sizeof (#name) - 1 == len, #name " != " #len);	\</u></td></tr>
+<tr><th id="44">44</th><td><u>  if (!DEFAULT_MEMCMP (f, #name, len))					\</u></td></tr>
+<tr><th id="45">45</th><td><u>    {									\</u></td></tr>
+<tr><th id="46">46</th><td><u>      cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::cpuid" title='cpu_features::cpuid' data-ref="cpu_features::cpuid" data-ref-filename="cpu_features..cpuid">cpuid</a>[index_cpu_##name].reg_##name			\</u></td></tr>
+<tr><th id="47">47</th><td><u>	&amp;= ~bit_cpu_##name;						\</u></td></tr>
+<tr><th id="48">48</th><td><u>      break;								\</u></td></tr>
+<tr><th id="49">49</th><td><u>    }</u></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><i>/* Disable an ARCH feature NAME.  We don't enable an ARCH feature which</i></td></tr>
+<tr><th id="52">52</th><td><i>   isn't available.  */</i></td></tr>
+<tr><th id="53">53</th><td><u># define <dfn class="macro" id="_M/CHECK_GLIBC_IFUNC_ARCH_OFF" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</dfn>(f, cpu_features, name, len)		\</u></td></tr>
+<tr><th id="54">54</th><td><u>  _Static_assert (sizeof (#name) - 1 == len, #name " != " #len);	\</u></td></tr>
+<tr><th id="55">55</th><td><u>  if (!DEFAULT_MEMCMP (f, #name, len))					\</u></td></tr>
+<tr><th id="56">56</th><td><u>    {									\</u></td></tr>
+<tr><th id="57">57</th><td><u>      cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]				\</u></td></tr>
+<tr><th id="58">58</th><td><u>	&amp;= ~bit_arch_##name;						\</u></td></tr>
+<tr><th id="59">59</th><td><u>      break;								\</u></td></tr>
+<tr><th id="60">60</th><td><u>    }</u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><i>/* Enable/disable an ARCH feature NAME.  */</i></td></tr>
+<tr><th id="63">63</th><td><u># define <dfn class="macro" id="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</dfn>(f, cpu_features, name, disable,	\</u></td></tr>
+<tr><th id="64">64</th><td><u>				    len)				\</u></td></tr>
+<tr><th id="65">65</th><td><u>  _Static_assert (sizeof (#name) - 1 == len, #name " != " #len);	\</u></td></tr>
+<tr><th id="66">66</th><td><u>  if (!DEFAULT_MEMCMP (f, #name, len))					\</u></td></tr>
+<tr><th id="67">67</th><td><u>    {									\</u></td></tr>
+<tr><th id="68">68</th><td><u>      if (disable)							\</u></td></tr>
+<tr><th id="69">69</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="70">70</th><td><u>	  &amp;= ~bit_arch_##name;						\</u></td></tr>
+<tr><th id="71">71</th><td><u>      else								\</u></td></tr>
+<tr><th id="72">72</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="73">73</th><td><u>	  |= bit_arch_##name;						\</u></td></tr>
+<tr><th id="74">74</th><td><u>      break;								\</u></td></tr>
+<tr><th id="75">75</th><td><u>    }</u></td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><i>/* Enable/disable an ARCH feature NAME.  Enable an ARCH feature only</i></td></tr>
+<tr><th id="78">78</th><td><i>   if the ARCH feature NEED is also enabled.  */</i></td></tr>
+<tr><th id="79">79</th><td><u># define <dfn class="macro" id="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH</dfn>(f, cpu_features, name,	\</u></td></tr>
+<tr><th id="80">80</th><td><u>					       need, disable, len)	\</u></td></tr>
+<tr><th id="81">81</th><td><u>  _Static_assert (sizeof (#name) - 1 == len, #name " != " #len);	\</u></td></tr>
+<tr><th id="82">82</th><td><u>  if (!DEFAULT_MEMCMP (f, #name, len))					\</u></td></tr>
+<tr><th id="83">83</th><td><u>    {									\</u></td></tr>
+<tr><th id="84">84</th><td><u>      if (disable)							\</u></td></tr>
+<tr><th id="85">85</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="86">86</th><td><u>	  &amp;= ~bit_arch_##name;						\</u></td></tr>
+<tr><th id="87">87</th><td><u>      else if (CPU_FEATURES_ARCH_P (cpu_features, need))		\</u></td></tr>
+<tr><th id="88">88</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="89">89</th><td><u>	  |= bit_arch_##name;						\</u></td></tr>
+<tr><th id="90">90</th><td><u>      break;								\</u></td></tr>
+<tr><th id="91">91</th><td><u>    }</u></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><i>/* Enable/disable an ARCH feature NAME.  Enable an ARCH feature only</i></td></tr>
+<tr><th id="94">94</th><td><i>   if the CPU feature NEED is also enabled.  */</i></td></tr>
+<tr><th id="95">95</th><td><u># define <dfn class="macro" id="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH</dfn>(f, cpu_features, name,	\</u></td></tr>
+<tr><th id="96">96</th><td><u>					      need, disable, len)	\</u></td></tr>
+<tr><th id="97">97</th><td><u>  _Static_assert (sizeof (#name) - 1 == len, #name " != " #len);	\</u></td></tr>
+<tr><th id="98">98</th><td><u>  if (!DEFAULT_MEMCMP (f, #name, len))					\</u></td></tr>
+<tr><th id="99">99</th><td><u>    {									\</u></td></tr>
+<tr><th id="100">100</th><td><u>      if (disable)							\</u></td></tr>
+<tr><th id="101">101</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="102">102</th><td><u>	  &amp;= ~bit_arch_##name;						\</u></td></tr>
+<tr><th id="103">103</th><td><u>      else if (CPU_FEATURES_CPU_P (cpu_features, need))			\</u></td></tr>
+<tr><th id="104">104</th><td><u>	cpu_features-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::feature" title='cpu_features::feature' data-ref="cpu_features::feature" data-ref-filename="cpu_features..feature">feature</a>[index_arch_##name]			\</u></td></tr>
+<tr><th id="105">105</th><td><u>	  |= bit_arch_##name;						\</u></td></tr>
+<tr><th id="106">106</th><td><u>      break;								\</u></td></tr>
+<tr><th id="107">107</th><td><u>    }</u></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><a class="macro" href="../../include/libc-symbols.h.html#432" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a></td></tr>
+<tr><th id="110">110</th><td><em>void</em></td></tr>
+<tr><th id="111">111</th><td><a class="macro" href="../../elf/dl-tunables.h.html#109" title="_dl_tunable_set_hwcaps" data-ref="_M/TUNABLE_CALLBACK">TUNABLE_CALLBACK</a> (set_hwcaps) (<a class="typedef" href="../../elf/dl-tunable-types.h.html#tunable_val_t" title='tunable_val_t' data-type='union tunable_val_t' data-ref="tunable_val_t" data-ref-filename="tunable_val_t">tunable_val_t</a> *<dfn class="local col1 decl" id="1valp" title='valp' data-type='tunable_val_t *' data-ref="1valp" data-ref-filename="1valp">valp</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>  <i>/* The current IFUNC selection is based on microbenchmarks in glibc.</i></td></tr>
+<tr><th id="114">114</th><td><i>     It should give the best performance for most workloads.  But other</i></td></tr>
+<tr><th id="115">115</th><td><i>     choices may have better performance for a particular workload or on</i></td></tr>
+<tr><th id="116">116</th><td><i>     the hardware which wasn't available when the selection was made.</i></td></tr>
+<tr><th id="117">117</th><td><i>     The environment variable:</i></td></tr>
+<tr><th id="118">118</th><td><i></i></td></tr>
+<tr><th id="119">119</th><td><i>     GLIBC_TUNABLES=glibc.cpu.hwcaps=-xxx,yyy,-zzz,....</i></td></tr>
+<tr><th id="120">120</th><td><i></i></td></tr>
+<tr><th id="121">121</th><td><i>     can be used to enable CPU/ARCH feature yyy, disable CPU/ARCH feature</i></td></tr>
+<tr><th id="122">122</th><td><i>     yyy and zzz, where the feature name is case-sensitive and has to</i></td></tr>
+<tr><th id="123">123</th><td><i>     match the ones in cpu-features.h.  It can be used by glibc developers</i></td></tr>
+<tr><th id="124">124</th><td><i>     to tune for a new processor or override the IFUNC selection to</i></td></tr>
+<tr><th id="125">125</th><td><i>     improve performance for a particular workload.</i></td></tr>
+<tr><th id="126">126</th><td><i></i></td></tr>
+<tr><th id="127">127</th><td><i>     NOTE: the IFUNC selection may change over time.  Please check all</i></td></tr>
+<tr><th id="128">128</th><td><i>     multiarch implementations when experimenting.  */</i></td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>  <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2p" title='p' data-type='const char *' data-ref="2p" data-ref-filename="2p">p</dfn> = <a class="local col1 ref" href="#1valp" title='valp' data-ref="1valp" data-ref-filename="1valp">valp</a>-&gt;<a class="ref field" href="../../elf/dl-tunable-types.h.html#(anonymous)::strval" title='(anonymous union)::strval' data-ref="(anonymous)::strval" data-ref-filename="(anonymous)..strval">strval</a>;</td></tr>
+<tr><th id="131">131</th><td>  <b>struct</b> <a class="type" href="cpu-features.h.html#cpu_features" title='cpu_features' data-ref="cpu_features" data-ref-filename="cpu_features">cpu_features</a> *<dfn class="local col3 decl" id="3cpu_features" title='cpu_features' data-type='struct cpu_features *' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</dfn> = &amp;<a class="macro" href="../generic/ldsodefs.h.html#463" title="_dl_x86_cpu_features" data-ref="_M/GLRO">GLRO</a>(dl_x86_cpu_features);</td></tr>
+<tr><th id="132">132</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="4len" title='len' data-type='size_t' data-ref="4len" data-ref-filename="4len">len</dfn>;</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>  <b>do</b></td></tr>
+<tr><th id="135">135</th><td>    {</td></tr>
+<tr><th id="136">136</th><td>      <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5c" title='c' data-type='const char *' data-ref="5c" data-ref-filename="5c">c</dfn>, *<dfn class="local col6 decl" id="6n" title='n' data-type='const char *' data-ref="6n" data-ref-filename="6n">n</dfn>;</td></tr>
+<tr><th id="137">137</th><td>      <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col7 decl" id="7disable" title='disable' data-type='_Bool' data-ref="7disable" data-ref-filename="7disable">disable</dfn>;</td></tr>
+<tr><th id="138">138</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8nl" title='nl' data-type='size_t' data-ref="8nl" data-ref-filename="8nl">nl</dfn>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>      <b>for</b> (<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a> = <a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a>; *<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a> != <kbd>','</kbd>; <a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>++)</td></tr>
+<tr><th id="141">141</th><td>	<b>if</b> (*<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="142">142</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>      <a class="local col4 ref" href="#4len" title='len' data-ref="4len" data-ref-filename="4len">len</a> = <a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a> - <a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a>;</td></tr>
+<tr><th id="145">145</th><td>      <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a> = *<a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a> == <kbd>'-'</kbd>;</td></tr>
+<tr><th id="146">146</th><td>      <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="147">147</th><td>	{</td></tr>
+<tr><th id="148">148</th><td>	  <a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a> = <a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a> + <var>1</var>;</td></tr>
+<tr><th id="149">149</th><td>	  <a class="local col8 ref" href="#8nl" title='nl' data-ref="8nl" data-ref-filename="8nl">nl</a> = <a class="local col4 ref" href="#4len" title='len' data-ref="4len" data-ref-filename="4len">len</a> - <var>1</var>;</td></tr>
+<tr><th id="150">150</th><td>	}</td></tr>
+<tr><th id="151">151</th><td>      <b>else</b></td></tr>
+<tr><th id="152">152</th><td>	{</td></tr>
+<tr><th id="153">153</th><td>	  <a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a> = <a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a>;</td></tr>
+<tr><th id="154">154</th><td>	  <a class="local col8 ref" href="#8nl" title='nl' data-ref="8nl" data-ref-filename="8nl">nl</a> = <a class="local col4 ref" href="#4len" title='len' data-ref="4len" data-ref-filename="4len">len</a>;</td></tr>
+<tr><th id="155">155</th><td>	}</td></tr>
+<tr><th id="156">156</th><td>      <b>switch</b> (<a class="local col8 ref" href="#8nl" title='nl' data-ref="8nl" data-ref-filename="8nl">nl</a>)</td></tr>
+<tr><th id="157">157</th><td>	{</td></tr>
+<tr><th id="158">158</th><td>	<b>default</b>:</td></tr>
+<tr><th id="159">159</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="160">160</th><td>	<b>case</b> <var>3</var>:</td></tr>
+<tr><th id="161">161</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="162">162</th><td>	    {</td></tr>
+<tr><th id="163">163</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX&quot;) - 1 == 3, &quot;AVX&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;AVX&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 28); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX, <var>3</var>);</td></tr>
+<tr><th id="164">164</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;CX8&quot;) - 1 == 3, &quot;CX8&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;CX8&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].edx &amp;= ~(1u &lt;&lt; 8); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, CX8, <var>3</var>);</td></tr>
+<tr><th id="165">165</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;FMA&quot;) - 1 == 3, &quot;FMA&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;FMA&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 12); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, FMA, <var>3</var>);</td></tr>
+<tr><th id="166">166</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;HTT&quot;) - 1 == 3, &quot;HTT&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;HTT&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].edx &amp;= ~(1u &lt;&lt; 28); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, HTT, <var>3</var>);</td></tr>
+<tr><th id="167">167</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;IBT&quot;) - 1 == 3, &quot;IBT&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;IBT&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].edx &amp;= ~(1u &lt;&lt; 20); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, IBT, <var>3</var>);</td></tr>
+<tr><th id="168">168</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;RTM&quot;) - 1 == 3, &quot;RTM&quot; &quot; != &quot; &quot;3&quot;); if (!__memcmp_sse2 (n, &quot;RTM&quot;, 3)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 11); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, RTM, <var>3</var>);</td></tr>
+<tr><th id="169">169</th><td>	    }</td></tr>
+<tr><th id="170">170</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="171">171</th><td>	<b>case</b> <var>4</var>:</td></tr>
+<tr><th id="172">172</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="173">173</th><td>	    {</td></tr>
+<tr><th id="174">174</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX2&quot;) - 1 == 4, &quot;AVX2&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;AVX2&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 5); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX2, <var>4</var>);</td></tr>
+<tr><th id="175">175</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;BMI1&quot;) - 1 == 4, &quot;BMI1&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;BMI1&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 3); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, BMI1, <var>4</var>);</td></tr>
+<tr><th id="176">176</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;BMI2&quot;) - 1 == 4, &quot;BMI2&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;BMI2&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 8); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, BMI2, <var>4</var>);</td></tr>
+<tr><th id="177">177</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;CMOV&quot;) - 1 == 4, &quot;CMOV&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;CMOV&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].edx &amp;= ~(1u &lt;&lt; 15); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, CMOV, <var>4</var>);</td></tr>
+<tr><th id="178">178</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;ERMS&quot;) - 1 == 4, &quot;ERMS&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;ERMS&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 9); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, ERMS, <var>4</var>);</td></tr>
+<tr><th id="179">179</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;FMA4&quot;) - 1 == 4, &quot;FMA4&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;FMA4&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_80000001].ecx &amp;= ~(1u &lt;&lt; 16); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, FMA4, <var>4</var>);</td></tr>
+<tr><th id="180">180</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;SSE2&quot;) - 1 == 4, &quot;SSE2&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;SSE2&quot;, 4)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].edx &amp;= ~(1u &lt;&lt; 26); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, SSE2, <var>4</var>);</td></tr>
+<tr><th id="181">181</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;I586&quot;) - 1 == 4, &quot;I586&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;I586&quot;, 4)) { cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 0); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, I586, <var>4</var>);</td></tr>
+<tr><th id="182">182</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;I686&quot;) - 1 == 4, &quot;I686&quot; &quot; != &quot; &quot;4&quot;); if (!__memcmp_sse2 (n, &quot;I686&quot;, 4)) { cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 1); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, I686, <var>4</var>);</td></tr>
+<tr><th id="183">183</th><td>	    }</td></tr>
+<tr><th id="184">184</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="185">185</th><td>	<b>case</b> <var>5</var>:</td></tr>
+<tr><th id="186">186</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="187">187</th><td>	    {</td></tr>
+<tr><th id="188">188</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;LZCNT&quot;) - 1 == 5, &quot;LZCNT&quot; &quot; != &quot; &quot;5&quot;); if (!__memcmp_sse2 (n, &quot;LZCNT&quot;, 5)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_80000001].ecx &amp;= ~(1u &lt;&lt; 5); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, LZCNT, <var>5</var>);</td></tr>
+<tr><th id="189">189</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;MOVBE&quot;) - 1 == 5, &quot;MOVBE&quot; &quot; != &quot; &quot;5&quot;); if (!__memcmp_sse2 (n, &quot;MOVBE&quot;, 5)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 22); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, MOVBE, <var>5</var>);</td></tr>
+<tr><th id="190">190</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;SHSTK&quot;) - 1 == 5, &quot;SHSTK&quot; &quot; != &quot; &quot;5&quot;); if (!__memcmp_sse2 (n, &quot;SHSTK&quot;, 5)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ecx &amp;= ~(1u &lt;&lt; 7); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, SHSTK, <var>5</var>);</td></tr>
+<tr><th id="191">191</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;SSSE3&quot;) - 1 == 5, &quot;SSSE3&quot; &quot; != &quot; &quot;5&quot;); if (!__memcmp_sse2 (n, &quot;SSSE3&quot;, 5)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 9); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, SSSE3, <var>5</var>);</td></tr>
+<tr><th id="192">192</th><td>	    }</td></tr>
+<tr><th id="193">193</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="194">194</th><td>	<b>case</b> <var>6</var>:</td></tr>
+<tr><th id="195">195</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="196">196</th><td>	    {</td></tr>
+<tr><th id="197">197</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;POPCNT&quot;) - 1 == 6, &quot;POPCNT&quot; &quot; != &quot; &quot;6&quot;); if (!__memcmp_sse2 (n, &quot;POPCNT&quot;, 6)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 23); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, POPCNT, <var>6</var>);</td></tr>
+<tr><th id="198">198</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;SSE4_1&quot;) - 1 == 6, &quot;SSE4_1&quot; &quot; != &quot; &quot;6&quot;); if (!__memcmp_sse2 (n, &quot;SSE4_1&quot;, 6)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 19); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, SSE4_1, <var>6</var>);</td></tr>
+<tr><th id="199">199</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;SSE4_2&quot;) - 1 == 6, &quot;SSE4_2&quot; &quot; != &quot; &quot;6&quot;); if (!__memcmp_sse2 (n, &quot;SSE4_2&quot;, 6)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 20); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, SSE4_2, <var>6</var>);</td></tr>
+<tr><th id="200">200</th><td>	    }</td></tr>
+<tr><th id="201">201</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="202">202</th><td>	<b>case</b> <var>7</var>:</td></tr>
+<tr><th id="203">203</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="204">204</th><td>	    {</td></tr>
+<tr><th id="205">205</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512F&quot;) - 1 == 7, &quot;AVX512F&quot; &quot; != &quot; &quot;7&quot;); if (!__memcmp_sse2 (n, &quot;AVX512F&quot;, 7)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 16); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512F, <var>7</var>);</td></tr>
+<tr><th id="206">206</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;OSXSAVE&quot;) - 1 == 7, &quot;OSXSAVE&quot; &quot; != &quot; &quot;7&quot;); if (!__memcmp_sse2 (n, &quot;OSXSAVE&quot;, 7)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp;= ~(1u &lt;&lt; 27); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, OSXSAVE, <var>7</var>);</td></tr>
+<tr><th id="207">207</th><td>	    }</td></tr>
+<tr><th id="208">208</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="209">209</th><td>	<b>case</b> <var>8</var>:</td></tr>
+<tr><th id="210">210</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="211">211</th><td>	    {</td></tr>
+<tr><th id="212">212</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512CD&quot;) - 1 == 8, &quot;AVX512CD&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512CD&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 28); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512CD, <var>8</var>);</td></tr>
+<tr><th id="213">213</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512BW&quot;) - 1 == 8, &quot;AVX512BW&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512BW&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 30); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512BW, <var>8</var>);</td></tr>
+<tr><th id="214">214</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512DQ&quot;) - 1 == 8, &quot;AVX512DQ&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512DQ&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 17); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512DQ, <var>8</var>);</td></tr>
+<tr><th id="215">215</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512ER&quot;) - 1 == 8, &quot;AVX512ER&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512ER&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 27); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512ER, <var>8</var>);</td></tr>
+<tr><th id="216">216</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512PF&quot;) - 1 == 8, &quot;AVX512PF&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512PF&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 26); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512PF, <var>8</var>);</td></tr>
+<tr><th id="217">217</th><td>	      <a class="macro" href="#42" title="_Static_assert (sizeof (&quot;AVX512VL&quot;) - 1 == 8, &quot;AVX512VL&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;AVX512VL&quot;, 8)) { cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_7].ebx &amp;= ~(1u &lt;&lt; 31); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_CPU_OFF">CHECK_GLIBC_IFUNC_CPU_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX512VL, <var>8</var>);</td></tr>
+<tr><th id="218">218</th><td>	    }</td></tr>
+<tr><th id="219">219</th><td>	  <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Slow_BSF&quot;) - 1 == 8, &quot;Slow_BSF&quot; &quot; != &quot; &quot;8&quot;); if (!__memcmp_sse2 (n, &quot;Slow_BSF&quot;, 8)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 6); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 6); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Slow_BSF,</td></tr>
+<tr><th id="220">220</th><td>				       <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>8</var>);</td></tr>
+<tr><th id="221">221</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="222">222</th><td>	<b>case</b> <var>10</var>:</td></tr>
+<tr><th id="223">223</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="224">224</th><td>	    {</td></tr>
+<tr><th id="225">225</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;AVX_Usable&quot;) - 1 == 10, &quot;AVX_Usable&quot; &quot; != &quot; &quot;10&quot;); if (!__memcmp_sse2 (n, &quot;AVX_Usable&quot;, 10)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 0); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX_Usable,</td></tr>
+<tr><th id="226">226</th><td>					  <var>10</var>);</td></tr>
+<tr><th id="227">227</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;FMA_Usable&quot;) - 1 == 10, &quot;FMA_Usable&quot; &quot; != &quot; &quot;10&quot;); if (!__memcmp_sse2 (n, &quot;FMA_Usable&quot;, 10)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 17); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, FMA_Usable,</td></tr>
+<tr><th id="228">228</th><td>					  <var>10</var>);</td></tr>
+<tr><th id="229">229</th><td>	    }</td></tr>
+<tr><th id="230">230</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="231">231</th><td>	<b>case</b> <var>11</var>:</td></tr>
+<tr><th id="232">232</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="233">233</th><td>	    {</td></tr>
+<tr><th id="234">234</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;AVX2_Usable&quot;) - 1 == 11, &quot;AVX2_Usable&quot; &quot; != &quot; &quot;11&quot;); if (!__memcmp_sse2 (n, &quot;AVX2_Usable&quot;, 11)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 1); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX2_Usable,</td></tr>
+<tr><th id="235">235</th><td>					  <var>11</var>);</td></tr>
+<tr><th id="236">236</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;FMA4_Usable&quot;) - 1 == 11, &quot;FMA4_Usable&quot; &quot; != &quot; &quot;11&quot;); if (!__memcmp_sse2 (n, &quot;FMA4_Usable&quot;, 11)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 18); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, FMA4_Usable,</td></tr>
+<tr><th id="237">237</th><td>					  <var>11</var>);</td></tr>
+<tr><th id="238">238</th><td>	    }</td></tr>
+<tr><th id="239">239</th><td>	  <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Prefer_ERMS&quot;) - 1 == 11, &quot;Prefer_ERMS&quot; &quot; != &quot; &quot;11&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_ERMS&quot;, 11)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 12); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 12); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Prefer_ERMS,</td></tr>
+<tr><th id="240">240</th><td>				       <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>11</var>);</td></tr>
+<tr><th id="241">241</th><td>	  <a class="macro" href="#95" title="_Static_assert (sizeof (&quot;Slow_SSE4_2&quot;) - 1 == 11, &quot;Slow_SSE4_2&quot; &quot; != &quot; &quot;11&quot;); if (!__memcmp_sse2 (n, &quot;Slow_SSE4_2&quot;, 11)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 7); else if (((cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].ecx &amp; ((1u &lt;&lt; 20))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 7); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="242">242</th><td>						Slow_SSE4_2, SSE4_2,</td></tr>
+<tr><th id="243">243</th><td>						<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>11</var>);</td></tr>
+<tr><th id="244">244</th><td>	  <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Prefer_FSRM&quot;) - 1 == 11, &quot;Prefer_FSRM&quot; &quot; != &quot; &quot;11&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_FSRM&quot;, 11)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 13); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 13); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Prefer_FSRM,</td></tr>
+<tr><th id="245">245</th><td>				       <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>11</var>);</td></tr>
+<tr><th id="246">246</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="247">247</th><td>	<b>case</b> <var>13</var>:</td></tr>
+<tr><th id="248">248</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="249">249</th><td>	    {</td></tr>
+<tr><th id="250">250</th><td>	      <i>/* Update xsave_state_size to XSAVE state size.  */</i></td></tr>
+<tr><th id="251">251</th><td>	      <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::xsave_state_size" title='cpu_features::xsave_state_size' data-ref="cpu_features::xsave_state_size" data-ref-filename="cpu_features..xsave_state_size">xsave_state_size</a></td></tr>
+<tr><th id="252">252</th><td>		= <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>-&gt;<a class="ref field" href="cpu-features.h.html#cpu_features::xsave_state_full_size" title='cpu_features::xsave_state_full_size' data-ref="cpu_features::xsave_state_full_size" data-ref-filename="cpu_features..xsave_state_full_size">xsave_state_full_size</a>;</td></tr>
+<tr><th id="253">253</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;XSAVEC_Usable&quot;) - 1 == 13, &quot;XSAVEC_Usable&quot; &quot; != &quot; &quot;13&quot;); if (!__memcmp_sse2 (n, &quot;XSAVEC_Usable&quot;, 13)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 22); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="254">254</th><td>					  XSAVEC_Usable, <var>13</var>);</td></tr>
+<tr><th id="255">255</th><td>	    }</td></tr>
+<tr><th id="256">256</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="257">257</th><td>	<b>case</b> <var>14</var>:</td></tr>
+<tr><th id="258">258</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="259">259</th><td>	    {</td></tr>
+<tr><th id="260">260</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;AVX512F_Usable&quot;) - 1 == 14, &quot;AVX512F_Usable&quot; &quot; != &quot; &quot;14&quot;); if (!__memcmp_sse2 (n, &quot;AVX512F_Usable&quot;, 14)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 2); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="261">261</th><td>					  AVX512F_Usable, <var>14</var>);</td></tr>
+<tr><th id="262">262</th><td>	    }</td></tr>
+<tr><th id="263">263</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="264">264</th><td>	<b>case</b> <var>15</var>:</td></tr>
+<tr><th id="265">265</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>)</td></tr>
+<tr><th id="266">266</th><td>	    {</td></tr>
+<tr><th id="267">267</th><td>	      <a class="macro" href="#53" title="_Static_assert (sizeof (&quot;AVX512DQ_Usable&quot;) - 1 == 15, &quot;AVX512DQ_Usable&quot; &quot; != &quot; &quot;15&quot;); if (!__memcmp_sse2 (n, &quot;AVX512DQ_Usable&quot;, 15)) { cpu_features-&gt;feature[FEATURE_INDEX_1] &amp;= ~(1u &lt;&lt; 7); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_OFF">CHECK_GLIBC_IFUNC_ARCH_OFF</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="268">268</th><td>					  AVX512DQ_Usable, <var>15</var>);</td></tr>
+<tr><th id="269">269</th><td>	    }</td></tr>
+<tr><th id="270">270</th><td>	  <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Fast_Rep_String&quot;) - 1 == 15, &quot;Fast_Rep_String&quot; &quot; != &quot; &quot;15&quot;); if (!__memcmp_sse2 (n, &quot;Fast_Rep_String&quot;, 15)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 2); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 2); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Fast_Rep_String,</td></tr>
+<tr><th id="271">271</th><td>				       <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>15</var>);</td></tr>
+<tr><th id="272">272</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="273">273</th><td>	<b>case</b> <var>16</var>:</td></tr>
+<tr><th id="274">274</th><td>	    {</td></tr>
+<tr><th id="275">275</th><td>	      <a class="macro" href="#79" title="_Static_assert (sizeof (&quot;Prefer_No_AVX512&quot;) - 1 == 16, &quot;Prefer_No_AVX512&quot; &quot; != &quot; &quot;16&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_No_AVX512&quot;, 16)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 14); else if (((cpu_features-&gt;feature[FEATURE_INDEX_1] &amp; ((1u &lt;&lt; 2))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 14); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH</a></td></tr>
+<tr><th id="276">276</th><td>		(<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Prefer_No_AVX512, AVX512F_Usable,</td></tr>
+<tr><th id="277">277</th><td>		 <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>16</var>);</td></tr>
+<tr><th id="278">278</th><td>	    }</td></tr>
+<tr><th id="279">279</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="280">280</th><td>	<b>case</b> <var>18</var>:</td></tr>
+<tr><th id="281">281</th><td>	    {</td></tr>
+<tr><th id="282">282</th><td>	      <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Fast_Copy_Backward&quot;) - 1 == 18, &quot;Fast_Copy_Backward&quot; &quot; != &quot; &quot;18&quot;); if (!__memcmp_sse2 (n, &quot;Fast_Copy_Backward&quot;, 18)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 3); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 3); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="283">283</th><td>					   Fast_Copy_Backward, <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>,</td></tr>
+<tr><th id="284">284</th><td>					   <var>18</var>);</td></tr>
+<tr><th id="285">285</th><td>	    }</td></tr>
+<tr><th id="286">286</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="287">287</th><td>	<b>case</b> <var>19</var>:</td></tr>
+<tr><th id="288">288</th><td>	    {</td></tr>
+<tr><th id="289">289</th><td>	      <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Fast_Unaligned_Load&quot;) - 1 == 19, &quot;Fast_Unaligned_Load&quot; &quot; != &quot; &quot;19&quot;); if (!__memcmp_sse2 (n, &quot;Fast_Unaligned_Load&quot;, 19)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 4); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 4); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="290">290</th><td>					   Fast_Unaligned_Load, <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>,</td></tr>
+<tr><th id="291">291</th><td>					   <var>19</var>);</td></tr>
+<tr><th id="292">292</th><td>	      <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Fast_Unaligned_Copy&quot;) - 1 == 19, &quot;Fast_Unaligned_Copy&quot; &quot; != &quot; &quot;19&quot;); if (!__memcmp_sse2 (n, &quot;Fast_Unaligned_Copy&quot;, 19)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 5); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 5); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="293">293</th><td>					   Fast_Unaligned_Copy, <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>,</td></tr>
+<tr><th id="294">294</th><td>					   <var>19</var>);</td></tr>
+<tr><th id="295">295</th><td>	    }</td></tr>
+<tr><th id="296">296</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="297">297</th><td>	<b>case</b> <var>20</var>:</td></tr>
+<tr><th id="298">298</th><td>	    {</td></tr>
+<tr><th id="299">299</th><td>	      <a class="macro" href="#79" title="_Static_assert (sizeof (&quot;Prefer_No_VZEROUPPER&quot;) - 1 == 20, &quot;Prefer_No_VZEROUPPER&quot; &quot; != &quot; &quot;20&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_No_VZEROUPPER&quot;, 20)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 11); else if (((cpu_features-&gt;feature[FEATURE_INDEX_1] &amp; ((1u &lt;&lt; 0))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 11); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH</a></td></tr>
+<tr><th id="300">300</th><td>		(<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Prefer_No_VZEROUPPER, AVX_Usable,</td></tr>
+<tr><th id="301">301</th><td>		 <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>20</var>);</td></tr>
+<tr><th id="302">302</th><td>	    }</td></tr>
+<tr><th id="303">303</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="304">304</th><td>	<b>case</b> <var>21</var>:</td></tr>
+<tr><th id="305">305</th><td>	    {</td></tr>
+<tr><th id="306">306</th><td>	      <a class="macro" href="#63" title="_Static_assert (sizeof (&quot;Prefer_MAP_32BIT_EXEC&quot;) - 1 == 21, &quot;Prefer_MAP_32BIT_EXEC&quot; &quot; != &quot; &quot;21&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_MAP_32BIT_EXEC&quot;, 21)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 9); else cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 9); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_BOTH</a> (<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>,</td></tr>
+<tr><th id="307">307</th><td>					   Prefer_MAP_32BIT_EXEC, <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>,</td></tr>
+<tr><th id="308">308</th><td>					   <var>21</var>);</td></tr>
+<tr><th id="309">309</th><td>	    }</td></tr>
+<tr><th id="310">310</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="311">311</th><td>	<b>case</b> <var>23</var>:</td></tr>
+<tr><th id="312">312</th><td>	    {</td></tr>
+<tr><th id="313">313</th><td>	      <a class="macro" href="#79" title="_Static_assert (sizeof (&quot;AVX_Fast_Unaligned_Load&quot;) - 1 == 23, &quot;AVX_Fast_Unaligned_Load&quot; &quot; != &quot; &quot;23&quot;); if (!__memcmp_sse2 (n, &quot;AVX_Fast_Unaligned_Load&quot;, 23)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 8); else if (((cpu_features-&gt;feature[FEATURE_INDEX_1] &amp; ((1u &lt;&lt; 0))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 8); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH</a></td></tr>
+<tr><th id="314">314</th><td>		(<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, AVX_Fast_Unaligned_Load, AVX_Usable,</td></tr>
+<tr><th id="315">315</th><td>		 <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>23</var>);</td></tr>
+<tr><th id="316">316</th><td>	    }</td></tr>
+<tr><th id="317">317</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="318">318</th><td>	<b>case</b> <var>24</var>:</td></tr>
+<tr><th id="319">319</th><td>	    {</td></tr>
+<tr><th id="320">320</th><td>	      <a class="macro" href="#79" title="_Static_assert (sizeof (&quot;MathVec_Prefer_No_AVX512&quot;) - 1 == 24, &quot;MathVec_Prefer_No_AVX512&quot; &quot; != &quot; &quot;24&quot;); if (!__memcmp_sse2 (n, &quot;MathVec_Prefer_No_AVX512&quot;, 24)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 15); else if (((cpu_features-&gt;feature[FEATURE_INDEX_1] &amp; ((1u &lt;&lt; 2))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 15); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_ARCH_BOTH</a></td></tr>
+<tr><th id="321">321</th><td>		(<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, MathVec_Prefer_No_AVX512,</td></tr>
+<tr><th id="322">322</th><td>		 AVX512F_Usable, <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>24</var>);</td></tr>
+<tr><th id="323">323</th><td>	    }</td></tr>
+<tr><th id="324">324</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="325">325</th><td>	<b>case</b> <var>26</var>:</td></tr>
+<tr><th id="326">326</th><td>	    {</td></tr>
+<tr><th id="327">327</th><td>	      <a class="macro" href="#95" title="_Static_assert (sizeof (&quot;Prefer_PMINUB_for_stringop&quot;) - 1 == 26, &quot;Prefer_PMINUB_for_stringop&quot; &quot; != &quot; &quot;26&quot;); if (!__memcmp_sse2 (n, &quot;Prefer_PMINUB_for_stringop&quot;, 26)) { if (disable) cpu_features-&gt;feature[FEATURE_INDEX_2] &amp;= ~(1u &lt;&lt; 10); else if (((cpu_features-&gt;cpuid[COMMON_CPUID_INDEX_1].edx &amp; ((1u &lt;&lt; 26))) != 0)) cpu_features-&gt;feature[FEATURE_INDEX_2] |= (1u &lt;&lt; 10); break; }" data-ref="_M/CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH">CHECK_GLIBC_IFUNC_ARCH_NEED_CPU_BOTH</a></td></tr>
+<tr><th id="328">328</th><td>		(<a class="local col6 ref" href="#6n" title='n' data-ref="6n" data-ref-filename="6n">n</a>, <a class="local col3 ref" href="#3cpu_features" title='cpu_features' data-ref="3cpu_features" data-ref-filename="3cpu_features">cpu_features</a>, Prefer_PMINUB_for_stringop, SSE2,</td></tr>
+<tr><th id="329">329</th><td>		 <a class="local col7 ref" href="#7disable" title='disable' data-ref="7disable" data-ref-filename="7disable">disable</a>, <var>26</var>);</td></tr>
+<tr><th id="330">330</th><td>	    }</td></tr>
+<tr><th id="331">331</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="332">332</th><td>	}</td></tr>
+<tr><th id="333">333</th><td>      <a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a> += <a class="local col4 ref" href="#4len" title='len' data-ref="4len" data-ref-filename="4len">len</a> + <var>1</var>;</td></tr>
+<tr><th id="334">334</th><td>    }</td></tr>
+<tr><th id="335">335</th><td>  <b>while</b> (*<a class="local col2 ref" href="#2p" title='p' data-ref="2p" data-ref-filename="2p">p</a> != <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="336">336</th><td>}</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td><u># <span data-ppcond="338">if</span> <a class="macro" href="sysdep.h.html#46" title="0" data-ref="_M/CET_ENABLED">CET_ENABLED</a></u></td></tr>
+<tr><th id="339">339</th><td><u>#  include &lt;cet-tunables.h&gt;</u></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>attribute_hidden</td></tr>
+<tr><th id="342">342</th><td><em>void</em></td></tr>
+<tr><th id="343">343</th><td>TUNABLE_CALLBACK (set_x86_ibt) (tunable_val_t *valp)</td></tr>
+<tr><th id="344">344</th><td>{</td></tr>
+<tr><th id="345">345</th><td>  <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"on"</q>, <b>sizeof</b> (<q>"on"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="346">346</th><td>    {</td></tr>
+<tr><th id="347">347</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>);</td></tr>
+<tr><th id="348">348</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= CET_ALWAYS_ON;</td></tr>
+<tr><th id="349">349</th><td>    }</td></tr>
+<tr><th id="350">350</th><td>  <b>else</b> <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"off"</q>, <b>sizeof</b> (<q>"off"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="351">351</th><td>    {</td></tr>
+<tr><th id="352">352</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>);</td></tr>
+<tr><th id="353">353</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= CET_ALWAYS_OFF;</td></tr>
+<tr><th id="354">354</th><td>    }</td></tr>
+<tr><th id="355">355</th><td>  <b>else</b> <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"permissive"</q>,</td></tr>
+<tr><th id="356">356</th><td>			   <b>sizeof</b> (<q>"permissive"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="357">357</th><td>    {</td></tr>
+<tr><th id="358">358</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>);</td></tr>
+<tr><th id="359">359</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= CET_PERMISSIVE;</td></tr>
+<tr><th id="360">360</th><td>    }</td></tr>
+<tr><th id="361">361</th><td>}</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td>attribute_hidden</td></tr>
+<tr><th id="364">364</th><td><em>void</em></td></tr>
+<tr><th id="365">365</th><td>TUNABLE_CALLBACK (set_x86_shstk) (tunable_val_t *valp)</td></tr>
+<tr><th id="366">366</th><td>{</td></tr>
+<tr><th id="367">367</th><td>  <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"on"</q>, <b>sizeof</b> (<q>"on"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="368">368</th><td>    {</td></tr>
+<tr><th id="369">369</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~(((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>) &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="370">370</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= (CET_ALWAYS_ON &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="371">371</th><td>    }</td></tr>
+<tr><th id="372">372</th><td>  <b>else</b> <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"off"</q>, <b>sizeof</b> (<q>"off"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="373">373</th><td>    {</td></tr>
+<tr><th id="374">374</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~(((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>) &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="375">375</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= (CET_ALWAYS_OFF &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="376">376</th><td>    }</td></tr>
+<tr><th id="377">377</th><td>  <b>else</b> <b>if</b> (DEFAULT_MEMCMP (valp-&gt;strval, <q>"permissive"</q>,</td></tr>
+<tr><th id="378">378</th><td>			   <b>sizeof</b> (<q>"permissive"</q>)) == <var>0</var>)</td></tr>
+<tr><th id="379">379</th><td>    {</td></tr>
+<tr><th id="380">380</th><td>      GL(dl_x86_feature_1)[<var>1</var>] &amp;= ~(((<var>1</var> &lt;&lt; CET_MAX) - <var>1</var>) &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="381">381</th><td>      GL(dl_x86_feature_1)[<var>1</var>] |= (CET_PERMISSIVE &lt;&lt; CET_MAX);</td></tr>
+<tr><th id="382">382</th><td>    }</td></tr>
+<tr><th id="383">383</th><td>}</td></tr>
+<tr><th id="384">384</th><td><u># <span data-ppcond="338">endif</span></u></td></tr>
+<tr><th id="385">385</th><td><u>#<span data-ppcond="19">endif</span></u></td></tr>
+<tr><th id="386">386</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../unix/sysv/linux/x86/dl-sysdep.c.html'>glibc_src_2.30/sysdeps/unix/sysv/linux/x86/dl-sysdep.c</a><br/>Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

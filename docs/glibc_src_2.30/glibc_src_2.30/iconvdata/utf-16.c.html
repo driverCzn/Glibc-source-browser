@@ -1,0 +1,396 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>utf-16.c source code [glibc_src_2.30/iconvdata/utf-16.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="direction,utf16_data,variant "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.30/iconvdata/utf-16.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.30</a>/<a href='./'>iconvdata</a>/<a href='utf-16.c.html'>utf-16.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Conversion module for UTF-16.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1999-2019 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1999.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/byteswap.h.html">&lt;byteswap.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/dlfcn.h.html">&lt;dlfcn.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/gconv.h.html">&lt;gconv.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* This is the Byte Order Mark character (BOM).  */</i></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/BOM" data-ref="_M/BOM">BOM</dfn>	0xfeff</u></td></tr>
+<tr><th id="30">30</th><td><i>/* And in the other byte order.  */</i></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/BOM_OE" data-ref="_M/BOM_OE">BOM_OE</dfn>	0xfffe</u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* Definitions used in the body of the `gconv' function.  */</i></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		from_utf16_loop</u></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			to_utf16_loop</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		2</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_FROM" data-ref="_M/MAX_NEEDED_FROM">MAX_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		(dir == from_utf16)</u></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/PREPARE_LOOP" data-ref="_M/PREPARE_LOOP">PREPARE_LOOP</dfn> \</u></td></tr>
+<tr><th id="45">45</th><td><u>  enum direction dir = ((struct utf16_data *) step-&gt;__data)-&gt;dir;	      \</u></td></tr>
+<tr><th id="46">46</th><td><u>  enum variant var = ((struct utf16_data *) step-&gt;__data)-&gt;var;		      \</u></td></tr>
+<tr><th id="47">47</th><td><u>  if (__glibc_unlikely (data-&gt;__invocation_counter == 0))		      \</u></td></tr>
+<tr><th id="48">48</th><td><u>    {									      \</u></td></tr>
+<tr><th id="49">49</th><td><u>      if (var == UTF_16)						      \</u></td></tr>
+<tr><th id="50">50</th><td><u>	{								      \</u></td></tr>
+<tr><th id="51">51</th><td><u>	  if (FROM_DIRECTION)						      \</u></td></tr>
+<tr><th id="52">52</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="53">53</th><td><u>	      /* We have to find out which byte order the file is	      \</u></td></tr>
+<tr><th id="54">54</th><td><u>		 encoded in.  */					      \</u></td></tr>
+<tr><th id="55">55</th><td><u>	      if (inptr + 2 &gt; inend)					      \</u></td></tr>
+<tr><th id="56">56</th><td><u>		return (inptr == inend					      \</u></td></tr>
+<tr><th id="57">57</th><td><u>			? __GCONV_EMPTY_INPUT : __GCONV_INCOMPLETE_INPUT);    \</u></td></tr>
+<tr><th id="58">58</th><td><u>									      \</u></td></tr>
+<tr><th id="59">59</th><td><u>	      if (get16u (inptr) == BOM)				      \</u></td></tr>
+<tr><th id="60">60</th><td><u>		/* Simply ignore the BOM character.  */			      \</u></td></tr>
+<tr><th id="61">61</th><td><u>		*inptrp = inptr += 2;					      \</u></td></tr>
+<tr><th id="62">62</th><td><u>	      else if (get16u (inptr) == BOM_OE)			      \</u></td></tr>
+<tr><th id="63">63</th><td><u>		{							      \</u></td></tr>
+<tr><th id="64">64</th><td><u>		  data-&gt;__flags |= __GCONV_SWAP;			      \</u></td></tr>
+<tr><th id="65">65</th><td><u>		  *inptrp = inptr += 2;					      \</u></td></tr>
+<tr><th id="66">66</th><td><u>		}							      \</u></td></tr>
+<tr><th id="67">67</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="68">68</th><td><u>	  else if (!FROM_DIRECTION &amp;&amp; !data-&gt;__internal_use)		      \</u></td></tr>
+<tr><th id="69">69</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="70">70</th><td><u>	      /* Emit the Byte Order Mark.  */				      \</u></td></tr>
+<tr><th id="71">71</th><td><u>	      if (__glibc_unlikely (outbuf + 2 &gt; outend))		      \</u></td></tr>
+<tr><th id="72">72</th><td><u>		return __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="73">73</th><td><u>									      \</u></td></tr>
+<tr><th id="74">74</th><td><u>	      put16u (outbuf, BOM);					      \</u></td></tr>
+<tr><th id="75">75</th><td><u>	      outbuf += 2;						      \</u></td></tr>
+<tr><th id="76">76</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="77">77</th><td><u>	}								      \</u></td></tr>
+<tr><th id="78">78</th><td><u>      else if ((var == UTF_16LE &amp;&amp; BYTE_ORDER == BIG_ENDIAN)		      \</u></td></tr>
+<tr><th id="79">79</th><td><u>	       || (var == UTF_16BE &amp;&amp; BYTE_ORDER == LITTLE_ENDIAN))	      \</u></td></tr>
+<tr><th id="80">80</th><td><u>	data-&gt;__flags |= __GCONV_SWAP;					      \</u></td></tr>
+<tr><th id="81">81</th><td><u>    }									      \</u></td></tr>
+<tr><th id="82">82</th><td><u>  const int swap = data-&gt;__flags &amp; __GCONV_SWAP;</u></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_ARGS" data-ref="_M/EXTRA_LOOP_ARGS">EXTRA_LOOP_ARGS</dfn>		, swap</u></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><i>/* Direction of the transformation.  */</i></td></tr>
+<tr><th id="87">87</th><td><b>enum</b> <dfn class="type def" id="direction" title='direction' data-ref="direction" data-ref-filename="direction">direction</dfn></td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td>  <dfn class="enum" id="illegal_dir" title='illegal_dir' data-ref="illegal_dir" data-ref-filename="illegal_dir">illegal_dir</dfn>,</td></tr>
+<tr><th id="90">90</th><td>  <dfn class="enum" id="to_utf16" title='to_utf16' data-ref="to_utf16" data-ref-filename="to_utf16">to_utf16</dfn>,</td></tr>
+<tr><th id="91">91</th><td>  <dfn class="enum" id="from_utf16" title='from_utf16' data-ref="from_utf16" data-ref-filename="from_utf16">from_utf16</dfn></td></tr>
+<tr><th id="92">92</th><td>};</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><b>enum</b> <dfn class="type def" id="variant" title='variant' data-ref="variant" data-ref-filename="variant">variant</dfn></td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>  <dfn class="enum" id="illegal_var" title='illegal_var' data-ref="illegal_var" data-ref-filename="illegal_var">illegal_var</dfn>,</td></tr>
+<tr><th id="97">97</th><td>  <dfn class="enum" id="UTF_16" title='UTF_16' data-ref="UTF_16" data-ref-filename="UTF_16">UTF_16</dfn>,</td></tr>
+<tr><th id="98">98</th><td>  <dfn class="enum" id="UTF_16LE" title='UTF_16LE' data-ref="UTF_16LE" data-ref-filename="UTF_16LE">UTF_16LE</dfn>,</td></tr>
+<tr><th id="99">99</th><td>  <dfn class="enum" id="UTF_16BE" title='UTF_16BE' data-ref="UTF_16BE" data-ref-filename="UTF_16BE">UTF_16BE</dfn></td></tr>
+<tr><th id="100">100</th><td>};</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><b>struct</b> <dfn class="type def" id="utf16_data" title='utf16_data' data-ref="utf16_data" data-ref-filename="utf16_data">utf16_data</dfn></td></tr>
+<tr><th id="103">103</th><td>{</td></tr>
+<tr><th id="104">104</th><td>  <b>enum</b> <a class="type" href="#direction" title='direction' data-ref="direction" data-ref-filename="direction">direction</a> <dfn class="tu decl field" id="utf16_data::dir" title='utf16_data::dir' data-type='enum direction' data-ref="utf16_data::dir" data-ref-filename="utf16_data..dir">dir</dfn>;</td></tr>
+<tr><th id="105">105</th><td>  <b>enum</b> <a class="type" href="#variant" title='variant' data-ref="variant" data-ref-filename="variant">variant</a> <dfn class="tu decl field" id="utf16_data::var" title='utf16_data::var' data-type='enum variant' data-ref="utf16_data::var" data-ref-filename="utf16_data..var">var</dfn>;</td></tr>
+<tr><th id="106">106</th><td>};</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="#gconv_init" title='gconv_init' data-ref="gconv_init" data-ref-filename="gconv_init">gconv_init</a> (<b>struct</b> <a class="type" href="../iconv/gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col1 decl" id="1step" title='step' data-type='struct __gconv_step *' data-ref="1step" data-ref-filename="1step">step</dfn>);</td></tr>
+<tr><th id="110">110</th><td><em>int</em></td></tr>
+<tr><th id="111">111</th><td><dfn class="decl def fn" id="gconv_init" title='gconv_init' data-ref="gconv_init" data-ref-filename="gconv_init">gconv_init</dfn> (<b>struct</b> <a class="type" href="../iconv/gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col2 decl" id="2step" title='step' data-type='struct __gconv_step *' data-ref="2step" data-ref-filename="2step">step</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>  <i>/* Determine which direction.  */</i></td></tr>
+<tr><th id="114">114</th><td>  <b>struct</b> <a class="type" href="#utf16_data" title='utf16_data' data-ref="utf16_data" data-ref-filename="utf16_data">utf16_data</a> *<dfn class="local col3 decl" id="3new_data" title='new_data' data-type='struct utf16_data *' data-ref="3new_data" data-ref-filename="3new_data">new_data</dfn>;</td></tr>
+<tr><th id="115">115</th><td>  <b>enum</b> <a class="type" href="#direction" title='direction' data-ref="direction" data-ref-filename="direction">direction</a> <dfn class="local col4 decl" id="4dir" title='dir' data-type='enum direction' data-ref="4dir" data-ref-filename="4dir">dir</dfn> = <a class="enum" href="#illegal_dir" title='illegal_dir' data-ref="illegal_dir" data-ref-filename="illegal_dir">illegal_dir</a>;</td></tr>
+<tr><th id="116">116</th><td>  <b>enum</b> <a class="type" href="#variant" title='variant' data-ref="variant" data-ref-filename="variant">variant</a> <dfn class="local col5 decl" id="5var" title='var' data-type='enum variant' data-ref="5var" data-ref-filename="5var">var</dfn> = <a class="enum" href="#illegal_var" title='illegal_var' data-ref="illegal_var" data-ref-filename="illegal_var">illegal_var</a>;</td></tr>
+<tr><th id="117">117</th><td>  <em>int</em> <dfn class="local col6 decl" id="6result" title='result' data-type='int' data-ref="6result" data-ref-filename="6result">result</dfn>;</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>  <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__from_name" title='__gconv_step::__from_name' data-ref="__gconv_step::__from_name" data-ref-filename="__gconv_step..__from_name">__from_name</a>, <q>"UTF-16//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="120">120</th><td>    {</td></tr>
+<tr><th id="121">121</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#from_utf16" title='from_utf16' data-ref="from_utf16" data-ref-filename="from_utf16">from_utf16</a>;</td></tr>
+<tr><th id="122">122</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16" title='UTF_16' data-ref="UTF_16" data-ref-filename="UTF_16">UTF_16</a>;</td></tr>
+<tr><th id="123">123</th><td>    }</td></tr>
+<tr><th id="124">124</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__to_name" title='__gconv_step::__to_name' data-ref="__gconv_step::__to_name" data-ref-filename="__gconv_step..__to_name">__to_name</a>, <q>"UTF-16//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="125">125</th><td>    {</td></tr>
+<tr><th id="126">126</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#to_utf16" title='to_utf16' data-ref="to_utf16" data-ref-filename="to_utf16">to_utf16</a>;</td></tr>
+<tr><th id="127">127</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16" title='UTF_16' data-ref="UTF_16" data-ref-filename="UTF_16">UTF_16</a>;</td></tr>
+<tr><th id="128">128</th><td>    }</td></tr>
+<tr><th id="129">129</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__from_name" title='__gconv_step::__from_name' data-ref="__gconv_step::__from_name" data-ref-filename="__gconv_step..__from_name">__from_name</a>, <q>"UTF-16BE//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="130">130</th><td>    {</td></tr>
+<tr><th id="131">131</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#from_utf16" title='from_utf16' data-ref="from_utf16" data-ref-filename="from_utf16">from_utf16</a>;</td></tr>
+<tr><th id="132">132</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16BE" title='UTF_16BE' data-ref="UTF_16BE" data-ref-filename="UTF_16BE">UTF_16BE</a>;</td></tr>
+<tr><th id="133">133</th><td>    }</td></tr>
+<tr><th id="134">134</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__to_name" title='__gconv_step::__to_name' data-ref="__gconv_step::__to_name" data-ref-filename="__gconv_step..__to_name">__to_name</a>, <q>"UTF-16BE//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="135">135</th><td>    {</td></tr>
+<tr><th id="136">136</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#to_utf16" title='to_utf16' data-ref="to_utf16" data-ref-filename="to_utf16">to_utf16</a>;</td></tr>
+<tr><th id="137">137</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16BE" title='UTF_16BE' data-ref="UTF_16BE" data-ref-filename="UTF_16BE">UTF_16BE</a>;</td></tr>
+<tr><th id="138">138</th><td>    }</td></tr>
+<tr><th id="139">139</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__from_name" title='__gconv_step::__from_name' data-ref="__gconv_step::__from_name" data-ref-filename="__gconv_step..__from_name">__from_name</a>, <q>"UTF-16LE//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="140">140</th><td>    {</td></tr>
+<tr><th id="141">141</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#from_utf16" title='from_utf16' data-ref="from_utf16" data-ref-filename="from_utf16">from_utf16</a>;</td></tr>
+<tr><th id="142">142</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16LE" title='UTF_16LE' data-ref="UTF_16LE" data-ref-filename="UTF_16LE">UTF_16LE</a>;</td></tr>
+<tr><th id="143">143</th><td>    }</td></tr>
+<tr><th id="144">144</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a> (<a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__to_name" title='__gconv_step::__to_name' data-ref="__gconv_step::__to_name" data-ref-filename="__gconv_step..__to_name">__to_name</a>, <q>"UTF-16LE//"</q>) == <var>0</var>)</td></tr>
+<tr><th id="145">145</th><td>    {</td></tr>
+<tr><th id="146">146</th><td>      <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> = <a class="enum" href="#to_utf16" title='to_utf16' data-ref="to_utf16" data-ref-filename="to_utf16">to_utf16</a>;</td></tr>
+<tr><th id="147">147</th><td>      <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a> = <a class="enum" href="#UTF_16LE" title='UTF_16LE' data-ref="UTF_16LE" data-ref-filename="UTF_16LE">UTF_16LE</a>;</td></tr>
+<tr><th id="148">148</th><td>    }</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>  <a class="local col6 ref" href="#6result" title='result' data-ref="6result" data-ref-filename="6result">result</a> = <a class="enum" href="../iconv/gconv.h.html#__GCONV_NOCONV" title='__GCONV_NOCONV' data-ref="__GCONV_NOCONV" data-ref-filename="__GCONV_NOCONV">__GCONV_NOCONV</a>;</td></tr>
+<tr><th id="151">151</th><td>  <b>if</b> (<a class="ref fn" href="#151" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a>, <a class="enum" href="#to_utf16" title='to_utf16' data-ref="to_utf16" data-ref-filename="to_utf16">to_utf16</a>) != <a class="enum" href="#illegal_dir" title='illegal_dir' data-ref="illegal_dir" data-ref-filename="illegal_dir">illegal_dir</a>)</td></tr>
+<tr><th id="152">152</th><td>    {</td></tr>
+<tr><th id="153">153</th><td>      <a class="local col3 ref" href="#3new_data" title='new_data' data-ref="3new_data" data-ref-filename="3new_data">new_data</a> = (<b>struct</b> <a class="type" href="#utf16_data" title='utf16_data' data-ref="utf16_data" data-ref-filename="utf16_data">utf16_data</a> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<b>sizeof</b> (<b>struct</b> <a class="type" href="#utf16_data" title='utf16_data' data-ref="utf16_data" data-ref-filename="utf16_data">utf16_data</a>));</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>      <a class="local col6 ref" href="#6result" title='result' data-ref="6result" data-ref-filename="6result">result</a> = <a class="enum" href="../iconv/gconv.h.html#__GCONV_NOMEM" title='__GCONV_NOMEM' data-ref="__GCONV_NOMEM" data-ref-filename="__GCONV_NOMEM">__GCONV_NOMEM</a>;</td></tr>
+<tr><th id="156">156</th><td>      <b>if</b> (<a class="local col3 ref" href="#3new_data" title='new_data' data-ref="3new_data" data-ref-filename="3new_data">new_data</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="157">157</th><td>	{</td></tr>
+<tr><th id="158">158</th><td>	  <a class="local col3 ref" href="#3new_data" title='new_data' data-ref="3new_data" data-ref-filename="3new_data">new_data</a>-&gt;<a class="tu ref field" href="#utf16_data::dir" title='utf16_data::dir' data-use='w' data-ref="utf16_data::dir" data-ref-filename="utf16_data..dir">dir</a> = <a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a>;</td></tr>
+<tr><th id="159">159</th><td>	  <a class="local col3 ref" href="#3new_data" title='new_data' data-ref="3new_data" data-ref-filename="3new_data">new_data</a>-&gt;<a class="tu ref field" href="#utf16_data::var" title='utf16_data::var' data-use='w' data-ref="utf16_data::var" data-ref-filename="utf16_data..var">var</a> = <a class="local col5 ref" href="#5var" title='var' data-ref="5var" data-ref-filename="5var">var</a>;</td></tr>
+<tr><th id="160">160</th><td>	  <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__data" title='__gconv_step::__data' data-ref="__gconv_step::__data" data-ref-filename="__gconv_step..__data">__data</a> = <a class="local col3 ref" href="#3new_data" title='new_data' data-ref="3new_data" data-ref-filename="3new_data">new_data</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>	  <b>if</b> (<a class="local col4 ref" href="#4dir" title='dir' data-ref="4dir" data-ref-filename="4dir">dir</a> == <a class="enum" href="#from_utf16" title='from_utf16' data-ref="from_utf16" data-ref-filename="from_utf16">from_utf16</a>)</td></tr>
+<tr><th id="163">163</th><td>	    {</td></tr>
+<tr><th id="164">164</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__min_needed_from" title='__gconv_step::__min_needed_from' data-ref="__gconv_step::__min_needed_from" data-ref-filename="__gconv_step..__min_needed_from">__min_needed_from</a> = <a class="macro" href="#39" title="2" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</a>;</td></tr>
+<tr><th id="165">165</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__max_needed_from" title='__gconv_step::__max_needed_from' data-ref="__gconv_step::__max_needed_from" data-ref-filename="__gconv_step..__max_needed_from">__max_needed_from</a> = <a class="macro" href="#40" title="4" data-ref="_M/MAX_NEEDED_FROM">MAX_NEEDED_FROM</a>;</td></tr>
+<tr><th id="166">166</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__min_needed_to" title='__gconv_step::__min_needed_to' data-ref="__gconv_step::__min_needed_to" data-ref-filename="__gconv_step..__min_needed_to">__min_needed_to</a> = <a class="macro" href="#41" title="4" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</a>;</td></tr>
+<tr><th id="167">167</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__max_needed_to" title='__gconv_step::__max_needed_to' data-ref="__gconv_step::__max_needed_to" data-ref-filename="__gconv_step..__max_needed_to">__max_needed_to</a> = <a class="macro" href="#41" title="4" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</a>;</td></tr>
+<tr><th id="168">168</th><td>	    }</td></tr>
+<tr><th id="169">169</th><td>	  <b>else</b></td></tr>
+<tr><th id="170">170</th><td>	    {</td></tr>
+<tr><th id="171">171</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__min_needed_from" title='__gconv_step::__min_needed_from' data-ref="__gconv_step::__min_needed_from" data-ref-filename="__gconv_step..__min_needed_from">__min_needed_from</a> = <a class="macro" href="#41" title="4" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</a>;</td></tr>
+<tr><th id="172">172</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__max_needed_from" title='__gconv_step::__max_needed_from' data-ref="__gconv_step::__max_needed_from" data-ref-filename="__gconv_step..__max_needed_from">__max_needed_from</a> = <a class="macro" href="#41" title="4" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</a>;</td></tr>
+<tr><th id="173">173</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__min_needed_to" title='__gconv_step::__min_needed_to' data-ref="__gconv_step::__min_needed_to" data-ref-filename="__gconv_step..__min_needed_to">__min_needed_to</a> = <a class="macro" href="#39" title="2" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</a>;</td></tr>
+<tr><th id="174">174</th><td>	      <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__max_needed_to" title='__gconv_step::__max_needed_to' data-ref="__gconv_step::__max_needed_to" data-ref-filename="__gconv_step..__max_needed_to">__max_needed_to</a> = <a class="macro" href="#40" title="4" data-ref="_M/MAX_NEEDED_FROM">MAX_NEEDED_FROM</a>;</td></tr>
+<tr><th id="175">175</th><td>	    }</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	  <a class="local col2 ref" href="#2step" title='step' data-ref="2step" data-ref-filename="2step">step</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__stateful" title='__gconv_step::__stateful' data-ref="__gconv_step::__stateful" data-ref-filename="__gconv_step..__stateful">__stateful</a> = <var>0</var>;</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>	  <a class="local col6 ref" href="#6result" title='result' data-ref="6result" data-ref-filename="6result">result</a> = <a class="enum" href="../iconv/gconv.h.html#__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</a>;</td></tr>
+<tr><th id="180">180</th><td>	}</td></tr>
+<tr><th id="181">181</th><td>    }</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>  <b>return</b> <a class="local col6 ref" href="#6result" title='result' data-ref="6result" data-ref-filename="6result">result</a>;</td></tr>
+<tr><th id="184">184</th><td>}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td><b>extern</b> <em>void</em> <a class="decl fn" href="#gconv_end" title='gconv_end' data-ref="gconv_end" data-ref-filename="gconv_end">gconv_end</a> (<b>struct</b> <a class="type" href="../iconv/gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col7 decl" id="7data" title='data' data-type='struct __gconv_step *' data-ref="7data" data-ref-filename="7data">data</dfn>);</td></tr>
+<tr><th id="188">188</th><td><em>void</em></td></tr>
+<tr><th id="189">189</th><td><dfn class="decl def fn" id="gconv_end" title='gconv_end' data-ref="gconv_end" data-ref-filename="gconv_end">gconv_end</dfn> (<b>struct</b> <a class="type" href="../iconv/gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col8 decl" id="8data" title='data' data-type='struct __gconv_step *' data-ref="8data" data-ref-filename="8data">data</dfn>)</td></tr>
+<tr><th id="190">190</th><td>{</td></tr>
+<tr><th id="191">191</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col8 ref" href="#8data" title='data' data-ref="8data" data-ref-filename="8data">data</a>-&gt;<a class="ref field" href="../iconv/gconv.h.html#__gconv_step::__data" title='__gconv_step::__data' data-ref="__gconv_step::__data" data-ref-filename="__gconv_step..__data">__data</a>);</td></tr>
+<tr><th id="192">192</th><td>}</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><i>/* Convert from the internal (UCS4-like) format to UTF-16.  */</i></td></tr>
+<tr><th id="196">196</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="197">197</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="198">198</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_OUTPUT" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</dfn>	MAX_NEEDED_FROM</u></td></tr>
+<tr><th id="199">199</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			TO_LOOP</u></td></tr>
+<tr><th id="200">200</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="201">201</th><td><u>  {									      \</u></td></tr>
+<tr><th id="202">202</th><td><u>    uint32_t c = get32 (inptr);						      \</u></td></tr>
+<tr><th id="203">203</th><td><u>									      \</u></td></tr>
+<tr><th id="204">204</th><td><u>    if (__glibc_unlikely (c &gt;= 0xd800 &amp;&amp; c &lt; 0xe000))			      \</u></td></tr>
+<tr><th id="205">205</th><td><u>      {									      \</u></td></tr>
+<tr><th id="206">206</th><td><u>	/* Surrogate characters in UCS-4 input are not valid.		      \</u></td></tr>
+<tr><th id="207">207</th><td><u>	   We must catch this.  If we let surrogates pass through,	      \</u></td></tr>
+<tr><th id="208">208</th><td><u>	   attackers could make a security hole exploit by		      \</u></td></tr>
+<tr><th id="209">209</th><td><u>	   synthesizing any desired plane 1-16 character.  */		      \</u></td></tr>
+<tr><th id="210">210</th><td><u>	result = __GCONV_ILLEGAL_INPUT;					      \</u></td></tr>
+<tr><th id="211">211</th><td><u>	if (! ignore_errors_p ())					      \</u></td></tr>
+<tr><th id="212">212</th><td><u>	  break;							      \</u></td></tr>
+<tr><th id="213">213</th><td><u>	inptr += 4;							      \</u></td></tr>
+<tr><th id="214">214</th><td><u>	++*irreversible;						      \</u></td></tr>
+<tr><th id="215">215</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="216">216</th><td><u>      }									      \</u></td></tr>
+<tr><th id="217">217</th><td><u>									      \</u></td></tr>
+<tr><th id="218">218</th><td><u>    if (swap)								      \</u></td></tr>
+<tr><th id="219">219</th><td><u>      {									      \</u></td></tr>
+<tr><th id="220">220</th><td><u>	if (__glibc_unlikely (c &gt;= 0x10000))				      \</u></td></tr>
+<tr><th id="221">221</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="222">222</th><td><u>	    if (__glibc_unlikely (c &gt;= 0x110000))			      \</u></td></tr>
+<tr><th id="223">223</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="224">224</th><td><u>		STANDARD_TO_LOOP_ERR_HANDLER (4);			      \</u></td></tr>
+<tr><th id="225">225</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="226">226</th><td><u>									      \</u></td></tr>
+<tr><th id="227">227</th><td><u>	    /* Generate a surrogate character.  */			      \</u></td></tr>
+<tr><th id="228">228</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="229">229</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="230">230</th><td><u>		/* Overflow in the output buffer.  */			      \</u></td></tr>
+<tr><th id="231">231</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="232">232</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="233">233</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="234">234</th><td><u>									      \</u></td></tr>
+<tr><th id="235">235</th><td><u>	    put16 (outptr, bswap_16 (0xd7c0 + (c &gt;&gt; 10)));		      \</u></td></tr>
+<tr><th id="236">236</th><td><u>	    outptr += 2;						      \</u></td></tr>
+<tr><th id="237">237</th><td><u>	    put16 (outptr, bswap_16 (0xdc00 + (c &amp; 0x3ff)));		      \</u></td></tr>
+<tr><th id="238">238</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="239">239</th><td><u>	else								      \</u></td></tr>
+<tr><th id="240">240</th><td><u>	  put16 (outptr, bswap_16 (c));					      \</u></td></tr>
+<tr><th id="241">241</th><td><u>      }									      \</u></td></tr>
+<tr><th id="242">242</th><td><u>    else								      \</u></td></tr>
+<tr><th id="243">243</th><td><u>      {									      \</u></td></tr>
+<tr><th id="244">244</th><td><u>	if (__glibc_unlikely (c &gt;= 0x10000))				      \</u></td></tr>
+<tr><th id="245">245</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="246">246</th><td><u>	    if (__glibc_unlikely (c &gt;= 0x110000))			      \</u></td></tr>
+<tr><th id="247">247</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="248">248</th><td><u>		STANDARD_TO_LOOP_ERR_HANDLER (4);			      \</u></td></tr>
+<tr><th id="249">249</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="250">250</th><td><u>									      \</u></td></tr>
+<tr><th id="251">251</th><td><u>	    /* Generate a surrogate character.  */			      \</u></td></tr>
+<tr><th id="252">252</th><td><u>	    if (__glibc_unlikely (outptr + 4 &gt; outend))			      \</u></td></tr>
+<tr><th id="253">253</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="254">254</th><td><u>		/* Overflow in the output buffer.  */			      \</u></td></tr>
+<tr><th id="255">255</th><td><u>		result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="256">256</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="257">257</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="258">258</th><td><u>									      \</u></td></tr>
+<tr><th id="259">259</th><td><u>	    put16 (outptr, 0xd7c0 + (c &gt;&gt; 10));				      \</u></td></tr>
+<tr><th id="260">260</th><td><u>	    outptr += 2;						      \</u></td></tr>
+<tr><th id="261">261</th><td><u>	    put16 (outptr, 0xdc00 + (c &amp; 0x3ff));			      \</u></td></tr>
+<tr><th id="262">262</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="263">263</th><td><u>	else								      \</u></td></tr>
+<tr><th id="264">264</th><td><u>	  put16 (outptr, c);						      \</u></td></tr>
+<tr><th id="265">265</th><td><u>      }									      \</u></td></tr>
+<tr><th id="266">266</th><td><u>    outptr += 2;							      \</u></td></tr>
+<tr><th id="267">267</th><td><u>    inptr += 4;								      \</u></td></tr>
+<tr><th id="268">268</th><td><u>  }</u></td></tr>
+<tr><th id="269">269</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="270">270</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_DECLS" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</dfn> \</u></td></tr>
+<tr><th id="271">271</th><td><u>	, int swap</u></td></tr>
+<tr><th id="272">272</th><td><u>#include <a href="../iconv/loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><i>/* Convert from UTF-16 to the internal (UCS4-like) format.  */</i></td></tr>
+<tr><th id="276">276</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="277">277</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_INPUT" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</dfn>	MAX_NEEDED_FROM</u></td></tr>
+<tr><th id="278">278</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="279">279</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="280">280</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="281">281</th><td><u>  {									      \</u></td></tr>
+<tr><th id="282">282</th><td><u>    uint16_t u1 = get16 (inptr);					      \</u></td></tr>
+<tr><th id="283">283</th><td><u>									      \</u></td></tr>
+<tr><th id="284">284</th><td><u>    if (swap)								      \</u></td></tr>
+<tr><th id="285">285</th><td><u>      {									      \</u></td></tr>
+<tr><th id="286">286</th><td><u>	u1 = bswap_16 (u1);						      \</u></td></tr>
+<tr><th id="287">287</th><td><u>									      \</u></td></tr>
+<tr><th id="288">288</th><td><u>	if (__builtin_expect (u1 &lt; 0xd800, 1) || u1 &gt; 0xdfff)		      \</u></td></tr>
+<tr><th id="289">289</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="290">290</th><td><u>	    /* No surrogate.  */					      \</u></td></tr>
+<tr><th id="291">291</th><td><u>	    put32 (outptr, u1);						      \</u></td></tr>
+<tr><th id="292">292</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="293">293</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="294">294</th><td><u>	else								      \</u></td></tr>
+<tr><th id="295">295</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="296">296</th><td><u>	    uint16_t u2;						      \</u></td></tr>
+<tr><th id="297">297</th><td><u>									      \</u></td></tr>
+<tr><th id="298">298</th><td><u>	    if (__glibc_unlikely (u1 &gt;= 0xdc00))			      \</u></td></tr>
+<tr><th id="299">299</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="300">300</th><td><u>		/* This is no valid first word for a surrogate.  */	      \</u></td></tr>
+<tr><th id="301">301</th><td><u>		STANDARD_FROM_LOOP_ERR_HANDLER (2);			      \</u></td></tr>
+<tr><th id="302">302</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="303">303</th><td><u>									      \</u></td></tr>
+<tr><th id="304">304</th><td><u>	    /* It's a surrogate character.  At least the first word says      \</u></td></tr>
+<tr><th id="305">305</th><td><u>	       it is.  */						      \</u></td></tr>
+<tr><th id="306">306</th><td><u>	    if (__glibc_unlikely (inptr + 4 &gt; inend))			      \</u></td></tr>
+<tr><th id="307">307</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="308">308</th><td><u>		/* We don't have enough input for another complete input      \</u></td></tr>
+<tr><th id="309">309</th><td><u>		   character.  */					      \</u></td></tr>
+<tr><th id="310">310</th><td><u>		result = __GCONV_INCOMPLETE_INPUT;			      \</u></td></tr>
+<tr><th id="311">311</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="312">312</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="313">313</th><td><u>									      \</u></td></tr>
+<tr><th id="314">314</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="315">315</th><td><u>	    u2 = bswap_16 (get16 (inptr));				      \</u></td></tr>
+<tr><th id="316">316</th><td><u>	    if (__builtin_expect (u2 &lt; 0xdc00, 0)			      \</u></td></tr>
+<tr><th id="317">317</th><td><u>		|| __builtin_expect (u2 &gt; 0xdfff, 0))			      \</u></td></tr>
+<tr><th id="318">318</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="319">319</th><td><u>		/* This is no valid second word for a surrogate.  */	      \</u></td></tr>
+<tr><th id="320">320</th><td><u>		inptr -= 2;						      \</u></td></tr>
+<tr><th id="321">321</th><td><u>		STANDARD_FROM_LOOP_ERR_HANDLER (2);			      \</u></td></tr>
+<tr><th id="322">322</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="323">323</th><td><u>									      \</u></td></tr>
+<tr><th id="324">324</th><td><u>	    put32 (outptr, ((u1 - 0xd7c0) &lt;&lt; 10) + (u2 - 0xdc00));	      \</u></td></tr>
+<tr><th id="325">325</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="326">326</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="327">327</th><td><u>      }									      \</u></td></tr>
+<tr><th id="328">328</th><td><u>    else								      \</u></td></tr>
+<tr><th id="329">329</th><td><u>      {									      \</u></td></tr>
+<tr><th id="330">330</th><td><u>	if (__builtin_expect (u1 &lt; 0xd800, 1) || u1 &gt; 0xdfff)		      \</u></td></tr>
+<tr><th id="331">331</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="332">332</th><td><u>	    /* No surrogate.  */					      \</u></td></tr>
+<tr><th id="333">333</th><td><u>	    put32 (outptr, u1);						      \</u></td></tr>
+<tr><th id="334">334</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="335">335</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="336">336</th><td><u>	else								      \</u></td></tr>
+<tr><th id="337">337</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="338">338</th><td><u>	    if (__glibc_unlikely (u1 &gt;= 0xdc00))			      \</u></td></tr>
+<tr><th id="339">339</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="340">340</th><td><u>		/* This is no valid first word for a surrogate.  */	      \</u></td></tr>
+<tr><th id="341">341</th><td><u>		STANDARD_FROM_LOOP_ERR_HANDLER (2);			      \</u></td></tr>
+<tr><th id="342">342</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="343">343</th><td><u>									      \</u></td></tr>
+<tr><th id="344">344</th><td><u>	    /* It's a surrogate character.  At least the first word says      \</u></td></tr>
+<tr><th id="345">345</th><td><u>	       it is.  */						      \</u></td></tr>
+<tr><th id="346">346</th><td><u>	    if (__glibc_unlikely (inptr + 4 &gt; inend))			      \</u></td></tr>
+<tr><th id="347">347</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="348">348</th><td><u>		/* We don't have enough input for another complete input      \</u></td></tr>
+<tr><th id="349">349</th><td><u>		   character.  */					      \</u></td></tr>
+<tr><th id="350">350</th><td><u>		result = __GCONV_INCOMPLETE_INPUT;			      \</u></td></tr>
+<tr><th id="351">351</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="352">352</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="353">353</th><td><u>									      \</u></td></tr>
+<tr><th id="354">354</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="355">355</th><td><u>	    uint16_t u2 = get16 (inptr);				      \</u></td></tr>
+<tr><th id="356">356</th><td><u>	    if (__builtin_expect (u2 &lt; 0xdc00, 0)			      \</u></td></tr>
+<tr><th id="357">357</th><td><u>		|| __builtin_expect (u2 &gt; 0xdfff, 0))			      \</u></td></tr>
+<tr><th id="358">358</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="359">359</th><td><u>		/* This is no valid second word for a surrogate.  */	      \</u></td></tr>
+<tr><th id="360">360</th><td><u>		inptr -= 2;						      \</u></td></tr>
+<tr><th id="361">361</th><td><u>		STANDARD_FROM_LOOP_ERR_HANDLER (2);			      \</u></td></tr>
+<tr><th id="362">362</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="363">363</th><td><u>									      \</u></td></tr>
+<tr><th id="364">364</th><td><u>	    put32 (outptr, ((u1 - 0xd7c0) &lt;&lt; 10) + (u2 - 0xdc00));	      \</u></td></tr>
+<tr><th id="365">365</th><td><u>	    inptr += 2;							      \</u></td></tr>
+<tr><th id="366">366</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="367">367</th><td><u>      }									      \</u></td></tr>
+<tr><th id="368">368</th><td><u>    outptr += 4;							      \</u></td></tr>
+<tr><th id="369">369</th><td><u>  }</u></td></tr>
+<tr><th id="370">370</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="371">371</th><td><u>#define <dfn class="macro" id="_M/EXTRA_LOOP_DECLS" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</dfn> \</u></td></tr>
+<tr><th id="372">372</th><td><u>	, int swap</u></td></tr>
+<tr><th id="373">373</th><td><u>#include <a href="../iconv/loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><i>/* Now define the toplevel functions.  */</i></td></tr>
+<tr><th id="377">377</th><td><u>#include <a href="../iconv/skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="378">378</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-26</em> from project glibc_src_2.30 revision <em>2.30</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
