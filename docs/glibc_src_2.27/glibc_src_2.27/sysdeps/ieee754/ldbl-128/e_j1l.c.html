@@ -1,0 +1,979 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>e_j1l.c source code [glibc_src_2.27/sysdeps/ieee754/ldbl-128/e_j1l.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/sysdeps/ieee754/ldbl-128/e_j1l.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.27</a>/<a href='../..'>sysdeps</a>/<a href='..'>ieee754</a>/<a href='./'>ldbl-128</a>/<a href='e_j1l.c.html'>e_j1l.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*							j1l.c</i></td></tr>
+<tr><th id="2">2</th><td><i> *</i></td></tr>
+<tr><th id="3">3</th><td><i> *	Bessel function of order one</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * SYNOPSIS:</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * long double x, y, j1l();</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * y = j1l( x );</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * DESCRIPTION:</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * Returns Bessel function of first kind, order one of the argument.</i></td></tr>
+<tr><th id="18">18</th><td><i> *</i></td></tr>
+<tr><th id="19">19</th><td><i> * The domain is divided into two major intervals [0, 2] and</i></td></tr>
+<tr><th id="20">20</th><td><i> * (2, infinity). In the first interval the rational approximation is</i></td></tr>
+<tr><th id="21">21</th><td><i> * J1(x) = .5x + x x^2 R(x^2)</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * The second interval is further partitioned into eight equal segments</i></td></tr>
+<tr><th id="24">24</th><td><i> * of 1/x.</i></td></tr>
+<tr><th id="25">25</th><td><i> * J1(x) = sqrt(2/(pi x)) (P1(x) cos(X) - Q1(x) sin(X)),</i></td></tr>
+<tr><th id="26">26</th><td><i> * X = x - 3 pi / 4,</i></td></tr>
+<tr><th id="27">27</th><td><i> *</i></td></tr>
+<tr><th id="28">28</th><td><i> * and the auxiliary functions are given by</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> * J1(x)cos(X) + Y1(x)sin(X) = sqrt( 2/(pi x)) P1(x),</i></td></tr>
+<tr><th id="31">31</th><td><i> * P1(x) = 1 + 1/x^2 R(1/x^2)</i></td></tr>
+<tr><th id="32">32</th><td><i> *</i></td></tr>
+<tr><th id="33">33</th><td><i> * Y1(x)cos(X) - J1(x)sin(X) = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="34">34</th><td><i> * Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)).</i></td></tr>
+<tr><th id="35">35</th><td><i> *</i></td></tr>
+<tr><th id="36">36</th><td><i> *</i></td></tr>
+<tr><th id="37">37</th><td><i> *</i></td></tr>
+<tr><th id="38">38</th><td><i> * ACCURACY:</i></td></tr>
+<tr><th id="39">39</th><td><i> *</i></td></tr>
+<tr><th id="40">40</th><td><i> *                      Absolute error:</i></td></tr>
+<tr><th id="41">41</th><td><i> * arithmetic   domain      # trials      peak         rms</i></td></tr>
+<tr><th id="42">42</th><td><i> *    IEEE      0, 30       100000      2.8e-34      2.7e-35</i></td></tr>
+<tr><th id="43">43</th><td><i> *</i></td></tr>
+<tr><th id="44">44</th><td><i> *</i></td></tr>
+<tr><th id="45">45</th><td><i> */</i></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><i>/*							y1l.c</i></td></tr>
+<tr><th id="48">48</th><td><i> *</i></td></tr>
+<tr><th id="49">49</th><td><i> *	Bessel function of the second kind, order one</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> *</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * SYNOPSIS:</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> * double x, y, y1l();</i></td></tr>
+<tr><th id="56">56</th><td><i> *</i></td></tr>
+<tr><th id="57">57</th><td><i> * y = y1l( x );</i></td></tr>
+<tr><th id="58">58</th><td><i> *</i></td></tr>
+<tr><th id="59">59</th><td><i> *</i></td></tr>
+<tr><th id="60">60</th><td><i> *</i></td></tr>
+<tr><th id="61">61</th><td><i> * DESCRIPTION:</i></td></tr>
+<tr><th id="62">62</th><td><i> *</i></td></tr>
+<tr><th id="63">63</th><td><i> * Returns Bessel function of the second kind, of order</i></td></tr>
+<tr><th id="64">64</th><td><i> * one, of the argument.</i></td></tr>
+<tr><th id="65">65</th><td><i> *</i></td></tr>
+<tr><th id="66">66</th><td><i> * The domain is divided into two major intervals [0, 2] and</i></td></tr>
+<tr><th id="67">67</th><td><i> * (2, infinity). In the first interval the rational approximation is</i></td></tr>
+<tr><th id="68">68</th><td><i> * Y1(x) = 2/pi * (log(x) * J1(x) - 1/x) + x R(x^2) .</i></td></tr>
+<tr><th id="69">69</th><td><i> * In the second interval the approximation is the same as for J1(x), and</i></td></tr>
+<tr><th id="70">70</th><td><i> * Y1(x) = sqrt(2/(pi x)) (P1(x) sin(X) + Q1(x) cos(X)),</i></td></tr>
+<tr><th id="71">71</th><td><i> * X = x - 3 pi / 4.</i></td></tr>
+<tr><th id="72">72</th><td><i> *</i></td></tr>
+<tr><th id="73">73</th><td><i> * ACCURACY:</i></td></tr>
+<tr><th id="74">74</th><td><i> *</i></td></tr>
+<tr><th id="75">75</th><td><i> *  Absolute error, when y0(x) &lt; 1; else relative error:</i></td></tr>
+<tr><th id="76">76</th><td><i> *</i></td></tr>
+<tr><th id="77">77</th><td><i> * arithmetic   domain     # trials      peak         rms</i></td></tr>
+<tr><th id="78">78</th><td><i> *    IEEE      0, 30       100000      2.7e-34     2.9e-35</i></td></tr>
+<tr><th id="79">79</th><td><i> *</i></td></tr>
+<tr><th id="80">80</th><td><i> */</i></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* Copyright 2001 by Stephen L. Moshier (moshier@na-net.onrl.gov).</i></td></tr>
+<tr><th id="83">83</th><td><i></i></td></tr>
+<tr><th id="84">84</th><td><i>    This library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="85">85</th><td><i>    modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="86">86</th><td><i>    License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="87">87</th><td><i>    version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="88">88</th><td><i></i></td></tr>
+<tr><th id="89">89</th><td><i>    This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="90">90</th><td><i>    but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="91">91</th><td><i>    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="92">92</th><td><i>    Lesser General Public License for more details.</i></td></tr>
+<tr><th id="93">93</th><td><i></i></td></tr>
+<tr><th id="94">94</th><td><i>    You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="95">95</th><td><i>    License along with this library; if not, see</i></td></tr>
+<tr><th id="96">96</th><td><i>    &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u>#include <a href="../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="99">99</th><td><u>#include <a href="../../../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="100">100</th><td><u>#include <a href="../../x86_64/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="101">101</th><td><u>#include <a href="../../../include/float.h.html">&lt;float.h&gt;</a></u></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><i>/* 1 / sqrt(pi) */</i></td></tr>
+<tr><th id="104">104</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="ONEOSQPI" title='ONEOSQPI' data-ref="ONEOSQPI" data-ref-filename="ONEOSQPI">ONEOSQPI</dfn> = <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.6418958354775628694807945156077258584405E-1)" data-ref="_M/L">L</a>(<var>5.6418958354775628694807945156077258584405E-1</var>);</td></tr>
+<tr><th id="105">105</th><td><i>/* 2 / pi */</i></td></tr>
+<tr><th id="106">106</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="TWOOPI" title='TWOOPI' data-ref="TWOOPI" data-ref-filename="TWOOPI">TWOOPI</dfn> = <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.3661977236758134307553505349005744813784E-1)" data-ref="_M/L">L</a>(<var>6.3661977236758134307553505349005744813784E-1</var>);</td></tr>
+<tr><th id="107">107</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="zero" title='zero' data-ref="zero" data-ref-filename="zero">zero</dfn> = <var>0</var>;</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* J1(x) = .5x + x x^2 R(x^2)</i></td></tr>
+<tr><th id="110">110</th><td><i>   Peak relative error 1.9e-35</i></td></tr>
+<tr><th id="111">111</th><td><i>   0 &lt;= x &lt;= 2  */</i></td></tr>
+<tr><th id="112">112</th><td><u>#define <dfn class="macro" id="_M/NJ0_2N" data-ref="_M/NJ0_2N">NJ0_2N</dfn> 6</u></td></tr>
+<tr><th id="113">113</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="J0_2N" title='J0_2N' data-ref="J0_2N" data-ref-filename="J0_2N">J0_2N</dfn>[<a class="macro" href="#112" title="6" data-ref="_M/NJ0_2N">NJ0_2N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="114">114</th><td> <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-5.943799577386942855938508697619735179660E16)" data-ref="_M/L">L</a>(-<var>5.943799577386942855938508697619735179660E16</var>),</td></tr>
+<tr><th id="115">115</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.812087021305009192259946997014044074711E15)" data-ref="_M/L">L</a>(<var>1.812087021305009192259946997014044074711E15</var>),</td></tr>
+<tr><th id="116">116</th><td> <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.761698314264509665075127515729146460895E13)" data-ref="_M/L">L</a>(-<var>2.761698314264509665075127515729146460895E13</var>),</td></tr>
+<tr><th id="117">117</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.091089497823600978949389109350658815972E11)" data-ref="_M/L">L</a>(<var>2.091089497823600978949389109350658815972E11</var>),</td></tr>
+<tr><th id="118">118</th><td> <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-8.546413231387036372945453565654130054307E8)" data-ref="_M/L">L</a>(-<var>8.546413231387036372945453565654130054307E8</var>),</td></tr>
+<tr><th id="119">119</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.797229225249742247475464052741320612261E6)" data-ref="_M/L">L</a>(<var>1.797229225249742247475464052741320612261E6</var>),</td></tr>
+<tr><th id="120">120</th><td> <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.559552840946694171346552770008812083969E3)" data-ref="_M/L">L</a>(-<var>1.559552840946694171346552770008812083969E3</var>)</td></tr>
+<tr><th id="121">121</th><td>};</td></tr>
+<tr><th id="122">122</th><td><u>#define <dfn class="macro" id="_M/NJ0_2D" data-ref="_M/NJ0_2D">NJ0_2D</dfn> 6</u></td></tr>
+<tr><th id="123">123</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="J0_2D" title='J0_2D' data-ref="J0_2D" data-ref-filename="J0_2D">J0_2D</dfn>[<a class="macro" href="#122" title="6" data-ref="_M/NJ0_2D">NJ0_2D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="124">124</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.510079323819108569501613916191477479397E17)" data-ref="_M/L">L</a>(<var>9.510079323819108569501613916191477479397E17</var>),</td></tr>
+<tr><th id="125">125</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.063193817503280529676423936545854693915E16)" data-ref="_M/L">L</a>(<var>1.063193817503280529676423936545854693915E16</var>),</td></tr>
+<tr><th id="126">126</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.934143516050192600795972192791775226920E13)" data-ref="_M/L">L</a>(<var>5.934143516050192600795972192791775226920E13</var>),</td></tr>
+<tr><th id="127">127</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.168000911950620999091479265214368352883E11)" data-ref="_M/L">L</a>(<var>2.168000911950620999091479265214368352883E11</var>),</td></tr>
+<tr><th id="128">128</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.673775894803172808323058205986256928794E8)" data-ref="_M/L">L</a>(<var>5.673775894803172808323058205986256928794E8</var>),</td></tr>
+<tr><th id="129">129</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.080329960080981204840966206372671147224E6)" data-ref="_M/L">L</a>(<var>1.080329960080981204840966206372671147224E6</var>),</td></tr>
+<tr><th id="130">130</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.411951256636576283942477881535283304912E3)" data-ref="_M/L">L</a>(<var>1.411951256636576283942477881535283304912E3</var>),</td></tr>
+<tr><th id="131">131</th><td> <i>/* 1.000000000000000000000000000000000000000E0L */</i></td></tr>
+<tr><th id="132">132</th><td>};</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="135">135</th><td><i>   0 &lt;= 1/x &lt;= .0625</i></td></tr>
+<tr><th id="136">136</th><td><i>   Peak relative error 3.6e-36  */</i></td></tr>
+<tr><th id="137">137</th><td><u>#define <dfn class="macro" id="_M/NP16_IN" data-ref="_M/NP16_IN">NP16_IN</dfn> 9</u></td></tr>
+<tr><th id="138">138</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P16_IN" title='P16_IN' data-ref="P16_IN" data-ref-filename="P16_IN">P16_IN</dfn>[<a class="macro" href="#137" title="9" data-ref="_M/NP16_IN">NP16_IN</a> + <var>1</var>] = {</td></tr>
+<tr><th id="139">139</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.143674369359646114999545149085139822905E-16)" data-ref="_M/L">L</a>(<var>5.143674369359646114999545149085139822905E-16</var>),</td></tr>
+<tr><th id="140">140</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.836645664124562546056389268546233577376E-13)" data-ref="_M/L">L</a>(<var>4.836645664124562546056389268546233577376E-13</var>),</td></tr>
+<tr><th id="141">141</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.730945562285804805325011561498453013673E-10)" data-ref="_M/L">L</a>(<var>1.730945562285804805325011561498453013673E-10</var>),</td></tr>
+<tr><th id="142">142</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.047976856147077889834905908605310585810E-8)" data-ref="_M/L">L</a>(<var>3.047976856147077889834905908605310585810E-8</var>),</td></tr>
+<tr><th id="143">143</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.855227609107969710407464739188141162386E-6)" data-ref="_M/L">L</a>(<var>2.855227609107969710407464739188141162386E-6</var>),</td></tr>
+<tr><th id="144">144</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.439362407936705484122143713643023998457E-4)" data-ref="_M/L">L</a>(<var>1.439362407936705484122143713643023998457E-4</var>),</td></tr>
+<tr><th id="145">145</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.774489768532936551500999699815873422073E-3)" data-ref="_M/L">L</a>(<var>3.774489768532936551500999699815873422073E-3</var>),</td></tr>
+<tr><th id="146">146</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.723962172984642566142399678920790598426E-2)" data-ref="_M/L">L</a>(<var>4.723962172984642566142399678920790598426E-2</var>),</td></tr>
+<tr><th id="147">147</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.359289678988743939925017240478818248735E-1)" data-ref="_M/L">L</a>(<var>2.359289678988743939925017240478818248735E-1</var>),</td></tr>
+<tr><th id="148">148</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.032580002220628812728954785118117124520E-1)" data-ref="_M/L">L</a>(<var>3.032580002220628812728954785118117124520E-1</var>),</td></tr>
+<tr><th id="149">149</th><td>};</td></tr>
+<tr><th id="150">150</th><td><u>#define <dfn class="macro" id="_M/NP16_ID" data-ref="_M/NP16_ID">NP16_ID</dfn> 9</u></td></tr>
+<tr><th id="151">151</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P16_ID" title='P16_ID' data-ref="P16_ID" data-ref-filename="P16_ID">P16_ID</dfn>[<a class="macro" href="#150" title="9" data-ref="_M/NP16_ID">NP16_ID</a> + <var>1</var>] = {</td></tr>
+<tr><th id="152">152</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.389268795186898018132945193912677177553E-15)" data-ref="_M/L">L</a>(<var>4.389268795186898018132945193912677177553E-15</var>),</td></tr>
+<tr><th id="153">153</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.132671824807454334388868363256830961655E-12)" data-ref="_M/L">L</a>(<var>4.132671824807454334388868363256830961655E-12</var>),</td></tr>
+<tr><th id="154">154</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.482133328179508835835963635130894413136E-9)" data-ref="_M/L">L</a>(<var>1.482133328179508835835963635130894413136E-9</var>),</td></tr>
+<tr><th id="155">155</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.618941412861122118906353737117067376236E-7)" data-ref="_M/L">L</a>(<var>2.618941412861122118906353737117067376236E-7</var>),</td></tr>
+<tr><th id="156">156</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.467854246740858470815714426201888034270E-5)" data-ref="_M/L">L</a>(<var>2.467854246740858470815714426201888034270E-5</var>),</td></tr>
+<tr><th id="157">157</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.257192927368839847825938545925340230490E-3)" data-ref="_M/L">L</a>(<var>1.257192927368839847825938545925340230490E-3</var>),</td></tr>
+<tr><th id="158">158</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.362739031941574274949719324644120720341E-2)" data-ref="_M/L">L</a>(<var>3.362739031941574274949719324644120720341E-2</var>),</td></tr>
+<tr><th id="159">159</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.384458231338934105875343439265370178858E-1)" data-ref="_M/L">L</a>(<var>4.384458231338934105875343439265370178858E-1</var>),</td></tr>
+<tr><th id="160">160</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.412830809841095249170909628197264854651E0)" data-ref="_M/L">L</a>(<var>2.412830809841095249170909628197264854651E0</var>),</td></tr>
+<tr><th id="161">161</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.176078204111348059102962617368214856874E0)" data-ref="_M/L">L</a>(<var>4.176078204111348059102962617368214856874E0</var>),</td></tr>
+<tr><th id="162">162</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="163">163</th><td>};</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="166">166</th><td><i>    0.0625 &lt;= 1/x &lt;= 0.125</i></td></tr>
+<tr><th id="167">167</th><td><i>    Peak relative error 1.9e-36  */</i></td></tr>
+<tr><th id="168">168</th><td><u>#define <dfn class="macro" id="_M/NP8_16N" data-ref="_M/NP8_16N">NP8_16N</dfn> 11</u></td></tr>
+<tr><th id="169">169</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P8_16N" title='P8_16N' data-ref="P8_16N" data-ref-filename="P8_16N">P8_16N</dfn>[<a class="macro" href="#168" title="11" data-ref="_M/NP8_16N">NP8_16N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="170">170</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.984612480763362345647303274082071598135E-16)" data-ref="_M/L">L</a>(<var>2.984612480763362345647303274082071598135E-16</var>),</td></tr>
+<tr><th id="171">171</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.923651877544126103941232173085475682334E-13)" data-ref="_M/L">L</a>(<var>1.923651877544126103941232173085475682334E-13</var>),</td></tr>
+<tr><th id="172">172</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.881258879388869396043760693256024307743E-11)" data-ref="_M/L">L</a>(<var>4.881258879388869396043760693256024307743E-11</var>),</td></tr>
+<tr><th id="173">173</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.368866572475045408480898921866869811889E-9)" data-ref="_M/L">L</a>(<var>6.368866572475045408480898921866869811889E-9</var>),</td></tr>
+<tr><th id="174">174</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.684818344104910450523906967821090796737E-7)" data-ref="_M/L">L</a>(<var>4.684818344104910450523906967821090796737E-7</var>),</td></tr>
+<tr><th id="175">175</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.005177298271593587095982211091300382796E-5)" data-ref="_M/L">L</a>(<var>2.005177298271593587095982211091300382796E-5</var>),</td></tr>
+<tr><th id="176">176</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.979808067163957634120681477207147536182E-4)" data-ref="_M/L">L</a>(<var>4.979808067163957634120681477207147536182E-4</var>),</td></tr>
+<tr><th id="177">177</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.946005761642579085284689047091173581127E-3)" data-ref="_M/L">L</a>(<var>6.946005761642579085284689047091173581127E-3</var>),</td></tr>
+<tr><th id="178">178</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.074601112955765012750207555985299026204E-2)" data-ref="_M/L">L</a>(<var>5.074601112955765012750207555985299026204E-2</var>),</td></tr>
+<tr><th id="179">179</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.698599455896180893191766195194231825379E-1)" data-ref="_M/L">L</a>(<var>1.698599455896180893191766195194231825379E-1</var>),</td></tr>
+<tr><th id="180">180</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.957536905259237627737222775573623779638E-1)" data-ref="_M/L">L</a>(<var>1.957536905259237627737222775573623779638E-1</var>),</td></tr>
+<tr><th id="181">181</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.991314703282528370270179989044994319374E-2)" data-ref="_M/L">L</a>(<var>2.991314703282528370270179989044994319374E-2</var>),</td></tr>
+<tr><th id="182">182</th><td>};</td></tr>
+<tr><th id="183">183</th><td><u>#define <dfn class="macro" id="_M/NP8_16D" data-ref="_M/NP8_16D">NP8_16D</dfn> 10</u></td></tr>
+<tr><th id="184">184</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P8_16D" title='P8_16D' data-ref="P8_16D" data-ref-filename="P8_16D">P8_16D</dfn>[<a class="macro" href="#183" title="10" data-ref="_M/NP8_16D">NP8_16D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="185">185</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.546869316918069202079580939942463010937E-15)" data-ref="_M/L">L</a>(<var>2.546869316918069202079580939942463010937E-15</var>),</td></tr>
+<tr><th id="186">186</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.644650111942455804019788382157745229955E-12)" data-ref="_M/L">L</a>(<var>1.644650111942455804019788382157745229955E-12</var>),</td></tr>
+<tr><th id="187">187</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.185430770291694079925607420808011147173E-10)" data-ref="_M/L">L</a>(<var>4.185430770291694079925607420808011147173E-10</var>),</td></tr>
+<tr><th id="188">188</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.485331966975218025368698195861074143153E-8)" data-ref="_M/L">L</a>(<var>5.485331966975218025368698195861074143153E-8</var>),</td></tr>
+<tr><th id="189">189</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.062884421686912042335466327098932678905E-6)" data-ref="_M/L">L</a>(<var>4.062884421686912042335466327098932678905E-6</var>),</td></tr>
+<tr><th id="190">190</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.758139661060905948870523641319556816772E-4)" data-ref="_M/L">L</a>(<var>1.758139661060905948870523641319556816772E-4</var>),</td></tr>
+<tr><th id="191">191</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.445143889306356207566032244985607493096E-3)" data-ref="_M/L">L</a>(<var>4.445143889306356207566032244985607493096E-3</var>),</td></tr>
+<tr><th id="192">192</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.391901016293512632765621532571159071158E-2)" data-ref="_M/L">L</a>(<var>6.391901016293512632765621532571159071158E-2</var>),</td></tr>
+<tr><th id="193">193</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.933040207519900471177016015718145795434E-1)" data-ref="_M/L">L</a>(<var>4.933040207519900471177016015718145795434E-1</var>),</td></tr>
+<tr><th id="194">194</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.839144086168947712971630337250761842976E0)" data-ref="_M/L">L</a>(<var>1.839144086168947712971630337250761842976E0</var>),</td></tr>
+<tr><th id="195">195</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.715120873995490920415616716916149586579E0)" data-ref="_M/L">L</a>(<var>2.715120873995490920415616716916149586579E0</var>),</td></tr>
+<tr><th id="196">196</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="197">197</th><td>};</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="200">200</th><td><i>  0.125 &lt;= 1/x &lt;= 0.1875</i></td></tr>
+<tr><th id="201">201</th><td><i>  Peak relative error 1.3e-36  */</i></td></tr>
+<tr><th id="202">202</th><td><u>#define <dfn class="macro" id="_M/NP5_8N" data-ref="_M/NP5_8N">NP5_8N</dfn> 10</u></td></tr>
+<tr><th id="203">203</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P5_8N" title='P5_8N' data-ref="P5_8N" data-ref-filename="P5_8N">P5_8N</dfn>[<a class="macro" href="#202" title="10" data-ref="_M/NP5_8N">NP5_8N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="204">204</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.837678373978003452653763806968237227234E-12)" data-ref="_M/L">L</a>(<var>2.837678373978003452653763806968237227234E-12</var>),</td></tr>
+<tr><th id="205">205</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.726641165590364928442128579282742354806E-10)" data-ref="_M/L">L</a>(<var>9.726641165590364928442128579282742354806E-10</var>),</td></tr>
+<tr><th id="206">206</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.284408003604131382028112171490633956539E-7)" data-ref="_M/L">L</a>(<var>1.284408003604131382028112171490633956539E-7</var>),</td></tr>
+<tr><th id="207">207</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.524624695868291291250573339272194285008E-6)" data-ref="_M/L">L</a>(<var>8.524624695868291291250573339272194285008E-6</var>),</td></tr>
+<tr><th id="208">208</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.111516908953172249853673787748841282846E-4)" data-ref="_M/L">L</a>(<var>3.111516908953172249853673787748841282846E-4</var>),</td></tr>
+<tr><th id="209">209</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.423175156126364104172801983096596409176E-3)" data-ref="_M/L">L</a>(<var>6.423175156126364104172801983096596409176E-3</var>),</td></tr>
+<tr><th id="210">210</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.430220589989104581004416356260692450652E-2)" data-ref="_M/L">L</a>(<var>7.430220589989104581004416356260692450652E-2</var>),</td></tr>
+<tr><th id="211">211</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.608315409833682489016656279567605536619E-1)" data-ref="_M/L">L</a>(<var>4.608315409833682489016656279567605536619E-1</var>),</td></tr>
+<tr><th id="212">212</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.396870223510964882676225042258855977512E0)" data-ref="_M/L">L</a>(<var>1.396870223510964882676225042258855977512E0</var>),</td></tr>
+<tr><th id="213">213</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.718500293904122365894630460672081526236E0)" data-ref="_M/L">L</a>(<var>1.718500293904122365894630460672081526236E0</var>),</td></tr>
+<tr><th id="214">214</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.465927698800862172307352821870223855365E-1)" data-ref="_M/L">L</a>(<var>5.465927698800862172307352821870223855365E-1</var>)</td></tr>
+<tr><th id="215">215</th><td>};</td></tr>
+<tr><th id="216">216</th><td><u>#define <dfn class="macro" id="_M/NP5_8D" data-ref="_M/NP5_8D">NP5_8D</dfn> 10</u></td></tr>
+<tr><th id="217">217</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P5_8D" title='P5_8D' data-ref="P5_8D" data-ref-filename="P5_8D">P5_8D</dfn>[<a class="macro" href="#216" title="10" data-ref="_M/NP5_8D">NP5_8D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="218">218</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.421485545794616609951168511612060482715E-11)" data-ref="_M/L">L</a>(<var>2.421485545794616609951168511612060482715E-11</var>),</td></tr>
+<tr><th id="219">219</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.329862750896452929030058039752327232310E-9)" data-ref="_M/L">L</a>(<var>8.329862750896452929030058039752327232310E-9</var>),</td></tr>
+<tr><th id="220">220</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.106137992233383429630592081375289010720E-6)" data-ref="_M/L">L</a>(<var>1.106137992233383429630592081375289010720E-6</var>),</td></tr>
+<tr><th id="221">221</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.405786153760681090127497796448503306939E-5)" data-ref="_M/L">L</a>(<var>7.405786153760681090127497796448503306939E-5</var>),</td></tr>
+<tr><th id="222">222</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.740364785433195322492093333127633465227E-3)" data-ref="_M/L">L</a>(<var>2.740364785433195322492093333127633465227E-3</var>),</td></tr>
+<tr><th id="223">223</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.781246470403095224872243564165254652198E-2)" data-ref="_M/L">L</a>(<var>5.781246470403095224872243564165254652198E-2</var>),</td></tr>
+<tr><th id="224">224</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.927711353039742469918754111511109983546E-1)" data-ref="_M/L">L</a>(<var>6.927711353039742469918754111511109983546E-1</var>),</td></tr>
+<tr><th id="225">225</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.558679283460430281188304515922826156690E0)" data-ref="_M/L">L</a>(<var>4.558679283460430281188304515922826156690E0</var>),</td></tr>
+<tr><th id="226">226</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.534468499844879487013168065728837900009E1)" data-ref="_M/L">L</a>(<var>1.534468499844879487013168065728837900009E1</var>),</td></tr>
+<tr><th id="227">227</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.313927430889218597919624843161569422745E1)" data-ref="_M/L">L</a>(<var>2.313927430889218597919624843161569422745E1</var>),</td></tr>
+<tr><th id="228">228</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.194506341319498844336768473218382828637E1)" data-ref="_M/L">L</a>(<var>1.194506341319498844336768473218382828637E1</var>),</td></tr>
+<tr><th id="229">229</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="230">230</th><td>};</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="233">233</th><td><i>   Peak relative error 1.4e-36</i></td></tr>
+<tr><th id="234">234</th><td><i>   0.1875 &lt;= 1/x &lt;= 0.25  */</i></td></tr>
+<tr><th id="235">235</th><td><u>#define <dfn class="macro" id="_M/NP4_5N" data-ref="_M/NP4_5N">NP4_5N</dfn> 10</u></td></tr>
+<tr><th id="236">236</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P4_5N" title='P4_5N' data-ref="P4_5N" data-ref-filename="P4_5N">P4_5N</dfn>[<a class="macro" href="#235" title="10" data-ref="_M/NP4_5N">NP4_5N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="237">237</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.846029078268368685834261260420933914621E-10)" data-ref="_M/L">L</a>(<var>1.846029078268368685834261260420933914621E-10</var>),</td></tr>
+<tr><th id="238">238</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.916295939611376119377869680335444207768E-8)" data-ref="_M/L">L</a>(<var>3.916295939611376119377869680335444207768E-8</var>),</td></tr>
+<tr><th id="239">239</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.122158792018920627984597530935323997312E-6)" data-ref="_M/L">L</a>(<var>3.122158792018920627984597530935323997312E-6</var>),</td></tr>
+<tr><th id="240">240</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.218073444893078303994045653603392272450E-4)" data-ref="_M/L">L</a>(<var>1.218073444893078303994045653603392272450E-4</var>),</td></tr>
+<tr><th id="241">241</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.536420827983485448140477159977981844883E-3)" data-ref="_M/L">L</a>(<var>2.536420827983485448140477159977981844883E-3</var>),</td></tr>
+<tr><th id="242">242</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.883011322006690823959367922241169171315E-2)" data-ref="_M/L">L</a>(<var>2.883011322006690823959367922241169171315E-2</var>),</td></tr>
+<tr><th id="243">243</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.755255190734902907438042414495469810830E-1)" data-ref="_M/L">L</a>(<var>1.755255190734902907438042414495469810830E-1</var>),</td></tr>
+<tr><th id="244">244</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.379317079922628599870898285488723736599E-1)" data-ref="_M/L">L</a>(<var>5.379317079922628599870898285488723736599E-1</var>),</td></tr>
+<tr><th id="245">245</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.284904050194300773890303361501726561938E-1)" data-ref="_M/L">L</a>(<var>7.284904050194300773890303361501726561938E-1</var>),</td></tr>
+<tr><th id="246">246</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.270110346613085348094396323925000362813E-1)" data-ref="_M/L">L</a>(<var>3.270110346613085348094396323925000362813E-1</var>),</td></tr>
+<tr><th id="247">247</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.804473805689725610052078464951722064757E-2)" data-ref="_M/L">L</a>(<var>1.804473805689725610052078464951722064757E-2</var>),</td></tr>
+<tr><th id="248">248</th><td>};</td></tr>
+<tr><th id="249">249</th><td><u>#define <dfn class="macro" id="_M/NP4_5D" data-ref="_M/NP4_5D">NP4_5D</dfn> 9</u></td></tr>
+<tr><th id="250">250</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P4_5D" title='P4_5D' data-ref="P4_5D" data-ref-filename="P4_5D">P4_5D</dfn>[<a class="macro" href="#249" title="9" data-ref="_M/NP4_5D">NP4_5D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="251">251</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.575278146806816970152174364308980863569E-9)" data-ref="_M/L">L</a>(<var>1.575278146806816970152174364308980863569E-9</var>),</td></tr>
+<tr><th id="252">252</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.361289173657099516191331123405675054321E-7)" data-ref="_M/L">L</a>(<var>3.361289173657099516191331123405675054321E-7</var>),</td></tr>
+<tr><th id="253">253</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.704692281550877810424745289838790693708E-5)" data-ref="_M/L">L</a>(<var>2.704692281550877810424745289838790693708E-5</var>),</td></tr>
+<tr><th id="254">254</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.070854930483999749316546199273521063543E-3)" data-ref="_M/L">L</a>(<var>1.070854930483999749316546199273521063543E-3</var>),</td></tr>
+<tr><th id="255">255</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.282373093495295842598097265627962125411E-2)" data-ref="_M/L">L</a>(<var>2.282373093495295842598097265627962125411E-2</var>),</td></tr>
+<tr><th id="256">256</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.692025460665354148328762368240343249830E-1)" data-ref="_M/L">L</a>(<var>2.692025460665354148328762368240343249830E-1</var>),</td></tr>
+<tr><th id="257">257</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.739892942593664447220951225734811133759E0)" data-ref="_M/L">L</a>(<var>1.739892942593664447220951225734811133759E0</var>),</td></tr>
+<tr><th id="258">258</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.890727576752230385342377570386657229324E0)" data-ref="_M/L">L</a>(<var>5.890727576752230385342377570386657229324E0</var>),</td></tr>
+<tr><th id="259">259</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.517442287057841500750256954117735128153E0)" data-ref="_M/L">L</a>(<var>9.517442287057841500750256954117735128153E0</var>),</td></tr>
+<tr><th id="260">260</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.100616353935338240775363403030137736013E0)" data-ref="_M/L">L</a>(<var>6.100616353935338240775363403030137736013E0</var>),</td></tr>
+<tr><th id="261">261</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="262">262</th><td>};</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="265">265</th><td><i>   Peak relative error 3.0e-36</i></td></tr>
+<tr><th id="266">266</th><td><i>   0.25 &lt;= 1/x &lt;= 0.3125  */</i></td></tr>
+<tr><th id="267">267</th><td><u>#define <dfn class="macro" id="_M/NP3r2_4N" data-ref="_M/NP3r2_4N">NP3r2_4N</dfn> 9</u></td></tr>
+<tr><th id="268">268</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P3r2_4N" title='P3r2_4N' data-ref="P3r2_4N" data-ref-filename="P3r2_4N">P3r2_4N</dfn>[<a class="macro" href="#267" title="9" data-ref="_M/NP3r2_4N">NP3r2_4N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="269">269</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.240803130988044478595580300846665863782E-8)" data-ref="_M/L">L</a>(<var>8.240803130988044478595580300846665863782E-8</var>),</td></tr>
+<tr><th id="270">270</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.179418958381961224222969866406483744580E-5)" data-ref="_M/L">L</a>(<var>1.179418958381961224222969866406483744580E-5</var>),</td></tr>
+<tr><th id="271">271</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.179787320956386624336959112503824397755E-4)" data-ref="_M/L">L</a>(<var>6.179787320956386624336959112503824397755E-4</var>),</td></tr>
+<tr><th id="272">272</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.540270833608687596420595830747166658383E-2)" data-ref="_M/L">L</a>(<var>1.540270833608687596420595830747166658383E-2</var>),</td></tr>
+<tr><th id="273">273</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.983904219491512618376375619598837355076E-1)" data-ref="_M/L">L</a>(<var>1.983904219491512618376375619598837355076E-1</var>),</td></tr>
+<tr><th id="274">274</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.341465722692038870390470651608301155565E0)" data-ref="_M/L">L</a>(<var>1.341465722692038870390470651608301155565E0</var>),</td></tr>
+<tr><th id="275">275</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.617865326696612898792238245990854646057E0)" data-ref="_M/L">L</a>(<var>4.617865326696612898792238245990854646057E0</var>),</td></tr>
+<tr><th id="276">276</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.435574801812346424460233180412308000587E0)" data-ref="_M/L">L</a>(<var>7.435574801812346424460233180412308000587E0</var>),</td></tr>
+<tr><th id="277">277</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.671327027414635292514599201278557680420E0)" data-ref="_M/L">L</a>(<var>4.671327027414635292514599201278557680420E0</var>),</td></tr>
+<tr><th id="278">278</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.299530852495776936690976966995187714739E-1)" data-ref="_M/L">L</a>(<var>7.299530852495776936690976966995187714739E-1</var>),</td></tr>
+<tr><th id="279">279</th><td>};</td></tr>
+<tr><th id="280">280</th><td><u>#define <dfn class="macro" id="_M/NP3r2_4D" data-ref="_M/NP3r2_4D">NP3r2_4D</dfn> 9</u></td></tr>
+<tr><th id="281">281</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P3r2_4D" title='P3r2_4D' data-ref="P3r2_4D" data-ref-filename="P3r2_4D">P3r2_4D</dfn>[<a class="macro" href="#280" title="9" data-ref="_M/NP3r2_4D">NP3r2_4D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="282">282</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.032152009675729604487575753279187576521E-7)" data-ref="_M/L">L</a>(<var>7.032152009675729604487575753279187576521E-7</var>),</td></tr>
+<tr><th id="283">283</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.015090352324577615777511269928856742848E-4)" data-ref="_M/L">L</a>(<var>1.015090352324577615777511269928856742848E-4</var>),</td></tr>
+<tr><th id="284">284</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.394262184808448484302067955186308730620E-3)" data-ref="_M/L">L</a>(<var>5.394262184808448484302067955186308730620E-3</var>),</td></tr>
+<tr><th id="285">285</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.375291438480256110455809354836988584325E-1)" data-ref="_M/L">L</a>(<var>1.375291438480256110455809354836988584325E-1</var>),</td></tr>
+<tr><th id="286">286</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.836247144461106304788160919310404376670E0)" data-ref="_M/L">L</a>(<var>1.836247144461106304788160919310404376670E0</var>),</td></tr>
+<tr><th id="287">287</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.314378564254376655001094503090935880349E1)" data-ref="_M/L">L</a>(<var>1.314378564254376655001094503090935880349E1</var>),</td></tr>
+<tr><th id="288">288</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.957184590465712006934452500894672343488E1)" data-ref="_M/L">L</a>(<var>4.957184590465712006934452500894672343488E1</var>),</td></tr>
+<tr><th id="289">289</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.287394244300647738855415178790263465398E1)" data-ref="_M/L">L</a>(<var>9.287394244300647738855415178790263465398E1</var>),</td></tr>
+<tr><th id="290">290</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.652563275535900609085229286020552768399E1)" data-ref="_M/L">L</a>(<var>7.652563275535900609085229286020552768399E1</var>),</td></tr>
+<tr><th id="291">291</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.147042473003074533150718117770093209096E1)" data-ref="_M/L">L</a>(<var>2.147042473003074533150718117770093209096E1</var>),</td></tr>
+<tr><th id="292">292</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="293">293</th><td>};</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="296">296</th><td><i>   Peak relative error 1.0e-35</i></td></tr>
+<tr><th id="297">297</th><td><i>   0.3125 &lt;= 1/x &lt;= 0.375  */</i></td></tr>
+<tr><th id="298">298</th><td><u>#define <dfn class="macro" id="_M/NP2r7_3r2N" data-ref="_M/NP2r7_3r2N">NP2r7_3r2N</dfn> 9</u></td></tr>
+<tr><th id="299">299</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2r7_3r2N" title='P2r7_3r2N' data-ref="P2r7_3r2N" data-ref-filename="P2r7_3r2N">P2r7_3r2N</dfn>[<a class="macro" href="#298" title="9" data-ref="_M/NP2r7_3r2N">NP2r7_3r2N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="300">300</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.599033469240421554219816935160627085991E-7)" data-ref="_M/L">L</a>(<var>4.599033469240421554219816935160627085991E-7</var>),</td></tr>
+<tr><th id="301">301</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.665724440345003914596647144630893997284E-5)" data-ref="_M/L">L</a>(<var>4.665724440345003914596647144630893997284E-5</var>),</td></tr>
+<tr><th id="302">302</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.684348845667764271596142716944374892756E-3)" data-ref="_M/L">L</a>(<var>1.684348845667764271596142716944374892756E-3</var>),</td></tr>
+<tr><th id="303">303</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.802446446884455707845985913454440176223E-2)" data-ref="_M/L">L</a>(<var>2.802446446884455707845985913454440176223E-2</var>),</td></tr>
+<tr><th id="304">304</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.321937586453963310008279956042545173930E-1)" data-ref="_M/L">L</a>(<var>2.321937586453963310008279956042545173930E-1</var>),</td></tr>
+<tr><th id="305">305</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.640277413988055668692438709376437553804E-1)" data-ref="_M/L">L</a>(<var>9.640277413988055668692438709376437553804E-1</var>),</td></tr>
+<tr><th id="306">306</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.911021064710270904508663334033003246028E0)" data-ref="_M/L">L</a>(<var>1.911021064710270904508663334033003246028E0</var>),</td></tr>
+<tr><th id="307">307</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.600811610164341450262992138893970224971E0)" data-ref="_M/L">L</a>(<var>1.600811610164341450262992138893970224971E0</var>),</td></tr>
+<tr><th id="308">308</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.266299218652587901171386591543457861138E-1)" data-ref="_M/L">L</a>(<var>4.266299218652587901171386591543457861138E-1</var>),</td></tr>
+<tr><th id="309">309</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.316470424456061252962568223251247207325E-2)" data-ref="_M/L">L</a>(<var>1.316470424456061252962568223251247207325E-2</var>),</td></tr>
+<tr><th id="310">310</th><td>};</td></tr>
+<tr><th id="311">311</th><td><u>#define <dfn class="macro" id="_M/NP2r7_3r2D" data-ref="_M/NP2r7_3r2D">NP2r7_3r2D</dfn> 8</u></td></tr>
+<tr><th id="312">312</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2r7_3r2D" title='P2r7_3r2D' data-ref="P2r7_3r2D" data-ref-filename="P2r7_3r2D">P2r7_3r2D</dfn>[<a class="macro" href="#311" title="8" data-ref="_M/NP2r7_3r2D">NP2r7_3r2D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="313">313</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.924508608545520758883457108453520099610E-6)" data-ref="_M/L">L</a>(<var>3.924508608545520758883457108453520099610E-6</var>),</td></tr>
+<tr><th id="314">314</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.029707889408829273226495756222078039823E-4)" data-ref="_M/L">L</a>(<var>4.029707889408829273226495756222078039823E-4</var>),</td></tr>
+<tr><th id="315">315</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.484629715787703260797886463307469600219E-2)" data-ref="_M/L">L</a>(<var>1.484629715787703260797886463307469600219E-2</var>),</td></tr>
+<tr><th id="316">316</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.553136379967180865331706538897231588685E-1)" data-ref="_M/L">L</a>(<var>2.553136379967180865331706538897231588685E-1</var>),</td></tr>
+<tr><th id="317">317</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.229457223891676394409880026887106228740E0)" data-ref="_M/L">L</a>(<var>2.229457223891676394409880026887106228740E0</var>),</td></tr>
+<tr><th id="318">318</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.005708903856384091956550845198392117318E1)" data-ref="_M/L">L</a>(<var>1.005708903856384091956550845198392117318E1</var>),</td></tr>
+<tr><th id="319">319</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.277082659664386953166629360352385889558E1)" data-ref="_M/L">L</a>(<var>2.277082659664386953166629360352385889558E1</var>),</td></tr>
+<tr><th id="320">320</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.384726835193630788249826630376533988245E1)" data-ref="_M/L">L</a>(<var>2.384726835193630788249826630376533988245E1</var>),</td></tr>
+<tr><th id="321">321</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.700989749041320895890113781610939632410E0)" data-ref="_M/L">L</a>(<var>9.700989749041320895890113781610939632410E0</var>),</td></tr>
+<tr><th id="322">322</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="323">323</th><td>};</td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="326">326</th><td><i>   Peak relative error 1.7e-36</i></td></tr>
+<tr><th id="327">327</th><td><i>   0.3125 &lt;= 1/x &lt;= 0.4375  */</i></td></tr>
+<tr><th id="328">328</th><td><u>#define <dfn class="macro" id="_M/NP2r3_2r7N" data-ref="_M/NP2r3_2r7N">NP2r3_2r7N</dfn> 9</u></td></tr>
+<tr><th id="329">329</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2r3_2r7N" title='P2r3_2r7N' data-ref="P2r3_2r7N" data-ref-filename="P2r3_2r7N">P2r3_2r7N</dfn>[<a class="macro" href="#328" title="9" data-ref="_M/NP2r3_2r7N">NP2r3_2r7N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="330">330</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.916766777108274628543759603786857387402E-6)" data-ref="_M/L">L</a>(<var>3.916766777108274628543759603786857387402E-6</var>),</td></tr>
+<tr><th id="331">331</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.212176636756546217390661984304645137013E-4)" data-ref="_M/L">L</a>(<var>3.212176636756546217390661984304645137013E-4</var>),</td></tr>
+<tr><th id="332">332</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.255768488524816445220126081207248947118E-3)" data-ref="_M/L">L</a>(<var>9.255768488524816445220126081207248947118E-3</var>),</td></tr>
+<tr><th id="333">333</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.214853146369078277453080641911700735354E-1)" data-ref="_M/L">L</a>(<var>1.214853146369078277453080641911700735354E-1</var>),</td></tr>
+<tr><th id="334">334</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.855163309847214136198449861311404633665E-1)" data-ref="_M/L">L</a>(<var>7.855163309847214136198449861311404633665E-1</var>),</td></tr>
+<tr><th id="335">335</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.520058073282978403655488662066019816540E0)" data-ref="_M/L">L</a>(<var>2.520058073282978403655488662066019816540E0</var>),</td></tr>
+<tr><th id="336">336</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.825136484837545257209234285382183711466E0)" data-ref="_M/L">L</a>(<var>3.825136484837545257209234285382183711466E0</var>),</td></tr>
+<tr><th id="337">337</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.432569427554248006229715163865569506873E0)" data-ref="_M/L">L</a>(<var>2.432569427554248006229715163865569506873E0</var>),</td></tr>
+<tr><th id="338">338</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.877934835018231178495030117729800489743E-1)" data-ref="_M/L">L</a>(<var>4.877934835018231178495030117729800489743E-1</var>),</td></tr>
+<tr><th id="339">339</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.109902737860249670981355149101343427885E-2)" data-ref="_M/L">L</a>(<var>1.109902737860249670981355149101343427885E-2</var>),</td></tr>
+<tr><th id="340">340</th><td>};</td></tr>
+<tr><th id="341">341</th><td><u>#define <dfn class="macro" id="_M/NP2r3_2r7D" data-ref="_M/NP2r3_2r7D">NP2r3_2r7D</dfn> 8</u></td></tr>
+<tr><th id="342">342</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2r3_2r7D" title='P2r3_2r7D' data-ref="P2r3_2r7D" data-ref-filename="P2r3_2r7D">P2r3_2r7D</dfn>[<a class="macro" href="#341" title="8" data-ref="_M/NP2r3_2r7D">NP2r3_2r7D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="343">343</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.342307880794065640312646341190547184461E-5)" data-ref="_M/L">L</a>(<var>3.342307880794065640312646341190547184461E-5</var>),</td></tr>
+<tr><th id="344">344</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.782182891138893201544978009012096558265E-3)" data-ref="_M/L">L</a>(<var>2.782182891138893201544978009012096558265E-3</var>),</td></tr>
+<tr><th id="345">345</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.221304931614200702142049236141249929207E-2)" data-ref="_M/L">L</a>(<var>8.221304931614200702142049236141249929207E-2</var>),</td></tr>
+<tr><th id="346">346</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.123728246291165812392918571987858010949E0)" data-ref="_M/L">L</a>(<var>1.123728246291165812392918571987858010949E0</var>),</td></tr>
+<tr><th id="347">347</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.740482453652715577233858317133423434590E0)" data-ref="_M/L">L</a>(<var>7.740482453652715577233858317133423434590E0</var>),</td></tr>
+<tr><th id="348">348</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.737624677567945952953322566311201919139E1)" data-ref="_M/L">L</a>(<var>2.737624677567945952953322566311201919139E1</var>),</td></tr>
+<tr><th id="349">349</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.837181477096062403118304137851260715475E1)" data-ref="_M/L">L</a>(<var>4.837181477096062403118304137851260715475E1</var>),</td></tr>
+<tr><th id="350">350</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.941098643468580791437772701093795299274E1)" data-ref="_M/L">L</a>(<var>3.941098643468580791437772701093795299274E1</var>),</td></tr>
+<tr><th id="351">351</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.245821247166544627558323920382547533630E1)" data-ref="_M/L">L</a>(<var>1.245821247166544627558323920382547533630E1</var>),</td></tr>
+<tr><th id="352">352</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="353">353</th><td>};</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td><i>/* J1(x)cosX + Y1(x)sinX = sqrt( 2/(pi x)) P1(x), P1(x) = 1 + 1/x^2 R(1/x^2),</i></td></tr>
+<tr><th id="356">356</th><td><i>   Peak relative error 1.7e-35</i></td></tr>
+<tr><th id="357">357</th><td><i>   0.4375 &lt;= 1/x &lt;= 0.5  */</i></td></tr>
+<tr><th id="358">358</th><td><u>#define <dfn class="macro" id="_M/NP2_2r3N" data-ref="_M/NP2_2r3N">NP2_2r3N</dfn> 8</u></td></tr>
+<tr><th id="359">359</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2_2r3N" title='P2_2r3N' data-ref="P2_2r3N" data-ref-filename="P2_2r3N">P2_2r3N</dfn>[<a class="macro" href="#358" title="8" data-ref="_M/NP2_2r3N">NP2_2r3N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="360">360</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.397930802851248553545191160608731940751E-4)" data-ref="_M/L">L</a>(<var>3.397930802851248553545191160608731940751E-4</var>),</td></tr>
+<tr><th id="361">361</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.104020902735482418784312825637833698217E-2)" data-ref="_M/L">L</a>(<var>2.104020902735482418784312825637833698217E-2</var>),</td></tr>
+<tr><th id="362">362</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.442291771608095963935342749477836181939E-1)" data-ref="_M/L">L</a>(<var>4.442291771608095963935342749477836181939E-1</var>),</td></tr>
+<tr><th id="363">363</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.131797328716583282869183304291833754967E0)" data-ref="_M/L">L</a>(<var>4.131797328716583282869183304291833754967E0</var>),</td></tr>
+<tr><th id="364">364</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.819920169779026500146134832455189917589E1)" data-ref="_M/L">L</a>(<var>1.819920169779026500146134832455189917589E1</var>),</td></tr>
+<tr><th id="365">365</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.781779616522937565300309684282401791291E1)" data-ref="_M/L">L</a>(<var>3.781779616522937565300309684282401791291E1</var>),</td></tr>
+<tr><th id="366">366</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.459605449728864218972931220783543410347E1)" data-ref="_M/L">L</a>(<var>3.459605449728864218972931220783543410347E1</var>),</td></tr>
+<tr><th id="367">367</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.173594248397603882049066603238568316561E1)" data-ref="_M/L">L</a>(<var>1.173594248397603882049066603238568316561E1</var>),</td></tr>
+<tr><th id="368">368</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.455702270242780642835086549285560316461E-1)" data-ref="_M/L">L</a>(<var>9.455702270242780642835086549285560316461E-1</var>),</td></tr>
+<tr><th id="369">369</th><td>};</td></tr>
+<tr><th id="370">370</th><td><u>#define <dfn class="macro" id="_M/NP2_2r3D" data-ref="_M/NP2_2r3D">NP2_2r3D</dfn> 8</u></td></tr>
+<tr><th id="371">371</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="P2_2r3D" title='P2_2r3D' data-ref="P2_2r3D" data-ref-filename="P2_2r3D">P2_2r3D</dfn>[<a class="macro" href="#370" title="8" data-ref="_M/NP2_2r3D">NP2_2r3D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="372">372</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.899568897241432883079888249845707400614E-3)" data-ref="_M/L">L</a>(<var>2.899568897241432883079888249845707400614E-3</var>),</td></tr>
+<tr><th id="373">373</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.831107138190848460767699919531132426356E-1)" data-ref="_M/L">L</a>(<var>1.831107138190848460767699919531132426356E-1</var>),</td></tr>
+<tr><th id="374">374</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.999350044057883839080258832758908825165E0)" data-ref="_M/L">L</a>(<var>3.999350044057883839080258832758908825165E0</var>),</td></tr>
+<tr><th id="375">375</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.929041535867957938340569419874195303712E1)" data-ref="_M/L">L</a>(<var>3.929041535867957938340569419874195303712E1</var>),</td></tr>
+<tr><th id="376">376</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.884245613422523323068802689915538908291E2)" data-ref="_M/L">L</a>(<var>1.884245613422523323068802689915538908291E2</var>),</td></tr>
+<tr><th id="377">377</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.461469948819229734353852978424629815929E2)" data-ref="_M/L">L</a>(<var>4.461469948819229734353852978424629815929E2</var>),</td></tr>
+<tr><th id="378">378</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.004998753999796821224085972610636347903E2)" data-ref="_M/L">L</a>(<var>5.004998753999796821224085972610636347903E2</var>),</td></tr>
+<tr><th id="379">379</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.386342520092608513170837883757163414100E2)" data-ref="_M/L">L</a>(<var>2.386342520092608513170837883757163414100E2</var>),</td></tr>
+<tr><th id="380">380</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.791322528149347975999851588922424189957E1)" data-ref="_M/L">L</a>(<var>3.791322528149347975999851588922424189957E1</var>),</td></tr>
+<tr><th id="381">381</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="382">382</th><td>};</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="385">385</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="386">386</th><td><i>   Peak relative error 8.0e-36</i></td></tr>
+<tr><th id="387">387</th><td><i>   0 &lt;= 1/x &lt;= .0625  */</i></td></tr>
+<tr><th id="388">388</th><td><u>#define <dfn class="macro" id="_M/NQ16_IN" data-ref="_M/NQ16_IN">NQ16_IN</dfn> 10</u></td></tr>
+<tr><th id="389">389</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q16_IN" title='Q16_IN' data-ref="Q16_IN" data-ref-filename="Q16_IN">Q16_IN</dfn>[<a class="macro" href="#388" title="10" data-ref="_M/NQ16_IN">NQ16_IN</a> + <var>1</var>] = {</td></tr>
+<tr><th id="390">390</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.917420835712508001321875734030357393421E-18)" data-ref="_M/L">L</a>(-<var>3.917420835712508001321875734030357393421E-18</var>),</td></tr>
+<tr><th id="391">391</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.440311387483014485304387406538069930457E-15)" data-ref="_M/L">L</a>(-<var>4.440311387483014485304387406538069930457E-15</var>),</td></tr>
+<tr><th id="392">392</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.951635424076926487780929645954007139616E-12)" data-ref="_M/L">L</a>(-<var>1.951635424076926487780929645954007139616E-12</var>),</td></tr>
+<tr><th id="393">393</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.318256438421012555040546775651612810513E-10)" data-ref="_M/L">L</a>(-<var>4.318256438421012555040546775651612810513E-10</var>),</td></tr>
+<tr><th id="394">394</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-5.231244131926180765270446557146989238020E-8)" data-ref="_M/L">L</a>(-<var>5.231244131926180765270446557146989238020E-8</var>),</td></tr>
+<tr><th id="395">395</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.540072702902043752460711989234732357653E-6)" data-ref="_M/L">L</a>(-<var>3.540072702902043752460711989234732357653E-6</var>),</td></tr>
+<tr><th id="396">396</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.311017536555269966928228052917534882984E-4)" data-ref="_M/L">L</a>(-<var>1.311017536555269966928228052917534882984E-4</var>),</td></tr>
+<tr><th id="397">397</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.495184669674631806622008769674827575088E-3)" data-ref="_M/L">L</a>(-<var>2.495184669674631806622008769674827575088E-3</var>),</td></tr>
+<tr><th id="398">398</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.141868222987209028118086708697998506716E-2)" data-ref="_M/L">L</a>(-<var>2.141868222987209028118086708697998506716E-2</var>),</td></tr>
+<tr><th id="399">399</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-6.184031415202148901863605871197272650090E-2)" data-ref="_M/L">L</a>(-<var>6.184031415202148901863605871197272650090E-2</var>),</td></tr>
+<tr><th id="400">400</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.922298704033332356899546792898156493887E-2)" data-ref="_M/L">L</a>(-<var>1.922298704033332356899546792898156493887E-2</var>),</td></tr>
+<tr><th id="401">401</th><td>};</td></tr>
+<tr><th id="402">402</th><td><u>#define <dfn class="macro" id="_M/NQ16_ID" data-ref="_M/NQ16_ID">NQ16_ID</dfn> 9</u></td></tr>
+<tr><th id="403">403</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q16_ID" title='Q16_ID' data-ref="Q16_ID" data-ref-filename="Q16_ID">Q16_ID</dfn>[<a class="macro" href="#402" title="9" data-ref="_M/NQ16_ID">NQ16_ID</a> + <var>1</var>] = {</td></tr>
+<tr><th id="404">404</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.820418034066293517479619763498400162314E-17)" data-ref="_M/L">L</a>(<var>3.820418034066293517479619763498400162314E-17</var>),</td></tr>
+<tr><th id="405">405</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.340702810799239909648911373329149354911E-14)" data-ref="_M/L">L</a>(<var>4.340702810799239909648911373329149354911E-14</var>),</td></tr>
+<tr><th id="406">406</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.914985356383416140706179933075303538524E-11)" data-ref="_M/L">L</a>(<var>1.914985356383416140706179933075303538524E-11</var>),</td></tr>
+<tr><th id="407">407</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.262333682610888819476498617261895474330E-9)" data-ref="_M/L">L</a>(<var>4.262333682610888819476498617261895474330E-9</var>),</td></tr>
+<tr><th id="408">408</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.213481314722233980346462747902942182792E-7)" data-ref="_M/L">L</a>(<var>5.213481314722233980346462747902942182792E-7</var>),</td></tr>
+<tr><th id="409">409</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.585741697694069399299005316809954590558E-5)" data-ref="_M/L">L</a>(<var>3.585741697694069399299005316809954590558E-5</var>),</td></tr>
+<tr><th id="410">410</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.366513429642842006385029778105539457546E-3)" data-ref="_M/L">L</a>(<var>1.366513429642842006385029778105539457546E-3</var>),</td></tr>
+<tr><th id="411">411</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.745282599850704662726337474371355160594E-2)" data-ref="_M/L">L</a>(<var>2.745282599850704662726337474371355160594E-2</var>),</td></tr>
+<tr><th id="412">412</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.637644521611867647651200098449903330074E-1)" data-ref="_M/L">L</a>(<var>2.637644521611867647651200098449903330074E-1</var>),</td></tr>
+<tr><th id="413">413</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.006953426110765984590782655598680488746E0)" data-ref="_M/L">L</a>(<var>1.006953426110765984590782655598680488746E0</var>),</td></tr>
+<tr><th id="414">414</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="415">415</th><td> };</td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="418">418</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="419">419</th><td><i>   Peak relative error 1.9e-36</i></td></tr>
+<tr><th id="420">420</th><td><i>   0.0625 &lt;= 1/x &lt;= 0.125  */</i></td></tr>
+<tr><th id="421">421</th><td><u>#define <dfn class="macro" id="_M/NQ8_16N" data-ref="_M/NQ8_16N">NQ8_16N</dfn> 11</u></td></tr>
+<tr><th id="422">422</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q8_16N" title='Q8_16N' data-ref="Q8_16N" data-ref-filename="Q8_16N">Q8_16N</dfn>[<a class="macro" href="#421" title="11" data-ref="_M/NQ8_16N">NQ8_16N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="423">423</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.028630366670228670781362543615221542291E-17)" data-ref="_M/L">L</a>(-<var>2.028630366670228670781362543615221542291E-17</var>),</td></tr>
+<tr><th id="424">424</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.519634620380959966438130374006858864624E-14)" data-ref="_M/L">L</a>(-<var>1.519634620380959966438130374006858864624E-14</var>),</td></tr>
+<tr><th id="425">425</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.540596528116104986388796594639405114524E-12)" data-ref="_M/L">L</a>(-<var>4.540596528116104986388796594639405114524E-12</var>),</td></tr>
+<tr><th id="426">426</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-7.085151756671466559280490913558388648274E-10)" data-ref="_M/L">L</a>(-<var>7.085151756671466559280490913558388648274E-10</var>),</td></tr>
+<tr><th id="427">427</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-6.351062671323970823761883833531546885452E-8)" data-ref="_M/L">L</a>(-<var>6.351062671323970823761883833531546885452E-8</var>),</td></tr>
+<tr><th id="428">428</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.390817171111032905297982523519503522491E-6)" data-ref="_M/L">L</a>(-<var>3.390817171111032905297982523519503522491E-6</var>),</td></tr>
+<tr><th id="429">429</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.082340897018886970282138836861233213972E-4)" data-ref="_M/L">L</a>(-<var>1.082340897018886970282138836861233213972E-4</var>),</td></tr>
+<tr><th id="430">430</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.020120801187226444822977006648252379508E-3)" data-ref="_M/L">L</a>(-<var>2.020120801187226444822977006648252379508E-3</var>),</td></tr>
+<tr><th id="431">431</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.093169910981725694937457070649605557555E-2)" data-ref="_M/L">L</a>(-<var>2.093169910981725694937457070649605557555E-2</var>),</td></tr>
+<tr><th id="432">432</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.092176538874275712359269481414448063393E-1)" data-ref="_M/L">L</a>(-<var>1.092176538874275712359269481414448063393E-1</var>),</td></tr>
+<tr><th id="433">433</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.374790947854765809203590474789108718733E-1)" data-ref="_M/L">L</a>(-<var>2.374790947854765809203590474789108718733E-1</var>),</td></tr>
+<tr><th id="434">434</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.365364204556573800719985118029601401323E-1)" data-ref="_M/L">L</a>(-<var>1.365364204556573800719985118029601401323E-1</var>),</td></tr>
+<tr><th id="435">435</th><td>};</td></tr>
+<tr><th id="436">436</th><td><u>#define <dfn class="macro" id="_M/NQ8_16D" data-ref="_M/NQ8_16D">NQ8_16D</dfn> 11</u></td></tr>
+<tr><th id="437">437</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q8_16D" title='Q8_16D' data-ref="Q8_16D" data-ref-filename="Q8_16D">Q8_16D</dfn>[<a class="macro" href="#436" title="11" data-ref="_M/NQ8_16D">NQ8_16D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="438">438</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.978397614733632533581207058069628242280E-16)" data-ref="_M/L">L</a>(<var>1.978397614733632533581207058069628242280E-16</var>),</td></tr>
+<tr><th id="439">439</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.487361156806202736877009608336766720560E-13)" data-ref="_M/L">L</a>(<var>1.487361156806202736877009608336766720560E-13</var>),</td></tr>
+<tr><th id="440">440</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.468041406888412086042576067133365913456E-11)" data-ref="_M/L">L</a>(<var>4.468041406888412086042576067133365913456E-11</var>),</td></tr>
+<tr><th id="441">441</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.027822074821007443672290507210594648877E-9)" data-ref="_M/L">L</a>(<var>7.027822074821007443672290507210594648877E-9</var>),</td></tr>
+<tr><th id="442">442</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.375740580686101224127290062867976007374E-7)" data-ref="_M/L">L</a>(<var>6.375740580686101224127290062867976007374E-7</var>),</td></tr>
+<tr><th id="443">443</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.466887658320002225888644977076410421940E-5)" data-ref="_M/L">L</a>(<var>3.466887658320002225888644977076410421940E-5</var>),</td></tr>
+<tr><th id="444">444</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.138625640905289601186353909213719596986E-3)" data-ref="_M/L">L</a>(<var>1.138625640905289601186353909213719596986E-3</var>),</td></tr>
+<tr><th id="445">445</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.224470799470414663443449818235008486439E-2)" data-ref="_M/L">L</a>(<var>2.224470799470414663443449818235008486439E-2</var>),</td></tr>
+<tr><th id="446">446</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.487052928527244907490589787691478482358E-1)" data-ref="_M/L">L</a>(<var>2.487052928527244907490589787691478482358E-1</var>),</td></tr>
+<tr><th id="447">447</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.483927406564349124649083853892380899217E0)" data-ref="_M/L">L</a>(<var>1.483927406564349124649083853892380899217E0</var>),</td></tr>
+<tr><th id="448">448</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.182773513276056975777258788903489507705E0)" data-ref="_M/L">L</a>(<var>4.182773513276056975777258788903489507705E0</var>),</td></tr>
+<tr><th id="449">449</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.419665392573449746043880892524360870944E0)" data-ref="_M/L">L</a>(<var>4.419665392573449746043880892524360870944E0</var>),</td></tr>
+<tr><th id="450">450</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="451">451</th><td>};</td></tr>
+<tr><th id="452">452</th><td></td></tr>
+<tr><th id="453">453</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="454">454</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="455">455</th><td><i>   Peak relative error 1.5e-35</i></td></tr>
+<tr><th id="456">456</th><td><i>   0.125 &lt;= 1/x &lt;= 0.1875  */</i></td></tr>
+<tr><th id="457">457</th><td><u>#define <dfn class="macro" id="_M/NQ5_8N" data-ref="_M/NQ5_8N">NQ5_8N</dfn> 10</u></td></tr>
+<tr><th id="458">458</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q5_8N" title='Q5_8N' data-ref="Q5_8N" data-ref-filename="Q5_8N">Q5_8N</dfn>[<a class="macro" href="#457" title="10" data-ref="_M/NQ5_8N">NQ5_8N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="459">459</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.656082407740970534915918390488336879763E-13)" data-ref="_M/L">L</a>(-<var>3.656082407740970534915918390488336879763E-13</var>),</td></tr>
+<tr><th id="460">460</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.344660308497244804752334556734121771023E-10)" data-ref="_M/L">L</a>(-<var>1.344660308497244804752334556734121771023E-10</var>),</td></tr>
+<tr><th id="461">461</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.909765035234071738548629788698150760791E-8)" data-ref="_M/L">L</a>(-<var>1.909765035234071738548629788698150760791E-8</var>),</td></tr>
+<tr><th id="462">462</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.366668038160120210269389551283666716453E-6)" data-ref="_M/L">L</a>(-<var>1.366668038160120210269389551283666716453E-6</var>),</td></tr>
+<tr><th id="463">463</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-5.392327355984269366895210704976314135683E-5)" data-ref="_M/L">L</a>(-<var>5.392327355984269366895210704976314135683E-5</var>),</td></tr>
+<tr><th id="464">464</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.206268245713024564674432357634540343884E-3)" data-ref="_M/L">L</a>(-<var>1.206268245713024564674432357634540343884E-3</var>),</td></tr>
+<tr><th id="465">465</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.515456784370354374066417703736088291287E-2)" data-ref="_M/L">L</a>(-<var>1.515456784370354374066417703736088291287E-2</var>),</td></tr>
+<tr><th id="466">466</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.022454301137286306933217746545237098518E-1)" data-ref="_M/L">L</a>(-<var>1.022454301137286306933217746545237098518E-1</var>),</td></tr>
+<tr><th id="467">467</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.373438906472495080504907858424251082240E-1)" data-ref="_M/L">L</a>(-<var>3.373438906472495080504907858424251082240E-1</var>),</td></tr>
+<tr><th id="468">468</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.510782522110845697262323973549178453405E-1)" data-ref="_M/L">L</a>(-<var>4.510782522110845697262323973549178453405E-1</var>),</td></tr>
+<tr><th id="469">469</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.549000892545288676809660828213589804884E-1)" data-ref="_M/L">L</a>(-<var>1.549000892545288676809660828213589804884E-1</var>),</td></tr>
+<tr><th id="470">470</th><td>};</td></tr>
+<tr><th id="471">471</th><td><u>#define <dfn class="macro" id="_M/NQ5_8D" data-ref="_M/NQ5_8D">NQ5_8D</dfn> 10</u></td></tr>
+<tr><th id="472">472</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q5_8D" title='Q5_8D' data-ref="Q5_8D" data-ref-filename="Q5_8D">Q5_8D</dfn>[<a class="macro" href="#471" title="10" data-ref="_M/NQ5_8D">NQ5_8D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="473">473</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.565550843359501079050699598913828460036E-12)" data-ref="_M/L">L</a>(<var>3.565550843359501079050699598913828460036E-12</var>),</td></tr>
+<tr><th id="474">474</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.321016015556560621591847454285330528045E-9)" data-ref="_M/L">L</a>(<var>1.321016015556560621591847454285330528045E-9</var>),</td></tr>
+<tr><th id="475">475</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.897542728662346479999969679234270605975E-7)" data-ref="_M/L">L</a>(<var>1.897542728662346479999969679234270605975E-7</var>),</td></tr>
+<tr><th id="476">476</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.381720283068706710298734234287456219474E-5)" data-ref="_M/L">L</a>(<var>1.381720283068706710298734234287456219474E-5</var>),</td></tr>
+<tr><th id="477">477</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.599248147286524662305325795203422873725E-4)" data-ref="_M/L">L</a>(<var>5.599248147286524662305325795203422873725E-4</var>),</td></tr>
+<tr><th id="478">478</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.305442352653121436697064782499122164843E-2)" data-ref="_M/L">L</a>(<var>1.305442352653121436697064782499122164843E-2</var>),</td></tr>
+<tr><th id="479">479</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.750234079626943298160445750078631894985E-1)" data-ref="_M/L">L</a>(<var>1.750234079626943298160445750078631894985E-1</var>),</td></tr>
+<tr><th id="480">480</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.311420542073436520965439883806946678491E0)" data-ref="_M/L">L</a>(<var>1.311420542073436520965439883806946678491E0</var>),</td></tr>
+<tr><th id="481">481</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.162757689856842406744504211089724926650E0)" data-ref="_M/L">L</a>(<var>5.162757689856842406744504211089724926650E0</var>),</td></tr>
+<tr><th id="482">482</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.527760296384704425618556332087850581308E0)" data-ref="_M/L">L</a>(<var>9.527760296384704425618556332087850581308E0</var>),</td></tr>
+<tr><th id="483">483</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.604648207463236667912921642545100248584E0)" data-ref="_M/L">L</a>(<var>6.604648207463236667912921642545100248584E0</var>),</td></tr>
+<tr><th id="484">484</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="485">485</th><td>};</td></tr>
+<tr><th id="486">486</th><td></td></tr>
+<tr><th id="487">487</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="488">488</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="489">489</th><td><i>   Peak relative error 1.3e-35</i></td></tr>
+<tr><th id="490">490</th><td><i>   0.1875 &lt;= 1/x &lt;= 0.25  */</i></td></tr>
+<tr><th id="491">491</th><td><u>#define <dfn class="macro" id="_M/NQ4_5N" data-ref="_M/NQ4_5N">NQ4_5N</dfn> 10</u></td></tr>
+<tr><th id="492">492</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q4_5N" title='Q4_5N' data-ref="Q4_5N" data-ref-filename="Q4_5N">Q4_5N</dfn>[<a class="macro" href="#491" title="10" data-ref="_M/NQ4_5N">NQ4_5N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="493">493</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.079513568708891749424783046520200903755E-11)" data-ref="_M/L">L</a>(-<var>4.079513568708891749424783046520200903755E-11</var>),</td></tr>
+<tr><th id="494">494</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-9.326548104106791766891812583019664893311E-9)" data-ref="_M/L">L</a>(-<var>9.326548104106791766891812583019664893311E-9</var>),</td></tr>
+<tr><th id="495">495</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-8.016795121318423066292906123815687003356E-7)" data-ref="_M/L">L</a>(-<var>8.016795121318423066292906123815687003356E-7</var>),</td></tr>
+<tr><th id="496">496</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.372350544043594415609295225664186750995E-5)" data-ref="_M/L">L</a>(-<var>3.372350544043594415609295225664186750995E-5</var>),</td></tr>
+<tr><th id="497">497</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-7.566238665947967882207277686375417983917E-4)" data-ref="_M/L">L</a>(-<var>7.566238665947967882207277686375417983917E-4</var>),</td></tr>
+<tr><th id="498">498</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-9.248861580055565402130441618521591282617E-3)" data-ref="_M/L">L</a>(-<var>9.248861580055565402130441618521591282617E-3</var>),</td></tr>
+<tr><th id="499">499</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-6.033106131055851432267702948850231270338E-2)" data-ref="_M/L">L</a>(-<var>6.033106131055851432267702948850231270338E-2</var>),</td></tr>
+<tr><th id="500">500</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.966908754799996793730369265431584303447E-1)" data-ref="_M/L">L</a>(-<var>1.966908754799996793730369265431584303447E-1</var>),</td></tr>
+<tr><th id="501">501</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.791062741179964150755788226623462207560E-1)" data-ref="_M/L">L</a>(-<var>2.791062741179964150755788226623462207560E-1</var>),</td></tr>
+<tr><th id="502">502</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.255478605849190549914610121863534191666E-1)" data-ref="_M/L">L</a>(-<var>1.255478605849190549914610121863534191666E-1</var>),</td></tr>
+<tr><th id="503">503</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.320429862021265463213168186061696944062E-3)" data-ref="_M/L">L</a>(-<var>4.320429862021265463213168186061696944062E-3</var>),</td></tr>
+<tr><th id="504">504</th><td>};</td></tr>
+<tr><th id="505">505</th><td><u>#define <dfn class="macro" id="_M/NQ4_5D" data-ref="_M/NQ4_5D">NQ4_5D</dfn> 9</u></td></tr>
+<tr><th id="506">506</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q4_5D" title='Q4_5D' data-ref="Q4_5D" data-ref-filename="Q4_5D">Q4_5D</dfn>[<a class="macro" href="#505" title="9" data-ref="_M/NQ4_5D">NQ4_5D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="507">507</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.978497042580921479003851216297330701056E-10)" data-ref="_M/L">L</a>(<var>3.978497042580921479003851216297330701056E-10</var>),</td></tr>
+<tr><th id="508">508</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.203304163828145809278568906420772246666E-8)" data-ref="_M/L">L</a>(<var>9.203304163828145809278568906420772246666E-8</var>),</td></tr>
+<tr><th id="509">509</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.059685467088175644915010485174545743798E-6)" data-ref="_M/L">L</a>(<var>8.059685467088175644915010485174545743798E-6</var>),</td></tr>
+<tr><th id="510">510</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.490187375993956409171098277561669167446E-4)" data-ref="_M/L">L</a>(<var>3.490187375993956409171098277561669167446E-4</var>),</td></tr>
+<tr><th id="511">511</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.189109654456872150100501732073810028829E-3)" data-ref="_M/L">L</a>(<var>8.189109654456872150100501732073810028829E-3</var>),</td></tr>
+<tr><th id="512">512</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.072572867311023640958725265762483033769E-1)" data-ref="_M/L">L</a>(<var>1.072572867311023640958725265762483033769E-1</var>),</td></tr>
+<tr><th id="513">513</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.790606862409960053675717185714576937994E-1)" data-ref="_M/L">L</a>(<var>7.790606862409960053675717185714576937994E-1</var>),</td></tr>
+<tr><th id="514">514</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.016049768232011196434185423512777656328E0)" data-ref="_M/L">L</a>(<var>3.016049768232011196434185423512777656328E0</var>),</td></tr>
+<tr><th id="515">515</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.722963851442769787733717162314477949360E0)" data-ref="_M/L">L</a>(<var>5.722963851442769787733717162314477949360E0</var>),</td></tr>
+<tr><th id="516">516</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.510527838428473279647251350931380867663E0)" data-ref="_M/L">L</a>(<var>4.510527838428473279647251350931380867663E0</var>),</td></tr>
+<tr><th id="517">517</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="518">518</th><td>};</td></tr>
+<tr><th id="519">519</th><td></td></tr>
+<tr><th id="520">520</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="521">521</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="522">522</th><td><i>   Peak relative error 2.1e-35</i></td></tr>
+<tr><th id="523">523</th><td><i>   0.25 &lt;= 1/x &lt;= 0.3125  */</i></td></tr>
+<tr><th id="524">524</th><td><u>#define <dfn class="macro" id="_M/NQ3r2_4N" data-ref="_M/NQ3r2_4N">NQ3r2_4N</dfn> 9</u></td></tr>
+<tr><th id="525">525</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q3r2_4N" title='Q3r2_4N' data-ref="Q3r2_4N" data-ref-filename="Q3r2_4N">Q3r2_4N</dfn>[<a class="macro" href="#524" title="9" data-ref="_M/NQ3r2_4N">NQ3r2_4N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="526">526</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.087480809271383885936921889040388133627E-8)" data-ref="_M/L">L</a>(-<var>1.087480809271383885936921889040388133627E-8</var>),</td></tr>
+<tr><th id="527">527</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.690067828697463740906962973479310170932E-6)" data-ref="_M/L">L</a>(-<var>1.690067828697463740906962973479310170932E-6</var>),</td></tr>
+<tr><th id="528">528</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-9.608064416995105532790745641974762550982E-5)" data-ref="_M/L">L</a>(-<var>9.608064416995105532790745641974762550982E-5</var>),</td></tr>
+<tr><th id="529">529</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.594198839156517191858208513873961837410E-3)" data-ref="_M/L">L</a>(-<var>2.594198839156517191858208513873961837410E-3</var>),</td></tr>
+<tr><th id="530">530</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.610954144421543968160459863048062977822E-2)" data-ref="_M/L">L</a>(-<var>3.610954144421543968160459863048062977822E-2</var>),</td></tr>
+<tr><th id="531">531</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.629866798251843212210482269563961685666E-1)" data-ref="_M/L">L</a>(-<var>2.629866798251843212210482269563961685666E-1</var>),</td></tr>
+<tr><th id="532">532</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-9.709186825881775885917984975685752956660E-1)" data-ref="_M/L">L</a>(-<var>9.709186825881775885917984975685752956660E-1</var>),</td></tr>
+<tr><th id="533">533</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.667521829918185121727268867619982417317E0)" data-ref="_M/L">L</a>(-<var>1.667521829918185121727268867619982417317E0</var>),</td></tr>
+<tr><th id="534">534</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.109255082925540057138766105229900943501E0)" data-ref="_M/L">L</a>(-<var>1.109255082925540057138766105229900943501E0</var>),</td></tr>
+<tr><th id="535">535</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.812932453006641348145049323713469043328E-1)" data-ref="_M/L">L</a>(-<var>1.812932453006641348145049323713469043328E-1</var>),</td></tr>
+<tr><th id="536">536</th><td>};</td></tr>
+<tr><th id="537">537</th><td><u>#define <dfn class="macro" id="_M/NQ3r2_4D" data-ref="_M/NQ3r2_4D">NQ3r2_4D</dfn> 9</u></td></tr>
+<tr><th id="538">538</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q3r2_4D" title='Q3r2_4D' data-ref="Q3r2_4D" data-ref-filename="Q3r2_4D">Q3r2_4D</dfn>[<a class="macro" href="#537" title="9" data-ref="_M/NQ3r2_4D">NQ3r2_4D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="539">539</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.060552717496912381388763753841473407026E-7)" data-ref="_M/L">L</a>(<var>1.060552717496912381388763753841473407026E-7</var>),</td></tr>
+<tr><th id="540">540</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.676928002024920520786883649102388708024E-5)" data-ref="_M/L">L</a>(<var>1.676928002024920520786883649102388708024E-5</var>),</td></tr>
+<tr><th id="541">541</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.803481712245420839301400601140812255737E-4)" data-ref="_M/L">L</a>(<var>9.803481712245420839301400601140812255737E-4</var>),</td></tr>
+<tr><th id="542">542</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.765559874262309494758505158089249012930E-2)" data-ref="_M/L">L</a>(<var>2.765559874262309494758505158089249012930E-2</var>),</td></tr>
+<tr><th id="543">543</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.117921827792571791298862613287549140706E-1)" data-ref="_M/L">L</a>(<var>4.117921827792571791298862613287549140706E-1</var>),</td></tr>
+<tr><th id="544">544</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.323769515244751267093378361930279161413E0)" data-ref="_M/L">L</a>(<var>3.323769515244751267093378361930279161413E0</var>),</td></tr>
+<tr><th id="545">545</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.436602494405814164724810151689705353670E1)" data-ref="_M/L">L</a>(<var>1.436602494405814164724810151689705353670E1</var>),</td></tr>
+<tr><th id="546">546</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.163087869617098638064881410646782408297E1)" data-ref="_M/L">L</a>(<var>3.163087869617098638064881410646782408297E1</var>),</td></tr>
+<tr><th id="547">547</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.198181264977021649489103980298349589419E1)" data-ref="_M/L">L</a>(<var>3.198181264977021649489103980298349589419E1</var>),</td></tr>
+<tr><th id="548">548</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.203649258862068431199471076202897823272E1)" data-ref="_M/L">L</a>(<var>1.203649258862068431199471076202897823272E1</var>),</td></tr>
+<tr><th id="549">549</th><td> <i>/* 1.000000000000000000000000000000000000000E0  */</i></td></tr>
+<tr><th id="550">550</th><td>};</td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="553">553</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="554">554</th><td><i>   Peak relative error 1.6e-36</i></td></tr>
+<tr><th id="555">555</th><td><i>   0.3125 &lt;= 1/x &lt;= 0.375  */</i></td></tr>
+<tr><th id="556">556</th><td><u>#define <dfn class="macro" id="_M/NQ2r7_3r2N" data-ref="_M/NQ2r7_3r2N">NQ2r7_3r2N</dfn> 9</u></td></tr>
+<tr><th id="557">557</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2r7_3r2N" title='Q2r7_3r2N' data-ref="Q2r7_3r2N" data-ref-filename="Q2r7_3r2N">Q2r7_3r2N</dfn>[<a class="macro" href="#556" title="9" data-ref="_M/NQ2r7_3r2N">NQ2r7_3r2N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="558">558</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.723405393982209853244278760171643219530E-7)" data-ref="_M/L">L</a>(-<var>1.723405393982209853244278760171643219530E-7</var>),</td></tr>
+<tr><th id="559">559</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.090508758514655456365709712333460087442E-5)" data-ref="_M/L">L</a>(-<var>2.090508758514655456365709712333460087442E-5</var>),</td></tr>
+<tr><th id="560">560</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-9.140104013370974823232873472192719263019E-4)" data-ref="_M/L">L</a>(-<var>9.140104013370974823232873472192719263019E-4</var>),</td></tr>
+<tr><th id="561">561</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.871349499990714843332742160292474780128E-2)" data-ref="_M/L">L</a>(-<var>1.871349499990714843332742160292474780128E-2</var>),</td></tr>
+<tr><th id="562">562</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.948930738119938669637865956162512983416E-1)" data-ref="_M/L">L</a>(-<var>1.948930738119938669637865956162512983416E-1</var>),</td></tr>
+<tr><th id="563">563</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.048764684978978127908439526343174139788E0)" data-ref="_M/L">L</a>(-<var>1.048764684978978127908439526343174139788E0</var>),</td></tr>
+<tr><th id="564">564</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.827714929925679500237476105843643064698E0)" data-ref="_M/L">L</a>(-<var>2.827714929925679500237476105843643064698E0</var>),</td></tr>
+<tr><th id="565">565</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.508761569156476114276988181329773987314E0)" data-ref="_M/L">L</a>(-<var>3.508761569156476114276988181329773987314E0</var>),</td></tr>
+<tr><th id="566">566</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.669332202790211090973255098624488308989E0)" data-ref="_M/L">L</a>(-<var>1.669332202790211090973255098624488308989E0</var>),</td></tr>
+<tr><th id="567">567</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.930796319299022954013840684651016077770E-1)" data-ref="_M/L">L</a>(-<var>1.930796319299022954013840684651016077770E-1</var>),</td></tr>
+<tr><th id="568">568</th><td>};</td></tr>
+<tr><th id="569">569</th><td><u>#define <dfn class="macro" id="_M/NQ2r7_3r2D" data-ref="_M/NQ2r7_3r2D">NQ2r7_3r2D</dfn> 9</u></td></tr>
+<tr><th id="570">570</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2r7_3r2D" title='Q2r7_3r2D' data-ref="Q2r7_3r2D" data-ref-filename="Q2r7_3r2D">Q2r7_3r2D</dfn>[<a class="macro" href="#569" title="9" data-ref="_M/NQ2r7_3r2D">NQ2r7_3r2D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="571">571</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.680730662300831976234547482334347983474E-6)" data-ref="_M/L">L</a>(<var>1.680730662300831976234547482334347983474E-6</var>),</td></tr>
+<tr><th id="572">572</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.084241442440551016475972218719621841120E-4)" data-ref="_M/L">L</a>(<var>2.084241442440551016475972218719621841120E-4</var>),</td></tr>
+<tr><th id="573">573</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.445316642108367479043541702688736295579E-3)" data-ref="_M/L">L</a>(<var>9.445316642108367479043541702688736295579E-3</var>),</td></tr>
+<tr><th id="574">574</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.044637889456631896650179477133252184672E-1)" data-ref="_M/L">L</a>(<var>2.044637889456631896650179477133252184672E-1</var>),</td></tr>
+<tr><th id="575">575</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.316091982244297350829522534435350078205E0)" data-ref="_M/L">L</a>(<var>2.316091982244297350829522534435350078205E0</var>),</td></tr>
+<tr><th id="576">576</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.412031891783015085196708811890448488865E1)" data-ref="_M/L">L</a>(<var>1.412031891783015085196708811890448488865E1</var>),</td></tr>
+<tr><th id="577">577</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.583830154673223384837091077279595496149E1)" data-ref="_M/L">L</a>(<var>4.583830154673223384837091077279595496149E1</var>),</td></tr>
+<tr><th id="578">578</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.549520609270909439885998474045974122261E1)" data-ref="_M/L">L</a>(<var>7.549520609270909439885998474045974122261E1</var>),</td></tr>
+<tr><th id="579">579</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.697605832808113367197494052388203310638E1)" data-ref="_M/L">L</a>(<var>5.697605832808113367197494052388203310638E1</var>),</td></tr>
+<tr><th id="580">580</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.601496240876192444526383314589371686234E1)" data-ref="_M/L">L</a>(<var>1.601496240876192444526383314589371686234E1</var>),</td></tr>
+<tr><th id="581">581</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="582">582</th><td>};</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="585">585</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="586">586</th><td><i>   Peak relative error 9.5e-36</i></td></tr>
+<tr><th id="587">587</th><td><i>   0.375 &lt;= 1/x &lt;= 0.4375  */</i></td></tr>
+<tr><th id="588">588</th><td><u>#define <dfn class="macro" id="_M/NQ2r3_2r7N" data-ref="_M/NQ2r3_2r7N">NQ2r3_2r7N</dfn> 9</u></td></tr>
+<tr><th id="589">589</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2r3_2r7N" title='Q2r3_2r7N' data-ref="Q2r3_2r7N" data-ref-filename="Q2r3_2r7N">Q2r3_2r7N</dfn>[<a class="macro" href="#588" title="9" data-ref="_M/NQ2r3_2r7N">NQ2r3_2r7N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="590">590</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-8.603042076329122085722385914954878953775E-7)" data-ref="_M/L">L</a>(-<var>8.603042076329122085722385914954878953775E-7</var>),</td></tr>
+<tr><th id="591">591</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-7.701746260451647874214968882605186675720E-5)" data-ref="_M/L">L</a>(-<var>7.701746260451647874214968882605186675720E-5</var>),</td></tr>
+<tr><th id="592">592</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.407932004380727587382493696877569654271E-3)" data-ref="_M/L">L</a>(-<var>2.407932004380727587382493696877569654271E-3</var>),</td></tr>
+<tr><th id="593">593</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-3.403434217607634279028110636919987224188E-2)" data-ref="_M/L">L</a>(-<var>3.403434217607634279028110636919987224188E-2</var>),</td></tr>
+<tr><th id="594">594</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.348707332185238159192422084985713102877E-1)" data-ref="_M/L">L</a>(-<var>2.348707332185238159192422084985713102877E-1</var>),</td></tr>
+<tr><th id="595">595</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-7.957498841538254916147095255700637463207E-1)" data-ref="_M/L">L</a>(-<var>7.957498841538254916147095255700637463207E-1</var>),</td></tr>
+<tr><th id="596">596</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.258469078442635106431098063707934348577E0)" data-ref="_M/L">L</a>(-<var>1.258469078442635106431098063707934348577E0</var>),</td></tr>
+<tr><th id="597">597</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-8.162415474676345812459353639449971369890E-1)" data-ref="_M/L">L</a>(-<var>8.162415474676345812459353639449971369890E-1</var>),</td></tr>
+<tr><th id="598">598</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.581783890269379690141513949609572806898E-1)" data-ref="_M/L">L</a>(-<var>1.581783890269379690141513949609572806898E-1</var>),</td></tr>
+<tr><th id="599">599</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.890595651683552228232308756569450822905E-3)" data-ref="_M/L">L</a>(-<var>1.890595651683552228232308756569450822905E-3</var>),</td></tr>
+<tr><th id="600">600</th><td>};</td></tr>
+<tr><th id="601">601</th><td><u>#define <dfn class="macro" id="_M/NQ2r3_2r7D" data-ref="_M/NQ2r3_2r7D">NQ2r3_2r7D</dfn> 8</u></td></tr>
+<tr><th id="602">602</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2r3_2r7D" title='Q2r3_2r7D' data-ref="Q2r3_2r7D" data-ref-filename="Q2r3_2r7D">Q2r3_2r7D</dfn>[<a class="macro" href="#601" title="8" data-ref="_M/NQ2r3_2r7D">NQ2r3_2r7D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="603">603</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.390017524798316921170710533381568175665E-6)" data-ref="_M/L">L</a>(<var>8.390017524798316921170710533381568175665E-6</var>),</td></tr>
+<tr><th id="604">604</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (7.738148683730826286477254659973968763659E-4)" data-ref="_M/L">L</a>(<var>7.738148683730826286477254659973968763659E-4</var>),</td></tr>
+<tr><th id="605">605</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.541480810958665794368759558791634341779E-2)" data-ref="_M/L">L</a>(<var>2.541480810958665794368759558791634341779E-2</var>),</td></tr>
+<tr><th id="606">606</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.878879789711276799058486068562386244873E-1)" data-ref="_M/L">L</a>(<var>3.878879789711276799058486068562386244873E-1</var>),</td></tr>
+<tr><th id="607">607</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.003783779325811292142957336802456109333E0)" data-ref="_M/L">L</a>(<var>3.003783779325811292142957336802456109333E0</var>),</td></tr>
+<tr><th id="608">608</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.206480374773322029883039064575464497400E1)" data-ref="_M/L">L</a>(<var>1.206480374773322029883039064575464497400E1</var>),</td></tr>
+<tr><th id="609">609</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.458414064785315978408974662900438351782E1)" data-ref="_M/L">L</a>(<var>2.458414064785315978408974662900438351782E1</var>),</td></tr>
+<tr><th id="610">610</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.367237826273668567199042088835448715228E1)" data-ref="_M/L">L</a>(<var>2.367237826273668567199042088835448715228E1</var>),</td></tr>
+<tr><th id="611">611</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.231451197519171090875569102116321676763E0)" data-ref="_M/L">L</a>(<var>9.231451197519171090875569102116321676763E0</var>),</td></tr>
+<tr><th id="612">612</th><td> <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="613">613</th><td>};</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td><i>/* Y1(x)cosX - J1(x)sinX = sqrt( 2/(pi x)) Q1(x),</i></td></tr>
+<tr><th id="616">616</th><td><i>   Q1(x) = 1/x (.375 + 1/x^2 R(1/x^2)),</i></td></tr>
+<tr><th id="617">617</th><td><i>   Peak relative error 1.4e-36</i></td></tr>
+<tr><th id="618">618</th><td><i>   0.4375 &lt;= 1/x &lt;= 0.5  */</i></td></tr>
+<tr><th id="619">619</th><td><u>#define <dfn class="macro" id="_M/NQ2_2r3N" data-ref="_M/NQ2_2r3N">NQ2_2r3N</dfn> 9</u></td></tr>
+<tr><th id="620">620</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2_2r3N" title='Q2_2r3N' data-ref="Q2_2r3N" data-ref-filename="Q2_2r3N">Q2_2r3N</dfn>[<a class="macro" href="#619" title="9" data-ref="_M/NQ2_2r3N">NQ2_2r3N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="621">621</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-5.552507516089087822166822364590806076174E-6)" data-ref="_M/L">L</a>(-<var>5.552507516089087822166822364590806076174E-6</var>),</td></tr>
+<tr><th id="622">622</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-4.135067659799500521040944087433752970297E-4)" data-ref="_M/L">L</a>(-<var>4.135067659799500521040944087433752970297E-4</var>),</td></tr>
+<tr><th id="623">623</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.059928728869218962607068840646564457980E-2)" data-ref="_M/L">L</a>(-<var>1.059928728869218962607068840646564457980E-2</var>),</td></tr>
+<tr><th id="624">624</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.212070036005832342565792241385459023801E-1)" data-ref="_M/L">L</a>(-<var>1.212070036005832342565792241385459023801E-1</var>),</td></tr>
+<tr><th id="625">625</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-6.688350110633603958684302153362735625156E-1)" data-ref="_M/L">L</a>(-<var>6.688350110633603958684302153362735625156E-1</var>),</td></tr>
+<tr><th id="626">626</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.793587878197360221340277951304429821582E0)" data-ref="_M/L">L</a>(-<var>1.793587878197360221340277951304429821582E0</var>),</td></tr>
+<tr><th id="627">627</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-2.225407682237197485644647380483725045326E0)" data-ref="_M/L">L</a>(-<var>2.225407682237197485644647380483725045326E0</var>),</td></tr>
+<tr><th id="628">628</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.123402135458940189438898496348239744403E0)" data-ref="_M/L">L</a>(-<var>1.123402135458940189438898496348239744403E0</var>),</td></tr>
+<tr><th id="629">629</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.679187241566347077204805190763597299805E-1)" data-ref="_M/L">L</a>(-<var>1.679187241566347077204805190763597299805E-1</var>),</td></tr>
+<tr><th id="630">630</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.458550613639093752909985189067233504148E-3)" data-ref="_M/L">L</a>(-<var>1.458550613639093752909985189067233504148E-3</var>),</td></tr>
+<tr><th id="631">631</th><td>};</td></tr>
+<tr><th id="632">632</th><td><u>#define <dfn class="macro" id="_M/NQ2_2r3D" data-ref="_M/NQ2_2r3D">NQ2_2r3D</dfn> 8</u></td></tr>
+<tr><th id="633">633</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Q2_2r3D" title='Q2_2r3D' data-ref="Q2_2r3D" data-ref-filename="Q2_2r3D">Q2_2r3D</dfn>[<a class="macro" href="#632" title="8" data-ref="_M/NQ2_2r3D">NQ2_2r3D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="634">634</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.415024336507980465169023996403597916115E-5)" data-ref="_M/L">L</a>(<var>5.415024336507980465169023996403597916115E-5</var>),</td></tr>
+<tr><th id="635">635</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.179246497380453022046357404266022870788E-3)" data-ref="_M/L">L</a>(<var>4.179246497380453022046357404266022870788E-3</var>),</td></tr>
+<tr><th id="636">636</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.136306384261959483095442402929502368598E-1)" data-ref="_M/L">L</a>(<var>1.136306384261959483095442402929502368598E-1</var>),</td></tr>
+<tr><th id="637">637</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.422640343719842213484515445393284072830E0)" data-ref="_M/L">L</a>(<var>1.422640343719842213484515445393284072830E0</var>),</td></tr>
+<tr><th id="638">638</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (8.968786703393158374728850922289204805764E0)" data-ref="_M/L">L</a>(<var>8.968786703393158374728850922289204805764E0</var>),</td></tr>
+<tr><th id="639">639</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.914542473339246127533384118781216495934E1)" data-ref="_M/L">L</a>(<var>2.914542473339246127533384118781216495934E1</var>),</td></tr>
+<tr><th id="640">640</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.781605421020380669870197378210457054685E1)" data-ref="_M/L">L</a>(<var>4.781605421020380669870197378210457054685E1</var>),</td></tr>
+<tr><th id="641">641</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.693865837171883152382820584714795072937E1)" data-ref="_M/L">L</a>(<var>3.693865837171883152382820584714795072937E1</var>),</td></tr>
+<tr><th id="642">642</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.153220502744204904763115556224395893076E1)" data-ref="_M/L">L</a>(<var>1.153220502744204904763115556224395893076E1</var>),</td></tr>
+<tr><th id="643">643</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="644">644</th><td>};</td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td></td></tr>
+<tr><th id="647">647</th><td><i>/* Evaluate P[n] x^n  +  P[n-1] x^(n-1)  +  ...  +  P[0] */</i></td></tr>
+<tr><th id="648">648</th><td></td></tr>
+<tr><th id="649">649</th><td><em>static</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="650">650</th><td><dfn class="decl def fn" id="neval" title='neval' data-ref="neval" data-ref-filename="neval">neval</dfn> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x, <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> *p, <em>int</em> n)</td></tr>
+<tr><th id="651">651</th><td>{</td></tr>
+<tr><th id="652">652</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span><span class='error' title="expected &apos;;&apos; after expression"></span> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="653">653</th><td></td></tr>
+<tr><th id="654">654</th><td>  p += n;</td></tr>
+<tr><th id="655">655</th><td>  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = *p--;</td></tr>
+<tr><th id="656">656</th><td>  <b>do</b></td></tr>
+<tr><th id="657">657</th><td>    {</td></tr>
+<tr><th id="658">658</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> * x + *p--;</td></tr>
+<tr><th id="659">659</th><td>    }</td></tr>
+<tr><th id="660">660</th><td>  <b>while</b> (--<a class="local col1 ref" href="#1n" title='n' data-ref="1n" data-ref-filename="1n">n</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="661">661</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="662">662</th><td>}</td></tr>
+<tr><th id="663">663</th><td></td></tr>
+<tr><th id="664">664</th><td></td></tr>
+<tr><th id="665">665</th><td><i>/* Evaluate x^n+1  +  P[n] x^(n)  +  P[n-1] x^(n-1)  +  ...  +  P[0] */</i></td></tr>
+<tr><th id="666">666</th><td></td></tr>
+<tr><th id="667">667</th><td><em>static</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="668">668</th><td><dfn class="decl def fn" id="deval" title='deval' data-ref="deval" data-ref-filename="deval">deval</dfn> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x, <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> *p, <em>int</em> n)</td></tr>
+<tr><th id="669">669</th><td>{</td></tr>
+<tr><th id="670">670</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> y;</td></tr>
+<tr><th id="671">671</th><td></td></tr>
+<tr><th id="672">672</th><td>  p += n;</td></tr>
+<tr><th id="673">673</th><td>  <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = x + *p--;</td></tr>
+<tr><th id="674">674</th><td>  <b>do</b></td></tr>
+<tr><th id="675">675</th><td>    {</td></tr>
+<tr><th id="676">676</th><td>      <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> = <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span> * x + *p--;</td></tr>
+<tr><th id="677">677</th><td>    }</td></tr>
+<tr><th id="678">678</th><td>  <b>while</b> (--<a class="local col2 ref" href="#2n" title='n' data-ref="2n" data-ref-filename="2n">n</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="679">679</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;y&apos;">y</span>;</td></tr>
+<tr><th id="680">680</th><td>}</td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td></td></tr>
+<tr><th id="683">683</th><td><i>/* Bessel function of the first kind, order one.  */</i></td></tr>
+<tr><th id="684">684</th><td></td></tr>
+<tr><th id="685">685</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="686">686</th><td><a class="macro" href="../float128/float128_private.h.html#142" title="__ieee754_j1f128" data-ref="_M/__ieee754_j1l">__ieee754_j1l</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x)</td></tr>
+<tr><th id="687">687</th><td>{</td></tr>
+<tr><th id="688">688</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> xx, xinv, z, p, q, c, s, cc, ss;</td></tr>
+<tr><th id="689">689</th><td></td></tr>
+<tr><th id="690">690</th><td>  <b>if</b> (! <a class="macro" href="../../../math/math.h.html#629" title="(sizeof ((x)) == sizeof (float) ? __finitef (x) : sizeof ((x)) == sizeof (double) ? __finite (x) : __finitef128 (x))" data-ref="_M/isfinite">isfinite</a> (x))</td></tr>
+<tr><th id="691">691</th><td>    {</td></tr>
+<tr><th id="692">692</th><td>      <b>if</b> (x != x)</td></tr>
+<tr><th id="693">693</th><td>	<b>return</b> x + x;</td></tr>
+<tr><th id="694">694</th><td>      <b>else</b></td></tr>
+<tr><th id="695">695</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="696">696</th><td>    }</td></tr>
+<tr><th id="697">697</th><td>  <b>if</b> (x == <var>0</var>)</td></tr>
+<tr><th id="698">698</th><td>    <b>return</b> x;</td></tr>
+<tr><th id="699">699</th><td>  <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> = <a class="macro" href="../float128/float128_private.h.html#258" title="fabsf128" data-ref="_M/fabsl">fabsl</a> (x);</td></tr>
+<tr><th id="700">700</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0x1p-58)" data-ref="_M/L">L</a>(<var>0x1p-58</var>))</td></tr>
+<tr><th id="701">701</th><td>    {</td></tr>
+<tr><th id="702">702</th><td>      <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> ret = x * <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0.5)" data-ref="_M/L">L</a>(<var>0.5</var>);</td></tr>
+<tr><th id="703">703</th><td>      <a class="macro" href="../../generic/math_private.h.html#313" title="do { __typeof (ret) force_underflow_tmp = (ret); if ((sizeof ((force_underflow_tmp)) == sizeof (float) ? (__typeof (force_underflow_tmp)) __builtin_fabsf (force_underflow_tmp) : sizeof ((force_underflow_tmp)) == sizeof (double) ? (__typeof (force_underflow_tmp)) __builtin_fabs (force_underflow_tmp) : (__typeof (force_underflow_tmp)) __builtin_fabsl (force_underflow_tmp)) &lt; (sizeof ((force_underflow_tmp)) == sizeof (float) ? (__typeof (force_underflow_tmp)) 1.17549435e-38F : sizeof ((force_underflow_tmp)) == sizeof (double) ? (__typeof (force_underflow_tmp)) 2.2250738585072014e-308 : (__typeof (force_underflow_tmp)) FLT128_MIN)) { __typeof (force_underflow_tmp) force_underflow_tmp2 = force_underflow_tmp * force_underflow_tmp; do { if (sizeof (force_underflow_tmp2) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (force_underflow_tmp2), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (force_underflow_tmp2)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (force_underflow_tmp2)); } while (0); } } while (0)" data-ref="_M/math_check_force_underflow">math_check_force_underflow</a> (<span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span>);</td></tr>
+<tr><th id="704">704</th><td>      <b>if</b> (<span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span> == <var>0</var>)</td></tr>
+<tr><th id="705">705</th><td>	<a class="macro" href="../../../include/errno.h.html#37" title="(errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="706">706</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;ret&apos;">ret</span>;</td></tr>
+<tr><th id="707">707</th><td>    }</td></tr>
+<tr><th id="708">708</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <var>2</var>)</td></tr>
+<tr><th id="709">709</th><td>    {</td></tr>
+<tr><th id="710">710</th><td>      <i>/* 0 &lt;= x &lt;= 2 */</i></td></tr>
+<tr><th id="711">711</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> * <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>;</td></tr>
+<tr><th id="712">712</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> * <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, J0_2N, <a class="macro" href="#112" title="6" data-ref="_M/NJ0_2N">NJ0_2N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, J0_2D, <a class="macro" href="#122" title="6" data-ref="_M/NJ0_2D">NJ0_2D</a>);</td></tr>
+<tr><th id="713">713</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> += <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0.5)" data-ref="_M/L">L</a>(<var>0.5</var>) * <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>;</td></tr>
+<tr><th id="714">714</th><td>      <b>if</b> (x &lt; <var>0</var>)</td></tr>
+<tr><th id="715">715</th><td>	<span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = -<span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="716">716</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="717">717</th><td>    }</td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td>  <i>/* X = x - 3 pi/4</i></td></tr>
+<tr><th id="720">720</th><td><i>     cos(X) = cos(x) cos(3 pi/4) + sin(x) sin(3 pi/4)</i></td></tr>
+<tr><th id="721">721</th><td><i>     = 1/sqrt(2) * (-cos(x) + sin(x))</i></td></tr>
+<tr><th id="722">722</th><td><i>     sin(X) = sin(x) cos(3 pi/4) - cos(x) sin(3 pi/4)</i></td></tr>
+<tr><th id="723">723</th><td><i>     = -1/sqrt(2) * (sin(x) + cos(x))</i></td></tr>
+<tr><th id="724">724</th><td><i>     cf. Fdlibm.  */</i></td></tr>
+<tr><th id="725">725</th><td>  <a class="macro" href="../float128/float128_private.h.html#232" title="__sincosf128" data-ref="_M/__sincosl">__sincosl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>, &amp;<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span>, &amp;<span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>);</td></tr>
+<tr><th id="726">726</th><td>  <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> = -<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> - <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>;</td></tr>
+<tr><th id="727">727</th><td>  <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> = <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> - <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>;</td></tr>
+<tr><th id="728">728</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <a class="macro" href="../float128/float128_private.h.html#81" title="FLT128_MAX" data-ref="_M/LDBL_MAX">LDBL_MAX</a> / <var>2</var>)</td></tr>
+<tr><th id="729">729</th><td>    {</td></tr>
+<tr><th id="730">730</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <a class="macro" href="../float128/float128_private.h.html#193" title="__cosf128" data-ref="_M/__cosl">__cosl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> + <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="731">731</th><td>      <b>if</b> ((<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> * <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>) &gt; <var>0</var>)</td></tr>
+<tr><th id="732">732</th><td>	<span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> / <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span>;</td></tr>
+<tr><th id="733">733</th><td>      <b>else</b></td></tr>
+<tr><th id="734">734</th><td>	<span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> / <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span>;</td></tr>
+<tr><th id="735">735</th><td>    }</td></tr>
+<tr><th id="736">736</th><td></td></tr>
+<tr><th id="737">737</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &gt; <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0x1p256)" data-ref="_M/L">L</a>(<var>0x1p256</var>))</td></tr>
+<tr><th id="738">738</th><td>    {</td></tr>
+<tr><th id="739">739</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = ONEOSQPI * <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> / <a class="macro" href="../float128/float128_private.h.html#152" title="__ieee754_sqrtf128" data-ref="_M/__ieee754_sqrtl">__ieee754_sqrtl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="740">740</th><td>      <b>if</b> (x &lt; <var>0</var>)</td></tr>
+<tr><th id="741">741</th><td>	<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = -<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="742">742</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="743">743</th><td>    }</td></tr>
+<tr><th id="744">744</th><td></td></tr>
+<tr><th id="745">745</th><td>  <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> = <var>1</var> / <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>;</td></tr>
+<tr><th id="746">746</th><td>  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span>;</td></tr>
+<tr><th id="747">747</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.25</var>)</td></tr>
+<tr><th id="748">748</th><td>    {</td></tr>
+<tr><th id="749">749</th><td>      <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.125</var>)</td></tr>
+<tr><th id="750">750</th><td>	{</td></tr>
+<tr><th id="751">751</th><td>	  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.0625</var>)</td></tr>
+<tr><th id="752">752</th><td>	    {</td></tr>
+<tr><th id="753">753</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P16_IN, <a class="macro" href="#137" title="9" data-ref="_M/NP16_IN">NP16_IN</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P16_ID, <a class="macro" href="#150" title="9" data-ref="_M/NP16_ID">NP16_ID</a>);</td></tr>
+<tr><th id="754">754</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q16_IN, <a class="macro" href="#388" title="10" data-ref="_M/NQ16_IN">NQ16_IN</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q16_ID, <a class="macro" href="#402" title="9" data-ref="_M/NQ16_ID">NQ16_ID</a>);</td></tr>
+<tr><th id="755">755</th><td>	    }</td></tr>
+<tr><th id="756">756</th><td>	  <b>else</b></td></tr>
+<tr><th id="757">757</th><td>	    {</td></tr>
+<tr><th id="758">758</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P8_16N, <a class="macro" href="#168" title="11" data-ref="_M/NP8_16N">NP8_16N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P8_16D, <a class="macro" href="#183" title="10" data-ref="_M/NP8_16D">NP8_16D</a>);</td></tr>
+<tr><th id="759">759</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q8_16N, <a class="macro" href="#421" title="11" data-ref="_M/NQ8_16N">NQ8_16N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q8_16D, <a class="macro" href="#436" title="11" data-ref="_M/NQ8_16D">NQ8_16D</a>);</td></tr>
+<tr><th id="760">760</th><td>	    }</td></tr>
+<tr><th id="761">761</th><td>	}</td></tr>
+<tr><th id="762">762</th><td>      <b>else</b> <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.1875</var>)</td></tr>
+<tr><th id="763">763</th><td>	{</td></tr>
+<tr><th id="764">764</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P5_8N, <a class="macro" href="#202" title="10" data-ref="_M/NP5_8N">NP5_8N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P5_8D, <a class="macro" href="#216" title="10" data-ref="_M/NP5_8D">NP5_8D</a>);</td></tr>
+<tr><th id="765">765</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q5_8N, <a class="macro" href="#457" title="10" data-ref="_M/NQ5_8N">NQ5_8N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q5_8D, <a class="macro" href="#471" title="10" data-ref="_M/NQ5_8D">NQ5_8D</a>);</td></tr>
+<tr><th id="766">766</th><td>	}</td></tr>
+<tr><th id="767">767</th><td>      <b>else</b></td></tr>
+<tr><th id="768">768</th><td>	{</td></tr>
+<tr><th id="769">769</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P4_5N, <a class="macro" href="#235" title="10" data-ref="_M/NP4_5N">NP4_5N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P4_5D, <a class="macro" href="#249" title="9" data-ref="_M/NP4_5D">NP4_5D</a>);</td></tr>
+<tr><th id="770">770</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q4_5N, <a class="macro" href="#491" title="10" data-ref="_M/NQ4_5N">NQ4_5N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q4_5D, <a class="macro" href="#505" title="9" data-ref="_M/NQ4_5D">NQ4_5D</a>);</td></tr>
+<tr><th id="771">771</th><td>	}</td></tr>
+<tr><th id="772">772</th><td>    }				<i>/* .25 */</i></td></tr>
+<tr><th id="773">773</th><td>  <b>else</b> <i>/* if (xinv &lt;= 0.5) */</i></td></tr>
+<tr><th id="774">774</th><td>    {</td></tr>
+<tr><th id="775">775</th><td>      <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.375</var>)</td></tr>
+<tr><th id="776">776</th><td>	{</td></tr>
+<tr><th id="777">777</th><td>	  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.3125</var>)</td></tr>
+<tr><th id="778">778</th><td>	    {</td></tr>
+<tr><th id="779">779</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P3r2_4N, <a class="macro" href="#267" title="9" data-ref="_M/NP3r2_4N">NP3r2_4N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P3r2_4D, <a class="macro" href="#280" title="9" data-ref="_M/NP3r2_4D">NP3r2_4D</a>);</td></tr>
+<tr><th id="780">780</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q3r2_4N, <a class="macro" href="#524" title="9" data-ref="_M/NQ3r2_4N">NQ3r2_4N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q3r2_4D, <a class="macro" href="#537" title="9" data-ref="_M/NQ3r2_4D">NQ3r2_4D</a>);</td></tr>
+<tr><th id="781">781</th><td>	    }</td></tr>
+<tr><th id="782">782</th><td>	  <b>else</b></td></tr>
+<tr><th id="783">783</th><td>	    {</td></tr>
+<tr><th id="784">784</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r7_3r2N, <a class="macro" href="#298" title="9" data-ref="_M/NP2r7_3r2N">NP2r7_3r2N</a>)</td></tr>
+<tr><th id="785">785</th><td>		  / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r7_3r2D, <a class="macro" href="#311" title="8" data-ref="_M/NP2r7_3r2D">NP2r7_3r2D</a>);</td></tr>
+<tr><th id="786">786</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r7_3r2N, <a class="macro" href="#556" title="9" data-ref="_M/NQ2r7_3r2N">NQ2r7_3r2N</a>)</td></tr>
+<tr><th id="787">787</th><td>		  / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r7_3r2D, <a class="macro" href="#569" title="9" data-ref="_M/NQ2r7_3r2D">NQ2r7_3r2D</a>);</td></tr>
+<tr><th id="788">788</th><td>	    }</td></tr>
+<tr><th id="789">789</th><td>	}</td></tr>
+<tr><th id="790">790</th><td>      <b>else</b> <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.4375</var>)</td></tr>
+<tr><th id="791">791</th><td>	{</td></tr>
+<tr><th id="792">792</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r3_2r7N, <a class="macro" href="#328" title="9" data-ref="_M/NP2r3_2r7N">NP2r3_2r7N</a>)</td></tr>
+<tr><th id="793">793</th><td>	      / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r3_2r7D, <a class="macro" href="#341" title="8" data-ref="_M/NP2r3_2r7D">NP2r3_2r7D</a>);</td></tr>
+<tr><th id="794">794</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r3_2r7N, <a class="macro" href="#588" title="9" data-ref="_M/NQ2r3_2r7N">NQ2r3_2r7N</a>)</td></tr>
+<tr><th id="795">795</th><td>	      / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r3_2r7D, <a class="macro" href="#601" title="8" data-ref="_M/NQ2r3_2r7D">NQ2r3_2r7D</a>);</td></tr>
+<tr><th id="796">796</th><td>	}</td></tr>
+<tr><th id="797">797</th><td>      <b>else</b></td></tr>
+<tr><th id="798">798</th><td>	{</td></tr>
+<tr><th id="799">799</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2_2r3N, <a class="macro" href="#358" title="8" data-ref="_M/NP2_2r3N">NP2_2r3N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2_2r3D, <a class="macro" href="#370" title="8" data-ref="_M/NP2_2r3D">NP2_2r3D</a>);</td></tr>
+<tr><th id="800">800</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2_2r3N, <a class="macro" href="#619" title="9" data-ref="_M/NQ2_2r3N">NQ2_2r3N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2_2r3D, <a class="macro" href="#632" title="8" data-ref="_M/NQ2_2r3D">NQ2_2r3D</a>);</td></tr>
+<tr><th id="801">801</th><td>	}</td></tr>
+<tr><th id="802">802</th><td>    }</td></tr>
+<tr><th id="803">803</th><td>  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = <var>1</var> + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="804">804</th><td>  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="805">805</th><td>  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> + <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0.375)" data-ref="_M/L">L</a>(<var>0.375</var>) * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span>;</td></tr>
+<tr><th id="806">806</th><td>  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = ONEOSQPI * (<span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> * <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> - <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> * <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span>) / <a class="macro" href="../float128/float128_private.h.html#152" title="__ieee754_sqrtf128" data-ref="_M/__ieee754_sqrtl">__ieee754_sqrtl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="807">807</th><td>  <b>if</b> (x &lt; <var>0</var>)</td></tr>
+<tr><th id="808">808</th><td>    <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = -<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="809">809</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="810">810</th><td>}</td></tr>
+<tr><th id="811">811</th><td><a class="macro" href="../../../include/libc-symbols.h.html#133" title="extern __typeof (__ieee754_j1f128) __j1f128_finite __attribute__ ((alias (&quot;__ieee754_j1f128&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="macro" href="../float128/float128_private.h.html#142" title="__ieee754_j1f128" data-ref="_M/__ieee754_j1l">__ieee754_j1l</a>, <a class="macro" href="../float128/float128_private.h.html#173" title="__j1f128_finite" data-ref="_M/__j1l_finite">__j1l_finite</a>)</td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td></td></tr>
+<tr><th id="814">814</th><td><i>/* Y1(x) = 2/pi * (log(x) * J1(x) - 1/x) + x R(x^2)</i></td></tr>
+<tr><th id="815">815</th><td><i>   Peak relative error 6.2e-38</i></td></tr>
+<tr><th id="816">816</th><td><i>   0 &lt;= x &lt;= 2   */</i></td></tr>
+<tr><th id="817">817</th><td><u>#define <dfn class="macro" id="_M/NY0_2N" data-ref="_M/NY0_2N">NY0_2N</dfn> 7</u></td></tr>
+<tr><th id="818">818</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Y0_2N" title='Y0_2N' data-ref="Y0_2N" data-ref-filename="Y0_2N">Y0_2N</dfn>[<a class="macro" href="#817" title="7" data-ref="_M/NY0_2N">NY0_2N</a> + <var>1</var>] = {</td></tr>
+<tr><th id="819">819</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-6.804415404830253804408698161694720833249E19)" data-ref="_M/L">L</a>(-<var>6.804415404830253804408698161694720833249E19</var>),</td></tr>
+<tr><th id="820">820</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.805450517967019908027153056150465849237E19)" data-ref="_M/L">L</a>(<var>1.805450517967019908027153056150465849237E19</var>),</td></tr>
+<tr><th id="821">821</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-8.065747497063694098810419456383006737312E17)" data-ref="_M/L">L</a>(-<var>8.065747497063694098810419456383006737312E17</var>),</td></tr>
+<tr><th id="822">822</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.401336667383028259295830955439028236299E16)" data-ref="_M/L">L</a>(<var>1.401336667383028259295830955439028236299E16</var>),</td></tr>
+<tr><th id="823">823</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.171654432898137585000399489686629680230E14)" data-ref="_M/L">L</a>(-<var>1.171654432898137585000399489686629680230E14</var>),</td></tr>
+<tr><th id="824">824</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (5.061267920943853732895341125243428129150E11)" data-ref="_M/L">L</a>(<var>5.061267920943853732895341125243428129150E11</var>),</td></tr>
+<tr><th id="825">825</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (-1.096677850566094204586208610960870217970E9)" data-ref="_M/L">L</a>(-<var>1.096677850566094204586208610960870217970E9</var>),</td></tr>
+<tr><th id="826">826</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.541172044989995856117187515882879304461E5)" data-ref="_M/L">L</a>(<var>9.541172044989995856117187515882879304461E5</var>),</td></tr>
+<tr><th id="827">827</th><td>};</td></tr>
+<tr><th id="828">828</th><td><u>#define <dfn class="macro" id="_M/NY0_2D" data-ref="_M/NY0_2D">NY0_2D</dfn> 7</u></td></tr>
+<tr><th id="829">829</th><td><em>static</em> <em>const</em> <span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> <dfn class="decl def" id="Y0_2D" title='Y0_2D' data-ref="Y0_2D" data-ref-filename="Y0_2D">Y0_2D</dfn>[<a class="macro" href="#828" title="7" data-ref="_M/NY0_2D">NY0_2D</a> + <var>1</var>] = {</td></tr>
+<tr><th id="830">830</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (3.470629591820267059538637461549677594549E20)" data-ref="_M/L">L</a>(<var>3.470629591820267059538637461549677594549E20</var>),</td></tr>
+<tr><th id="831">831</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (4.120796439009916326855848107545425217219E18)" data-ref="_M/L">L</a>(<var>4.120796439009916326855848107545425217219E18</var>),</td></tr>
+<tr><th id="832">832</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.477653371652018249749350657387030814542E16)" data-ref="_M/L">L</a>(<var>2.477653371652018249749350657387030814542E16</var>),</td></tr>
+<tr><th id="833">833</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (9.954678543353888958177169349272167762797E13)" data-ref="_M/L">L</a>(<var>9.954678543353888958177169349272167762797E13</var>),</td></tr>
+<tr><th id="834">834</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (2.957927997613630118216218290262851197754E11)" data-ref="_M/L">L</a>(<var>2.957927997613630118216218290262851197754E11</var>),</td></tr>
+<tr><th id="835">835</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (6.748421382188864486018861197614025972118E8)" data-ref="_M/L">L</a>(<var>6.748421382188864486018861197614025972118E8</var>),</td></tr>
+<tr><th id="836">836</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.173453425218010888004562071020305709319E6)" data-ref="_M/L">L</a>(<var>1.173453425218010888004562071020305709319E6</var>),</td></tr>
+<tr><th id="837">837</th><td>  <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (1.450335662961034949894009554536003377187E3)" data-ref="_M/L">L</a>(<var>1.450335662961034949894009554536003377187E3</var>),</td></tr>
+<tr><th id="838">838</th><td>  <i>/* 1.000000000000000000000000000000000000000E0 */</i></td></tr>
+<tr><th id="839">839</th><td>};</td></tr>
+<tr><th id="840">840</th><td></td></tr>
+<tr><th id="841">841</th><td></td></tr>
+<tr><th id="842">842</th><td><i>/* Bessel function of the second kind, order one.  */</i></td></tr>
+<tr><th id="843">843</th><td></td></tr>
+<tr><th id="844">844</th><td><span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span></td></tr>
+<tr><th id="845">845</th><td><a class="macro" href="../float128/float128_private.h.html#154" title="__ieee754_y1f128" data-ref="_M/__ieee754_y1l">__ieee754_y1l</a> (<span class='error' title="unknown type name &apos;_Float128&apos;">_Float128</span> x)</td></tr>
+<tr><th id="846">846</th><td>{</td></tr>
+<tr><th id="847">847</th><td>  <span class='error' title="use of undeclared identifier &apos;_Float128&apos;">_Float128</span> xx, xinv, z, p, q, c, s, cc, ss;</td></tr>
+<tr><th id="848">848</th><td></td></tr>
+<tr><th id="849">849</th><td>  <b>if</b> (! <a class="macro" href="../../../math/math.h.html#629" title="(sizeof ((x)) == sizeof (float) ? __finitef (x) : sizeof ((x)) == sizeof (double) ? __finite (x) : __finitef128 (x))" data-ref="_M/isfinite">isfinite</a> (x))</td></tr>
+<tr><th id="850">850</th><td>    <b>return</b> <var>1</var> / (x + x * x);</td></tr>
+<tr><th id="851">851</th><td>  <b>if</b> (x &lt;= <var>0</var>)</td></tr>
+<tr><th id="852">852</th><td>    {</td></tr>
+<tr><th id="853">853</th><td>      <b>if</b> (x &lt; <var>0</var>)</td></tr>
+<tr><th id="854">854</th><td>	<b>return</b> (zero / (zero * x));</td></tr>
+<tr><th id="855">855</th><td>      <b>return</b> -<var>1</var> / zero; <i>/* -inf and divide by zero exception.  */</i></td></tr>
+<tr><th id="856">856</th><td>    }</td></tr>
+<tr><th id="857">857</th><td>  <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> = <a class="macro" href="../float128/float128_private.h.html#258" title="fabsf128" data-ref="_M/fabsl">fabsl</a> (x);</td></tr>
+<tr><th id="858">858</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <var>0x1p-114</var>)</td></tr>
+<tr><th id="859">859</th><td>    {</td></tr>
+<tr><th id="860">860</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = -TWOOPI / x;</td></tr>
+<tr><th id="861">861</th><td>      <b>if</b> (<a class="macro" href="../../../math/math.h.html#661" title="(sizeof ((z)) == sizeof (float) ? __isinff (z) : sizeof ((z)) == sizeof (double) ? __isinf (z) : __isinff128 (z))" data-ref="_M/isinf">isinf</a> (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>))</td></tr>
+<tr><th id="862">862</th><td>	<a class="macro" href="../../../include/errno.h.html#37" title="(errno = (34))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>);</td></tr>
+<tr><th id="863">863</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="864">864</th><td>    }</td></tr>
+<tr><th id="865">865</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <var>2</var>)</td></tr>
+<tr><th id="866">866</th><td>    {</td></tr>
+<tr><th id="867">867</th><td>      <i>/* 0 &lt;= x &lt;= 2 */</i></td></tr>
+<tr><th id="868">868</th><td>      <a class="macro" href="../float128/float128_private.h.html#54" title="struct rm_ctx ctx __attribute__((cleanup (libc_feresetround_sse_ctx))); libc_feholdsetround_sse_ctx (&amp;ctx, (0))" data-ref="_M/SET_RESTORE_ROUNDL">SET_RESTORE_ROUNDL</a> (<a class="macro" href="../../x86/fpu/bits/fenv.h.html#53" title="0" data-ref="_M/FE_TONEAREST">FE_TONEAREST</a>);</td></tr>
+<tr><th id="869">869</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> * <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>;</td></tr>
+<tr><th id="870">870</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> * neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Y0_2N, <a class="macro" href="#817" title="7" data-ref="_M/NY0_2N">NY0_2N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Y0_2D, <a class="macro" href="#828" title="7" data-ref="_M/NY0_2D">NY0_2D</a>);</td></tr>
+<tr><th id="871">871</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = -TWOOPI / <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> + <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="872">872</th><td>      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = TWOOPI * <a class="macro" href="../float128/float128_private.h.html#147" title="__ieee754_logf128" data-ref="_M/__ieee754_logl">__ieee754_logl</a> (x) * <a class="macro" href="../float128/float128_private.h.html#142" title="__ieee754_j1f128" data-ref="_M/__ieee754_j1l">__ieee754_j1l</a> (x) + <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="873">873</th><td>      <b>return</b> <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="874">874</th><td>    }</td></tr>
+<tr><th id="875">875</th><td></td></tr>
+<tr><th id="876">876</th><td>  <i>/* X = x - 3 pi/4</i></td></tr>
+<tr><th id="877">877</th><td><i>     cos(X) = cos(x) cos(3 pi/4) + sin(x) sin(3 pi/4)</i></td></tr>
+<tr><th id="878">878</th><td><i>     = 1/sqrt(2) * (-cos(x) + sin(x))</i></td></tr>
+<tr><th id="879">879</th><td><i>     sin(X) = sin(x) cos(3 pi/4) - cos(x) sin(3 pi/4)</i></td></tr>
+<tr><th id="880">880</th><td><i>     = -1/sqrt(2) * (sin(x) + cos(x))</i></td></tr>
+<tr><th id="881">881</th><td><i>     cf. Fdlibm.  */</i></td></tr>
+<tr><th id="882">882</th><td>  <a class="macro" href="../float128/float128_private.h.html#232" title="__sincosf128" data-ref="_M/__sincosl">__sincosl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>, &amp;<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span>, &amp;<span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>);</td></tr>
+<tr><th id="883">883</th><td>  <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> = -<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> - <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>;</td></tr>
+<tr><th id="884">884</th><td>  <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> = <span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> - <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>;</td></tr>
+<tr><th id="885">885</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &lt;= <a class="macro" href="../float128/float128_private.h.html#81" title="FLT128_MAX" data-ref="_M/LDBL_MAX">LDBL_MAX</a> / <var>2</var>)</td></tr>
+<tr><th id="886">886</th><td>    {</td></tr>
+<tr><th id="887">887</th><td>      <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <a class="macro" href="../float128/float128_private.h.html#193" title="__cosf128" data-ref="_M/__cosl">__cosl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> + <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="888">888</th><td>      <b>if</b> ((<span class='error' title="use of undeclared identifier &apos;s&apos;">s</span> * <span class='error' title="use of undeclared identifier &apos;c&apos;">c</span>) &gt; <var>0</var>)</td></tr>
+<tr><th id="889">889</th><td>	<span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> / <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span>;</td></tr>
+<tr><th id="890">890</th><td>      <b>else</b></td></tr>
+<tr><th id="891">891</th><td>	<span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> / <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span>;</td></tr>
+<tr><th id="892">892</th><td>    }</td></tr>
+<tr><th id="893">893</th><td></td></tr>
+<tr><th id="894">894</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span> &gt; <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0x1p256)" data-ref="_M/L">L</a>(<var>0x1p256</var>))</td></tr>
+<tr><th id="895">895</th><td>    <b>return</b> ONEOSQPI * <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> / <a class="macro" href="../float128/float128_private.h.html#152" title="__ieee754_sqrtf128" data-ref="_M/__ieee754_sqrtl">__ieee754_sqrtl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="896">896</th><td></td></tr>
+<tr><th id="897">897</th><td>  <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> = <var>1</var> / <span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>;</td></tr>
+<tr><th id="898">898</th><td>  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span>;</td></tr>
+<tr><th id="899">899</th><td>  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.25</var>)</td></tr>
+<tr><th id="900">900</th><td>    {</td></tr>
+<tr><th id="901">901</th><td>      <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.125</var>)</td></tr>
+<tr><th id="902">902</th><td>	{</td></tr>
+<tr><th id="903">903</th><td>	  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.0625</var>)</td></tr>
+<tr><th id="904">904</th><td>	    {</td></tr>
+<tr><th id="905">905</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P16_IN, <a class="macro" href="#137" title="9" data-ref="_M/NP16_IN">NP16_IN</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P16_ID, <a class="macro" href="#150" title="9" data-ref="_M/NP16_ID">NP16_ID</a>);</td></tr>
+<tr><th id="906">906</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q16_IN, <a class="macro" href="#388" title="10" data-ref="_M/NQ16_IN">NQ16_IN</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q16_ID, <a class="macro" href="#402" title="9" data-ref="_M/NQ16_ID">NQ16_ID</a>);</td></tr>
+<tr><th id="907">907</th><td>	    }</td></tr>
+<tr><th id="908">908</th><td>	  <b>else</b></td></tr>
+<tr><th id="909">909</th><td>	    {</td></tr>
+<tr><th id="910">910</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P8_16N, <a class="macro" href="#168" title="11" data-ref="_M/NP8_16N">NP8_16N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P8_16D, <a class="macro" href="#183" title="10" data-ref="_M/NP8_16D">NP8_16D</a>);</td></tr>
+<tr><th id="911">911</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q8_16N, <a class="macro" href="#421" title="11" data-ref="_M/NQ8_16N">NQ8_16N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q8_16D, <a class="macro" href="#436" title="11" data-ref="_M/NQ8_16D">NQ8_16D</a>);</td></tr>
+<tr><th id="912">912</th><td>	    }</td></tr>
+<tr><th id="913">913</th><td>	}</td></tr>
+<tr><th id="914">914</th><td>      <b>else</b> <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.1875</var>)</td></tr>
+<tr><th id="915">915</th><td>	{</td></tr>
+<tr><th id="916">916</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P5_8N, <a class="macro" href="#202" title="10" data-ref="_M/NP5_8N">NP5_8N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P5_8D, <a class="macro" href="#216" title="10" data-ref="_M/NP5_8D">NP5_8D</a>);</td></tr>
+<tr><th id="917">917</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q5_8N, <a class="macro" href="#457" title="10" data-ref="_M/NQ5_8N">NQ5_8N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q5_8D, <a class="macro" href="#471" title="10" data-ref="_M/NQ5_8D">NQ5_8D</a>);</td></tr>
+<tr><th id="918">918</th><td>	}</td></tr>
+<tr><th id="919">919</th><td>      <b>else</b></td></tr>
+<tr><th id="920">920</th><td>	{</td></tr>
+<tr><th id="921">921</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P4_5N, <a class="macro" href="#235" title="10" data-ref="_M/NP4_5N">NP4_5N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P4_5D, <a class="macro" href="#249" title="9" data-ref="_M/NP4_5D">NP4_5D</a>);</td></tr>
+<tr><th id="922">922</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q4_5N, <a class="macro" href="#491" title="10" data-ref="_M/NQ4_5N">NQ4_5N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q4_5D, <a class="macro" href="#505" title="9" data-ref="_M/NQ4_5D">NQ4_5D</a>);</td></tr>
+<tr><th id="923">923</th><td>	}</td></tr>
+<tr><th id="924">924</th><td>    }				<i>/* .25 */</i></td></tr>
+<tr><th id="925">925</th><td>  <b>else</b> <i>/* if (xinv &lt;= 0.5) */</i></td></tr>
+<tr><th id="926">926</th><td>    {</td></tr>
+<tr><th id="927">927</th><td>      <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.375</var>)</td></tr>
+<tr><th id="928">928</th><td>	{</td></tr>
+<tr><th id="929">929</th><td>	  <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.3125</var>)</td></tr>
+<tr><th id="930">930</th><td>	    {</td></tr>
+<tr><th id="931">931</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P3r2_4N, <a class="macro" href="#267" title="9" data-ref="_M/NP3r2_4N">NP3r2_4N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P3r2_4D, <a class="macro" href="#280" title="9" data-ref="_M/NP3r2_4D">NP3r2_4D</a>);</td></tr>
+<tr><th id="932">932</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q3r2_4N, <a class="macro" href="#524" title="9" data-ref="_M/NQ3r2_4N">NQ3r2_4N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q3r2_4D, <a class="macro" href="#537" title="9" data-ref="_M/NQ3r2_4D">NQ3r2_4D</a>);</td></tr>
+<tr><th id="933">933</th><td>	    }</td></tr>
+<tr><th id="934">934</th><td>	  <b>else</b></td></tr>
+<tr><th id="935">935</th><td>	    {</td></tr>
+<tr><th id="936">936</th><td>	      <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r7_3r2N, <a class="macro" href="#298" title="9" data-ref="_M/NP2r7_3r2N">NP2r7_3r2N</a>)</td></tr>
+<tr><th id="937">937</th><td>		  / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r7_3r2D, <a class="macro" href="#311" title="8" data-ref="_M/NP2r7_3r2D">NP2r7_3r2D</a>);</td></tr>
+<tr><th id="938">938</th><td>	      <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r7_3r2N, <a class="macro" href="#556" title="9" data-ref="_M/NQ2r7_3r2N">NQ2r7_3r2N</a>)</td></tr>
+<tr><th id="939">939</th><td>		  / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r7_3r2D, <a class="macro" href="#569" title="9" data-ref="_M/NQ2r7_3r2D">NQ2r7_3r2D</a>);</td></tr>
+<tr><th id="940">940</th><td>	    }</td></tr>
+<tr><th id="941">941</th><td>	}</td></tr>
+<tr><th id="942">942</th><td>      <b>else</b> <b>if</b> (<span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> &lt;= <var>0.4375</var>)</td></tr>
+<tr><th id="943">943</th><td>	{</td></tr>
+<tr><th id="944">944</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r3_2r7N, <a class="macro" href="#328" title="9" data-ref="_M/NP2r3_2r7N">NP2r3_2r7N</a>)</td></tr>
+<tr><th id="945">945</th><td>	      / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2r3_2r7D, <a class="macro" href="#341" title="8" data-ref="_M/NP2r3_2r7D">NP2r3_2r7D</a>);</td></tr>
+<tr><th id="946">946</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r3_2r7N, <a class="macro" href="#588" title="9" data-ref="_M/NQ2r3_2r7N">NQ2r3_2r7N</a>)</td></tr>
+<tr><th id="947">947</th><td>	      / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2r3_2r7D, <a class="macro" href="#601" title="8" data-ref="_M/NQ2r3_2r7D">NQ2r3_2r7D</a>);</td></tr>
+<tr><th id="948">948</th><td>	}</td></tr>
+<tr><th id="949">949</th><td>      <b>else</b></td></tr>
+<tr><th id="950">950</th><td>	{</td></tr>
+<tr><th id="951">951</th><td>	  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2_2r3N, <a class="macro" href="#358" title="8" data-ref="_M/NP2_2r3N">NP2_2r3N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, P2_2r3D, <a class="macro" href="#370" title="8" data-ref="_M/NP2_2r3D">NP2_2r3D</a>);</td></tr>
+<tr><th id="952">952</th><td>	  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = neval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2_2r3N, <a class="macro" href="#619" title="9" data-ref="_M/NQ2_2r3N">NQ2_2r3N</a>) / deval (<span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>, Q2_2r3D, <a class="macro" href="#632" title="8" data-ref="_M/NQ2_2r3D">NQ2_2r3D</a>);</td></tr>
+<tr><th id="953">953</th><td>	}</td></tr>
+<tr><th id="954">954</th><td>    }</td></tr>
+<tr><th id="955">955</th><td>  <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> = <var>1</var> + <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * <span class='error' title="use of undeclared identifier &apos;p&apos;">p</span>;</td></tr>
+<tr><th id="956">956</th><td>  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> * <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span>;</td></tr>
+<tr><th id="957">957</th><td>  <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> = <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span> + <a class="macro" href="../float128/float128_private.h.html#318" title="__f128 (0.375)" data-ref="_M/L">L</a>(<var>0.375</var>) * <span class='error' title="use of undeclared identifier &apos;xinv&apos;">xinv</span>;</td></tr>
+<tr><th id="958">958</th><td>  <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span> = ONEOSQPI * (<span class='error' title="use of undeclared identifier &apos;p&apos;">p</span> * <span class='error' title="use of undeclared identifier &apos;ss&apos;">ss</span> + <span class='error' title="use of undeclared identifier &apos;q&apos;">q</span> * <span class='error' title="use of undeclared identifier &apos;cc&apos;">cc</span>) / <a class="macro" href="../float128/float128_private.h.html#152" title="__ieee754_sqrtf128" data-ref="_M/__ieee754_sqrtl">__ieee754_sqrtl</a> (<span class='error' title="use of undeclared identifier &apos;xx&apos;">xx</span>);</td></tr>
+<tr><th id="959">959</th><td>  <b>return</b> <span class='error' title="use of undeclared identifier &apos;z&apos;">z</span>;</td></tr>
+<tr><th id="960">960</th><td>}</td></tr>
+<tr><th id="961">961</th><td><a class="macro" href="../../../include/libc-symbols.h.html#133" title="extern __typeof (__ieee754_y1f128) __y1f128_finite __attribute__ ((alias (&quot;__ieee754_y1f128&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="macro" href="../float128/float128_private.h.html#154" title="__ieee754_y1f128" data-ref="_M/__ieee754_y1l">__ieee754_y1l</a>, <a class="macro" href="../float128/float128_private.h.html#183" title="__y1f128_finite" data-ref="_M/__y1l_finite">__y1l_finite</a>)</td></tr>
+<tr><th id="962">962</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../float128/e_j1f128.c.html'>glibc_src_2.27/sysdeps/ieee754/float128/e_j1f128.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

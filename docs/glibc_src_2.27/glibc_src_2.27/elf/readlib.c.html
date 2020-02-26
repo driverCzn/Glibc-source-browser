@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>readlib.c source code [glibc_src_2.27/elf/readlib.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="known_names "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/elf/readlib.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.27</a>/<a href='./'>elf</a>/<a href='readlib.c.html'>readlib.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1999-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Andreas Jaeger &lt;aj@suse.de&gt;, 1999 and</i></td></tr>
+<tr><th id="4">4</th><td><i>		  Jakub Jelinek &lt;jakub@redhat.com&gt;, 1999.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   This program is free software; you can redistribute it and/or modify</i></td></tr>
+<tr><th id="7">7</th><td><i>   it under the terms of the GNU General Public License as published</i></td></tr>
+<tr><th id="8">8</th><td><i>   by the Free Software Foundation; version 2 of the License, or</i></td></tr>
+<tr><th id="9">9</th><td><i>   (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   This program is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</i></td></tr>
+<tr><th id="14">14</th><td><i>   GNU General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU General Public License</i></td></tr>
+<tr><th id="17">17</th><td><i>   along with this program; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><i>/* The code in this file and in readelflib is a heavily simplified</i></td></tr>
+<tr><th id="20">20</th><td><i>   version of the readelf program that's part of the current binutils</i></td></tr>
+<tr><th id="21">21</th><td><i>   development version.  Besides the simplification, it has also been</i></td></tr>
+<tr><th id="22">22</th><td><i>   modified to read some other file formats.  */</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/a.out.h.html">&lt;a.out.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/elf.h.html">&lt;elf.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/error.h.html">&lt;error.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/link.h.html">&lt;link.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/sys/mman.h.html">&lt;sys/mman.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../include/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include &lt;gnu/lib-names.h&gt;</u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/ldconfig.h.html">&lt;ldconfig.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/Elf32_CLASS" data-ref="_M/Elf32_CLASS">Elf32_CLASS</dfn> ELFCLASS32</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/Elf64_CLASS" data-ref="_M/Elf64_CLASS">Elf64_CLASS</dfn> ELFCLASS64</u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <dfn class="type def" id="known_names" title='known_names' data-ref="known_names" data-ref-filename="known_names">known_names</dfn></td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>  <em>const</em> <em>char</em> *<dfn class="tu decl field" id="known_names::soname" title='known_names::soname' data-type='const char *' data-ref="known_names::soname" data-ref-filename="known_names..soname">soname</dfn>;</td></tr>
+<tr><th id="45">45</th><td>  <em>int</em> <dfn class="tu decl field" id="known_names::flag" title='known_names::flag' data-type='int' data-ref="known_names::flag" data-ref-filename="known_names..flag">flag</dfn>;</td></tr>
+<tr><th id="46">46</th><td>};</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><em>static</em> <b>struct</b> <a class="type" href="#known_names" title='known_names' data-ref="known_names" data-ref-filename="known_names">known_names</a> <dfn class="tu decl def" id="interpreters" title='interpreters' data-type='struct known_names [4]' data-ref="interpreters" data-ref-filename="interpreters">interpreters</dfn>[] =</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>  { <q>"/lib/"</q> <span class="macro" title="&quot;ld-linux-x86-64.so.2&quot;" data-ref="_M/LD_SO">LD_SO</span>, <a class="macro" href="../sysdeps/generic/ldconfig.h.html#29" title="0x0003" data-ref="_M/FLAG_ELF_LIBC6">FLAG_ELF_LIBC6</a> },</td></tr>
+<tr><th id="51">51</th><td><u>#<span data-ppcond="51">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/ldconfig.h.html#20" data-ref="_M/SYSDEP_KNOWN_INTERPRETER_NAMES">SYSDEP_KNOWN_INTERPRETER_NAMES</a></u></td></tr>
+<tr><th id="52">52</th><td>  <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/ldconfig.h.html#20" title="{ &quot;/lib/ld-linux.so.2&quot;, 0x0003 }, { &quot;/libx32/ld-linux-x32.so.2&quot;, 0x0003 }, { &quot;/lib64/ld-linux-x86-64.so.2&quot;, 0x0003 }," data-ref="_M/SYSDEP_KNOWN_INTERPRETER_NAMES">SYSDEP_KNOWN_INTERPRETER_NAMES</a></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="51">endif</span></u></td></tr>
+<tr><th id="54">54</th><td>};</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><em>static</em> <b>struct</b> <a class="type" href="#known_names" title='known_names' data-ref="known_names" data-ref-filename="known_names">known_names</a> <dfn class="tu decl def" id="known_libs" title='known_libs' data-type='struct known_names [4]' data-ref="known_libs" data-ref-filename="known_libs">known_libs</dfn>[] =</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>  { <span class="macro" title="&quot;libc.so.6&quot;" data-ref="_M/LIBC_SO">LIBC_SO</span>, <a class="macro" href="../sysdeps/generic/ldconfig.h.html#29" title="0x0003" data-ref="_M/FLAG_ELF_LIBC6">FLAG_ELF_LIBC6</a> },</td></tr>
+<tr><th id="59">59</th><td>  { <span class="macro" title="&quot;libm.so.6&quot;" data-ref="_M/LIBM_SO">LIBM_SO</span>, <a class="macro" href="../sysdeps/generic/ldconfig.h.html#29" title="0x0003" data-ref="_M/FLAG_ELF_LIBC6">FLAG_ELF_LIBC6</a> },</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="60">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/ldconfig.h.html#24" data-ref="_M/SYSDEP_KNOWN_LIBRARY_NAMES">SYSDEP_KNOWN_LIBRARY_NAMES</a></u></td></tr>
+<tr><th id="61">61</th><td>  <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/ldconfig.h.html#24" title="{ &quot;libc.so.6&quot;, 0x0003 }, { &quot;libm.so.6&quot;, 0x0003 }," data-ref="_M/SYSDEP_KNOWN_LIBRARY_NAMES">SYSDEP_KNOWN_LIBRARY_NAMES</a></td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="60">endif</span></u></td></tr>
+<tr><th id="63">63</th><td>};</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i  data-doc="is_gdb_python_file">/* Check if string corresponds to a GDB Python file.  */</i></td></tr>
+<tr><th id="67">67</th><td><em>static</em> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="68">68</th><td><dfn class="tu decl def fn" id="is_gdb_python_file" title='is_gdb_python_file' data-type='_Bool is_gdb_python_file(const char * name)' data-ref="is_gdb_python_file" data-ref-filename="is_gdb_python_file">is_gdb_python_file</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1name" title='name' data-type='const char *' data-ref="1name" data-ref-filename="1name">name</dfn>)</td></tr>
+<tr><th id="69">69</th><td>{</td></tr>
+<tr><th id="70">70</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="2len" title='len' data-type='size_t' data-ref="2len" data-ref-filename="2len">len</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col1 ref" href="#1name" title='name' data-ref="1name" data-ref-filename="1name">name</a>);</td></tr>
+<tr><th id="71">71</th><td>  <b>return</b> <a class="local col2 ref" href="#2len" title='len' data-ref="2len" data-ref-filename="2len">len</a> &gt; <var>7</var> &amp;&amp; <a class="ref fn" href="../string/string.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a> (<a class="local col1 ref" href="#1name" title='name' data-ref="1name" data-ref-filename="1name">name</a> + <a class="local col2 ref" href="#2len" title='len' data-ref="2len" data-ref-filename="2len">len</a> - <var>7</var>, <q>"-gdb.py"</q>) == <var>0</var>;</td></tr>
+<tr><th id="72">72</th><td>}</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* Returns 0 if everything is ok, != 0 in case of error.  */</i></td></tr>
+<tr><th id="75">75</th><td><em>int</em></td></tr>
+<tr><th id="76">76</th><td><dfn class="decl def fn" id="process_file" title='process_file' data-ref="process_file" data-ref-filename="process_file">process_file</dfn> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3real_file_name" title='real_file_name' data-type='const char *' data-ref="3real_file_name" data-ref-filename="3real_file_name">real_file_name</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4file_name" title='file_name' data-type='const char *' data-ref="4file_name" data-ref-filename="4file_name">file_name</dfn>,</td></tr>
+<tr><th id="77">77</th><td>	      <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5lib" title='lib' data-type='const char *' data-ref="5lib" data-ref-filename="5lib">lib</dfn>, <em>int</em> *<dfn class="local col6 decl" id="6flag" title='flag' data-type='int *' data-ref="6flag" data-ref-filename="6flag">flag</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col7 decl" id="7osversion" title='osversion' data-type='unsigned int *' data-ref="7osversion" data-ref-filename="7osversion">osversion</dfn>,</td></tr>
+<tr><th id="78">78</th><td>	      <em>char</em> **<dfn class="local col8 decl" id="8soname" title='soname' data-type='char **' data-ref="8soname" data-ref-filename="8soname">soname</dfn>, <em>int</em> <dfn class="local col9 decl" id="9is_link" title='is_link' data-type='int' data-ref="9is_link" data-ref-filename="9is_link">is_link</dfn>, <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> *<dfn class="local col0 decl" id="10stat_buf" title='stat_buf' data-type='struct stat64 *' data-ref="10stat_buf" data-ref-filename="10stat_buf">stat_buf</dfn>)</td></tr>
+<tr><th id="79">79</th><td>{</td></tr>
+<tr><th id="80">80</th><td>  <a class="typedef" href="../libio/bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col1 decl" id="11file" title='file' data-type='FILE *' data-ref="11file" data-ref-filename="11file">file</dfn>;</td></tr>
+<tr><th id="81">81</th><td>  <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> <dfn class="local col2 decl" id="12statbuf" title='statbuf' data-type='struct stat64' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</dfn>;</td></tr>
+<tr><th id="82">82</th><td>  <em>void</em> *<dfn class="local col3 decl" id="13file_contents" title='file_contents' data-type='void *' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</dfn>;</td></tr>
+<tr><th id="83">83</th><td>  <em>int</em> <dfn class="local col4 decl" id="14ret" title='ret' data-type='int' data-ref="14ret" data-ref-filename="14ret">ret</dfn>;</td></tr>
+<tr><th id="84">84</th><td>  <a class="macro" href="link.h.html#30" title="Elf64_Ehdr" data-ref="_M/ElfW">ElfW</a>(Ehdr) *<dfn class="local col5 decl" id="15elf_header" title='elf_header' data-type='Elf64_Ehdr *' data-ref="15elf_header" data-ref-filename="15elf_header">elf_header</dfn>;</td></tr>
+<tr><th id="85">85</th><td>  <b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/a.out.h.html#exec" title='exec' data-ref="exec" data-ref-filename="exec">exec</a> *<dfn class="local col6 decl" id="16aout_header" title='aout_header' data-type='struct exec *' data-ref="16aout_header" data-ref-filename="16aout_header">aout_header</dfn>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>  <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a> = <var>0</var>;</td></tr>
+<tr><th id="88">88</th><td>  *<a class="local col6 ref" href="#6flag" title='flag' data-ref="6flag" data-ref-filename="6flag">flag</a> = <a class="macro" href="../sysdeps/generic/ldconfig.h.html#24" title="-1" data-ref="_M/FLAG_ANY">FLAG_ANY</a>;</td></tr>
+<tr><th id="89">89</th><td>  *<a class="local col8 ref" href="#8soname" title='soname' data-ref="8soname" data-ref-filename="8soname">soname</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>  <a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a> = <a class="ref fn" href="../libio/stdio.h.html#fopen" title='fopen' data-ref="fopen" data-ref-filename="fopen">fopen</a> (<a class="local col3 ref" href="#3real_file_name" title='real_file_name' data-ref="3real_file_name" data-ref-filename="3real_file_name">real_file_name</a>, <q>"rb"</q>);</td></tr>
+<tr><th id="92">92</th><td>  <b>if</b> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="93">93</th><td>    {</td></tr>
+<tr><th id="94">94</th><td>      <i>/* No error for stale symlink.  */</i></td></tr>
+<tr><th id="95">95</th><td>      <b>if</b> (<a class="local col9 ref" href="#9is_link" title='is_link' data-ref="9is_link" data-ref-filename="9is_link">is_link</a> &amp;&amp; <a class="ref fn" href="../string/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a> (<a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>, <q>".so"</q>) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="96">96</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="97">97</th><td>      <a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;Input file %s not found.\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"Input file %s not found.\n"</q>), <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="98">98</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="99">99</th><td>    }</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>  <b>if</b> (<a class="macro" href="../include/sys/stat.h.html#55" title="__fxstat64 (1, fileno (file), &amp;statbuf)" data-ref="_M/fstat64">fstat64</a> (<a class="ref fn" href="../libio/stdio.h.html#fileno" title='fileno' data-ref="fileno" data-ref-filename="fileno">fileno</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>), &amp;<a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="102">102</th><td>    {</td></tr>
+<tr><th id="103">103</th><td>      <a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;Cannot fstat file %s.\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"Cannot fstat file %s.\n"</q>), <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="104">104</th><td>      <a class="ref fn" href="../libio/stdio.h.html#fclose" title='fclose' data-ref="fclose" data-ref-filename="fclose">fclose</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>);</td></tr>
+<tr><th id="105">105</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="106">106</th><td>    }</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td>  <i>/* Check that the file is large enough so that we can access the</i></td></tr>
+<tr><th id="109">109</th><td><i>     information.  We're only checking the size of the headers here.  */</i></td></tr>
+<tr><th id="110">110</th><td>  <b>if</b> ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a> &lt; <b>sizeof</b> (<b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/a.out.h.html#exec" title='exec' data-ref="exec" data-ref-filename="exec">exec</a>)</td></tr>
+<tr><th id="111">111</th><td>      || (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a> &lt; <b>sizeof</b> (<a class="macro" href="link.h.html#30" title="Elf64_Ehdr" data-ref="_M/ElfW">ElfW</a>(Ehdr)))</td></tr>
+<tr><th id="112">112</th><td>    {</td></tr>
+<tr><th id="113">113</th><td>      <b>if</b> (<a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a> == <var>0</var>)</td></tr>
+<tr><th id="114">114</th><td>	<a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;File %s is empty, not checked.&quot;, 5)" data-ref="_M/_">_</a>(<q>"File %s is empty, not checked."</q>), <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="115">115</th><td>      <b>else</b></td></tr>
+<tr><th id="116">116</th><td>	{</td></tr>
+<tr><th id="117">117</th><td>	  <em>char</em> <dfn class="local col7 decl" id="17buf" title='buf' data-type='char [4]' data-ref="17buf" data-ref-filename="17buf">buf</dfn>[<a class="macro" href="elf.h.html#121" title="4" data-ref="_M/SELFMAG">SELFMAG</a>];</td></tr>
+<tr><th id="118">118</th><td>	  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="18n" title='n' data-type='size_t' data-ref="18n" data-ref-filename="18n">n</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((statbuf.st_size)&lt;(4))?(statbuf.st_size):(4))" data-ref="_M/MIN">MIN</a> (<a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>, <a class="macro" href="elf.h.html#121" title="4" data-ref="_M/SELFMAG">SELFMAG</a>);</td></tr>
+<tr><th id="119">119</th><td>	  <b>if</b> (<a class="ref fn" href="../libio/stdio.h.html#fread" title='fread' data-ref="fread" data-ref-filename="fread">fread</a> (<a class="local col7 ref" href="#17buf" title='buf' data-ref="17buf" data-ref-filename="17buf">buf</a>, <a class="local col8 ref" href="#18n" title='n' data-ref="18n" data-ref-filename="18n">n</a>, <var>1</var>, <a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>) == <var>1</var> &amp;&amp; <a class="ref fn" href="../string/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a> (<a class="local col7 ref" href="#17buf" title='buf' data-ref="17buf" data-ref-filename="17buf">buf</a>, <a class="macro" href="elf.h.html#120" title="&quot;\177ELF&quot;" data-ref="_M/ELFMAG">ELFMAG</a>, <a class="local col8 ref" href="#18n" title='n' data-ref="18n" data-ref-filename="18n">n</a>) == <var>0</var>)</td></tr>
+<tr><th id="120">120</th><td>	    <a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;File %s is too small, not checked.&quot;, 5)" data-ref="_M/_">_</a>(<q>"File %s is too small, not checked."</q>), <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="121">121</th><td>	}</td></tr>
+<tr><th id="122">122</th><td>      <a class="ref fn" href="../libio/stdio.h.html#fclose" title='fclose' data-ref="fclose" data-ref-filename="fclose">fclose</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>);</td></tr>
+<tr><th id="123">123</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="124">124</th><td>    }</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>  <a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a> = <a class="ref fn" href="../misc/sys/mman.h.html#mmap" title='mmap' data-ref="mmap" data-ref-filename="mmap">mmap</a> (<var>0</var>, <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#32" title="0x1" data-ref="_M/PROT_READ">PROT_READ</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#42" title="0x01" data-ref="_M/MAP_SHARED">MAP_SHARED</a>,</td></tr>
+<tr><th id="127">127</th><td>			<a class="ref fn" href="../libio/stdio.h.html#fileno" title='fileno' data-ref="fileno" data-ref-filename="fileno">fileno</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>), <var>0</var>);</td></tr>
+<tr><th id="128">128</th><td>  <b>if</b> (<a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a> == <a class="macro" href="../misc/sys/mman.h.html#44" title="((void *) -1)" data-ref="_M/MAP_FAILED">MAP_FAILED</a>)</td></tr>
+<tr><th id="129">129</th><td>    {</td></tr>
+<tr><th id="130">130</th><td>      <a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;Cannot mmap file %s.\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"Cannot mmap file %s.\n"</q>), <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="131">131</th><td>      <a class="ref fn" href="../libio/stdio.h.html#fclose" title='fclose' data-ref="fclose" data-ref-filename="fclose">fclose</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>);</td></tr>
+<tr><th id="132">132</th><td>      <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="133">133</th><td>    }</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>  <i>/* First check if this is an aout file.  */</i></td></tr>
+<tr><th id="136">136</th><td>  <a class="local col6 ref" href="#16aout_header" title='aout_header' data-ref="16aout_header" data-ref-filename="16aout_header">aout_header</a> = (<b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/a.out.h.html#exec" title='exec' data-ref="exec" data-ref-filename="exec">exec</a> *) <a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>;</td></tr>
+<tr><th id="137">137</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/unix/sysv/linux/a.out.h.html#31" title="((*aout_header).a_info &amp; 0xffff)" data-ref="_M/N_MAGIC">N_MAGIC</a> (*<a class="local col6 ref" href="#16aout_header" title='aout_header' data-ref="16aout_header" data-ref-filename="16aout_header">aout_header</a>) == <a class="macro" href="../sysdeps/unix/sysv/linux/a.out.h.html#52" title="0413" data-ref="_M/ZMAGIC">ZMAGIC</a></td></tr>
+<tr><th id="138">138</th><td><u>#<span data-ppcond="138">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/a.out.h.html#55" data-ref="_M/QMAGIC">QMAGIC</a>			/* Linuxism.  */</u></td></tr>
+<tr><th id="139">139</th><td>      || <a class="macro" href="../sysdeps/unix/sysv/linux/a.out.h.html#31" title="((*aout_header).a_info &amp; 0xffff)" data-ref="_M/N_MAGIC">N_MAGIC</a> (*<a class="local col6 ref" href="#16aout_header" title='aout_header' data-ref="16aout_header" data-ref-filename="16aout_header">aout_header</a>) == <a class="macro" href="../sysdeps/unix/sysv/linux/a.out.h.html#55" title="0314" data-ref="_M/QMAGIC">QMAGIC</a></td></tr>
+<tr><th id="140">140</th><td><u>#<span data-ppcond="138">endif</span></u></td></tr>
+<tr><th id="141">141</th><td>      )</td></tr>
+<tr><th id="142">142</th><td>    {</td></tr>
+<tr><th id="143">143</th><td>      <i>/* Aout files don't have a soname, just return the name</i></td></tr>
+<tr><th id="144">144</th><td><i>	 including the major number.  */</i></td></tr>
+<tr><th id="145">145</th><td>      <em>char</em> *<dfn class="local col9 decl" id="19copy" title='copy' data-type='char *' data-ref="19copy" data-ref-filename="19copy">copy</dfn>, *<dfn class="local col0 decl" id="20major" title='major' data-type='char *' data-ref="20major" data-ref-filename="20major">major</dfn>, *<dfn class="local col1 decl" id="21dot" title='dot' data-type='char *' data-ref="21dot" data-ref-filename="21dot">dot</dfn>;</td></tr>
+<tr><th id="146">146</th><td>      <a class="local col9 ref" href="#19copy" title='copy' data-ref="19copy" data-ref-filename="19copy">copy</a> = <a class="ref fn" href="../include/programs/xmalloc.h.html#xstrdup" title='xstrdup' data-ref="xstrdup" data-ref-filename="xstrdup">xstrdup</a> (<a class="local col5 ref" href="#5lib" title='lib' data-ref="5lib" data-ref-filename="5lib">lib</a>);</td></tr>
+<tr><th id="147">147</th><td>      <a class="local col0 ref" href="#20major" title='major' data-ref="20major" data-ref-filename="20major">major</a> = <a class="ref fn" href="../string/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a> (<a class="local col9 ref" href="#19copy" title='copy' data-ref="19copy" data-ref-filename="19copy">copy</a>, <q>".so."</q>);</td></tr>
+<tr><th id="148">148</th><td>      <b>if</b> (<a class="local col0 ref" href="#20major" title='major' data-ref="20major" data-ref-filename="20major">major</a>)</td></tr>
+<tr><th id="149">149</th><td>	{</td></tr>
+<tr><th id="150">150</th><td>	  <a class="local col1 ref" href="#21dot" title='dot' data-ref="21dot" data-ref-filename="21dot">dot</a> = <a class="ref fn" href="../string/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a> (<a class="local col0 ref" href="#20major" title='major' data-ref="20major" data-ref-filename="20major">major</a> + <var>4</var>, <q>"."</q>);</td></tr>
+<tr><th id="151">151</th><td>	  <b>if</b> (<a class="local col1 ref" href="#21dot" title='dot' data-ref="21dot" data-ref-filename="21dot">dot</a>)</td></tr>
+<tr><th id="152">152</th><td>	    *<a class="local col1 ref" href="#21dot" title='dot' data-ref="21dot" data-ref-filename="21dot">dot</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="153">153</th><td>	}</td></tr>
+<tr><th id="154">154</th><td>      *<a class="local col8 ref" href="#8soname" title='soname' data-ref="8soname" data-ref-filename="8soname">soname</a> = <a class="local col9 ref" href="#19copy" title='copy' data-ref="19copy" data-ref-filename="19copy">copy</a>;</td></tr>
+<tr><th id="155">155</th><td>      *<a class="local col6 ref" href="#6flag" title='flag' data-ref="6flag" data-ref-filename="6flag">flag</a> = <a class="macro" href="../sysdeps/generic/ldconfig.h.html#26" title="0x0000" data-ref="_M/FLAG_LIBC4">FLAG_LIBC4</a>;</td></tr>
+<tr><th id="156">156</th><td>      <b>goto</b> <a class="lbl" href="#22done" data-ref="22done" data-ref-filename="22done">done</a>;</td></tr>
+<tr><th id="157">157</th><td>    }</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>  <a class="local col5 ref" href="#15elf_header" title='elf_header' data-ref="15elf_header" data-ref-filename="15elf_header">elf_header</a> = (<a class="macro" href="link.h.html#30" title="Elf64_Ehdr" data-ref="_M/ElfW">ElfW</a>(Ehdr) *) <a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>;</td></tr>
+<tr><th id="160">160</th><td>  <b>if</b> (<a class="ref fn" href="../string/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a> (<a class="local col5 ref" href="#15elf_header" title='elf_header' data-ref="15elf_header" data-ref-filename="15elf_header">elf_header</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::e_ident" title='(anonymous struct)::e_ident' data-ref="(anonymous)::e_ident" data-ref-filename="(anonymous)..e_ident">e_ident</a>, <a class="macro" href="elf.h.html#120" title="&quot;\177ELF&quot;" data-ref="_M/ELFMAG">ELFMAG</a>, <a class="macro" href="elf.h.html#121" title="4" data-ref="_M/SELFMAG">SELFMAG</a>) != <var>0</var>)</td></tr>
+<tr><th id="161">161</th><td>    {</td></tr>
+<tr><th id="162">162</th><td>      <i>/* The file is neither ELF nor aout.  Check if it's a linker</i></td></tr>
+<tr><th id="163">163</th><td><i>	 script, like libc.so - otherwise complain.  Only search the</i></td></tr>
+<tr><th id="164">164</th><td><i>	 beginning of the file.  */</i></td></tr>
+<tr><th id="165">165</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="23len" title='len' data-type='size_t' data-ref="23len" data-ref-filename="23len">len</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((statbuf.st_size)&lt;(512))?(statbuf.st_size):(512))" data-ref="_M/MIN">MIN</a> (<a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>, <var>512</var>);</td></tr>
+<tr><th id="166">166</th><td>      <b>if</b> (<a class="ref fn" href="../string/string.h.html#memmem" title='memmem' data-ref="memmem" data-ref-filename="memmem">memmem</a> (<a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>, <a class="local col3 ref" href="#23len" title='len' data-ref="23len" data-ref-filename="23len">len</a>, <q>"GROUP"</q>, <var>5</var>) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="167">167</th><td>	  &amp;&amp; <a class="ref fn" href="../string/string.h.html#memmem" title='memmem' data-ref="memmem" data-ref-filename="memmem">memmem</a> (<a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>, <a class="local col3 ref" href="#23len" title='len' data-ref="23len" data-ref-filename="23len">len</a>, <q>"GNU ld script"</q>, <var>13</var>) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="168">168</th><td>	  &amp;&amp; !<a class="tu ref fn" href="#is_gdb_python_file" title='is_gdb_python_file' data-use='c' data-ref="is_gdb_python_file" data-ref-filename="is_gdb_python_file">is_gdb_python_file</a> (<a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>))</td></tr>
+<tr><th id="169">169</th><td>	<a class="ref fn" href="../misc/error.h.html#error" title='error' data-ref="error" data-ref-filename="error">error</a> (<var>0</var>, <var>0</var>, <a class="macro" href="../include/libintl.h.html#49" title="__dcgettext (_libc_intl_domainname, &quot;%s is not an ELF file - it has the wrong magic bytes at the start.\n&quot;, 5)" data-ref="_M/_">_</a>(<q>"%s is not an ELF file - it has the wrong magic bytes at the start.\n"</q>),</td></tr>
+<tr><th id="170">170</th><td>	       <a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>);</td></tr>
+<tr><th id="171">171</th><td>      <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a> = <var>1</var>;</td></tr>
+<tr><th id="172">172</th><td>    }</td></tr>
+<tr><th id="173">173</th><td>  <i>/* Libraries have to be shared object files.  */</i></td></tr>
+<tr><th id="174">174</th><td>  <b>else</b> <b>if</b> (<a class="local col5 ref" href="#15elf_header" title='elf_header' data-ref="15elf_header" data-ref-filename="15elf_header">elf_header</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::e_type" title='(anonymous struct)::e_type' data-ref="(anonymous)::e_type" data-ref-filename="(anonymous)..e_type">e_type</a> != <a class="macro" href="elf.h.html#165" title="3" data-ref="_M/ET_DYN">ET_DYN</a>)</td></tr>
+<tr><th id="175">175</th><td>    <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a> = <var>1</var>;</td></tr>
+<tr><th id="176">176</th><td>  <b>else</b> <b>if</b> (<a class="ref fn" href="../sysdeps/unix/sysv/linux/i386/readelflib.c.html#process_elf_file" title='process_elf_file' data-ref="process_elf_file" data-ref-filename="process_elf_file">process_elf_file</a> (<a class="local col4 ref" href="#4file_name" title='file_name' data-ref="4file_name" data-ref-filename="4file_name">file_name</a>, <a class="local col5 ref" href="#5lib" title='lib' data-ref="5lib" data-ref-filename="5lib">lib</a>, <a class="local col6 ref" href="#6flag" title='flag' data-ref="6flag" data-ref-filename="6flag">flag</a>, <a class="local col7 ref" href="#7osversion" title='osversion' data-ref="7osversion" data-ref-filename="7osversion">osversion</a>, <a class="local col8 ref" href="#8soname" title='soname' data-ref="8soname" data-ref-filename="8soname">soname</a>,</td></tr>
+<tr><th id="177">177</th><td>			     <a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>, <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>))</td></tr>
+<tr><th id="178">178</th><td>    <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a> = <var>1</var>;</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td> <dfn class="lbl" id="22done" data-ref="22done" data-ref-filename="22done">done</dfn>:</td></tr>
+<tr><th id="181">181</th><td>  <i>/* Clean up allocated memory and resources.  */</i></td></tr>
+<tr><th id="182">182</th><td>  <a class="ref fn" href="../misc/sys/mman.h.html#munmap" title='munmap' data-ref="munmap" data-ref-filename="munmap">munmap</a> (<a class="local col3 ref" href="#13file_contents" title='file_contents' data-ref="13file_contents" data-ref-filename="13file_contents">file_contents</a>, <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_size" title='stat64::st_size' data-ref="stat64::st_size" data-ref-filename="stat64..st_size">st_size</a>);</td></tr>
+<tr><th id="183">183</th><td>  <a class="ref fn" href="../libio/stdio.h.html#fclose" title='fclose' data-ref="fclose" data-ref-filename="fclose">fclose</a> (<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>);</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>  *<a class="local col0 ref" href="#10stat_buf" title='stat_buf' data-ref="10stat_buf" data-ref-filename="10stat_buf">stat_buf</a> = <a class="local col2 ref" href="#12statbuf" title='statbuf' data-ref="12statbuf" data-ref-filename="12statbuf">statbuf</a>;</td></tr>
+<tr><th id="186">186</th><td>  <b>return</b> <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a>;</td></tr>
+<tr><th id="187">187</th><td>}</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><i>/* Returns made up soname if lib doesn't have explicit DT_SONAME.  */</i></td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td><em>char</em> *</td></tr>
+<tr><th id="192">192</th><td><dfn class="decl def fn" id="implicit_soname" title='implicit_soname' data-ref="implicit_soname" data-ref-filename="implicit_soname">implicit_soname</dfn> (<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="24lib" title='lib' data-type='const char *' data-ref="24lib" data-ref-filename="24lib">lib</dfn>, <em>int</em> <dfn class="local col5 decl" id="25flag" title='flag' data-type='int' data-ref="25flag" data-ref-filename="25flag">flag</dfn>)</td></tr>
+<tr><th id="193">193</th><td>{</td></tr>
+<tr><th id="194">194</th><td>  <em>char</em> *<dfn class="local col6 decl" id="26soname" title='soname' data-type='char *' data-ref="26soname" data-ref-filename="26soname">soname</dfn> = <a class="ref fn" href="../include/programs/xmalloc.h.html#xstrdup" title='xstrdup' data-ref="xstrdup" data-ref-filename="xstrdup">xstrdup</a> (<a class="local col4 ref" href="#24lib" title='lib' data-ref="24lib" data-ref-filename="24lib">lib</a>);</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>  <b>if</b> ((<a class="local col5 ref" href="#25flag" title='flag' data-ref="25flag" data-ref-filename="25flag">flag</a> &amp; <a class="macro" href="../sysdeps/generic/ldconfig.h.html#25" title="0x00ff" data-ref="_M/FLAG_TYPE_MASK">FLAG_TYPE_MASK</a>) != <a class="macro" href="../sysdeps/generic/ldconfig.h.html#26" title="0x0000" data-ref="_M/FLAG_LIBC4">FLAG_LIBC4</a>)</td></tr>
+<tr><th id="197">197</th><td>    <b>return</b> <a class="local col6 ref" href="#26soname" title='soname' data-ref="26soname" data-ref-filename="26soname">soname</a>;</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>  <i>/* Aout files don't have a soname, just return the name</i></td></tr>
+<tr><th id="200">200</th><td><i>     including the major number.  */</i></td></tr>
+<tr><th id="201">201</th><td>  <em>char</em> *<dfn class="local col7 decl" id="27major" title='major' data-type='char *' data-ref="27major" data-ref-filename="27major">major</dfn> = <a class="ref fn" href="../string/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a> (<a class="local col6 ref" href="#26soname" title='soname' data-ref="26soname" data-ref-filename="26soname">soname</a>, <q>".so."</q>);</td></tr>
+<tr><th id="202">202</th><td>  <b>if</b> (<a class="local col7 ref" href="#27major" title='major' data-ref="27major" data-ref-filename="27major">major</a>)</td></tr>
+<tr><th id="203">203</th><td>    {</td></tr>
+<tr><th id="204">204</th><td>      <em>char</em> *<dfn class="local col8 decl" id="28dot" title='dot' data-type='char *' data-ref="28dot" data-ref-filename="28dot">dot</dfn> = <a class="ref fn" href="../string/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a> (<a class="local col7 ref" href="#27major" title='major' data-ref="27major" data-ref-filename="27major">major</a> + <var>4</var>, <q>"."</q>);</td></tr>
+<tr><th id="205">205</th><td>      <b>if</b> (<a class="local col8 ref" href="#28dot" title='dot' data-ref="28dot" data-ref-filename="28dot">dot</a>)</td></tr>
+<tr><th id="206">206</th><td>	*<a class="local col8 ref" href="#28dot" title='dot' data-ref="28dot" data-ref-filename="28dot">dot</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="207">207</th><td>    }</td></tr>
+<tr><th id="208">208</th><td>  <b>return</b> <a class="local col6 ref" href="#26soname" title='soname' data-ref="26soname" data-ref-filename="26soname">soname</a>;</td></tr>
+<tr><th id="209">209</th><td>}</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><i>/* Get architecture specific version of process_elf_file.  */</i></td></tr>
+<tr><th id="212">212</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/readelflib.c.html">&lt;readelflib.c&gt;</a></u></td></tr>
+<tr><th id="213">213</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

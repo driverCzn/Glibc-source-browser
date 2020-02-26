@@ -1,0 +1,5 @@
+<dec f='glibc_src_2.27/posix/regex_internal.h' l='667' type='unsigned char'/>
+<use f='glibc_src_2.27/posix/regcomp.c' l='3179' u='r' c='parse_bracket_exp'/>
+<use f='glibc_src_2.27/posix/regcomp.c' l='3179' u='r' c='parse_bracket_exp'/>
+<use f='glibc_src_2.27/posix/regcomp.c' l='3349' u='w' c='parse_bracket_element'/>
+<offset>0</offset>

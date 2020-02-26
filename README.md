@@ -5,6 +5,7 @@ typora-root-url: ./
 # View my built version
  - [2.25](http://www.j10.monster/Glibc-source-browser/glibc_src_2.25/)
  - [2.26](http://www.j10.monster/Glibc-source-browser/glibc_src_2.26/)
+ - [2.27](http://www.j10.monster/Glibc-source-browser/glibc_src_2.27/)
 # Glibc-source-browser
 ```bash
 $ mkdir ~/glibc

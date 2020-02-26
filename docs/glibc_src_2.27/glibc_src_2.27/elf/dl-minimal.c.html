@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-minimal.c source code [glibc_src_2.27/elf/dl-minimal.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/elf/dl-minimal.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.27</a>/<a href='./'>elf</a>/<a href='dl-minimal.c.html'>dl-minimal.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Minimal replacements for basic facilities used in the dynamic linker.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/x86_64/nptl/tls.h.html">&lt;tls.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/sys/mman.h.html">&lt;sys/mman.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../sysdeps/generic/_itoa.h.html">&lt;_itoa.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../malloc/malloc-internal.h.html">&lt;malloc/malloc-internal.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* Minimal malloc allocator for used during initial link.  After the</i></td></tr>
+<tr><th id="35">35</th><td><i>   initial link, a full malloc implementation is interposed, either</i></td></tr>
+<tr><th id="36">36</th><td><i>   the one in libc, or a different one supplied by the user through</i></td></tr>
+<tr><th id="37">37</th><td><i>   interposition.  */</i></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>static</em> <em>void</em> *<dfn class="tu decl def" id="alloc_ptr" title='alloc_ptr' data-type='void *' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</dfn>, *<dfn class="tu decl def" id="alloc_end" title='alloc_end' data-type='void *' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</dfn>, *<dfn class="tu decl def" id="alloc_last_block" title='alloc_last_block' data-type='void *' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</dfn>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><i>/* Declarations of global functions.  */</i></td></tr>
+<tr><th id="42">42</th><td><b>extern</b> <em>void</em> <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a> <a class="decl fn" href="#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<em>void</em> *<dfn class="local col9 decl" id="9ptr" title='ptr' data-type='void *' data-ref="9ptr" data-ref-filename="9ptr">ptr</dfn>);</td></tr>
+<tr><th id="43">43</th><td><b>extern</b> <em>void</em> * <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a> <a class="decl fn" href="#realloc" title='realloc' data-ref="realloc" data-ref-filename="realloc">realloc</a> (<em>void</em> *<dfn class="local col0 decl" id="10ptr" title='ptr' data-type='void *' data-ref="10ptr" data-ref-filename="10ptr">ptr</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="11n" title='n' data-type='size_t' data-ref="11n" data-ref-filename="11n">n</dfn>);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i>/* Allocate an aligned memory block.  */</i></td></tr>
+<tr><th id="47">47</th><td><em>void</em> * <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="48">48</th><td><dfn class="decl def fn" id="malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</dfn> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="12n" title='n' data-type='size_t' data-ref="12n" data-ref-filename="12n">n</dfn>)</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>  <b>if</b> (<a class="tu ref" href="#alloc_end" title='alloc_end' data-use='r' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</a> == <var>0</var>)</td></tr>
+<tr><th id="51">51</th><td>    {</td></tr>
+<tr><th id="52">52</th><td>      <i>/* Consume any unused space in the last page of our data segment.  */</i></td></tr>
+<tr><th id="53">53</th><td>      <b>extern</b> <em>int</em> <dfn class="decl" id="_end" title='_end' data-ref="_end" data-ref-filename="_end">_end</dfn> <a class="macro" href="../include/libc-symbols.h.html#361" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="54">54</th><td>      <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> = &amp;<a class="ref" href="#_end" title='_end' data-ref="_end" data-ref-filename="_end">_end</a>;</td></tr>
+<tr><th id="55">55</th><td>      <a class="tu ref" href="#alloc_end" title='alloc_end' data-use='w' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</a> = (<em>void</em> *) <var>0</var> + (((<a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> - (<em>void</em> *) <var>0</var>)</td></tr>
+<tr><th id="56">56</th><td>				 + <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#461" title="_rtld_local_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>)</td></tr>
+<tr><th id="57">57</th><td>				&amp; ~(<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#461" title="_rtld_local_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>));</td></tr>
+<tr><th id="58">58</th><td>    }</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* Make sure the allocation pointer is ideally aligned.  */</i></td></tr>
+<tr><th id="61">61</th><td>  <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> = (<em>void</em> *) <var>0</var> + (((<a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> - (<em>void</em> *) <var>0</var>) + <a class="macro" href="../sysdeps/generic/malloc-alignment.h.html#27" title="(2 * (sizeof (size_t)) &lt; __alignof__ (long double) ? __alignof__ (long double) : 2 * (sizeof (size_t)))" data-ref="_M/MALLOC_ALIGNMENT">MALLOC_ALIGNMENT</a> - <var>1</var>)</td></tr>
+<tr><th id="62">62</th><td>			    &amp; ~(<a class="macro" href="../sysdeps/generic/malloc-alignment.h.html#27" title="(2 * (sizeof (size_t)) &lt; __alignof__ (long double) ? __alignof__ (long double) : 2 * (sizeof (size_t)))" data-ref="_M/MALLOC_ALIGNMENT">MALLOC_ALIGNMENT</a> - <var>1</var>));</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>  <b>if</b> (<a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> + <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &gt;= <a class="tu ref" href="#alloc_end" title='alloc_end' data-use='r' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</a> || <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &gt;= -(<a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a>)</td></tr>
+<tr><th id="65">65</th><td>    {</td></tr>
+<tr><th id="66">66</th><td>      <i>/* Insufficient space left; allocate another page plus one extra</i></td></tr>
+<tr><th id="67">67</th><td><i>	 page to reduce number of mmap calls.  */</i></td></tr>
+<tr><th id="68">68</th><td>      <a class="typedef" href="../posix/sys/types.h.html#caddr_t" title='caddr_t' data-type='__caddr_t' data-ref="caddr_t" data-ref-filename="caddr_t">caddr_t</a> <dfn class="local col3 decl" id="13page" title='page' data-type='caddr_t' data-ref="13page" data-ref-filename="13page">page</dfn>;</td></tr>
+<tr><th id="69">69</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14nup" title='nup' data-type='size_t' data-ref="14nup" data-ref-filename="14nup">nup</dfn> = (<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> + <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#461" title="_rtld_local_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>) &amp; ~(<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#461" title="_rtld_local_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) - <var>1</var>);</td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#393" title="__builtin_expect ((nup == 0 &amp;&amp; n != 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#14nup" title='nup' data-ref="14nup" data-ref-filename="14nup">nup</a> == <var>0</var> &amp;&amp; <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> != <var>0</var>))</td></tr>
+<tr><th id="71">71</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="72">72</th><td>      <a class="local col4 ref" href="#14nup" title='nup' data-ref="14nup" data-ref-filename="14nup">nup</a> += <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#461" title="_rtld_local_ro._dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize);</td></tr>
+<tr><th id="73">73</th><td>      <a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a> = <a class="ref fn" href="../include/sys/mman.h.html#__mmap" title='__mmap' data-ref="__mmap" data-ref-filename="__mmap">__mmap</a> (<var>0</var>, <a class="local col4 ref" href="#14nup" title='nup' data-ref="14nup" data-ref-filename="14nup">nup</a>, <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#32" title="0x1" data-ref="_M/PROT_READ">PROT_READ</a>|<a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#33" title="0x2" data-ref="_M/PROT_WRITE">PROT_WRITE</a>,</td></tr>
+<tr><th id="74">74</th><td>		     <a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#57" title="0x20" data-ref="_M/MAP_ANON">MAP_ANON</a>|<a class="macro" href="../sysdeps/unix/sysv/linux/bits/mman-linux.h.html#43" title="0x02" data-ref="_M/MAP_PRIVATE">MAP_PRIVATE</a>, -<var>1</var>, <var>0</var>);</td></tr>
+<tr><th id="75">75</th><td>      <b>if</b> (<a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a> == <a class="macro" href="../misc/sys/mman.h.html#44" title="((void *) -1)" data-ref="_M/MAP_FAILED">MAP_FAILED</a>)</td></tr>
+<tr><th id="76">76</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="77">77</th><td>      <b>if</b> (<a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a> != <a class="tu ref" href="#alloc_end" title='alloc_end' data-use='r' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</a>)</td></tr>
+<tr><th id="78">78</th><td>	<a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> = <a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a>;</td></tr>
+<tr><th id="79">79</th><td>      <a class="tu ref" href="#alloc_end" title='alloc_end' data-use='w' data-ref="alloc_end" data-ref-filename="alloc_end">alloc_end</a> = <a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a> + <a class="local col4 ref" href="#14nup" title='nup' data-ref="14nup" data-ref-filename="14nup">nup</a>;</td></tr>
+<tr><th id="80">80</th><td>    }</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>  <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='w' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a> = (<em>void</em> *) <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a>;</td></tr>
+<tr><th id="83">83</th><td>  <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> += <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a>;</td></tr>
+<tr><th id="84">84</th><td>  <b>return</b> <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>;</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><i>/* We use this function occasionally since the real implementation may</i></td></tr>
+<tr><th id="88">88</th><td><i>   be optimized when it can assume the memory it returns already is</i></td></tr>
+<tr><th id="89">89</th><td><i>   set to NUL.  */</i></td></tr>
+<tr><th id="90">90</th><td><em>void</em> * <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="91">91</th><td><dfn class="decl def fn" id="calloc" title='calloc' data-ref="calloc" data-ref-filename="calloc">calloc</dfn> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="15nmemb" title='nmemb' data-type='size_t' data-ref="15nmemb" data-ref-filename="15nmemb">nmemb</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="16size" title='size' data-type='size_t' data-ref="16size" data-ref-filename="16size">size</dfn>)</td></tr>
+<tr><th id="92">92</th><td>{</td></tr>
+<tr><th id="93">93</th><td>  <i>/* New memory from the trivial malloc above is always already cleared.</i></td></tr>
+<tr><th id="94">94</th><td><i>     (We make sure that's true in the rare occasion it might not be,</i></td></tr>
+<tr><th id="95">95</th><td><i>     by clearing memory in free, below.)  */</i></td></tr>
+<tr><th id="96">96</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="17bytes" title='bytes' data-type='size_t' data-ref="17bytes" data-ref-filename="17bytes">bytes</dfn> = <a class="local col5 ref" href="#15nmemb" title='nmemb' data-ref="15nmemb" data-ref-filename="15nmemb">nmemb</a> * <a class="local col6 ref" href="#16size" title='size' data-ref="16size" data-ref-filename="16size">size</a>;</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u>#define <dfn class="macro" id="_M/HALF_SIZE_T" data-ref="_M/HALF_SIZE_T">HALF_SIZE_T</dfn> (((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) 1) &lt;&lt; (8 * sizeof (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) / 2))</u></td></tr>
+<tr><th id="99">99</th><td>  <b>if</b> (<a class="ref fn" href="../sysdeps/unix/sysv/linux/malloc-sysdep.h.html#38" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> ((<a class="local col5 ref" href="#15nmemb" title='nmemb' data-ref="15nmemb" data-ref-filename="15nmemb">nmemb</a> | <a class="local col6 ref" href="#16size" title='size' data-ref="16size" data-ref-filename="16size">size</a>) &gt;= <a class="macro" href="#98" title="(((size_t) 1) &lt;&lt; (8 * sizeof (size_t) / 2))" data-ref="_M/HALF_SIZE_T">HALF_SIZE_T</a>, <var>0</var>)</td></tr>
+<tr><th id="100">100</th><td>      &amp;&amp; <a class="local col6 ref" href="#16size" title='size' data-ref="16size" data-ref-filename="16size">size</a> != <var>0</var> &amp;&amp; <a class="local col7 ref" href="#17bytes" title='bytes' data-ref="17bytes" data-ref-filename="17bytes">bytes</a> / <a class="local col6 ref" href="#16size" title='size' data-ref="16size" data-ref-filename="16size">size</a> != <a class="local col5 ref" href="#15nmemb" title='nmemb' data-ref="15nmemb" data-ref-filename="15nmemb">nmemb</a>)</td></tr>
+<tr><th id="101">101</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>  <b>return</b> <a class="ref fn" href="#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col7 ref" href="#17bytes" title='bytes' data-ref="17bytes" data-ref-filename="17bytes">bytes</a>);</td></tr>
+<tr><th id="104">104</th><td>}</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/* This will rarely be called.  */</i></td></tr>
+<tr><th id="107">107</th><td><em>void</em> <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="108">108</th><td><dfn class="decl def fn" id="free" title='free' data-ref="free" data-ref-filename="free">free</dfn> (<em>void</em> *<dfn class="local col8 decl" id="18ptr" title='ptr' data-type='void *' data-ref="18ptr" data-ref-filename="18ptr">ptr</dfn>)</td></tr>
+<tr><th id="109">109</th><td>{</td></tr>
+<tr><th id="110">110</th><td>  <i>/* We can free only the last block allocated.  */</i></td></tr>
+<tr><th id="111">111</th><td>  <b>if</b> (<a class="local col8 ref" href="#18ptr" title='ptr' data-ref="18ptr" data-ref-filename="18ptr">ptr</a> == <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>)</td></tr>
+<tr><th id="112">112</th><td>    {</td></tr>
+<tr><th id="113">113</th><td>      <i>/* Since this is rare, we clear the freed block here</i></td></tr>
+<tr><th id="114">114</th><td><i>	 so that calloc can presume malloc returns cleared memory.  */</i></td></tr>
+<tr><th id="115">115</th><td>      <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (<a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>, <kbd>'\0'</kbd>, <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> - <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>);</td></tr>
+<tr><th id="116">116</th><td>      <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> = <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>;</td></tr>
+<tr><th id="117">117</th><td>    }</td></tr>
+<tr><th id="118">118</th><td>}</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i>/* This is only called with the most recent block returned by malloc.  */</i></td></tr>
+<tr><th id="121">121</th><td><em>void</em> * <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="122">122</th><td><dfn class="decl def fn" id="realloc" title='realloc' data-ref="realloc" data-ref-filename="realloc">realloc</dfn> (<em>void</em> *<dfn class="local col9 decl" id="19ptr" title='ptr' data-type='void *' data-ref="19ptr" data-ref-filename="19ptr">ptr</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="20n" title='n' data-type='size_t' data-ref="20n" data-ref-filename="20n">n</dfn>)</td></tr>
+<tr><th id="123">123</th><td>{</td></tr>
+<tr><th id="124">124</th><td>  <b>if</b> (<a class="local col9 ref" href="#19ptr" title='ptr' data-ref="19ptr" data-ref-filename="19ptr">ptr</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="125">125</th><td>    <b>return</b> <a class="ref fn" href="#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col0 ref" href="#20n" title='n' data-ref="20n" data-ref-filename="20n">n</a>);</td></tr>
+<tr><th id="126">126</th><td>  <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((ptr == alloc_last_block) ? 1 : 0), __extension__ ({ if (ptr == alloc_last_block) ; else __assert_fail (&quot;ptr == alloc_last_block&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-minimal.c&quot;, 126, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col9 ref" href="#19ptr" title='ptr' data-ref="19ptr" data-ref-filename="19ptr">ptr</a> == <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>);</td></tr>
+<tr><th id="127">127</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="21old_size" title='old_size' data-type='size_t' data-ref="21old_size" data-ref-filename="21old_size">old_size</dfn> = <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='r' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> - <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>;</td></tr>
+<tr><th id="128">128</th><td>  <a class="tu ref" href="#alloc_ptr" title='alloc_ptr' data-use='w' data-ref="alloc_ptr" data-ref-filename="alloc_ptr">alloc_ptr</a> = <a class="tu ref" href="#alloc_last_block" title='alloc_last_block' data-use='r' data-ref="alloc_last_block" data-ref-filename="alloc_last_block">alloc_last_block</a>;</td></tr>
+<tr><th id="129">129</th><td>  <em>void</em> *<dfn class="local col2 decl" id="22new" title='new' data-type='void *' data-ref="22new" data-ref-filename="22new">new</dfn> = <a class="ref fn" href="#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col0 ref" href="#20n" title='n' data-ref="20n" data-ref-filename="20n">n</a>);</td></tr>
+<tr><th id="130">130</th><td>  <b>return</b> <a class="local col2 ref" href="#22new" title='new' data-ref="22new" data-ref-filename="22new">new</a> != <a class="local col9 ref" href="#19ptr" title='ptr' data-ref="19ptr" data-ref-filename="19ptr">ptr</a> ? <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="local col2 ref" href="#22new" title='new' data-ref="22new" data-ref-filename="22new">new</a>, <a class="local col9 ref" href="#19ptr" title='ptr' data-ref="19ptr" data-ref-filename="19ptr">ptr</a>, <a class="local col1 ref" href="#21old_size" title='old_size' data-ref="21old_size" data-ref-filename="21old_size">old_size</a>) : <a class="local col2 ref" href="#22new" title='new' data-ref="22new" data-ref-filename="22new">new</a>;</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><i>/* Avoid signal frobnication in setjmp/longjmp.  Keeps things smaller.  */</i></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><u>#include <a href="../include/setjmp.h.html">&lt;setjmp.h&gt;</a></u></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><em>int</em> <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="138">138</th><td><dfn class="decl def fn" id="__sigjmp_save" title='__sigjmp_save' data-ref="__sigjmp_save" data-ref-filename="__sigjmp_save">__sigjmp_save</dfn> (<a class="typedef" href="../setjmp/setjmp.h.html#sigjmp_buf" title='sigjmp_buf' data-type='struct __jmp_buf_tag [1]' data-ref="sigjmp_buf" data-ref-filename="sigjmp_buf">sigjmp_buf</a> <dfn class="local col3 decl" id="23env" title='env' data-type='struct __jmp_buf_tag *' data-ref="23env" data-ref-filename="23env">env</dfn>, <em>int</em> <dfn class="local col4 decl" id="24savemask" title='savemask' data-type='int' data-ref="24savemask" data-ref-filename="24savemask">savemask</dfn> <b>__attribute__</b> ((unused)))</td></tr>
+<tr><th id="139">139</th><td>{</td></tr>
+<tr><th id="140">140</th><td>  <a class="local col3 ref" href="#23env" title='env' data-ref="23env" data-ref-filename="23env">env</a>[<var>0</var>].<a class="ref field" href="../setjmp/setjmp.h.html#__jmp_buf_tag::__mask_was_saved" title='__jmp_buf_tag::__mask_was_saved' data-ref="__jmp_buf_tag::__mask_was_saved" data-ref-filename="__jmp_buf_tag..__mask_was_saved">__mask_was_saved</a> = <var>0</var>;</td></tr>
+<tr><th id="141">141</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="142">142</th><td>}</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><i>/* Define our own version of the internal function used by strerror.  We</i></td></tr>
+<tr><th id="145">145</th><td><i>   only provide the messages for some common errors.  This avoids pulling</i></td></tr>
+<tr><th id="146">146</th><td><i>   in the whole error list.  */</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><em>char</em> * <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="149">149</th><td><dfn class="decl def fn" id="__strerror_r" title='__strerror_r' data-ref="__strerror_r" data-ref-filename="__strerror_r">__strerror_r</dfn> (<em>int</em> <dfn class="local col5 decl" id="25errnum" title='errnum' data-type='int' data-ref="25errnum" data-ref-filename="25errnum">errnum</dfn>, <em>char</em> *<dfn class="local col6 decl" id="26buf" title='buf' data-type='char *' data-ref="26buf" data-ref-filename="26buf">buf</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="27buflen" title='buflen' data-type='size_t' data-ref="27buflen" data-ref-filename="27buflen">buflen</dfn>)</td></tr>
+<tr><th id="150">150</th><td>{</td></tr>
+<tr><th id="151">151</th><td>  <em>char</em> *<dfn class="local col8 decl" id="28msg" title='msg' data-type='char *' data-ref="28msg" data-ref-filename="28msg">msg</dfn>;</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <b>switch</b> (<a class="local col5 ref" href="#25errnum" title='errnum' data-ref="25errnum" data-ref-filename="25errnum">errnum</a>)</td></tr>
+<tr><th id="154">154</th><td>    {</td></tr>
+<tr><th id="155">155</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>:</td></tr>
+<tr><th id="156">156</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"Cannot allocate memory"</q>;</td></tr>
+<tr><th id="157">157</th><td>      <b>break</b>;</td></tr>
+<tr><th id="158">158</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>:</td></tr>
+<tr><th id="159">159</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"Invalid argument"</q>;</td></tr>
+<tr><th id="160">160</th><td>      <b>break</b>;</td></tr>
+<tr><th id="161">161</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>:</td></tr>
+<tr><th id="162">162</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"No such file or directory"</q>;</td></tr>
+<tr><th id="163">163</th><td>      <b>break</b>;</td></tr>
+<tr><th id="164">164</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#5" title="1" data-ref="_M/EPERM">EPERM</a>:</td></tr>
+<tr><th id="165">165</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"Operation not permitted"</q>;</td></tr>
+<tr><th id="166">166</th><td>      <b>break</b>;</td></tr>
+<tr><th id="167">167</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#9" title="5" data-ref="_M/EIO">EIO</a>:</td></tr>
+<tr><th id="168">168</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"Input/output error"</q>;</td></tr>
+<tr><th id="169">169</th><td>      <b>break</b>;</td></tr>
+<tr><th id="170">170</th><td>    <b>case</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#17" title="13" data-ref="_M/EACCES">EACCES</a>:</td></tr>
+<tr><th id="171">171</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = (<em>char</em> *) <q>"Permission denied"</q>;</td></tr>
+<tr><th id="172">172</th><td>      <b>break</b>;</td></tr>
+<tr><th id="173">173</th><td>    <b>default</b>:</td></tr>
+<tr><th id="174">174</th><td>      <i>/* No need to check buffer size, all calls in the dynamic linker</i></td></tr>
+<tr><th id="175">175</th><td><i>	 provide enough space.  */</i></td></tr>
+<tr><th id="176">176</th><td>      <a class="local col6 ref" href="#26buf" title='buf' data-ref="26buf" data-ref-filename="26buf">buf</a>[<a class="local col7 ref" href="#27buflen" title='buflen' data-ref="27buflen" data-ref-filename="27buflen">buflen</a> - <var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="177">177</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = <a class="macro" href="../sysdeps/generic/_itoa.h.html#99" title="_itoa_word (errnum, buf + buflen - 1, 10, 0)" data-ref="_M/_itoa">_itoa</a> (<a class="local col5 ref" href="#25errnum" title='errnum' data-ref="25errnum" data-ref-filename="25errnum">errnum</a>, <a class="local col6 ref" href="#26buf" title='buf' data-ref="26buf" data-ref-filename="26buf">buf</a> + <a class="local col7 ref" href="#27buflen" title='buflen' data-ref="27buflen" data-ref-filename="27buflen">buflen</a> - <var>1</var>, <var>10</var>, <var>0</var>);</td></tr>
+<tr><th id="178">178</th><td>      <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> = <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a> - (<b>sizeof</b> (<q>"Error "</q>) - <var>1</var>), <q>"Error "</q>,</td></tr>
+<tr><th id="179">179</th><td>		    <b>sizeof</b> (<q>"Error "</q>) - <var>1</var>);</td></tr>
+<tr><th id="180">180</th><td>      <b>break</b>;</td></tr>
+<tr><th id="181">181</th><td>    }</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>  <b>return</b> <a class="local col8 ref" href="#28msg" title='msg' data-ref="28msg" data-ref-filename="28msg">msg</a>;</td></tr>
+<tr><th id="184">184</th><td>}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><em>void</em></td></tr>
+<tr><th id="187">187</th><td><dfn class="decl def fn" id="__libc_fatal" title='__libc_fatal' data-ref="__libc_fatal" data-ref-filename="__libc_fatal">__libc_fatal</dfn> (<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="29message" title='message' data-type='const char *' data-ref="29message" data-ref-filename="29message">message</dfn>)</td></tr>
+<tr><th id="188">188</th><td>{</td></tr>
+<tr><th id="189">189</th><td>  <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#729" title="do { _dl_dprintf (2, &quot;%s&quot;, message); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"%s"</q>, <a class="local col9 ref" href="#29message" title='message' data-ref="29message" data-ref-filename="29message">message</a>);</td></tr>
+<tr><th id="190">190</th><td>}</td></tr>
+<tr><th id="191">191</th><td><a class="macro" href="../include/libc-symbols.h.html#565" title="extern __typeof (__libc_fatal) __EI___libc_fatal __asm__(&quot;&quot; &quot;__libc_fatal&quot;); extern __typeof (__libc_fatal) __EI___libc_fatal __attribute__((alias (&quot;&quot; &quot;__GI___libc_fatal&quot;)));" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__libc_fatal" title='__libc_fatal' data-ref="__libc_fatal" data-ref-filename="__libc_fatal">__libc_fatal</a>)</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><em>void</em></td></tr>
+<tr><th id="194">194</th><td><b>__attribute__</b> ((noreturn))</td></tr>
+<tr><th id="195">195</th><td><dfn class="decl def fn" id="__chk_fail" title='__chk_fail' data-ref="__chk_fail" data-ref-filename="__chk_fail">__chk_fail</dfn> (<em>void</em>)</td></tr>
+<tr><th id="196">196</th><td>{</td></tr>
+<tr><th id="197">197</th><td>  <a class="ref fn" href="../posix/unistd.h.html#__GI__exit" title='_exit' data-ref="__GI__exit" data-ref-filename="__GI__exit">_exit</a> (<var>127</var>);</td></tr>
+<tr><th id="198">198</th><td>}</td></tr>
+<tr><th id="199">199</th><td><a class="macro" href="../include/libc-symbols.h.html#565" title="extern __typeof (__chk_fail) __EI___chk_fail __asm__(&quot;&quot; &quot;__chk_fail&quot;); extern __typeof (__chk_fail) __EI___chk_fail __attribute__((alias (&quot;&quot; &quot;__GI___chk_fail&quot;)));" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__chk_fail" title='__chk_fail' data-ref="__chk_fail" data-ref-filename="__chk_fail">__chk_fail</a>)</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><u>#<span data-ppcond="201">ifndef</span> <span class="macro" data-ref="_M/NDEBUG">NDEBUG</span></u></td></tr>
+<tr><th id="202">202</th><td><i>/* Define (weakly) our own assert failure function which doesn't use stdio.</i></td></tr>
+<tr><th id="203">203</th><td><i>   If we are linked into the user program (-ldl), the normal __assert_fail</i></td></tr>
+<tr><th id="204">204</th><td><i>   defn can override this one.  */</i></td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td><em>void</em> <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="207">207</th><td><dfn class="decl def fn" id="__assert_fail" title='__assert_fail' data-ref="__assert_fail" data-ref-filename="__assert_fail">__assert_fail</dfn> (<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="30assertion" title='assertion' data-type='const char *' data-ref="30assertion" data-ref-filename="30assertion">assertion</dfn>,</td></tr>
+<tr><th id="208">208</th><td>	       <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="31file" title='file' data-type='const char *' data-ref="31file" data-ref-filename="31file">file</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="32line" title='line' data-type='unsigned int' data-ref="32line" data-ref-filename="32line">line</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="33function" title='function' data-type='const char *' data-ref="33function" data-ref-filename="33function">function</dfn>)</td></tr>
+<tr><th id="209">209</th><td>{</td></tr>
+<tr><th id="210">210</th><td>  <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#729" title="do { _dl_dprintf (2, &quot;Inconsistency detected by ld.so: %s: %u: %s%sAssertion `%s&apos; failed!\n&quot;, file, line, function ?: &quot;&quot;, function ? &quot;: &quot; : &quot;&quot;, assertion); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"\</q></td></tr>
+<tr><th id="211">211</th><td><q>Inconsistency detected by ld.so: %s: %u: %s%sAssertion `%s' failed!\n"</q>,</td></tr>
+<tr><th id="212">212</th><td>		    <a class="local col1 ref" href="#31file" title='file' data-ref="31file" data-ref-filename="31file">file</a>, <a class="local col2 ref" href="#32line" title='line' data-ref="32line" data-ref-filename="32line">line</a>, <a class="local col3 ref" href="#33function" title='function' data-ref="33function" data-ref-filename="33function">function</a> ?: <q>""</q>, <a class="local col3 ref" href="#33function" title='function' data-ref="33function" data-ref-filename="33function">function</a> ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="213">213</th><td>		    <a class="local col0 ref" href="#30assertion" title='assertion' data-ref="30assertion" data-ref-filename="30assertion">assertion</a>);</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>}</td></tr>
+<tr><th id="216">216</th><td><a class="macro" href="../include/libc-symbols.h.html#566" title="extern __typeof (__assert_fail) __EI___assert_fail __asm__(&quot;&quot; &quot;__assert_fail&quot;); extern __typeof (__assert_fail) __EI___assert_fail __attribute__((alias (&quot;&quot; &quot;__GI___assert_fail&quot;))) __attribute__((weak));" data-ref="_M/rtld_hidden_weak">rtld_hidden_weak</a> (<a class="ref fn" href="#__assert_fail" title='__assert_fail' data-ref="__assert_fail" data-ref-filename="__assert_fail">__assert_fail</a>)</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><em>void</em> <a class="macro" href="../include/libc-symbols.h.html#139" title="__attribute__ ((weak))" data-ref="_M/weak_function">weak_function</a></td></tr>
+<tr><th id="219">219</th><td><dfn class="decl def fn" id="__assert_perror_fail" title='__assert_perror_fail' data-ref="__assert_perror_fail" data-ref-filename="__assert_perror_fail">__assert_perror_fail</dfn> (<em>int</em> <dfn class="local col4 decl" id="34errnum" title='errnum' data-type='int' data-ref="34errnum" data-ref-filename="34errnum">errnum</dfn>,</td></tr>
+<tr><th id="220">220</th><td>		      <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="35file" title='file' data-type='const char *' data-ref="35file" data-ref-filename="35file">file</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="36line" title='line' data-type='unsigned int' data-ref="36line" data-ref-filename="36line">line</dfn>,</td></tr>
+<tr><th id="221">221</th><td>		      <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="37function" title='function' data-type='const char *' data-ref="37function" data-ref-filename="37function">function</dfn>)</td></tr>
+<tr><th id="222">222</th><td>{</td></tr>
+<tr><th id="223">223</th><td>  <em>char</em> <dfn class="local col8 decl" id="38errbuf" title='errbuf' data-type='char [400]' data-ref="38errbuf" data-ref-filename="38errbuf">errbuf</dfn>[<var>400</var>];</td></tr>
+<tr><th id="224">224</th><td>  <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#729" title="do { _dl_dprintf (2, &quot;Inconsistency detected by ld.so: %s: %u: %s%sUnexpected error: %s.\n&quot;, file, line, function ?: &quot;&quot;, function ? &quot;: &quot; : &quot;&quot;, __strerror_r (errnum, errbuf, sizeof errbuf)); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"\</q></td></tr>
+<tr><th id="225">225</th><td><q>Inconsistency detected by ld.so: %s: %u: %s%sUnexpected error: %s.\n"</q>,</td></tr>
+<tr><th id="226">226</th><td>		    <a class="local col5 ref" href="#35file" title='file' data-ref="35file" data-ref-filename="35file">file</a>, <a class="local col6 ref" href="#36line" title='line' data-ref="36line" data-ref-filename="36line">line</a>, <a class="local col7 ref" href="#37function" title='function' data-ref="37function" data-ref-filename="37function">function</a> ?: <q>""</q>, <a class="local col7 ref" href="#37function" title='function' data-ref="37function" data-ref-filename="37function">function</a> ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="227">227</th><td>		    <a class="ref fn" href="#__strerror_r" title='__strerror_r' data-ref="__strerror_r" data-ref-filename="__strerror_r">__strerror_r</a> (<a class="local col4 ref" href="#34errnum" title='errnum' data-ref="34errnum" data-ref-filename="34errnum">errnum</a>, <a class="local col8 ref" href="#38errbuf" title='errbuf' data-ref="38errbuf" data-ref-filename="38errbuf">errbuf</a>, <b>sizeof</b> <a class="local col8 ref" href="#38errbuf" title='errbuf' data-ref="38errbuf" data-ref-filename="38errbuf">errbuf</a>));</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td><a class="macro" href="../include/libc-symbols.h.html#566" title="extern __typeof (__assert_perror_fail) __EI___assert_perror_fail __asm__(&quot;&quot; &quot;__assert_perror_fail&quot;); extern __typeof (__assert_perror_fail) __EI___assert_perror_fail __attribute__((alias (&quot;&quot; &quot;__GI___assert_perror_fail&quot;))) __attribute__((weak));" data-ref="_M/rtld_hidden_weak">rtld_hidden_weak</a> (<a class="ref fn" href="#__assert_perror_fail" title='__assert_perror_fail' data-ref="__assert_perror_fail" data-ref-filename="__assert_perror_fail">__assert_perror_fail</a>)</td></tr>
+<tr><th id="231">231</th><td><u>#<span data-ppcond="201">endif</span></u></td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><u>#undef <a class="macro" href="../sysdeps/generic/_itoa.h.html#99" data-ref="_M/_itoa">_itoa</a></u></td></tr>
+<tr><th id="234">234</th><td><i>/* We always use _itoa instead of _itoa_word in ld.so since the former</i></td></tr>
+<tr><th id="235">235</th><td><i>   also has to be present and it is never about speed when these</i></td></tr>
+<tr><th id="236">236</th><td><i>   functions are used.  */</i></td></tr>
+<tr><th id="237">237</th><td><em>char</em> *</td></tr>
+<tr><th id="238">238</th><td><dfn class="decl def fn" id="_itoa" title='_itoa' data-ref="_itoa" data-ref-filename="_itoa">_itoa</dfn> (<em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> <dfn class="local col9 decl" id="39value" title='value' data-type='unsigned long long' data-ref="39value" data-ref-filename="39value">value</dfn>, <em>char</em> *<dfn class="local col0 decl" id="40buflim" title='buflim' data-type='char *' data-ref="40buflim" data-ref-filename="40buflim">buflim</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="41base" title='base' data-type='unsigned int' data-ref="41base" data-ref-filename="41base">base</dfn>,</td></tr>
+<tr><th id="239">239</th><td>       <em>int</em> <dfn class="local col2 decl" id="42upper_case" title='upper_case' data-type='int' data-ref="42upper_case" data-ref-filename="42upper_case">upper_case</dfn>)</td></tr>
+<tr><th id="240">240</th><td>{</td></tr>
+<tr><th id="241">241</th><td>  <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((! upper_case) ? 1 : 0), __extension__ ({ if (! upper_case) ; else __assert_fail (&quot;! upper_case&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-minimal.c&quot;, 241, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (! <a class="local col2 ref" href="#42upper_case" title='upper_case' data-ref="42upper_case" data-ref-filename="42upper_case">upper_case</a>);</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>  <b>do</b></td></tr>
+<tr><th id="244">244</th><td>    *--<a class="local col0 ref" href="#40buflim" title='buflim' data-ref="40buflim" data-ref-filename="40buflim">buflim</a> = <a class="ref" href="../sysdeps/generic/_itoa.h.html#_itoa_lower_digits" title='_itoa_lower_digits' data-ref="_itoa_lower_digits" data-ref-filename="_itoa_lower_digits">_itoa_lower_digits</a>[<a class="local col9 ref" href="#39value" title='value' data-ref="39value" data-ref-filename="39value">value</a> % <a class="local col1 ref" href="#41base" title='base' data-ref="41base" data-ref-filename="41base">base</a>];</td></tr>
+<tr><th id="245">245</th><td>  <b>while</b> ((<a class="local col9 ref" href="#39value" title='value' data-ref="39value" data-ref-filename="39value">value</a> /= <a class="local col1 ref" href="#41base" title='base' data-ref="41base" data-ref-filename="41base">base</a>) != <var>0</var>);</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>  <b>return</b> <a class="local col0 ref" href="#40buflim" title='buflim' data-ref="40buflim" data-ref-filename="40buflim">buflim</a>;</td></tr>
+<tr><th id="248">248</th><td>}</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><i>/* The '_itoa_lower_digits' variable in libc.so is able to handle bases</i></td></tr>
+<tr><th id="251">251</th><td><i>   up to 36.  We don't need this here.  */</i></td></tr>
+<tr><th id="252">252</th><td><em>const</em> <em>char</em> <dfn class="decl def" id="_itoa_lower_digits" title='_itoa_lower_digits' data-ref="_itoa_lower_digits" data-ref-filename="_itoa_lower_digits">_itoa_lower_digits</dfn>[<var>16</var>] = <q>"0123456789abcdef"</q>;</td></tr>
+<tr><th id="253">253</th><td><a class="macro" href="../include/libc-symbols.h.html#568" title="extern __typeof (_itoa_lower_digits) __EI__itoa_lower_digits __asm__(&quot;&quot; &quot;_itoa_lower_digits&quot;); extern __typeof (_itoa_lower_digits) __EI__itoa_lower_digits __attribute__((alias (&quot;&quot; &quot;__GI__itoa_lower_digits&quot;)));" data-ref="_M/rtld_hidden_data_def">rtld_hidden_data_def</a> (<a class="ref" href="../sysdeps/generic/_itoa.h.html#_itoa_lower_digits" title='_itoa_lower_digits' data-ref="_itoa_lower_digits" data-ref-filename="_itoa_lower_digits">_itoa_lower_digits</a>)</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td><i>/* The following is not a complete strsep implementation.  It cannot</i></td></tr>
+<tr><th id="256">256</th><td><i>   handle empty delimiter strings.  But this isn't necessary for the</i></td></tr>
+<tr><th id="257">257</th><td><i>   execution of ld.so.  */</i></td></tr>
+<tr><th id="258">258</th><td><u>#undef <span class="macro" data-ref="_M/strsep">strsep</span></u></td></tr>
+<tr><th id="259">259</th><td><u>#undef <span class="macro" data-ref="_M/__strsep">__strsep</span></u></td></tr>
+<tr><th id="260">260</th><td><em>char</em> *</td></tr>
+<tr><th id="261">261</th><td><dfn class="decl def fn" id="__strsep" title='__strsep' data-ref="__strsep" data-ref-filename="__strsep">__strsep</dfn> (<em>char</em> **<dfn class="local col3 decl" id="43stringp" title='stringp' data-type='char **' data-ref="43stringp" data-ref-filename="43stringp">stringp</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="44delim" title='delim' data-type='const char *' data-ref="44delim" data-ref-filename="44delim">delim</dfn>)</td></tr>
+<tr><th id="262">262</th><td>{</td></tr>
+<tr><th id="263">263</th><td>  <em>char</em> *<dfn class="local col5 decl" id="45begin" title='begin' data-type='char *' data-ref="45begin" data-ref-filename="45begin">begin</dfn>;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>  <a class="macro" href="../assert/assert.h.html#104" title="((void) sizeof ((delim[0] != &apos;\0&apos;) ? 1 : 0), __extension__ ({ if (delim[0] != &apos;\0&apos;) ; else __assert_fail (&quot;delim[0] != &apos;\\0&apos;&quot;, &quot;/home/fp/glibc/glibc_src/elf/dl-minimal.c&quot;, 265, __extension__ __PRETTY_FUNCTION__); }))" data-ref="_M/assert">assert</a> (<a class="local col4 ref" href="#44delim" title='delim' data-ref="44delim" data-ref-filename="44delim">delim</a>[<var>0</var>] != <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>  <a class="local col5 ref" href="#45begin" title='begin' data-ref="45begin" data-ref-filename="45begin">begin</a> = *<a class="local col3 ref" href="#43stringp" title='stringp' data-ref="43stringp" data-ref-filename="43stringp">stringp</a>;</td></tr>
+<tr><th id="268">268</th><td>  <b>if</b> (<a class="local col5 ref" href="#45begin" title='begin' data-ref="45begin" data-ref-filename="45begin">begin</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="269">269</th><td>    {</td></tr>
+<tr><th id="270">270</th><td>      <em>char</em> *<dfn class="local col6 decl" id="46end" title='end' data-type='char *' data-ref="46end" data-ref-filename="46end">end</dfn> = <a class="local col5 ref" href="#45begin" title='begin' data-ref="45begin" data-ref-filename="45begin">begin</a>;</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>      <b>while</b> (*<a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a> != <kbd>'\0'</kbd> || (<a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>))</td></tr>
+<tr><th id="273">273</th><td>	{</td></tr>
+<tr><th id="274">274</th><td>	  <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="47dp" title='dp' data-type='const char *' data-ref="47dp" data-ref-filename="47dp">dp</dfn> = <a class="local col4 ref" href="#44delim" title='delim' data-ref="44delim" data-ref-filename="44delim">delim</a>;</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td>	  <b>do</b></td></tr>
+<tr><th id="277">277</th><td>	    <b>if</b> (*<a class="local col7 ref" href="#47dp" title='dp' data-ref="47dp" data-ref-filename="47dp">dp</a> == *<a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a>)</td></tr>
+<tr><th id="278">278</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="279">279</th><td>	  <b>while</b> (*++<a class="local col7 ref" href="#47dp" title='dp' data-ref="47dp" data-ref-filename="47dp">dp</a> != <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td>	  <b>if</b> (*<a class="local col7 ref" href="#47dp" title='dp' data-ref="47dp" data-ref-filename="47dp">dp</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="282">282</th><td>	    {</td></tr>
+<tr><th id="283">283</th><td>	      *<a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="284">284</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="285">285</th><td>	    }</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	  ++<a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a>;</td></tr>
+<tr><th id="288">288</th><td>	}</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>      *<a class="local col3 ref" href="#43stringp" title='stringp' data-ref="43stringp" data-ref-filename="43stringp">stringp</a> = <a class="local col6 ref" href="#46end" title='end' data-ref="46end" data-ref-filename="46end">end</a>;</td></tr>
+<tr><th id="291">291</th><td>    }</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>  <b>return</b> <a class="local col5 ref" href="#45begin" title='begin' data-ref="45begin" data-ref-filename="45begin">begin</a>;</td></tr>
+<tr><th id="294">294</th><td>}</td></tr>
+<tr><th id="295">295</th><td><a class="macro" href="../include/libc-symbols.h.html#144" title="extern __typeof (__strsep) strsep __attribute__ ((weak, alias (&quot;__strsep&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__strsep" title='__strsep' data-ref="__strsep" data-ref-filename="__strsep">__strsep</a>, <dfn class="decl def fn" id="strsep" title='strsep' data-ref="strsep" data-ref-filename="strsep">strsep</dfn>)</td></tr>
+<tr><th id="296">296</th><td><a class="macro" href="../include/libc-symbols.h.html#133" title="extern __typeof (__strsep) __strsep_g __attribute__ ((alias (&quot;__strsep&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="ref fn" href="#__strsep" title='__strsep' data-ref="__strsep" data-ref-filename="__strsep">__strsep</a>, <dfn class="decl def fn" id="__strsep_g" title='__strsep_g' data-ref="__strsep_g" data-ref-filename="__strsep_g">__strsep_g</dfn>)</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

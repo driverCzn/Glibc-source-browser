@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dbg_log.c source code [glibc_src_2.27/nscd/dbg_log.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/nscd/dbg_log.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.27</a>/<a href='./'>nscd</a>/<a href='dbg_log.c.html'>dbg_log.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (c) 1998-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Thorsten Kukuk &lt;kukuk@vt.uni-paderborn.de&gt;, 1998.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   This program is free software; you can redistribute it and/or modify</i></td></tr>
+<tr><th id="6">6</th><td><i>   it under the terms of the GNU General Public License as published</i></td></tr>
+<tr><th id="7">7</th><td><i>   by the Free Software Foundation; version 2 of the License, or</i></td></tr>
+<tr><th id="8">8</th><td><i>   (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   This program is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</i></td></tr>
+<tr><th id="13">13</th><td><i>   GNU General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU General Public License</i></td></tr>
+<tr><th id="16">16</th><td><i>   along with this program; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/syslog.h.html">&lt;syslog.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="dbg_log.h.html">"dbg_log.h"</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="nscd.h.html">"nscd.h"</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i  data-doc="logfilename">/* if in debug mode and we have a debug file, we write the messages to it,</i></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="logfilename">   if in debug mode and no debug file, we write the messages to stderr,</i></td></tr>
+<tr><th id="28">28</th><td><i  data-doc="logfilename">   else to syslog.  */</i></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><em>static</em> <em>char</em> *<dfn class="tu decl def" id="logfilename" title='logfilename' data-type='char *' data-ref="logfilename" data-ref-filename="logfilename">logfilename</dfn>;</td></tr>
+<tr><th id="31">31</th><td><a class="typedef" href="../libio/bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="decl def" id="dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</dfn>;</td></tr>
+<tr><th id="32">32</th><td><em>int</em> <dfn class="decl def" id="debug_level" title='debug_level' data-ref="debug_level" data-ref-filename="debug_level">debug_level</dfn>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><em>void</em></td></tr>
+<tr><th id="35">35</th><td><dfn class="decl def fn" id="set_logfile" title='set_logfile' data-ref="set_logfile" data-ref-filename="set_logfile">set_logfile</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="11logfile" title='logfile' data-type='const char *' data-ref="11logfile" data-ref-filename="11logfile">logfile</dfn>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>  <a class="tu ref" href="#logfilename" title='logfilename' data-use='w' data-ref="logfilename" data-ref-filename="logfilename">logfilename</a> = <a class="ref fn" href="../string/string.h.html#strdup" title='strdup' data-ref="strdup" data-ref-filename="strdup">strdup</a> (<a class="local col1 ref" href="#11logfile" title='logfile' data-ref="11logfile" data-ref-filename="11logfile">logfile</a>);</td></tr>
+<tr><th id="38">38</th><td>}</td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><em>int</em></td></tr>
+<tr><th id="41">41</th><td><dfn class="decl def fn" id="init_logfile" title='init_logfile' data-ref="init_logfile" data-ref-filename="init_logfile">init_logfile</dfn> (<em>void</em>)</td></tr>
+<tr><th id="42">42</th><td>{</td></tr>
+<tr><th id="43">43</th><td>  <b>if</b> (<a class="tu ref" href="#logfilename" title='logfilename' data-use='r' data-ref="logfilename" data-ref-filename="logfilename">logfilename</a>)</td></tr>
+<tr><th id="44">44</th><td>    {</td></tr>
+<tr><th id="45">45</th><td>      <a class="ref" href="#dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</a> = <a class="ref fn" href="../libio/stdio.h.html#fopen64" title='fopen64' data-ref="fopen64" data-ref-filename="fopen64">fopen64</a> (<a class="tu ref" href="#logfilename" title='logfilename' data-use='r' data-ref="logfilename" data-ref-filename="logfilename">logfilename</a>, <q>"a"</q>);</td></tr>
+<tr><th id="46">46</th><td>      <b>return</b> <a class="ref" href="#dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> ? <var>0</var> : <var>1</var>;</td></tr>
+<tr><th id="47">47</th><td>    }</td></tr>
+<tr><th id="48">48</th><td>  <b>return</b> <var>1</var>;</td></tr>
+<tr><th id="49">49</th><td>}</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><em>void</em></td></tr>
+<tr><th id="52">52</th><td><dfn class="decl def fn" id="dbg_log" title='dbg_log' data-ref="dbg_log" data-ref-filename="dbg_log">dbg_log</dfn> (<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12fmt" title='fmt' data-type='const char *' data-ref="12fmt" data-ref-filename="12fmt">fmt</dfn>,...)</td></tr>
+<tr><th id="53">53</th><td>{</td></tr>
+<tr><th id="54">54</th><td>  <span class='typedef' title='va_list' data-type='__gnuc_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col3 decl" id="13ap" title='ap' data-type='va_list' data-ref="13ap" data-ref-filename="13ap">ap</dfn>;</td></tr>
+<tr><th id="55">55</th><td>  <em>char</em> <dfn class="local col4 decl" id="14msg2" title='msg2' data-type='char [512]' data-ref="14msg2" data-ref-filename="14msg2">msg2</dfn>[<var>512</var>];</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>  <span class="macro" title="__builtin_va_start(ap, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>);</td></tr>
+<tr><th id="58">58</th><td>  <a class="ref fn" href="../libio/stdio.h.html#vsnprintf" title='vsnprintf' data-ref="vsnprintf" data-ref-filename="vsnprintf">vsnprintf</a> (<a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>, <b>sizeof</b> (<a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>), <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>, <a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>);</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <b>if</b> (<a class="ref" href="dbg_log.h.html#debug_level" title='debug_level' data-ref="debug_level" data-ref-filename="debug_level">debug_level</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="61">61</th><td>    {</td></tr>
+<tr><th id="62">62</th><td>      <a class="typedef" href="../time/bits/types/time_t.h.html#time_t" title='time_t' data-type='__time_t' data-ref="time_t" data-ref-filename="time_t">time_t</a> <dfn class="local col5 decl" id="15t" title='t' data-type='time_t' data-ref="15t" data-ref-filename="15t">t</dfn> = <a class="ref fn" href="../time/time.h.html#time" title='time' data-ref="time" data-ref-filename="time">time</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>      <b>struct</b> <a class="type" href="../time/bits/types/struct_tm.h.html#tm" title='tm' data-ref="tm" data-ref-filename="tm">tm</a> <dfn class="local col6 decl" id="16now" title='now' data-type='struct tm' data-ref="16now" data-ref-filename="16now">now</dfn>;</td></tr>
+<tr><th id="65">65</th><td>      <a class="ref fn" href="../time/time.h.html#localtime_r" title='localtime_r' data-ref="localtime_r" data-ref-filename="localtime_r">localtime_r</a> (&amp;<a class="local col5 ref" href="#15t" title='t' data-ref="15t" data-ref-filename="15t">t</a>, &amp;<a class="local col6 ref" href="#16now" title='now' data-ref="16now" data-ref-filename="16now">now</a>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>      <em>char</em> <dfn class="local col7 decl" id="17buf" title='buf' data-type='char [256]' data-ref="17buf" data-ref-filename="17buf">buf</dfn>[<var>256</var>];</td></tr>
+<tr><th id="68">68</th><td>      <a class="ref fn" href="../time/time.h.html#strftime" title='strftime' data-ref="strftime" data-ref-filename="strftime">strftime</a> (<a class="local col7 ref" href="#17buf" title='buf' data-ref="17buf" data-ref-filename="17buf">buf</a>, <b>sizeof</b> (<a class="local col7 ref" href="#17buf" title='buf' data-ref="17buf" data-ref-filename="17buf">buf</a>), <q>"%c"</q>, &amp;<a class="local col6 ref" href="#16now" title='now' data-ref="16now" data-ref-filename="16now">now</a>);</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>      <em>char</em> <dfn class="local col8 decl" id="18msg" title='msg' data-type='char [1024]' data-ref="18msg" data-ref-filename="18msg">msg</dfn>[<var>1024</var>];</td></tr>
+<tr><th id="71">71</th><td>      <a class="macro" href="../libio/bits/stdio2.h.html#68" title="__builtin___snprintf_chk (msg, sizeof (msg), 2 - 1, __builtin_object_size (msg, 2 &gt; 1), &quot;%s - %d: %s%s&quot;, buf, getpid (), msg2, msg2[strlen (msg2) - 1] == &apos;\n&apos; ? &quot;&quot; : &quot;\n&quot;)" data-ref="_M/snprintf">snprintf</a> (<a class="local col8 ref" href="#18msg" title='msg' data-ref="18msg" data-ref-filename="18msg">msg</a>, <b>sizeof</b> (<a class="local col8 ref" href="#18msg" title='msg' data-ref="18msg" data-ref-filename="18msg">msg</a>), <q>"%s - %d: %s%s"</q>, <a class="local col7 ref" href="#17buf" title='buf' data-ref="17buf" data-ref-filename="17buf">buf</a>, <a class="ref fn" href="../posix/unistd.h.html#getpid" title='getpid' data-ref="getpid" data-ref-filename="getpid">getpid</a> (), <a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>,</td></tr>
+<tr><th id="72">72</th><td>		<a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>[<a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>) - <var>1</var>] == <kbd>'\n'</kbd> ? <q>""</q> : <q>"\n"</q>);</td></tr>
+<tr><th id="73">73</th><td>      <b>if</b> (<a class="ref" href="#dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</a>)</td></tr>
+<tr><th id="74">74</th><td>	{</td></tr>
+<tr><th id="75">75</th><td>	  <a class="ref fn" href="../libio/stdio.h.html#fputs" title='fputs' data-ref="fputs" data-ref-filename="fputs">fputs</a> (<a class="local col8 ref" href="#18msg" title='msg' data-ref="18msg" data-ref-filename="18msg">msg</a>, <a class="ref" href="#dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</a>);</td></tr>
+<tr><th id="76">76</th><td>	  <a class="ref fn" href="../libio/stdio.h.html#fflush" title='fflush' data-ref="fflush" data-ref-filename="fflush">fflush</a> (<a class="ref" href="#dbgout" title='dbgout' data-ref="dbgout" data-ref-filename="dbgout">dbgout</a>);</td></tr>
+<tr><th id="77">77</th><td>	}</td></tr>
+<tr><th id="78">78</th><td>      <b>else</b></td></tr>
+<tr><th id="79">79</th><td>	<a class="ref fn" href="../libio/stdio.h.html#fputs" title='fputs' data-ref="fputs" data-ref-filename="fputs">fputs</a> (<a class="local col8 ref" href="#18msg" title='msg' data-ref="18msg" data-ref-filename="18msg">msg</a>, <a class="macro" href="../libio/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>);</td></tr>
+<tr><th id="80">80</th><td>    }</td></tr>
+<tr><th id="81">81</th><td>  <b>else</b></td></tr>
+<tr><th id="82">82</th><td>    <a class="macro" href="../misc/bits/syslog.h.html#34" title="__syslog_chk (5, 2 - 1, &quot;%d %s&quot;, getpid (), msg2)" data-ref="_M/syslog">syslog</a> (<a class="macro" href="../misc/sys/syslog.h.html#56" title="5" data-ref="_M/LOG_NOTICE">LOG_NOTICE</a>, <q>"%d %s"</q>, <a class="ref fn" href="../posix/unistd.h.html#getpid" title='getpid' data-ref="getpid" data-ref-filename="getpid">getpid</a> (), <a class="local col4 ref" href="#14msg2" title='msg2' data-ref="14msg2" data-ref-filename="14msg2">msg2</a>);</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <span class="macro" title="__builtin_va_end(ap)" data-ref="_M/va_end">va_end</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>);</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

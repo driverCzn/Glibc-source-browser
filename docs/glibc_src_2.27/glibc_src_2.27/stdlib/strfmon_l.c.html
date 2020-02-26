@@ -1,0 +1,636 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>strfmon_l.c source code [glibc_src_2.27/stdlib/strfmon_l.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/stdlib/strfmon_l.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.27</a>/<a href='./'>stdlib</a>/<a href='strfmon_l.c.html'>strfmon_l.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Formatting a monetary value according to the given locale.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1996-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1996.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/langinfo.h.html">&lt;langinfo.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/locale.h.html">&lt;locale.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/monetary.h.html">&lt;monetary.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../libio/libioP.h.html">"../libio/libioP.h"</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../libio/strfile.h.html">"../libio/strfile.h"</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/printf.h.html">&lt;printf.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../locale/localeinfo.h.html">"../locale/localeinfo.h"</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/out_char" data-ref="_M/out_char">out_char</dfn>(Ch)							      \</u></td></tr>
+<tr><th id="35">35</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="36">36</th><td><u>    if (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> &gt;= <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a> + <a class="local col2 ref" href="#2maxsize" title='maxsize' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</a> - 1)					      \</u></td></tr>
+<tr><th id="37">37</th><td><u>      {									      \</u></td></tr>
+<tr><th id="38">38</th><td><u>	__set_errno (E2BIG);						      \</u></td></tr>
+<tr><th id="39">39</th><td><u>	va_end (<a class="local col5 ref" href="#5ap" title='ap' data-ref="5ap" data-ref-filename="5ap">ap</a>);							      \</u></td></tr>
+<tr><th id="40">40</th><td><u>	return -1;							      \</u></td></tr>
+<tr><th id="41">41</th><td><u>      }									      \</u></td></tr>
+<tr><th id="42">42</th><td><u>    *<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>++ = (Ch);							      \</u></td></tr>
+<tr><th id="43">43</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><u>#define <dfn class="macro" id="_M/out_string" data-ref="_M/out_string">out_string</dfn>(String)						      \</u></td></tr>
+<tr><th id="46">46</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="47">47</th><td><u>    const char *<dfn class="local col6 decl" id="46_s" title='_s' data-type='const char *' data-ref="46_s" data-ref-filename="46_s"><dfn class="local col7 decl" id="47_s" title='_s' data-type='const char *' data-ref="47_s" data-ref-filename="47_s"><dfn class="local col8 decl" id="48_s" title='_s' data-type='const char *' data-ref="48_s" data-ref-filename="48_s"><dfn class="local col9 decl" id="49_s" title='_s' data-type='const char *' data-ref="49_s" data-ref-filename="49_s"><dfn class="local col0 decl" id="50_s" title='_s' data-type='const char *' data-ref="50_s" data-ref-filename="50_s"><dfn class="local col3 decl" id="53_s" title='_s' data-type='const char *' data-ref="53_s" data-ref-filename="53_s"><dfn class="local col4 decl" id="54_s" title='_s' data-type='const char *' data-ref="54_s" data-ref-filename="54_s">_s</dfn></dfn></dfn></dfn></dfn></dfn></dfn> = (String);						      \</u></td></tr>
+<tr><th id="48">48</th><td><u>    while (*<a class="local col6 ref" href="#477" title='_s' data-ref="46_s" data-ref-filename="46_s"><a class="local col7 ref" href="#483" title='_s' data-ref="47_s" data-ref-filename="47_s"><a class="local col8 ref" href="#489" title='_s' data-ref="48_s" data-ref-filename="48_s"><a class="local col9 ref" href="#502" title='_s' data-ref="49_s" data-ref-filename="49_s"><a class="local col0 ref" href="#543" title='_s' data-ref="50_s" data-ref-filename="50_s"><a class="local col3 ref" href="#561" title='_s' data-ref="53_s" data-ref-filename="53_s"><a class="local col4 ref" href="#569" title='_s' data-ref="54_s" data-ref-filename="54_s">_s</a></a></a></a></a></a></a>)								      \</u></td></tr>
+<tr><th id="49">49</th><td><u>      out_char (*<a class="local col6 ref" href="#477" title='_s' data-ref="46_s" data-ref-filename="46_s"><a class="local col7 ref" href="#483" title='_s' data-ref="47_s" data-ref-filename="47_s"><a class="local col8 ref" href="#489" title='_s' data-ref="48_s" data-ref-filename="48_s"><a class="local col9 ref" href="#502" title='_s' data-ref="49_s" data-ref-filename="49_s"><a class="local col0 ref" href="#543" title='_s' data-ref="50_s" data-ref-filename="50_s"><a class="local col3 ref" href="#561" title='_s' data-ref="53_s" data-ref-filename="53_s"><a class="local col4 ref" href="#569" title='_s' data-ref="54_s" data-ref-filename="54_s">_s</a></a></a></a></a></a></a>++);							      \</u></td></tr>
+<tr><th id="50">50</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/out_nstring" data-ref="_M/out_nstring">out_nstring</dfn>(String, N)						      \</u></td></tr>
+<tr><th id="53">53</th><td><u>  do {									      \</u></td></tr>
+<tr><th id="54">54</th><td><u>    int <dfn class="local col1 decl" id="51_n" title='_n' data-type='int' data-ref="51_n" data-ref-filename="51_n">_n</dfn> = (N);							      \</u></td></tr>
+<tr><th id="55">55</th><td><u>    const char *<dfn class="local col2 decl" id="52_s" title='_s' data-type='const char *' data-ref="52_s" data-ref-filename="52_s">_s</dfn> = (String);						      \</u></td></tr>
+<tr><th id="56">56</th><td><u>    while (<a class="local col1 ref" href="#554" title='_n' data-ref="51_n" data-ref-filename="51_n">_n</a>-- &gt; 0)							      \</u></td></tr>
+<tr><th id="57">57</th><td><u>      out_char (*<a class="local col2 ref" href="#554" title='_s' data-ref="52_s" data-ref-filename="52_s">_s</a>++);							      \</u></td></tr>
+<tr><th id="58">58</th><td><u>  } while (0)</u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><u>#define <dfn class="macro" id="_M/to_digit" data-ref="_M/to_digit">to_digit</dfn>(Ch) ((Ch) - '0')</u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><i>/* We use this code also for the extended locale handling where the</i></td></tr>
+<tr><th id="64">64</th><td><i>   function gets as an additional argument the locale which has to be</i></td></tr>
+<tr><th id="65">65</th><td><i>   used.  To access the values we have to redefine the _NL_CURRENT</i></td></tr>
+<tr><th id="66">66</th><td><i>   macro.  */</i></td></tr>
+<tr><th id="67">67</th><td><u>#undef <a class="macro" href="../locale/localeinfo.h.html#252" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a></u></td></tr>
+<tr><th id="68">68</th><td><u>#define <dfn class="macro" id="_M/_NL_CURRENT" data-ref="_M/_NL_CURRENT">_NL_CURRENT</dfn>(category, item) \</u></td></tr>
+<tr><th id="69">69</th><td><u>  (<a class="local col6 ref" href="#6current" title='current' data-ref="6current" data-ref-filename="6current">current</a>-&gt;<a class="ref field" href="../locale/localeinfo.h.html#__locale_data::values" title='__locale_data::values' data-ref="__locale_data::values" data-ref-filename="__locale_data..values">values</a>[_NL_ITEM_INDEX (item)].<a class="ref field" href="../locale/localeinfo.h.html#locale_data_value::string" title='locale_data_value::string' data-ref="locale_data_value::string" data-ref-filename="locale_data_value..string">string</a>)</u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i>/* We have to overcome some problems with this implementation.  On the</i></td></tr>
+<tr><th id="73">73</th><td><i>   one hand the strfmon() function is specified in XPG4 and of course</i></td></tr>
+<tr><th id="74">74</th><td><i>   it has to follow this.  But on the other hand POSIX.2 specifies</i></td></tr>
+<tr><th id="75">75</th><td><i>   some information in the LC_MONETARY category which should be used,</i></td></tr>
+<tr><th id="76">76</th><td><i>   too.  Some of the information contradicts the information which can</i></td></tr>
+<tr><th id="77">77</th><td><i>   be specified in format string.  */</i></td></tr>
+<tr><th id="78">78</th><td><a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a></td></tr>
+<tr><th id="79">79</th><td><dfn class="decl def fn" id="__vstrfmon_l" title='__vstrfmon_l' data-ref="__vstrfmon_l" data-ref-filename="__vstrfmon_l">__vstrfmon_l</dfn> (<em>char</em> *<dfn class="local col1 decl" id="1s" title='s' data-type='char *' data-ref="1s" data-ref-filename="1s">s</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="2maxsize" title='maxsize' data-type='size_t' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</dfn>, <a class="typedef" href="../locale/bits/types/locale_t.h.html#locale_t" title='locale_t' data-type='__locale_t' data-ref="locale_t" data-ref-filename="locale_t">locale_t</a> <dfn class="local col3 decl" id="3loc" title='loc' data-type='locale_t' data-ref="3loc" data-ref-filename="3loc">loc</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4format" title='format' data-type='const char *' data-ref="4format" data-ref-filename="4format">format</dfn>,</td></tr>
+<tr><th id="80">80</th><td>	      <span class='typedef' title='va_list' data-type='__gnuc_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col5 decl" id="5ap" title='ap' data-type='struct __va_list_tag *' data-ref="5ap" data-ref-filename="5ap">ap</dfn>)</td></tr>
+<tr><th id="81">81</th><td>{</td></tr>
+<tr><th id="82">82</th><td>  <b>struct</b> <a class="type" href="../locale/localeinfo.h.html#__locale_data" title='__locale_data' data-ref="__locale_data" data-ref-filename="__locale_data">__locale_data</a> *<dfn class="local col6 decl" id="6current" title='current' data-type='struct __locale_data *' data-ref="6current" data-ref-filename="6current">current</dfn> = <a class="local col3 ref" href="#3loc" title='loc' data-ref="3loc" data-ref-filename="3loc">loc</a>-&gt;<a class="ref field" href="../locale/bits/types/__locale_t.h.html#__locale_struct::__locales" title='__locale_struct::__locales' data-ref="__locale_struct::__locales" data-ref-filename="__locale_struct..__locales">__locales</a>[<a class="macro" href="../locale/locale.h.html#39" title="4" data-ref="_M/LC_MONETARY">LC_MONETARY</a>];</td></tr>
+<tr><th id="83">83</th><td>  <a class="typedef" href="../libio/strfile.h.html#_IO_strfile" title='_IO_strfile' data-type='struct _IO_strfile_' data-ref="_IO_strfile" data-ref-filename="_IO_strfile">_IO_strfile</a> <dfn class="local col7 decl" id="7f" title='f' data-type='_IO_strfile' data-ref="7f" data-ref-filename="7f">f</dfn>;</td></tr>
+<tr><th id="84">84</th><td>  <b>struct</b> <a class="type" href="../stdio-common/printf.h.html#printf_info" title='printf_info' data-ref="printf_info" data-ref-filename="printf_info">printf_info</a> <dfn class="local col8 decl" id="8info" title='info' data-type='struct printf_info' data-ref="8info" data-ref-filename="8info">info</dfn>;</td></tr>
+<tr><th id="85">85</th><td>  <em>char</em> *<dfn class="local col9 decl" id="9dest" title='dest' data-type='char *' data-ref="9dest" data-ref-filename="9dest">dest</dfn>;			<i>/* Pointer so copy the output.  */</i></td></tr>
+<tr><th id="86">86</th><td>  <em>const</em> <em>char</em> *<dfn class="local col0 decl" id="10fmt" title='fmt' data-type='const char *' data-ref="10fmt" data-ref-filename="10fmt">fmt</dfn>;		<i>/* Pointer that walks through format.  */</i></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>  <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> = <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>;</td></tr>
+<tr><th id="89">89</th><td>  <a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> = <a class="local col4 ref" href="#4format" title='format' data-ref="4format" data-ref-filename="4format">format</a>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>  <i>/* Loop through the format-string.  */</i></td></tr>
+<tr><th id="92">92</th><td>  <b>while</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="93">93</th><td>    {</td></tr>
+<tr><th id="94">94</th><td>      <i>/* The floating-point value to output.  */</i></td></tr>
+<tr><th id="95">95</th><td>      <b>union</b></td></tr>
+<tr><th id="96">96</th><td>      {</td></tr>
+<tr><th id="97">97</th><td>	<em>double</em> <dfn class="local col1 decl field" id="11dbl" title='dbl' data-type='double' data-ref="11dbl" data-ref-filename="11dbl">dbl</dfn>;</td></tr>
+<tr><th id="98">98</th><td>	<em>long</em> <em>double</em> <dfn class="local col2 decl field" id="12ldbl" title='ldbl' data-type='long double' data-ref="12ldbl" data-ref-filename="12ldbl">ldbl</dfn>;</td></tr>
+<tr><th id="99">99</th><td>      }</td></tr>
+<tr><th id="100">100</th><td>      <dfn class="local col3 decl" id="13fpnum" title='fpnum' data-type='union (anonymous union at /home/fp/glibc/glibc_src/stdlib/strfmon_l.c:95:7)' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</dfn>;</td></tr>
+<tr><th id="101">101</th><td>      <em>int</em> <dfn class="local col4 decl" id="14int_format" title='int_format' data-type='int' data-ref="14int_format" data-ref-filename="14int_format">int_format</dfn>;</td></tr>
+<tr><th id="102">102</th><td>      <em>int</em> <dfn class="local col5 decl" id="15print_curr_symbol" title='print_curr_symbol' data-type='int' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</dfn>;</td></tr>
+<tr><th id="103">103</th><td>      <em>int</em> <dfn class="local col6 decl" id="16left_prec" title='left_prec' data-type='int' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</dfn>;</td></tr>
+<tr><th id="104">104</th><td>      <em>int</em> <dfn class="local col7 decl" id="17left_pad" title='left_pad' data-type='int' data-ref="17left_pad" data-ref-filename="17left_pad">left_pad</dfn>;</td></tr>
+<tr><th id="105">105</th><td>      <em>int</em> <dfn class="local col8 decl" id="18right_prec" title='right_prec' data-type='int' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</dfn>;</td></tr>
+<tr><th id="106">106</th><td>      <em>int</em> <dfn class="local col9 decl" id="19group" title='group' data-type='int' data-ref="19group" data-ref-filename="19group">group</dfn>;</td></tr>
+<tr><th id="107">107</th><td>      <em>char</em> <dfn class="local col0 decl" id="20pad" title='pad' data-type='char' data-ref="20pad" data-ref-filename="20pad">pad</dfn>;</td></tr>
+<tr><th id="108">108</th><td>      <em>int</em> <dfn class="local col1 decl" id="21is_long_double" title='is_long_double' data-type='int' data-ref="21is_long_double" data-ref-filename="21is_long_double">is_long_double</dfn>;</td></tr>
+<tr><th id="109">109</th><td>      <em>int</em> <dfn class="local col2 decl" id="22p_sign_posn" title='p_sign_posn' data-type='int' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</dfn>;</td></tr>
+<tr><th id="110">110</th><td>      <em>int</em> <dfn class="local col3 decl" id="23n_sign_posn" title='n_sign_posn' data-type='int' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</dfn>;</td></tr>
+<tr><th id="111">111</th><td>      <em>int</em> <dfn class="local col4 decl" id="24sign_posn" title='sign_posn' data-type='int' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</dfn>;</td></tr>
+<tr><th id="112">112</th><td>      <em>int</em> <dfn class="local col5 decl" id="25other_sign_posn" title='other_sign_posn' data-type='int' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</dfn>;</td></tr>
+<tr><th id="113">113</th><td>      <em>int</em> <dfn class="local col6 decl" id="26left" title='left' data-type='int' data-ref="26left" data-ref-filename="26left">left</dfn>;</td></tr>
+<tr><th id="114">114</th><td>      <em>int</em> <dfn class="local col7 decl" id="27is_negative" title='is_negative' data-type='int' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</dfn>;</td></tr>
+<tr><th id="115">115</th><td>      <em>int</em> <dfn class="local col8 decl" id="28sep_by_space" title='sep_by_space' data-type='int' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</dfn>;</td></tr>
+<tr><th id="116">116</th><td>      <em>int</em> <dfn class="local col9 decl" id="29other_sep_by_space" title='other_sep_by_space' data-type='int' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</dfn>;</td></tr>
+<tr><th id="117">117</th><td>      <em>int</em> <dfn class="local col0 decl" id="30cs_precedes" title='cs_precedes' data-type='int' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</dfn>;</td></tr>
+<tr><th id="118">118</th><td>      <em>int</em> <dfn class="local col1 decl" id="31other_cs_precedes" title='other_cs_precedes' data-type='int' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</dfn>;</td></tr>
+<tr><th id="119">119</th><td>      <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="32sign_string" title='sign_string' data-type='const char *' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</dfn>;</td></tr>
+<tr><th id="120">120</th><td>      <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="33other_sign_string" title='other_sign_string' data-type='const char *' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</dfn>;</td></tr>
+<tr><th id="121">121</th><td>      <em>int</em> <dfn class="local col4 decl" id="34done" title='done' data-type='int' data-ref="34done" data-ref-filename="34done">done</dfn>;</td></tr>
+<tr><th id="122">122</th><td>      <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="35currency_symbol" title='currency_symbol' data-type='const char *' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</dfn>;</td></tr>
+<tr><th id="123">123</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="36currency_symbol_len" title='currency_symbol_len' data-type='size_t' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</dfn>;</td></tr>
+<tr><th id="124">124</th><td>      <em>long</em> <em>int</em> <dfn class="local col7 decl" id="37width" title='width' data-type='long' data-ref="37width" data-ref-filename="37width">width</dfn>;</td></tr>
+<tr><th id="125">125</th><td>      <em>char</em> *<dfn class="local col8 decl" id="38startp" title='startp' data-type='char *' data-ref="38startp" data-ref-filename="38startp">startp</dfn>;</td></tr>
+<tr><th id="126">126</th><td>      <em>const</em> <em>void</em> *<dfn class="local col9 decl" id="39ptr" title='ptr' data-type='const void *' data-ref="39ptr" data-ref-filename="39ptr">ptr</dfn>;</td></tr>
+<tr><th id="127">127</th><td>      <em>char</em> <dfn class="local col0 decl" id="40space_char" title='space_char' data-type='char' data-ref="40space_char" data-ref-filename="40space_char">space_char</dfn>;</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>      <i>/* Process all character which do not introduce a format</i></td></tr>
+<tr><th id="130">130</th><td><i>	 specification.  */</i></td></tr>
+<tr><th id="131">131</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> != <kbd>'%'</kbd>)</td></tr>
+<tr><th id="132">132</th><td>	{</td></tr>
+<tr><th id="133">133</th><td>	  <a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*fmt++); } while (0)" data-ref="_M/out_char">out_char</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>++);</td></tr>
+<tr><th id="134">134</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="135">135</th><td>	}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>      <i>/* "%%" means a single '%' character.  */</i></td></tr>
+<tr><th id="138">138</th><td>      <b>if</b> (<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>[<var>1</var>] == <kbd>'%'</kbd>)</td></tr>
+<tr><th id="139">139</th><td>	{</td></tr>
+<tr><th id="140">140</th><td>	  <a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*++fmt); } while (0)" data-ref="_M/out_char">out_char</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="141">141</th><td>	  ++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>;</td></tr>
+<tr><th id="142">142</th><td>	  <b>continue</b>;</td></tr>
+<tr><th id="143">143</th><td>	}</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>      <i>/* Defaults for formatting.  */</i></td></tr>
+<tr><th id="146">146</th><td>      <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> = <var>0</var>;			<i>/* Use international curr. symbol */</i></td></tr>
+<tr><th id="147">147</th><td>      <a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a> = <var>1</var>;		<i>/* Print the currency symbol.  */</i></td></tr>
+<tr><th id="148">148</th><td>      <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> = -<var>1</var>;			<i>/* No left precision specified.  */</i></td></tr>
+<tr><th id="149">149</th><td>      <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> = -<var>1</var>;			<i>/* No right precision specified.  */</i></td></tr>
+<tr><th id="150">150</th><td>      <a class="local col9 ref" href="#19group" title='group' data-ref="19group" data-ref-filename="19group">group</a> = <var>1</var>;			<i>/* Print digits grouped.  */</i></td></tr>
+<tr><th id="151">151</th><td>      <a class="local col0 ref" href="#20pad" title='pad' data-ref="20pad" data-ref-filename="20pad">pad</a> = <kbd>' '</kbd>;			<i>/* Fill character is &lt;SP&gt;.  */</i></td></tr>
+<tr><th id="152">152</th><td>      <a class="local col1 ref" href="#21is_long_double" title='is_long_double' data-ref="21is_long_double" data-ref-filename="21is_long_double">is_long_double</a> = <var>0</var>;		<i>/* Double argument by default.  */</i></td></tr>
+<tr><th id="153">153</th><td>      <a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a> = -<var>2</var>;			<i>/* This indicates whether the */</i></td></tr>
+<tr><th id="154">154</th><td>      <a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> = -<var>2</var>;			<i>/* '(' flag is given.  */</i></td></tr>
+<tr><th id="155">155</th><td>      <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> = -<var>1</var>;			<i>/* No width specified so far.  */</i></td></tr>
+<tr><th id="156">156</th><td>      <a class="local col6 ref" href="#26left" title='left' data-ref="26left" data-ref-filename="26left">left</a> = <var>0</var>;				<i>/* Right justified by default.  */</i></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>      <i>/* Parse group characters.  */</i></td></tr>
+<tr><th id="159">159</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="160">160</th><td>	{</td></tr>
+<tr><th id="161">161</th><td>	  <b>switch</b> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>)</td></tr>
+<tr><th id="162">162</th><td>	    {</td></tr>
+<tr><th id="163">163</th><td>	    <b>case</b> <kbd>'='</kbd>:			<i>/* Set fill character.  */</i></td></tr>
+<tr><th id="164">164</th><td>	      <a class="local col0 ref" href="#20pad" title='pad' data-ref="20pad" data-ref-filename="20pad">pad</a> = *++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>;</td></tr>
+<tr><th id="165">165</th><td>	      <b>if</b> (<a class="local col0 ref" href="#20pad" title='pad' data-ref="20pad" data-ref-filename="20pad">pad</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="166">166</th><td>		{</td></tr>
+<tr><th id="167">167</th><td>		  <i>/* Premature EOS.  */</i></td></tr>
+<tr><th id="168">168</th><td>		  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="169">169</th><td>		  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="170">170</th><td>		}</td></tr>
+<tr><th id="171">171</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="172">172</th><td>	    <b>case</b> <kbd>'^'</kbd>:			<i>/* Don't group digits.  */</i></td></tr>
+<tr><th id="173">173</th><td>	      <a class="local col9 ref" href="#19group" title='group' data-ref="19group" data-ref-filename="19group">group</a> = <var>0</var>;</td></tr>
+<tr><th id="174">174</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="175">175</th><td>	    <b>case</b> <kbd>'+'</kbd>:			<i>/* Use +/- for sign of number.  */</i></td></tr>
+<tr><th id="176">176</th><td>	      <b>if</b> (<a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> != -<var>2</var>)</td></tr>
+<tr><th id="177">177</th><td>		{</td></tr>
+<tr><th id="178">178</th><td>		  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="179">179</th><td>		  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="180">180</th><td>		}</td></tr>
+<tr><th id="181">181</th><td>	      <a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (__P_SIGN_POSN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#488" title="__P_SIGN_POSN" data-ref="_M/P_SIGN_POSN">P_SIGN_POSN</a>);</td></tr>
+<tr><th id="182">182</th><td>	      <a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (__N_SIGN_POSN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#492" title="__N_SIGN_POSN" data-ref="_M/N_SIGN_POSN">N_SIGN_POSN</a>);</td></tr>
+<tr><th id="183">183</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="184">184</th><td>	    <b>case</b> <kbd>'('</kbd>:			<i>/* Use ( ) for negative sign.  */</i></td></tr>
+<tr><th id="185">185</th><td>	      <b>if</b> (<a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> != -<var>2</var>)</td></tr>
+<tr><th id="186">186</th><td>		{</td></tr>
+<tr><th id="187">187</th><td>		  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="188">188</th><td>		  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="189">189</th><td>		}</td></tr>
+<tr><th id="190">190</th><td>	      <a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a> = <var>0</var>;</td></tr>
+<tr><th id="191">191</th><td>	      <a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> = <var>0</var>;</td></tr>
+<tr><th id="192">192</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="193">193</th><td>	    <b>case</b> <kbd>'!'</kbd>:			<i>/* Don't print the currency symbol.  */</i></td></tr>
+<tr><th id="194">194</th><td>	      <a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a> = <var>0</var>;</td></tr>
+<tr><th id="195">195</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="196">196</th><td>	    <b>case</b> <kbd>'-'</kbd>:			<i>/* Print left justified.  */</i></td></tr>
+<tr><th id="197">197</th><td>	      <a class="local col6 ref" href="#26left" title='left' data-ref="26left" data-ref-filename="26left">left</a> = <var>1</var>;</td></tr>
+<tr><th id="198">198</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="199">199</th><td>	    <b>default</b>:</td></tr>
+<tr><th id="200">200</th><td>	      <i>/* Will stop the loop.  */</i>;</td></tr>
+<tr><th id="201">201</th><td>	    }</td></tr>
+<tr><th id="202">202</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="203">203</th><td>	}</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>      <b>if</b> (<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="206">206</th><td>	{</td></tr>
+<tr><th id="207">207</th><td>	  <i>/* Parse field width.  */</i></td></tr>
+<tr><th id="208">208</th><td>	  <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> = <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	  <b>while</b> (<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*++fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="211">211</th><td>	    {</td></tr>
+<tr><th id="212">212</th><td>	      <em>int</em> <dfn class="local col1 decl" id="41val" title='val' data-type='int' data-ref="41val" data-ref-filename="41val">val</dfn> = <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	      <b>if</b> (<a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> &gt; <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> / <var>10</var></td></tr>
+<tr><th id="215">215</th><td>		  || (<a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> == <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> &amp;&amp; <a class="local col1 ref" href="#41val" title='val' data-ref="41val" data-ref-filename="41val">val</a> &gt; <span class="macro" title="9223372036854775807L" data-ref="_M/LONG_MAX">LONG_MAX</span> % <var>10</var>))</td></tr>
+<tr><th id="216">216</th><td>		{</td></tr>
+<tr><th id="217">217</th><td>		  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (7))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#11" title="7" data-ref="_M/E2BIG">E2BIG</a>);</td></tr>
+<tr><th id="218">218</th><td>		  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="219">219</th><td>		}</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>	      <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> = <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> * <var>10</var> + <a class="local col1 ref" href="#41val" title='val' data-ref="41val" data-ref-filename="41val">val</a>;</td></tr>
+<tr><th id="222">222</th><td>	    }</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	  <i>/* If we don't have enough room for the demanded width we</i></td></tr>
+<tr><th id="225">225</th><td><i>	     can stop now and return an error.  */</i></td></tr>
+<tr><th id="226">226</th><td>	  <b>if</b> (<a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> &gt;= <a class="local col2 ref" href="#2maxsize" title='maxsize' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</a> - (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>))</td></tr>
+<tr><th id="227">227</th><td>	    {</td></tr>
+<tr><th id="228">228</th><td>	      <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (7))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#11" title="7" data-ref="_M/E2BIG">E2BIG</a>);</td></tr>
+<tr><th id="229">229</th><td>	      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="230">230</th><td>	    }</td></tr>
+<tr><th id="231">231</th><td>	}</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td>      <i>/* Recognize left precision.  */</i></td></tr>
+<tr><th id="234">234</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> == <kbd>'#'</kbd>)</td></tr>
+<tr><th id="235">235</th><td>	{</td></tr>
+<tr><th id="236">236</th><td>	  <b>if</b> (!<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*++fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="237">237</th><td>	    {</td></tr>
+<tr><th id="238">238</th><td>	      <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="239">239</th><td>	      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="240">240</th><td>	    }</td></tr>
+<tr><th id="241">241</th><td>	  <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> = <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>	  <b>while</b> (<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*++fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="244">244</th><td>	    {</td></tr>
+<tr><th id="245">245</th><td>	      <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> *= <var>10</var>;</td></tr>
+<tr><th id="246">246</th><td>	      <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> += <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="247">247</th><td>	    }</td></tr>
+<tr><th id="248">248</th><td>	}</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>      <i>/* Recognize right precision.  */</i></td></tr>
+<tr><th id="251">251</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> == <kbd>'.'</kbd>)</td></tr>
+<tr><th id="252">252</th><td>	{</td></tr>
+<tr><th id="253">253</th><td>	  <b>if</b> (!<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*++fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="254">254</th><td>	    {</td></tr>
+<tr><th id="255">255</th><td>	      <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="256">256</th><td>	      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="257">257</th><td>	    }</td></tr>
+<tr><th id="258">258</th><td>	  <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> = <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	  <b>while</b> (<a class="macro" href="../include/ctype.h.html#57" title="({ int __c = (*++fmt); __c &gt;= &apos;0&apos; &amp;&amp; __c &lt;= &apos;9&apos;; })" data-ref="_M/isdigit">isdigit</a> (*++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>))</td></tr>
+<tr><th id="261">261</th><td>	    {</td></tr>
+<tr><th id="262">262</th><td>	      <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> *= <var>10</var>;</td></tr>
+<tr><th id="263">263</th><td>	      <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> += <a class="macro" href="#60" title="((*fmt) - &apos;0&apos;)" data-ref="_M/to_digit">to_digit</a> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>);</td></tr>
+<tr><th id="264">264</th><td>	    }</td></tr>
+<tr><th id="265">265</th><td>	}</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>      <i>/* Handle modifier.  This is an extension.  */</i></td></tr>
+<tr><th id="268">268</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a> == <kbd>'L'</kbd>)</td></tr>
+<tr><th id="269">269</th><td>	{</td></tr>
+<tr><th id="270">270</th><td>	  ++<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>;</td></tr>
+<tr><th id="271">271</th><td>	  <b>if</b> (!<a class="macro" href="../sysdeps/generic/math_ldbl_opt.h.html#14" title="0" data-ref="_M/__ldbl_is_dbl">__ldbl_is_dbl</a>)</td></tr>
+<tr><th id="272">272</th><td>	    <a class="local col1 ref" href="#21is_long_double" title='is_long_double' data-ref="21is_long_double" data-ref-filename="21is_long_double">is_long_double</a> = <var>1</var>;</td></tr>
+<tr><th id="273">273</th><td>	}</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>      <i>/* Handle format specifier.  */</i></td></tr>
+<tr><th id="276">276</th><td>      <em>char</em> <dfn class="local col2 decl" id="42int_symbol" title='int_symbol' data-type='char [4]' data-ref="42int_symbol" data-ref-filename="42int_symbol">int_symbol</dfn>[<var>4</var>];</td></tr>
+<tr><th id="277">277</th><td>      <b>switch</b> (*<a class="local col0 ref" href="#10fmt" title='fmt' data-ref="10fmt" data-ref-filename="10fmt">fmt</a>++)</td></tr>
+<tr><th id="278">278</th><td>	{</td></tr>
+<tr><th id="279">279</th><td>	<b>case</b> <kbd>'i'</kbd>: {		<i>/* Use international currency symbol.  */</i></td></tr>
+<tr><th id="280">280</th><td>	  <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="43int_curr_symbol" title='int_curr_symbol' data-type='const char *' data-ref="43int_curr_symbol" data-ref-filename="43int_curr_symbol">int_curr_symbol</dfn>;</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>	  <a class="local col3 ref" href="#43int_curr_symbol" title='int_curr_symbol' data-ref="43int_curr_symbol" data-ref-filename="43int_curr_symbol">int_curr_symbol</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__INT_CURR_SYMBOL) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#436" title="__INT_CURR_SYMBOL" data-ref="_M/INT_CURR_SYMBOL">INT_CURR_SYMBOL</a>);</td></tr>
+<tr><th id="283">283</th><td>	  <a class="ref fn" href="../string/string.h.html#strncpy" title='strncpy' data-ref="strncpy" data-ref-filename="strncpy">strncpy</a>(<a class="local col2 ref" href="#42int_symbol" title='int_symbol' data-ref="42int_symbol" data-ref-filename="42int_symbol">int_symbol</a>, <a class="local col3 ref" href="#43int_curr_symbol" title='int_curr_symbol' data-ref="43int_curr_symbol" data-ref-filename="43int_curr_symbol">int_curr_symbol</a>, <var>3</var>);</td></tr>
+<tr><th id="284">284</th><td>	  <a class="local col2 ref" href="#42int_symbol" title='int_symbol' data-ref="42int_symbol" data-ref-filename="42int_symbol">int_symbol</a>[<var>3</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td>	  <a class="local col6 ref" href="#36currency_symbol_len" title='currency_symbol_len' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</a> = <var>3</var>;</td></tr>
+<tr><th id="287">287</th><td>	  <a class="local col5 ref" href="#35currency_symbol" title='currency_symbol' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</a> = &amp;<a class="local col2 ref" href="#42int_symbol" title='int_symbol' data-ref="42int_symbol" data-ref-filename="42int_symbol">int_symbol</a>[<var>0</var>];</td></tr>
+<tr><th id="288">288</th><td>	  <a class="local col0 ref" href="#40space_char" title='space_char' data-ref="40space_char" data-ref-filename="40space_char">space_char</a> = <a class="local col3 ref" href="#43int_curr_symbol" title='int_curr_symbol' data-ref="43int_curr_symbol" data-ref-filename="43int_curr_symbol">int_curr_symbol</a>[<var>3</var>];</td></tr>
+<tr><th id="289">289</th><td>	  <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> = <var>1</var>;</td></tr>
+<tr><th id="290">290</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="291">291</th><td>	}</td></tr>
+<tr><th id="292">292</th><td>	<b>case</b> <kbd>'n'</kbd>:		<i>/* Use national currency symbol.  */</i></td></tr>
+<tr><th id="293">293</th><td>	  <a class="local col5 ref" href="#35currency_symbol" title='currency_symbol' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__CURRENCY_SYMBOL) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#440" title="__CURRENCY_SYMBOL" data-ref="_M/CURRENCY_SYMBOL">CURRENCY_SYMBOL</a>);</td></tr>
+<tr><th id="294">294</th><td>	  <a class="local col6 ref" href="#36currency_symbol_len" title='currency_symbol_len' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</a> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col5 ref" href="#35currency_symbol" title='currency_symbol' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</a>);</td></tr>
+<tr><th id="295">295</th><td>	  <a class="local col0 ref" href="#40space_char" title='space_char' data-ref="40space_char" data-ref-filename="40space_char">space_char</a> = <kbd>' '</kbd>;</td></tr>
+<tr><th id="296">296</th><td>	  <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> = <var>0</var>;</td></tr>
+<tr><th id="297">297</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="298">298</th><td>	<b>default</b>:		<i>/* Any unrecognized format is an error.  */</i></td></tr>
+<tr><th id="299">299</th><td>	  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="300">300</th><td>	  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="301">301</th><td>	}</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td>      <i>/* If not specified by the format string now find the values for</i></td></tr>
+<tr><th id="304">304</th><td><i>	 the format specification.  */</i></td></tr>
+<tr><th id="305">305</th><td>      <b>if</b> (<a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a> == -<var>2</var>)</td></tr>
+<tr><th id="306">306</th><td>	<a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_P_SIGN_POSN : __P_SIGN_POSN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#514" title="__INT_P_SIGN_POSN" data-ref="_M/INT_P_SIGN_POSN">INT_P_SIGN_POSN</a> : <a class="macro" href="../locale/langinfo.h.html#488" title="__P_SIGN_POSN" data-ref="_M/P_SIGN_POSN">P_SIGN_POSN</a>);</td></tr>
+<tr><th id="307">307</th><td>      <b>if</b> (<a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> == -<var>2</var>)</td></tr>
+<tr><th id="308">308</th><td>	<a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_N_SIGN_POSN : __N_SIGN_POSN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#518" title="__INT_N_SIGN_POSN" data-ref="_M/INT_N_SIGN_POSN">INT_N_SIGN_POSN</a> : <a class="macro" href="../locale/langinfo.h.html#492" title="__N_SIGN_POSN" data-ref="_M/N_SIGN_POSN">N_SIGN_POSN</a>);</td></tr>
+<tr><th id="309">309</th><td></td></tr>
+<tr><th id="310">310</th><td>      <b>if</b> (<a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> == -<var>1</var>)</td></tr>
+<tr><th id="311">311</th><td>	{</td></tr>
+<tr><th id="312">312</th><td>	  <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_FRAC_DIGITS : __FRAC_DIGITS) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#464" title="__INT_FRAC_DIGITS" data-ref="_M/INT_FRAC_DIGITS">INT_FRAC_DIGITS</a> : <a class="macro" href="../locale/langinfo.h.html#468" title="__FRAC_DIGITS" data-ref="_M/FRAC_DIGITS">FRAC_DIGITS</a>);</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>	  <b>if</b> (<a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> == <kbd>'\377'</kbd>)</td></tr>
+<tr><th id="315">315</th><td>	    <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> = <var>2</var>;</td></tr>
+<tr><th id="316">316</th><td>	}</td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td>      <i>/* If we have to print the digits grouped determine how many</i></td></tr>
+<tr><th id="319">319</th><td><i>	 extra characters this means.  */</i></td></tr>
+<tr><th id="320">320</th><td>      <b>if</b> (<a class="local col9 ref" href="#19group" title='group' data-ref="19group" data-ref-filename="19group">group</a> &amp;&amp; <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> != -<var>1</var>)</td></tr>
+<tr><th id="321">321</th><td>	<a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> += <a class="ref fn" href="../include/printf.h.html#__guess_grouping" title='__guess_grouping' data-ref="__guess_grouping" data-ref-filename="__guess_grouping">__guess_grouping</a> (<a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a>,</td></tr>
+<tr><th id="322">322</th><td>				       <a class="macro" href="#68" title="(current-&gt;values[((int) (__MON_GROUPING) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#452" title="__MON_GROUPING" data-ref="_M/MON_GROUPING">MON_GROUPING</a>));</td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td>      <i>/* Now it's time to get the value.  */</i></td></tr>
+<tr><th id="325">325</th><td>      <b>if</b> (<a class="local col1 ref" href="#21is_long_double" title='is_long_double' data-ref="21is_long_double" data-ref-filename="21is_long_double">is_long_double</a> == <var>1</var>)</td></tr>
+<tr><th id="326">326</th><td>	{</td></tr>
+<tr><th id="327">327</th><td>	  <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col2 ref field" href="#12ldbl" title='ldbl' data-ref="12ldbl" data-ref-filename="12ldbl">ldbl</a> = <span class="macro" title="__builtin_va_arg(ap, long double)" data-ref="_M/va_arg">va_arg</span> (<a class="local col5 ref" href="#5ap" title='ap' data-ref="5ap" data-ref-filename="5ap">ap</a>, <em>long</em> <em>double</em>);</td></tr>
+<tr><th id="328">328</th><td>	  <a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a> = <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col2 ref field" href="#12ldbl" title='ldbl' data-ref="12ldbl" data-ref-filename="12ldbl">ldbl</a> &lt; <var>0</var>;</td></tr>
+<tr><th id="329">329</th><td>	  <b>if</b> (<a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="330">330</th><td>	    <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col2 ref field" href="#12ldbl" title='ldbl' data-ref="12ldbl" data-ref-filename="12ldbl">ldbl</a> = -<a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col2 ref field" href="#12ldbl" title='ldbl' data-ref="12ldbl" data-ref-filename="12ldbl">ldbl</a>;</td></tr>
+<tr><th id="331">331</th><td>	}</td></tr>
+<tr><th id="332">332</th><td>      <b>else</b></td></tr>
+<tr><th id="333">333</th><td>	{</td></tr>
+<tr><th id="334">334</th><td>	  <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col1 ref field" href="#11dbl" title='dbl' data-ref="11dbl" data-ref-filename="11dbl">dbl</a> = <span class="macro" title="__builtin_va_arg(ap, double)" data-ref="_M/va_arg">va_arg</span> (<a class="local col5 ref" href="#5ap" title='ap' data-ref="5ap" data-ref-filename="5ap">ap</a>, <em>double</em>);</td></tr>
+<tr><th id="335">335</th><td>	  <a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a> = <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col1 ref field" href="#11dbl" title='dbl' data-ref="11dbl" data-ref-filename="11dbl">dbl</a> &lt; <var>0</var>;</td></tr>
+<tr><th id="336">336</th><td>	  <b>if</b> (<a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="337">337</th><td>	    <a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col1 ref field" href="#11dbl" title='dbl' data-ref="11dbl" data-ref-filename="11dbl">dbl</a> = -<a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>.<a class="local col1 ref field" href="#11dbl" title='dbl' data-ref="11dbl" data-ref-filename="11dbl">dbl</a>;</td></tr>
+<tr><th id="338">338</th><td>	}</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td>      <i>/* We now know the sign of the value and can determine the format.  */</i></td></tr>
+<tr><th id="341">341</th><td>      <b>if</b> (<a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="342">342</th><td>	{</td></tr>
+<tr><th id="343">343</th><td>	  <a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__NEGATIVE_SIGN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#460" title="__NEGATIVE_SIGN" data-ref="_M/NEGATIVE_SIGN">NEGATIVE_SIGN</a>);</td></tr>
+<tr><th id="344">344</th><td>	  <i>/* If the locale does not specify a character for the</i></td></tr>
+<tr><th id="345">345</th><td><i>	     negative sign we use a '-'.  */</i></td></tr>
+<tr><th id="346">346</th><td>	  <b>if</b> (*<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="347">347</th><td>	    <a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a> = (<em>const</em> <em>char</em> *) <q>"-"</q>;</td></tr>
+<tr><th id="348">348</th><td>	  <a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_N_CS_PRECEDES : __N_CS_PRECEDES) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#506" title="__INT_N_CS_PRECEDES" data-ref="_M/INT_N_CS_PRECEDES">INT_N_CS_PRECEDES</a> : <a class="macro" href="../locale/langinfo.h.html#480" title="__N_CS_PRECEDES" data-ref="_M/N_CS_PRECEDES">N_CS_PRECEDES</a>);</td></tr>
+<tr><th id="349">349</th><td>	  <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_N_SEP_BY_SPACE : __N_SEP_BY_SPACE) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#510" title="__INT_N_SEP_BY_SPACE" data-ref="_M/INT_N_SEP_BY_SPACE">INT_N_SEP_BY_SPACE</a> : <a class="macro" href="../locale/langinfo.h.html#484" title="__N_SEP_BY_SPACE" data-ref="_M/N_SEP_BY_SPACE">N_SEP_BY_SPACE</a>);</td></tr>
+<tr><th id="350">350</th><td>	  <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> = <a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a>;</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td>	  <a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__POSITIVE_SIGN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#456" title="__POSITIVE_SIGN" data-ref="_M/POSITIVE_SIGN">POSITIVE_SIGN</a>);</td></tr>
+<tr><th id="353">353</th><td>	  <a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_P_CS_PRECEDES : __P_CS_PRECEDES) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#498" title="__INT_P_CS_PRECEDES" data-ref="_M/INT_P_CS_PRECEDES">INT_P_CS_PRECEDES</a> : <a class="macro" href="../locale/langinfo.h.html#472" title="__P_CS_PRECEDES" data-ref="_M/P_CS_PRECEDES">P_CS_PRECEDES</a>);</td></tr>
+<tr><th id="354">354</th><td>	  <a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_P_SEP_BY_SPACE : __P_SEP_BY_SPACE) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#502" title="__INT_P_SEP_BY_SPACE" data-ref="_M/INT_P_SEP_BY_SPACE">INT_P_SEP_BY_SPACE</a> : <a class="macro" href="../locale/langinfo.h.html#476" title="__P_SEP_BY_SPACE" data-ref="_M/P_SEP_BY_SPACE">P_SEP_BY_SPACE</a>);</td></tr>
+<tr><th id="355">355</th><td>	  <a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> = <a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a>;</td></tr>
+<tr><th id="356">356</th><td>	}</td></tr>
+<tr><th id="357">357</th><td>      <b>else</b></td></tr>
+<tr><th id="358">358</th><td>	{</td></tr>
+<tr><th id="359">359</th><td>	  <a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__POSITIVE_SIGN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#456" title="__POSITIVE_SIGN" data-ref="_M/POSITIVE_SIGN">POSITIVE_SIGN</a>);</td></tr>
+<tr><th id="360">360</th><td>	  <a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_P_CS_PRECEDES : __P_CS_PRECEDES) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#498" title="__INT_P_CS_PRECEDES" data-ref="_M/INT_P_CS_PRECEDES">INT_P_CS_PRECEDES</a> : <a class="macro" href="../locale/langinfo.h.html#472" title="__P_CS_PRECEDES" data-ref="_M/P_CS_PRECEDES">P_CS_PRECEDES</a>);</td></tr>
+<tr><th id="361">361</th><td>	  <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_P_SEP_BY_SPACE : __P_SEP_BY_SPACE) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#502" title="__INT_P_SEP_BY_SPACE" data-ref="_M/INT_P_SEP_BY_SPACE">INT_P_SEP_BY_SPACE</a> : <a class="macro" href="../locale/langinfo.h.html#476" title="__P_SEP_BY_SPACE" data-ref="_M/P_SEP_BY_SPACE">P_SEP_BY_SPACE</a>);</td></tr>
+<tr><th id="362">362</th><td>	  <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> = <a class="local col2 ref" href="#22p_sign_posn" title='p_sign_posn' data-ref="22p_sign_posn" data-ref-filename="22p_sign_posn">p_sign_posn</a>;</td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td>	  <a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a> = <a class="macro" href="#68" title="(current-&gt;values[((int) (__NEGATIVE_SIGN) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="macro" href="../locale/langinfo.h.html#460" title="__NEGATIVE_SIGN" data-ref="_M/NEGATIVE_SIGN">NEGATIVE_SIGN</a>);</td></tr>
+<tr><th id="365">365</th><td>	  <b>if</b> (*<a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="366">366</th><td>	    <a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a> = (<em>const</em> <em>char</em> *) <q>"-"</q>;</td></tr>
+<tr><th id="367">367</th><td>	  <a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_N_CS_PRECEDES : __N_CS_PRECEDES) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#506" title="__INT_N_CS_PRECEDES" data-ref="_M/INT_N_CS_PRECEDES">INT_N_CS_PRECEDES</a> : <a class="macro" href="../locale/langinfo.h.html#480" title="__N_CS_PRECEDES" data-ref="_M/N_CS_PRECEDES">N_CS_PRECEDES</a>);</td></tr>
+<tr><th id="368">368</th><td>	  <a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> = *<a class="macro" href="#68" title="(current-&gt;values[((int) (int_format ? __INT_N_SEP_BY_SPACE : __N_SEP_BY_SPACE) &amp; 0xffff)].string)" data-ref="_M/_NL_CURRENT">_NL_CURRENT</a> (LC_MONETARY, <a class="local col4 ref" href="#14int_format" title='int_format' data-ref="14int_format" data-ref-filename="14int_format">int_format</a> ? <a class="macro" href="../locale/langinfo.h.html#510" title="__INT_N_SEP_BY_SPACE" data-ref="_M/INT_N_SEP_BY_SPACE">INT_N_SEP_BY_SPACE</a> : <a class="macro" href="../locale/langinfo.h.html#484" title="__N_SEP_BY_SPACE" data-ref="_M/N_SEP_BY_SPACE">N_SEP_BY_SPACE</a>);</td></tr>
+<tr><th id="369">369</th><td>	  <a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> = <a class="local col3 ref" href="#23n_sign_posn" title='n_sign_posn' data-ref="23n_sign_posn" data-ref-filename="23n_sign_posn">n_sign_posn</a>;</td></tr>
+<tr><th id="370">370</th><td>	}</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>      <i>/* Set default values for unspecified information.  */</i></td></tr>
+<tr><th id="373">373</th><td>      <b>if</b> (<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a> != <var>0</var>)</td></tr>
+<tr><th id="374">374</th><td>	<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a> = <var>1</var>;</td></tr>
+<tr><th id="375">375</th><td>      <b>if</b> (<a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a> != <var>0</var>)</td></tr>
+<tr><th id="376">376</th><td>	<a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a> = <var>1</var>;</td></tr>
+<tr><th id="377">377</th><td>      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <kbd>'\377'</kbd>)</td></tr>
+<tr><th id="378">378</th><td>	<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> = <var>0</var>;</td></tr>
+<tr><th id="379">379</th><td>      <b>if</b> (<a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> == <kbd>'\377'</kbd>)</td></tr>
+<tr><th id="380">380</th><td>	<a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> = <var>0</var>;</td></tr>
+<tr><th id="381">381</th><td>      <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <kbd>'\377'</kbd>)</td></tr>
+<tr><th id="382">382</th><td>	<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> = <var>1</var>;</td></tr>
+<tr><th id="383">383</th><td>      <b>if</b> (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <kbd>'\377'</kbd>)</td></tr>
+<tr><th id="384">384</th><td>	<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> = <var>1</var>;</td></tr>
+<tr><th id="385">385</th><td></td></tr>
+<tr><th id="386">386</th><td>      <i>/* Check for degenerate cases */</i></td></tr>
+<tr><th id="387">387</th><td>      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="388">388</th><td>	{</td></tr>
+<tr><th id="389">389</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>0</var> ||</td></tr>
+<tr><th id="390">390</th><td>	      (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>1</var> &amp;&amp; !<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a>) ||</td></tr>
+<tr><th id="391">391</th><td>	      (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>2</var> &amp;&amp; <a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a>))</td></tr>
+<tr><th id="392">392</th><td>	    <i>/* sign and symbol are not adjacent, so no separator */</i></td></tr>
+<tr><th id="393">393</th><td>	    <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> = <var>0</var>;</td></tr>
+<tr><th id="394">394</th><td>	}</td></tr>
+<tr><th id="395">395</th><td>      <b>if</b> (<a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="396">396</th><td>	{</td></tr>
+<tr><th id="397">397</th><td>	  <b>if</b> (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>0</var> ||</td></tr>
+<tr><th id="398">398</th><td>	      (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>1</var> &amp;&amp; !<a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a>) ||</td></tr>
+<tr><th id="399">399</th><td>	      (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>2</var> &amp;&amp; <a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a>))</td></tr>
+<tr><th id="400">400</th><td>	    <i>/* sign and symbol are not adjacent, so no separator */</i></td></tr>
+<tr><th id="401">401</th><td>	    <a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> = <var>0</var>;</td></tr>
+<tr><th id="402">402</th><td>	}</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td>      <i>/* Set the left precision and padding needed for alignment */</i></td></tr>
+<tr><th id="405">405</th><td>      <b>if</b> (<a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> == -<var>1</var>)</td></tr>
+<tr><th id="406">406</th><td>	{</td></tr>
+<tr><th id="407">407</th><td>	  <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> = <var>0</var>;</td></tr>
+<tr><th id="408">408</th><td>	  <a class="local col7 ref" href="#17left_pad" title='left_pad' data-ref="17left_pad" data-ref-filename="17left_pad">left_pad</a> = <var>0</var>;</td></tr>
+<tr><th id="409">409</th><td>	}</td></tr>
+<tr><th id="410">410</th><td>      <b>else</b></td></tr>
+<tr><th id="411">411</th><td>	{</td></tr>
+<tr><th id="412">412</th><td>	  <i>/* Set left_pad to number of spaces needed to align positive</i></td></tr>
+<tr><th id="413">413</th><td><i>	     and negative formats */</i></td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>	  <em>int</em> <dfn class="local col4 decl" id="44left_bytes" title='left_bytes' data-type='int' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</dfn> = <var>0</var>;</td></tr>
+<tr><th id="416">416</th><td>	  <em>int</em> <dfn class="local col5 decl" id="45other_left_bytes" title='other_left_bytes' data-type='int' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</dfn> = <var>0</var>;</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td>	  <i>/* Work out number of bytes for currency string and separator</i></td></tr>
+<tr><th id="419">419</th><td><i>	     preceding the value */</i></td></tr>
+<tr><th id="420">420</th><td>	  <b>if</b> (<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a>)</td></tr>
+<tr><th id="421">421</th><td>	    {</td></tr>
+<tr><th id="422">422</th><td>	      <a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a> += <a class="local col6 ref" href="#36currency_symbol_len" title='currency_symbol_len' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</a>;</td></tr>
+<tr><th id="423">423</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> != <var>0</var>)</td></tr>
+<tr><th id="424">424</th><td>		++<a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a>;</td></tr>
+<tr><th id="425">425</th><td>	    }</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>	  <b>if</b> (<a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a>)</td></tr>
+<tr><th id="428">428</th><td>	    {</td></tr>
+<tr><th id="429">429</th><td>	      <a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a> += <a class="local col6 ref" href="#36currency_symbol_len" title='currency_symbol_len' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</a>;</td></tr>
+<tr><th id="430">430</th><td>	      <b>if</b> (<a class="local col9 ref" href="#29other_sep_by_space" title='other_sep_by_space' data-ref="29other_sep_by_space" data-ref-filename="29other_sep_by_space">other_sep_by_space</a> != <var>0</var>)</td></tr>
+<tr><th id="431">431</th><td>		++<a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a>;</td></tr>
+<tr><th id="432">432</th><td>	    }</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>	  <i>/* Work out number of bytes for the sign (or left parenthesis)</i></td></tr>
+<tr><th id="435">435</th><td><i>	     preceding the value */</i></td></tr>
+<tr><th id="436">436</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>0</var> &amp;&amp; <a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="437">437</th><td>	    ++<a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a>;</td></tr>
+<tr><th id="438">438</th><td>	  <b>else</b> <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>1</var>)</td></tr>
+<tr><th id="439">439</th><td>	    <a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="440">440</th><td>	  <b>else</b> <b>if</b> (<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a> &amp;&amp; (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>3</var> || <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>4</var>))</td></tr>
+<tr><th id="441">441</th><td>	    <a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td>	  <b>if</b> (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>0</var> &amp;&amp; !<a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="444">444</th><td>	    ++<a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a>;</td></tr>
+<tr><th id="445">445</th><td>	  <b>else</b> <b>if</b> (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>1</var>)</td></tr>
+<tr><th id="446">446</th><td>	    <a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a>);</td></tr>
+<tr><th id="447">447</th><td>	  <b>else</b> <b>if</b> (<a class="local col1 ref" href="#31other_cs_precedes" title='other_cs_precedes' data-ref="31other_cs_precedes" data-ref-filename="31other_cs_precedes">other_cs_precedes</a> &amp;&amp;</td></tr>
+<tr><th id="448">448</th><td>		   (<a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>3</var> || <a class="local col5 ref" href="#25other_sign_posn" title='other_sign_posn' data-ref="25other_sign_posn" data-ref-filename="25other_sign_posn">other_sign_posn</a> == <var>4</var>))</td></tr>
+<tr><th id="449">449</th><td>	    <a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col3 ref" href="#33other_sign_string" title='other_sign_string' data-ref="33other_sign_string" data-ref-filename="33other_sign_string">other_sign_string</a>);</td></tr>
+<tr><th id="450">450</th><td></td></tr>
+<tr><th id="451">451</th><td>	  <i>/* Compare the number of bytes preceding the value for</i></td></tr>
+<tr><th id="452">452</th><td><i>	     each format, and set the padding accordingly */</i></td></tr>
+<tr><th id="453">453</th><td>	  <b>if</b> (<a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a> &gt; <a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a>)</td></tr>
+<tr><th id="454">454</th><td>	    <a class="local col7 ref" href="#17left_pad" title='left_pad' data-ref="17left_pad" data-ref-filename="17left_pad">left_pad</a> = <a class="local col5 ref" href="#45other_left_bytes" title='other_left_bytes' data-ref="45other_left_bytes" data-ref-filename="45other_left_bytes">other_left_bytes</a> - <a class="local col4 ref" href="#44left_bytes" title='left_bytes' data-ref="44left_bytes" data-ref-filename="44left_bytes">left_bytes</a>;</td></tr>
+<tr><th id="455">455</th><td>	  <b>else</b></td></tr>
+<tr><th id="456">456</th><td>	    <a class="local col7 ref" href="#17left_pad" title='left_pad' data-ref="17left_pad" data-ref-filename="17left_pad">left_pad</a> = <var>0</var>;</td></tr>
+<tr><th id="457">457</th><td>	}</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td>      <i>/* Perhaps we'll someday make these things configurable so</i></td></tr>
+<tr><th id="460">460</th><td><i>	 better start using symbolic names now.  */</i></td></tr>
+<tr><th id="461">461</th><td><u>#define <dfn class="macro" id="_M/left_paren" data-ref="_M/left_paren">left_paren</dfn> '('</u></td></tr>
+<tr><th id="462">462</th><td><u>#define <dfn class="macro" id="_M/right_paren" data-ref="_M/right_paren">right_paren</dfn> ')'</u></td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td>      <a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a> = <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>;		<i>/* Remember start so we can compute length.  */</i></td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>      <b>while</b> (<a class="local col7 ref" href="#17left_pad" title='left_pad' data-ref="17left_pad" data-ref-filename="17left_pad">left_pad</a>-- &gt; <var>0</var>)</td></tr>
+<tr><th id="467">467</th><td>	<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td>      <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>0</var> &amp;&amp; <a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="470">470</th><td>	<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos;(&apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<a class="macro" href="#461" title="&apos;(&apos;" data-ref="_M/left_paren">left_paren</a>);</td></tr>
+<tr><th id="471">471</th><td></td></tr>
+<tr><th id="472">472</th><td>      <b>if</b> (<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a>)</td></tr>
+<tr><th id="473">473</th><td>	{</td></tr>
+<tr><th id="474">474</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>0</var> &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>2</var> &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>4</var></td></tr>
+<tr><th id="475">475</th><td>	      &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>5</var>)</td></tr>
+<tr><th id="476">476</th><td>	    {</td></tr>
+<tr><th id="477">477</th><td>	      <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="478">478</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="479">479</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="480">480</th><td>	    }</td></tr>
+<tr><th id="481">481</th><td></td></tr>
+<tr><th id="482">482</th><td>	  <b>if</b> (<a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a>)</td></tr>
+<tr><th id="483">483</th><td>	    <a class="macro" href="#45" title="do { const char *_s = (currency_symbol); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col5 ref" href="#35currency_symbol" title='currency_symbol' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</a>);</td></tr>
+<tr><th id="484">484</th><td></td></tr>
+<tr><th id="485">485</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>4</var>)</td></tr>
+<tr><th id="486">486</th><td>	    {</td></tr>
+<tr><th id="487">487</th><td>	      <b>if</b> (<a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="488">488</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (space_char); } while (0)" data-ref="_M/out_char">out_char</a> (<a class="local col0 ref" href="#40space_char" title='space_char' data-ref="40space_char" data-ref-filename="40space_char">space_char</a>);</td></tr>
+<tr><th id="489">489</th><td>	      <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="490">490</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="491">491</th><td>		<i>/* POSIX.2 and SUS are not clear on this case, but C99</i></td></tr>
+<tr><th id="492">492</th><td><i>		   says a space follows the adjacent-symbol-and-sign */</i></td></tr>
+<tr><th id="493">493</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="494">494</th><td>	    }</td></tr>
+<tr><th id="495">495</th><td>	  <b>else</b></td></tr>
+<tr><th id="496">496</th><td>	    <b>if</b> (<a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="497">497</th><td>	      <a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (space_char); } while (0)" data-ref="_M/out_char">out_char</a> (<a class="local col0 ref" href="#40space_char" title='space_char' data-ref="40space_char" data-ref-filename="40space_char">space_char</a>);</td></tr>
+<tr><th id="498">498</th><td>	}</td></tr>
+<tr><th id="499">499</th><td>      <b>else</b></td></tr>
+<tr><th id="500">500</th><td>	<b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>0</var> &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>2</var> &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>3</var></td></tr>
+<tr><th id="501">501</th><td>	    &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>4</var> &amp;&amp; <a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> != <var>5</var>)</td></tr>
+<tr><th id="502">502</th><td>	  <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="503">503</th><td></td></tr>
+<tr><th id="504">504</th><td>      <i>/* Print the number.  */</i></td></tr>
+<tr><th id="505">505</th><td><u>#<span data-ppcond="505">ifdef</span> <span class="macro" data-ref="_M/_IO_MTSAFE_IO">_IO_MTSAFE_IO</span></u></td></tr>
+<tr><th id="506">506</th><td>      <a class="local col7 ref" href="#7f" title='f' data-ref="7f" data-ref-filename="7f">f</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_strfile_::_sbf" title='_IO_strfile_::_sbf' data-ref="_IO_strfile_::_sbf" data-ref-filename="_IO_strfile_.._sbf">_sbf</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_streambuf::_f" title='_IO_streambuf::_f' data-ref="_IO_streambuf::_f" data-ref-filename="_IO_streambuf.._f">_f</a>.<a class="ref field" href="../libio/bits/libio.h.html#_IO_FILE::_lock" title='_IO_FILE::_lock' data-ref="_IO_FILE::_lock" data-ref-filename="_IO_FILE.._lock">_lock</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="507">507</th><td><u>#<span data-ppcond="505">endif</span></u></td></tr>
+<tr><th id="508">508</th><td>      <a class="ref fn" href="../libio/libioP.h.html#_IO_init_internal" title='_IO_init_internal' data-ref="_IO_init_internal" data-ref-filename="_IO_init_internal">_IO_init_internal</a> (&amp;<a class="local col7 ref" href="#7f" title='f' data-ref="7f" data-ref-filename="7f">f</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_strfile_::_sbf" title='_IO_strfile_::_sbf' data-ref="_IO_strfile_::_sbf" data-ref-filename="_IO_strfile_.._sbf">_sbf</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_streambuf::_f" title='_IO_streambuf::_f' data-ref="_IO_streambuf::_f" data-ref-filename="_IO_streambuf.._f">_f</a>, <var>0</var>);</td></tr>
+<tr><th id="509">509</th><td>      <a class="macro" href="../libio/libioP.h.html#97" title="(&amp;f._sbf)-&gt;vtable" data-ref="_M/_IO_JUMPS">_IO_JUMPS</a> (&amp;<a class="local col7 ref" href="#7f" title='f' data-ref="7f" data-ref-filename="7f">f</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_strfile_::_sbf" title='_IO_strfile_::_sbf' data-ref="_IO_strfile_::_sbf" data-ref-filename="_IO_strfile_.._sbf">_sbf</a>) = &amp;<a class="ref" href="../libio/libioP.h.html#_IO_str_jumps" title='_IO_str_jumps' data-ref="_IO_str_jumps" data-ref-filename="_IO_str_jumps">_IO_str_jumps</a>;</td></tr>
+<tr><th id="510">510</th><td>      <a class="ref fn" href="../libio/libioP.h.html#_IO_str_init_static_internal" title='_IO_str_init_static_internal' data-ref="_IO_str_init_static_internal" data-ref-filename="_IO_str_init_static_internal">_IO_str_init_static_internal</a> (&amp;<a class="local col7 ref" href="#7f" title='f' data-ref="7f" data-ref-filename="7f">f</a>, <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>, (<a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a> + <a class="local col2 ref" href="#2maxsize" title='maxsize' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</a>) - <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>, <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a>);</td></tr>
+<tr><th id="511">511</th><td>      <i>/* We clear the last available byte so we can find out whether</i></td></tr>
+<tr><th id="512">512</th><td><i>	 the numeric representation is too long.  */</i></td></tr>
+<tr><th id="513">513</th><td>      <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>[<a class="local col2 ref" href="#2maxsize" title='maxsize' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</a> - <var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="514">514</th><td></td></tr>
+<tr><th id="515">515</th><td>      <a class="ref fn" href="../string/string.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a> (&amp;<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>));</td></tr>
+<tr><th id="516">516</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::prec" title='printf_info::prec' data-ref="printf_info::prec" data-ref-filename="printf_info..prec">prec</a> = <a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a>;</td></tr>
+<tr><th id="517">517</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::width" title='printf_info::width' data-ref="printf_info::width" data-ref-filename="printf_info..width">width</a> = <a class="local col6 ref" href="#16left_prec" title='left_prec' data-ref="16left_prec" data-ref-filename="16left_prec">left_prec</a> + (<a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> ? (<a class="local col8 ref" href="#18right_prec" title='right_prec' data-ref="18right_prec" data-ref-filename="18right_prec">right_prec</a> + <var>1</var>) : <var>0</var>);</td></tr>
+<tr><th id="518">518</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::spec" title='printf_info::spec' data-ref="printf_info::spec" data-ref-filename="printf_info..spec">spec</a> = <kbd>'f'</kbd>;</td></tr>
+<tr><th id="519">519</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::is_long_double" title='printf_info::is_long_double' data-ref="printf_info::is_long_double" data-ref-filename="printf_info..is_long_double">is_long_double</a> = <a class="local col1 ref" href="#21is_long_double" title='is_long_double' data-ref="21is_long_double" data-ref-filename="21is_long_double">is_long_double</a>;</td></tr>
+<tr><th id="520">520</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::group" title='printf_info::group' data-ref="printf_info::group" data-ref-filename="printf_info..group">group</a> = <a class="local col9 ref" href="#19group" title='group' data-ref="19group" data-ref-filename="19group">group</a>;</td></tr>
+<tr><th id="521">521</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::pad" title='printf_info::pad' data-ref="printf_info::pad" data-ref-filename="printf_info..pad">pad</a> = <a class="local col0 ref" href="#20pad" title='pad' data-ref="20pad" data-ref-filename="20pad">pad</a>;</td></tr>
+<tr><th id="522">522</th><td>      <a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>.<a class="ref field" href="../stdio-common/printf.h.html#printf_info::extra" title='printf_info::extra' data-ref="printf_info::extra" data-ref-filename="printf_info..extra">extra</a> = <var>1</var>;		<i>/* This means use values from LC_MONETARY.  */</i></td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td>      <a class="local col9 ref" href="#39ptr" title='ptr' data-ref="39ptr" data-ref-filename="39ptr">ptr</a> = &amp;<a class="local col3 ref" href="#13fpnum" title='fpnum' data-ref="13fpnum" data-ref-filename="13fpnum">fpnum</a>;</td></tr>
+<tr><th id="525">525</th><td>      <a class="local col4 ref" href="#34done" title='done' data-ref="34done" data-ref-filename="34done">done</a> = <a class="ref fn" href="../include/printf.h.html#__printf_fp_l" title='__printf_fp_l' data-ref="__printf_fp_l" data-ref-filename="__printf_fp_l">__printf_fp_l</a> (&amp;<a class="local col7 ref" href="#7f" title='f' data-ref="7f" data-ref-filename="7f">f</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_strfile_::_sbf" title='_IO_strfile_::_sbf' data-ref="_IO_strfile_::_sbf" data-ref-filename="_IO_strfile_.._sbf">_sbf</a>.<a class="ref field" href="../libio/strfile.h.html#_IO_streambuf::_f" title='_IO_streambuf::_f' data-ref="_IO_streambuf::_f" data-ref-filename="_IO_streambuf.._f">_f</a>, <a class="local col3 ref" href="#3loc" title='loc' data-ref="3loc" data-ref-filename="3loc">loc</a>, &amp;<a class="local col8 ref" href="#8info" title='info' data-ref="8info" data-ref-filename="8info">info</a>, &amp;<a class="local col9 ref" href="#39ptr" title='ptr' data-ref="39ptr" data-ref-filename="39ptr">ptr</a>);</td></tr>
+<tr><th id="526">526</th><td>      <b>if</b> (<a class="local col4 ref" href="#34done" title='done' data-ref="34done" data-ref-filename="34done">done</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="527">527</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="528">528</th><td></td></tr>
+<tr><th id="529">529</th><td>      <b>if</b> (<a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>[<a class="local col2 ref" href="#2maxsize" title='maxsize' data-ref="2maxsize" data-ref-filename="2maxsize">maxsize</a> - <var>1</var>] != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="530">530</th><td>	{</td></tr>
+<tr><th id="531">531</th><td>	  <a class="macro" href="../include/errno.h.html#37" title="(__libc_errno = (7))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#11" title="7" data-ref="_M/E2BIG">E2BIG</a>);</td></tr>
+<tr><th id="532">532</th><td>	  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="533">533</th><td>	}</td></tr>
+<tr><th id="534">534</th><td></td></tr>
+<tr><th id="535">535</th><td>      <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> += <a class="local col4 ref" href="#34done" title='done' data-ref="34done" data-ref-filename="34done">done</a>;</td></tr>
+<tr><th id="536">536</th><td></td></tr>
+<tr><th id="537">537</th><td>      <b>if</b> (!<a class="local col0 ref" href="#30cs_precedes" title='cs_precedes' data-ref="30cs_precedes" data-ref-filename="30cs_precedes">cs_precedes</a>)</td></tr>
+<tr><th id="538">538</th><td>	{</td></tr>
+<tr><th id="539">539</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>3</var>)</td></tr>
+<tr><th id="540">540</th><td>	    {</td></tr>
+<tr><th id="541">541</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="542">542</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="543">543</th><td>	      <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="544">544</th><td>	    }</td></tr>
+<tr><th id="545">545</th><td></td></tr>
+<tr><th id="546">546</th><td>	  <b>if</b> (<a class="local col5 ref" href="#15print_curr_symbol" title='print_curr_symbol' data-ref="15print_curr_symbol" data-ref-filename="15print_curr_symbol">print_curr_symbol</a>)</td></tr>
+<tr><th id="547">547</th><td>	    {</td></tr>
+<tr><th id="548">548</th><td>	      <b>if</b> ((<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>3</var> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="549">549</th><td>		  || (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>4</var> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="550">550</th><td>		  || (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>2</var> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="551">551</th><td>		  || (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>1</var> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>)</td></tr>
+<tr><th id="552">552</th><td>		  || (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>0</var> &amp;&amp; <a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>1</var>))</td></tr>
+<tr><th id="553">553</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (space_char); } while (0)" data-ref="_M/out_char">out_char</a> (<a class="local col0 ref" href="#40space_char" title='space_char' data-ref="40space_char" data-ref-filename="40space_char">space_char</a>);</td></tr>
+<tr><th id="554">554</th><td>	      <a class="macro" href="#52" title="do { int _n = (currency_symbol_len); const char *_s = (currency_symbol); while (_n-- &gt; 0) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_nstring">out_nstring</a> (<a class="local col5 ref" href="#35currency_symbol" title='currency_symbol' data-ref="35currency_symbol" data-ref-filename="35currency_symbol">currency_symbol</a>, <a class="local col6 ref" href="#36currency_symbol_len" title='currency_symbol_len' data-ref="36currency_symbol_len" data-ref-filename="36currency_symbol_len">currency_symbol_len</a>);</td></tr>
+<tr><th id="555">555</th><td>	    }</td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td>	  <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>4</var>)</td></tr>
+<tr><th id="558">558</th><td>	    {</td></tr>
+<tr><th id="559">559</th><td>	      <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="560">560</th><td>		<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="561">561</th><td>	      <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="562">562</th><td>	    }</td></tr>
+<tr><th id="563">563</th><td>	}</td></tr>
+<tr><th id="564">564</th><td></td></tr>
+<tr><th id="565">565</th><td>      <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>2</var>)</td></tr>
+<tr><th id="566">566</th><td>	{</td></tr>
+<tr><th id="567">567</th><td>	  <b>if</b> (<a class="local col8 ref" href="#28sep_by_space" title='sep_by_space' data-ref="28sep_by_space" data-ref-filename="28sep_by_space">sep_by_space</a> == <var>2</var>)</td></tr>
+<tr><th id="568">568</th><td>	    <a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="569">569</th><td>	  <a class="macro" href="#45" title="do { const char *_s = (sign_string); while (*_s) do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (*_s++); } while (0); } while (0)" data-ref="_M/out_string">out_string</a> (<a class="local col2 ref" href="#32sign_string" title='sign_string' data-ref="32sign_string" data-ref-filename="32sign_string">sign_string</a>);</td></tr>
+<tr><th id="570">570</th><td>	}</td></tr>
+<tr><th id="571">571</th><td></td></tr>
+<tr><th id="572">572</th><td>      <b>if</b> (<a class="local col4 ref" href="#24sign_posn" title='sign_posn' data-ref="24sign_posn" data-ref-filename="24sign_posn">sign_posn</a> == <var>0</var> &amp;&amp; <a class="local col7 ref" href="#27is_negative" title='is_negative' data-ref="27is_negative" data-ref-filename="27is_negative">is_negative</a>)</td></tr>
+<tr><th id="573">573</th><td>	<a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos;)&apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<a class="macro" href="#462" title="&apos;)&apos;" data-ref="_M/right_paren">right_paren</a>);</td></tr>
+<tr><th id="574">574</th><td></td></tr>
+<tr><th id="575">575</th><td>      <i>/* Now test whether the output width is filled.  */</i></td></tr>
+<tr><th id="576">576</th><td>      <b>if</b> (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a> &lt; <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a>)</td></tr>
+<tr><th id="577">577</th><td>	{</td></tr>
+<tr><th id="578">578</th><td>	  <b>if</b> (<a class="local col6 ref" href="#26left" title='left' data-ref="26left" data-ref-filename="26left">left</a>)</td></tr>
+<tr><th id="579">579</th><td>	    <i>/* We simply have to fill using spaces.  */</i></td></tr>
+<tr><th id="580">580</th><td>	    <b>do</b></td></tr>
+<tr><th id="581">581</th><td>	      <a class="macro" href="#34" title="do { if (dest &gt;= s + maxsize - 1) { (__libc_errno = (7)); __builtin_va_end(ap); return -1; } *dest++ = (&apos; &apos;); } while (0)" data-ref="_M/out_char">out_char</a> (<kbd>' '</kbd>);</td></tr>
+<tr><th id="582">582</th><td>	    <b>while</b> (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a> &lt; <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a>);</td></tr>
+<tr><th id="583">583</th><td>	  <b>else</b></td></tr>
+<tr><th id="584">584</th><td>	    {</td></tr>
+<tr><th id="585">585</th><td>	      <em>long</em> <em>int</em> <dfn class="local col5 decl" id="55dist" title='dist' data-type='long' data-ref="55dist" data-ref-filename="55dist">dist</dfn> = <a class="local col7 ref" href="#37width" title='width' data-ref="37width" data-ref-filename="37width">width</a> - (<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a>);</td></tr>
+<tr><th id="586">586</th><td>	      <b>for</b> (<em>char</em> *<dfn class="local col6 decl" id="56cp" title='cp' data-type='char *' data-ref="56cp" data-ref-filename="56cp">cp</dfn> = <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <var>1</var>; <a class="local col6 ref" href="#56cp" title='cp' data-ref="56cp" data-ref-filename="56cp">cp</a> &gt;= <a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a>; --<a class="local col6 ref" href="#56cp" title='cp' data-ref="56cp" data-ref-filename="56cp">cp</a>)</td></tr>
+<tr><th id="587">587</th><td>		<a class="local col6 ref" href="#56cp" title='cp' data-ref="56cp" data-ref-filename="56cp">cp</a>[<a class="local col5 ref" href="#55dist" title='dist' data-ref="55dist" data-ref-filename="55dist">dist</a>] = <a class="local col6 ref" href="#56cp" title='cp' data-ref="56cp" data-ref-filename="56cp">cp</a>[<var>0</var>];</td></tr>
+<tr><th id="588">588</th><td></td></tr>
+<tr><th id="589">589</th><td>	      <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> += <a class="local col5 ref" href="#55dist" title='dist' data-ref="55dist" data-ref-filename="55dist">dist</a>;</td></tr>
+<tr><th id="590">590</th><td></td></tr>
+<tr><th id="591">591</th><td>	      <b>do</b></td></tr>
+<tr><th id="592">592</th><td>		<a class="local col8 ref" href="#38startp" title='startp' data-ref="38startp" data-ref-filename="38startp">startp</a>[--<a class="local col5 ref" href="#55dist" title='dist' data-ref="55dist" data-ref-filename="55dist">dist</a>] = <kbd>' '</kbd>;</td></tr>
+<tr><th id="593">593</th><td>	      <b>while</b> (<a class="local col5 ref" href="#55dist" title='dist' data-ref="55dist" data-ref-filename="55dist">dist</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="594">594</th><td>	    }</td></tr>
+<tr><th id="595">595</th><td>	}</td></tr>
+<tr><th id="596">596</th><td>    }</td></tr>
+<tr><th id="597">597</th><td></td></tr>
+<tr><th id="598">598</th><td>  <i>/* Terminate the string.  */</i></td></tr>
+<tr><th id="599">599</th><td>  *<a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td>  <b>return</b> <a class="local col9 ref" href="#9dest" title='dest' data-ref="9dest" data-ref-filename="9dest">dest</a> - <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>;</td></tr>
+<tr><th id="602">602</th><td>}</td></tr>
+<tr><th id="603">603</th><td></td></tr>
+<tr><th id="604">604</th><td><a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a></td></tr>
+<tr><th id="605">605</th><td><dfn class="decl def fn" id="___strfmon_l" title='___strfmon_l' data-ref="___strfmon_l" data-ref-filename="___strfmon_l">___strfmon_l</dfn> (<em>char</em> *<dfn class="local col7 decl" id="57s" title='s' data-type='char *' data-ref="57s" data-ref-filename="57s">s</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="58maxsize" title='maxsize' data-type='size_t' data-ref="58maxsize" data-ref-filename="58maxsize">maxsize</dfn>, <a class="typedef" href="../locale/bits/types/locale_t.h.html#locale_t" title='locale_t' data-type='__locale_t' data-ref="locale_t" data-ref-filename="locale_t">locale_t</a> <dfn class="local col9 decl" id="59loc" title='loc' data-type='locale_t' data-ref="59loc" data-ref-filename="59loc">loc</dfn>, <em>const</em> <em>char</em> *<dfn class="local col0 decl" id="60format" title='format' data-type='const char *' data-ref="60format" data-ref-filename="60format">format</dfn>, ...)</td></tr>
+<tr><th id="606">606</th><td>{</td></tr>
+<tr><th id="607">607</th><td>  <span class='typedef' title='va_list' data-type='__gnuc_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col1 decl" id="61ap" title='ap' data-type='va_list' data-ref="61ap" data-ref-filename="61ap">ap</dfn>;</td></tr>
+<tr><th id="608">608</th><td></td></tr>
+<tr><th id="609">609</th><td>  <span class="macro" title="__builtin_va_start(ap, format)" data-ref="_M/va_start">va_start</span> (<a class="local col1 ref" href="#61ap" title='ap' data-ref="61ap" data-ref-filename="61ap">ap</a>, <a class="local col0 ref" href="#60format" title='format' data-ref="60format" data-ref-filename="60format">format</a>);</td></tr>
+<tr><th id="610">610</th><td></td></tr>
+<tr><th id="611">611</th><td>  <a class="typedef" href="../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col2 decl" id="62res" title='res' data-type='ssize_t' data-ref="62res" data-ref-filename="62res">res</dfn> = <a class="ref fn" href="#__vstrfmon_l" title='__vstrfmon_l' data-ref="__vstrfmon_l" data-ref-filename="__vstrfmon_l">__vstrfmon_l</a> (<a class="local col7 ref" href="#57s" title='s' data-ref="57s" data-ref-filename="57s">s</a>, <a class="local col8 ref" href="#58maxsize" title='maxsize' data-ref="58maxsize" data-ref-filename="58maxsize">maxsize</a>, <a class="local col9 ref" href="#59loc" title='loc' data-ref="59loc" data-ref-filename="59loc">loc</a>, <a class="local col0 ref" href="#60format" title='format' data-ref="60format" data-ref-filename="60format">format</a>, <a class="local col1 ref" href="#61ap" title='ap' data-ref="61ap" data-ref-filename="61ap">ap</a>);</td></tr>
+<tr><th id="612">612</th><td></td></tr>
+<tr><th id="613">613</th><td>  <span class="macro" title="__builtin_va_end(ap)" data-ref="_M/va_end">va_end</span> (<a class="local col1 ref" href="#61ap" title='ap' data-ref="61ap" data-ref-filename="61ap">ap</a>);</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td>  <b>return</b> <a class="local col2 ref" href="#62res" title='res' data-ref="62res" data-ref-filename="62res">res</a>;</td></tr>
+<tr><th id="616">616</th><td>}</td></tr>
+<tr><th id="617">617</th><td><a class="macro" href="../sysdeps/generic/math_ldbl_opt.h.html#12" title="extern __typeof (___strfmon_l) __strfmon_l __attribute__ ((alias (&quot;___strfmon_l&quot;)));" data-ref="_M/ldbl_strong_alias">ldbl_strong_alias</a> (<a class="ref fn" href="#___strfmon_l" title='___strfmon_l' data-ref="___strfmon_l" data-ref-filename="___strfmon_l">___strfmon_l</a>, <dfn class="decl def fn" id="__strfmon_l" title='__strfmon_l' data-ref="__strfmon_l" data-ref-filename="__strfmon_l">__strfmon_l</dfn>)</td></tr>
+<tr><th id="618">618</th><td><a class="macro" href="../sysdeps/generic/math_ldbl_opt.h.html#13" title="extern __typeof (___strfmon_l) strfmon_l __attribute__ ((weak, alias (&quot;___strfmon_l&quot;)));" data-ref="_M/ldbl_weak_alias">ldbl_weak_alias</a> (<a class="ref fn" href="#___strfmon_l" title='___strfmon_l' data-ref="___strfmon_l" data-ref-filename="___strfmon_l">___strfmon_l</a>, <dfn class="decl def fn" id="strfmon_l" title='strfmon_l' data-ref="strfmon_l" data-ref-filename="strfmon_l">strfmon_l</dfn>)</td></tr>
+<tr><th id="619">619</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

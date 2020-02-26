@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-exception.c source code [glibc_src_2.27/elf/dl-exception.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.27/elf/dl-exception.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.27</a>/<a href='./'>elf</a>/<a href='dl-exception.c.html'>dl-exception.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* ld.so error exception allocation and deallocation.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2018 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="_dl_out_of_memory">/* This message we return as a last resort.  We define the string in a</i></td></tr>
+<tr><th id="28">28</th><td><i  data-doc="_dl_out_of_memory">   variable since we have to avoid freeing it and so have to enable</i></td></tr>
+<tr><th id="29">29</th><td><i  data-doc="_dl_out_of_memory">   a pointer comparison.  See below and in dlfcn/dlerror.c.  */</i></td></tr>
+<tr><th id="30">30</th><td><em>static</em> <em>const</em> <em>char</em> <dfn class="tu decl def" id="_dl_out_of_memory" title='_dl_out_of_memory' data-type='const char [14]' data-ref="_dl_out_of_memory" data-ref-filename="_dl_out_of_memory">_dl_out_of_memory</dfn>[] = <q>"out of memory"</q>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i  data-doc="oom_exception">/* Dummy allocation object used if allocating the message buffer</i></td></tr>
+<tr><th id="33">33</th><td><i  data-doc="oom_exception">   fails.  */</i></td></tr>
+<tr><th id="34">34</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="35">35</th><td><dfn class="tu decl def fn" id="oom_exception" title='oom_exception' data-type='void oom_exception(struct dl_exception * exception)' data-ref="oom_exception" data-ref-filename="oom_exception">oom_exception</dfn> (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_exception" title='dl_exception' data-ref="dl_exception" data-ref-filename="dl_exception">dl_exception</a> *<dfn class="local col1 decl" id="1exception" title='exception' data-type='struct dl_exception *' data-ref="1exception" data-ref-filename="1exception">exception</dfn>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>  <a class="local col1 ref" href="#1exception" title='exception' data-ref="1exception" data-ref-filename="1exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::objname" title='dl_exception::objname' data-ref="dl_exception::objname" data-ref-filename="dl_exception..objname">objname</a> = <q>""</q>;</td></tr>
+<tr><th id="38">38</th><td>  <a class="local col1 ref" href="#1exception" title='exception' data-ref="1exception" data-ref-filename="1exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::errstring" title='dl_exception::errstring' data-ref="dl_exception::errstring" data-ref-filename="dl_exception..errstring">errstring</a> = <a class="tu ref" href="#_dl_out_of_memory" title='_dl_out_of_memory' data-use='r' data-ref="_dl_out_of_memory" data-ref-filename="_dl_out_of_memory">_dl_out_of_memory</a>;</td></tr>
+<tr><th id="39">39</th><td>  <a class="local col1 ref" href="#1exception" title='exception' data-ref="1exception" data-ref-filename="1exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::message_buffer" title='dl_exception::message_buffer' data-ref="dl_exception::message_buffer" data-ref-filename="dl_exception..message_buffer">message_buffer</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="40">40</th><td>}</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="43">43</th><td><b>__attribute__</b> ((noreturn))</td></tr>
+<tr><th id="44">44</th><td><dfn class="tu decl def fn" id="length_mismatch" title='length_mismatch' data-type='void length_mismatch()' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</dfn> (<em>void</em>)</td></tr>
+<tr><th id="45">45</th><td>{</td></tr>
+<tr><th id="46">46</th><td>  <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#729" title="do { _dl_dprintf (2, &quot;Fatal error: &quot; &quot;length accounting in _dl_exception_create_format\n&quot;); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"Fatal error: "</q></td></tr>
+<tr><th id="47">47</th><td>                    <q>"length accounting in _dl_exception_create_format\n"</q>);</td></tr>
+<tr><th id="48">48</th><td>}</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i  data-doc="adjust_message_buffer">/* Adjust the message buffer to indicate whether it is possible to</i></td></tr>
+<tr><th id="51">51</th><td><i  data-doc="adjust_message_buffer">   free it.  EXCEPTION-&gt;errstring must be a potentially deallocatable</i></td></tr>
+<tr><th id="52">52</th><td><i  data-doc="adjust_message_buffer">   pointer.  */</i></td></tr>
+<tr><th id="53">53</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="54">54</th><td><dfn class="tu decl def fn" id="adjust_message_buffer" title='adjust_message_buffer' data-type='void adjust_message_buffer(struct dl_exception * exception)' data-ref="adjust_message_buffer" data-ref-filename="adjust_message_buffer">adjust_message_buffer</dfn> (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_exception" title='dl_exception' data-ref="dl_exception" data-ref-filename="dl_exception">dl_exception</a> *<dfn class="local col2 decl" id="2exception" title='exception' data-type='struct dl_exception *' data-ref="2exception" data-ref-filename="2exception">exception</dfn>)</td></tr>
+<tr><th id="55">55</th><td>{</td></tr>
+<tr><th id="56">56</th><td>  <i>/* If the main executable is relocated it means the libc's malloc</i></td></tr>
+<tr><th id="57">57</th><td><i>     is used.  */</i></td></tr>
+<tr><th id="58">58</th><td>  <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col3 decl" id="3malloced" title='malloced' data-type='_Bool' data-ref="3malloced" data-ref-filename="3malloced">malloced</dfn> = <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="59">59</th><td><u>#<span data-ppcond="59">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="60">60</th><td>  <a class="local col3 ref" href="#3malloced" title='malloced' data-ref="3malloced" data-ref-filename="3malloced">malloced</a> = (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#280" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="macro" href="../dlfcn/dlfcn.h.html#47" title="0" data-ref="_M/LM_ID_BASE">LM_ID_BASE</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span></td></tr>
+<tr><th id="61">61</th><td>              &amp;&amp; (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#280" title="_rtld_local._dl_ns" data-ref="_M/GL">GL</a>(dl_ns)[<a class="macro" href="../dlfcn/dlfcn.h.html#47" title="0" data-ref="_M/LM_ID_BASE">LM_ID_BASE</a>].<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a>-&gt;<a class="ref field" href="../include/link.h.html#link_map::l_relocated" title='link_map::l_relocated' data-ref="link_map::l_relocated" data-ref-filename="link_map..l_relocated">l_relocated</a> != <var>0</var>));</td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="59">endif</span></u></td></tr>
+<tr><th id="63">63</th><td>  <b>if</b> (<a class="local col3 ref" href="#3malloced" title='malloced' data-ref="3malloced" data-ref-filename="3malloced">malloced</a>)</td></tr>
+<tr><th id="64">64</th><td>    <a class="local col2 ref" href="#2exception" title='exception' data-ref="2exception" data-ref-filename="2exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::message_buffer" title='dl_exception::message_buffer' data-ref="dl_exception::message_buffer" data-ref-filename="dl_exception..message_buffer">message_buffer</a> = (<em>char</em> *) <a class="local col2 ref" href="#2exception" title='exception' data-ref="2exception" data-ref-filename="2exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::errstring" title='dl_exception::errstring' data-ref="dl_exception::errstring" data-ref-filename="dl_exception..errstring">errstring</a>;</td></tr>
+<tr><th id="65">65</th><td>  <b>else</b></td></tr>
+<tr><th id="66">66</th><td>    <a class="local col2 ref" href="#2exception" title='exception' data-ref="2exception" data-ref-filename="2exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::message_buffer" title='dl_exception::message_buffer' data-ref="dl_exception::message_buffer" data-ref-filename="dl_exception..message_buffer">message_buffer</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="67">67</th><td>}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><em>void</em></td></tr>
+<tr><th id="70">70</th><td><dfn class="decl def fn" id="__GI__dl_exception_create" title='_dl_exception_create' data-ref="__GI__dl_exception_create" data-ref-filename="__GI__dl_exception_create">_dl_exception_create</dfn> (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_exception" title='dl_exception' data-ref="dl_exception" data-ref-filename="dl_exception">dl_exception</a> *<dfn class="local col4 decl" id="4exception" title='exception' data-type='struct dl_exception *' data-ref="4exception" data-ref-filename="4exception">exception</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5objname" title='objname' data-type='const char *' data-ref="5objname" data-ref-filename="5objname">objname</dfn>,</td></tr>
+<tr><th id="71">71</th><td>                      <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="6errstring" title='errstring' data-type='const char *' data-ref="6errstring" data-ref-filename="6errstring">errstring</dfn>)</td></tr>
+<tr><th id="72">72</th><td>{</td></tr>
+<tr><th id="73">73</th><td>  <b>if</b> (<a class="local col5 ref" href="#5objname" title='objname' data-ref="5objname" data-ref-filename="5objname">objname</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="74">74</th><td>    <a class="local col5 ref" href="#5objname" title='objname' data-ref="5objname" data-ref-filename="5objname">objname</a> = <q>""</q>;</td></tr>
+<tr><th id="75">75</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="7len_objname" title='len_objname' data-type='size_t' data-ref="7len_objname" data-ref-filename="7len_objname">len_objname</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col5 ref" href="#5objname" title='objname' data-ref="5objname" data-ref-filename="5objname">objname</a>) + <var>1</var>;</td></tr>
+<tr><th id="76">76</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="8len_errstring" title='len_errstring' data-type='size_t' data-ref="8len_errstring" data-ref-filename="8len_errstring">len_errstring</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col6 ref" href="#6errstring" title='errstring' data-ref="6errstring" data-ref-filename="6errstring">errstring</a>) + <var>1</var>;</td></tr>
+<tr><th id="77">77</th><td>  <em>char</em> *<dfn class="local col9 decl" id="9errstring_copy" title='errstring_copy' data-type='char *' data-ref="9errstring_copy" data-ref-filename="9errstring_copy">errstring_copy</dfn> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col7 ref" href="#7len_objname" title='len_objname' data-ref="7len_objname" data-ref-filename="7len_objname">len_objname</a> + <a class="local col8 ref" href="#8len_errstring" title='len_errstring' data-ref="8len_errstring" data-ref-filename="8len_errstring">len_errstring</a>);</td></tr>
+<tr><th id="78">78</th><td>  <b>if</b> (<a class="local col9 ref" href="#9errstring_copy" title='errstring_copy' data-ref="9errstring_copy" data-ref-filename="9errstring_copy">errstring_copy</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="79">79</th><td>    {</td></tr>
+<tr><th id="80">80</th><td>      <i>/* Make a copy of the object file name and the error string.  */</i></td></tr>
+<tr><th id="81">81</th><td>      <a class="local col4 ref" href="#4exception" title='exception' data-ref="4exception" data-ref-filename="4exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::objname" title='dl_exception::objname' data-ref="dl_exception::objname" data-ref-filename="dl_exception..objname">objname</a> = <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="macro" href="../include/string.h.html#81" title="__builtin_mempcpy (errstring_copy, errstring, len_errstring)" data-ref="_M/__mempcpy">__mempcpy</a> (<a class="local col9 ref" href="#9errstring_copy" title='errstring_copy' data-ref="9errstring_copy" data-ref-filename="9errstring_copy">errstring_copy</a>,</td></tr>
+<tr><th id="82">82</th><td>                                              <a class="local col6 ref" href="#6errstring" title='errstring' data-ref="6errstring" data-ref-filename="6errstring">errstring</a>, <a class="local col8 ref" href="#8len_errstring" title='len_errstring' data-ref="8len_errstring" data-ref-filename="8len_errstring">len_errstring</a>),</td></tr>
+<tr><th id="83">83</th><td>                                   <a class="local col5 ref" href="#5objname" title='objname' data-ref="5objname" data-ref-filename="5objname">objname</a>, <a class="local col7 ref" href="#7len_objname" title='len_objname' data-ref="7len_objname" data-ref-filename="7len_objname">len_objname</a>);</td></tr>
+<tr><th id="84">84</th><td>      <a class="local col4 ref" href="#4exception" title='exception' data-ref="4exception" data-ref-filename="4exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::errstring" title='dl_exception::errstring' data-ref="dl_exception::errstring" data-ref-filename="dl_exception..errstring">errstring</a> = <a class="local col9 ref" href="#9errstring_copy" title='errstring_copy' data-ref="9errstring_copy" data-ref-filename="9errstring_copy">errstring_copy</a>;</td></tr>
+<tr><th id="85">85</th><td>      <a class="tu ref fn" href="#adjust_message_buffer" title='adjust_message_buffer' data-use='c' data-ref="adjust_message_buffer" data-ref-filename="adjust_message_buffer">adjust_message_buffer</a> (<a class="local col4 ref" href="#4exception" title='exception' data-ref="4exception" data-ref-filename="4exception">exception</a>);</td></tr>
+<tr><th id="86">86</th><td>    }</td></tr>
+<tr><th id="87">87</th><td>  <b>else</b></td></tr>
+<tr><th id="88">88</th><td>    <a class="tu ref fn" href="#oom_exception" title='oom_exception' data-use='c' data-ref="oom_exception" data-ref-filename="oom_exception">oom_exception</a> (<a class="local col4 ref" href="#4exception" title='exception' data-ref="4exception" data-ref-filename="4exception">exception</a>);</td></tr>
+<tr><th id="89">89</th><td>}</td></tr>
+<tr><th id="90">90</th><td><a class="macro" href="../include/libc-symbols.h.html#565" title="extern __typeof (_dl_exception_create) __EI__dl_exception_create __asm__(&quot;&quot; &quot;_dl_exception_create&quot;); extern __typeof (_dl_exception_create) __EI__dl_exception_create __attribute__((alias (&quot;&quot; &quot;__GI__dl_exception_create&quot;)));" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__GI__dl_exception_create" title='_dl_exception_create' data-ref="__GI__dl_exception_create" data-ref-filename="__GI__dl_exception_create">_dl_exception_create</a>)</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><em>void</em></td></tr>
+<tr><th id="93">93</th><td><dfn class="decl def fn" id="__GI__dl_exception_create_format" title='_dl_exception_create_format' data-ref="__GI__dl_exception_create_format" data-ref-filename="__GI__dl_exception_create_format">_dl_exception_create_format</dfn> (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_exception" title='dl_exception' data-ref="dl_exception" data-ref-filename="dl_exception">dl_exception</a> *<dfn class="local col0 decl" id="10exception" title='exception' data-type='struct dl_exception *' data-ref="10exception" data-ref-filename="10exception">exception</dfn>, <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="11objname" title='objname' data-type='const char *' data-ref="11objname" data-ref-filename="11objname">objname</dfn>,</td></tr>
+<tr><th id="94">94</th><td>                             <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12fmt" title='fmt' data-type='const char *' data-ref="12fmt" data-ref-filename="12fmt">fmt</dfn>, ...)</td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>  <b>if</b> (<a class="local col1 ref" href="#11objname" title='objname' data-ref="11objname" data-ref-filename="11objname">objname</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="97">97</th><td>    <a class="local col1 ref" href="#11objname" title='objname' data-ref="11objname" data-ref-filename="11objname">objname</a> = <q>""</q>;</td></tr>
+<tr><th id="98">98</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="13len_objname" title='len_objname' data-type='size_t' data-ref="13len_objname" data-ref-filename="13len_objname">len_objname</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col1 ref" href="#11objname" title='objname' data-ref="11objname" data-ref-filename="11objname">objname</a>) + <var>1</var>;</td></tr>
+<tr><th id="99">99</th><td>  <i>/* Compute the length of the result.  Include room for two NUL</i></td></tr>
+<tr><th id="100">100</th><td><i>     bytes.  */</i></td></tr>
+<tr><th id="101">101</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14length" title='length' data-type='size_t' data-ref="14length" data-ref-filename="14length">length</dfn> = <a class="local col3 ref" href="#13len_objname" title='len_objname' data-ref="13len_objname" data-ref-filename="13len_objname">len_objname</a> + <var>1</var>;</td></tr>
+<tr><th id="102">102</th><td>  {</td></tr>
+<tr><th id="103">103</th><td>    <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col5 decl" id="15ap" title='ap' data-type='va_list' data-ref="15ap" data-ref-filename="15ap">ap</dfn>;</td></tr>
+<tr><th id="104">104</th><td>    <span class="macro" title="__builtin_va_start(ap, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col5 ref" href="#15ap" title='ap' data-ref="15ap" data-ref-filename="15ap">ap</a>, <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>);</td></tr>
+<tr><th id="105">105</th><td>    <b>for</b> (<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="16p" title='p' data-type='const char *' data-ref="16p" data-ref-filename="16p">p</dfn> = <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>; *<a class="local col6 ref" href="#16p" title='p' data-ref="16p" data-ref-filename="16p">p</a> != <kbd>'\0'</kbd>; ++<a class="local col6 ref" href="#16p" title='p' data-ref="16p" data-ref-filename="16p">p</a>)</td></tr>
+<tr><th id="106">106</th><td>      <b>if</b> (*<a class="local col6 ref" href="#16p" title='p' data-ref="16p" data-ref-filename="16p">p</a> == <kbd>'%'</kbd>)</td></tr>
+<tr><th id="107">107</th><td>        {</td></tr>
+<tr><th id="108">108</th><td>          ++<a class="local col6 ref" href="#16p" title='p' data-ref="16p" data-ref-filename="16p">p</a>;</td></tr>
+<tr><th id="109">109</th><td>          <b>switch</b> (*<a class="local col6 ref" href="#16p" title='p' data-ref="16p" data-ref-filename="16p">p</a>)</td></tr>
+<tr><th id="110">110</th><td>            {</td></tr>
+<tr><th id="111">111</th><td>            <b>case</b> <kbd>'s'</kbd>:</td></tr>
+<tr><th id="112">112</th><td>              <a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a> += <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<span class="macro" title="__builtin_va_arg(ap, const char *)" data-ref="_M/va_arg">va_arg</span> (<a class="local col5 ref" href="#15ap" title='ap' data-ref="15ap" data-ref-filename="15ap">ap</a>, <em>const</em> <em>char</em> *));</td></tr>
+<tr><th id="113">113</th><td>              <b>break</b>;</td></tr>
+<tr><th id="114">114</th><td>            <b>default</b>:</td></tr>
+<tr><th id="115">115</th><td>              <i>/* Assumed to be '%'.  */</i></td></tr>
+<tr><th id="116">116</th><td>              ++<a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a>;</td></tr>
+<tr><th id="117">117</th><td>              <b>break</b>;</td></tr>
+<tr><th id="118">118</th><td>            }</td></tr>
+<tr><th id="119">119</th><td>        }</td></tr>
+<tr><th id="120">120</th><td>      <b>else</b></td></tr>
+<tr><th id="121">121</th><td>        ++<a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a>;</td></tr>
+<tr><th id="122">122</th><td>    <span class="macro" title="__builtin_va_end(ap)" data-ref="_M/va_end">va_end</span> (<a class="local col5 ref" href="#15ap" title='ap' data-ref="15ap" data-ref-filename="15ap">ap</a>);</td></tr>
+<tr><th id="123">123</th><td>  }</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>  <b>if</b> (<a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a> &gt; <a class="macro" href="../sysdeps/generic/stdint.h.html#220" title="(9223372036854775807L)" data-ref="_M/PTRDIFF_MAX">PTRDIFF_MAX</a>)</td></tr>
+<tr><th id="126">126</th><td>    {</td></tr>
+<tr><th id="127">127</th><td>      <a class="tu ref fn" href="#oom_exception" title='oom_exception' data-use='c' data-ref="oom_exception" data-ref-filename="oom_exception">oom_exception</a> (<a class="local col0 ref" href="#10exception" title='exception' data-ref="10exception" data-ref-filename="10exception">exception</a>);</td></tr>
+<tr><th id="128">128</th><td>      <b>return</b>;</td></tr>
+<tr><th id="129">129</th><td>    }</td></tr>
+<tr><th id="130">130</th><td>  <em>char</em> *<dfn class="local col7 decl" id="17errstring" title='errstring' data-type='char *' data-ref="17errstring" data-ref-filename="17errstring">errstring</dfn> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a>);</td></tr>
+<tr><th id="131">131</th><td>  <b>if</b> (<a class="local col7 ref" href="#17errstring" title='errstring' data-ref="17errstring" data-ref-filename="17errstring">errstring</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="132">132</th><td>    {</td></tr>
+<tr><th id="133">133</th><td>      <a class="tu ref fn" href="#oom_exception" title='oom_exception' data-use='c' data-ref="oom_exception" data-ref-filename="oom_exception">oom_exception</a> (<a class="local col0 ref" href="#10exception" title='exception' data-ref="10exception" data-ref-filename="10exception">exception</a>);</td></tr>
+<tr><th id="134">134</th><td>      <b>return</b>;</td></tr>
+<tr><th id="135">135</th><td>    }</td></tr>
+<tr><th id="136">136</th><td>  <a class="local col0 ref" href="#10exception" title='exception' data-ref="10exception" data-ref-filename="10exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::errstring" title='dl_exception::errstring' data-ref="dl_exception::errstring" data-ref-filename="dl_exception..errstring">errstring</a> = <a class="local col7 ref" href="#17errstring" title='errstring' data-ref="17errstring" data-ref-filename="17errstring">errstring</a>;</td></tr>
+<tr><th id="137">137</th><td>  <a class="tu ref fn" href="#adjust_message_buffer" title='adjust_message_buffer' data-use='c' data-ref="adjust_message_buffer" data-ref-filename="adjust_message_buffer">adjust_message_buffer</a> (<a class="local col0 ref" href="#10exception" title='exception' data-ref="10exception" data-ref-filename="10exception">exception</a>);</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>  <i>/* Copy the error message to errstring.  */</i></td></tr>
+<tr><th id="140">140</th><td>  {</td></tr>
+<tr><th id="141">141</th><td>    <i>/* Next byte to be written in errstring.  */</i></td></tr>
+<tr><th id="142">142</th><td>    <em>char</em> *<dfn class="local col8 decl" id="18wptr" title='wptr' data-type='char *' data-ref="18wptr" data-ref-filename="18wptr">wptr</dfn> = <a class="local col7 ref" href="#17errstring" title='errstring' data-ref="17errstring" data-ref-filename="17errstring">errstring</a>;</td></tr>
+<tr><th id="143">143</th><td>    <i>/* End of the allocated string.  */</i></td></tr>
+<tr><th id="144">144</th><td>    <em>char</em> *<em>const</em> <dfn class="local col9 decl" id="19end" title='end' data-type='char *const' data-ref="19end" data-ref-filename="19end">end</dfn> = <a class="local col7 ref" href="#17errstring" title='errstring' data-ref="17errstring" data-ref-filename="17errstring">errstring</a> + <a class="local col4 ref" href="#14length" title='length' data-ref="14length" data-ref-filename="14length">length</a>;</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>    <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col0 decl" id="20ap" title='ap' data-type='va_list' data-ref="20ap" data-ref-filename="20ap">ap</dfn>;</td></tr>
+<tr><th id="147">147</th><td>    <span class="macro" title="__builtin_va_start(ap, fmt)" data-ref="_M/va_start">va_start</span> (<a class="local col0 ref" href="#20ap" title='ap' data-ref="20ap" data-ref-filename="20ap">ap</a>, <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>);</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>    <b>for</b> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="21p" title='p' data-type='const char *' data-ref="21p" data-ref-filename="21p">p</dfn> = <a class="local col2 ref" href="#12fmt" title='fmt' data-ref="12fmt" data-ref-filename="12fmt">fmt</a>; *<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> != <kbd>'\0'</kbd>; ++<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a>)</td></tr>
+<tr><th id="150">150</th><td>      <b>if</b> (*<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a> == <kbd>'%'</kbd>)</td></tr>
+<tr><th id="151">151</th><td>        {</td></tr>
+<tr><th id="152">152</th><td>          ++<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a>;</td></tr>
+<tr><th id="153">153</th><td>          <b>switch</b> (*<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a>)</td></tr>
+<tr><th id="154">154</th><td>            {</td></tr>
+<tr><th id="155">155</th><td>            <b>case</b> <kbd>'s'</kbd>:</td></tr>
+<tr><th id="156">156</th><td>              {</td></tr>
+<tr><th id="157">157</th><td>                <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="22ptr" title='ptr' data-type='const char *' data-ref="22ptr" data-ref-filename="22ptr">ptr</dfn> = <span class="macro" title="__builtin_va_arg(ap, const char *)" data-ref="_M/va_arg">va_arg</span> (<a class="local col0 ref" href="#20ap" title='ap' data-ref="20ap" data-ref-filename="20ap">ap</a>, <em>const</em> <em>char</em> *);</td></tr>
+<tr><th id="158">158</th><td>                <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="23len_ptr" title='len_ptr' data-type='size_t' data-ref="23len_ptr" data-ref-filename="23len_ptr">len_ptr</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col2 ref" href="#22ptr" title='ptr' data-ref="22ptr" data-ref-filename="22ptr">ptr</a>);</td></tr>
+<tr><th id="159">159</th><td>                <b>if</b> (<a class="local col3 ref" href="#23len_ptr" title='len_ptr' data-ref="23len_ptr" data-ref-filename="23len_ptr">len_ptr</a> &gt; <a class="local col9 ref" href="#19end" title='end' data-ref="19end" data-ref-filename="19end">end</a> - <a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>)</td></tr>
+<tr><th id="160">160</th><td>                  <a class="tu ref fn" href="#length_mismatch" title='length_mismatch' data-use='c' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</a> ();</td></tr>
+<tr><th id="161">161</th><td>                <a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> = <a class="macro" href="../include/string.h.html#81" title="__builtin_mempcpy (wptr, ptr, len_ptr)" data-ref="_M/__mempcpy">__mempcpy</a> (<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>, <a class="local col2 ref" href="#22ptr" title='ptr' data-ref="22ptr" data-ref-filename="22ptr">ptr</a>, <a class="local col3 ref" href="#23len_ptr" title='len_ptr' data-ref="23len_ptr" data-ref-filename="23len_ptr">len_ptr</a>);</td></tr>
+<tr><th id="162">162</th><td>              }</td></tr>
+<tr><th id="163">163</th><td>              <b>break</b>;</td></tr>
+<tr><th id="164">164</th><td>            <b>case</b> <kbd>'%'</kbd>:</td></tr>
+<tr><th id="165">165</th><td>              <b>if</b> (<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> == <a class="local col9 ref" href="#19end" title='end' data-ref="19end" data-ref-filename="19end">end</a>)</td></tr>
+<tr><th id="166">166</th><td>                <a class="tu ref fn" href="#length_mismatch" title='length_mismatch' data-use='c' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</a> ();</td></tr>
+<tr><th id="167">167</th><td>              *<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> = <kbd>'%'</kbd>;</td></tr>
+<tr><th id="168">168</th><td>              ++<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>;</td></tr>
+<tr><th id="169">169</th><td>              <b>break</b>;</td></tr>
+<tr><th id="170">170</th><td>            <b>default</b>:</td></tr>
+<tr><th id="171">171</th><td>              <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#729" title="do { _dl_dprintf (2, &quot;Fatal error:&quot; &quot; invalid format in exception string\n&quot;); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"Fatal error:"</q></td></tr>
+<tr><th id="172">172</th><td>                                <q>" invalid format in exception string\n"</q>);</td></tr>
+<tr><th id="173">173</th><td>            }</td></tr>
+<tr><th id="174">174</th><td>        }</td></tr>
+<tr><th id="175">175</th><td>      <b>else</b></td></tr>
+<tr><th id="176">176</th><td>        {</td></tr>
+<tr><th id="177">177</th><td>          <b>if</b> (<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> == <a class="local col9 ref" href="#19end" title='end' data-ref="19end" data-ref-filename="19end">end</a>)</td></tr>
+<tr><th id="178">178</th><td>            <a class="tu ref fn" href="#length_mismatch" title='length_mismatch' data-use='c' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</a> ();</td></tr>
+<tr><th id="179">179</th><td>          *<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> = *<a class="local col1 ref" href="#21p" title='p' data-ref="21p" data-ref-filename="21p">p</a>;</td></tr>
+<tr><th id="180">180</th><td>          ++<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>;</td></tr>
+<tr><th id="181">181</th><td>        }</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>    <b>if</b> (<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> == <a class="local col9 ref" href="#19end" title='end' data-ref="19end" data-ref-filename="19end">end</a>)</td></tr>
+<tr><th id="184">184</th><td>      <a class="tu ref fn" href="#length_mismatch" title='length_mismatch' data-use='c' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</a> ();</td></tr>
+<tr><th id="185">185</th><td>    *<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="186">186</th><td>    ++<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>;</td></tr>
+<tr><th id="187">187</th><td>    <b>if</b> (<a class="local col3 ref" href="#13len_objname" title='len_objname' data-ref="13len_objname" data-ref-filename="13len_objname">len_objname</a> != <a class="local col9 ref" href="#19end" title='end' data-ref="19end" data-ref-filename="19end">end</a> - <a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>)</td></tr>
+<tr><th id="188">188</th><td>      <a class="tu ref fn" href="#length_mismatch" title='length_mismatch' data-use='c' data-ref="length_mismatch" data-ref-filename="length_mismatch">length_mismatch</a> ();</td></tr>
+<tr><th id="189">189</th><td>    <a class="local col0 ref" href="#10exception" title='exception' data-ref="10exception" data-ref-filename="10exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::objname" title='dl_exception::objname' data-ref="dl_exception::objname" data-ref-filename="dl_exception..objname">objname</a> = <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="local col8 ref" href="#18wptr" title='wptr' data-ref="18wptr" data-ref-filename="18wptr">wptr</a>, <a class="local col1 ref" href="#11objname" title='objname' data-ref="11objname" data-ref-filename="11objname">objname</a>, <a class="local col3 ref" href="#13len_objname" title='len_objname' data-ref="13len_objname" data-ref-filename="13len_objname">len_objname</a>);</td></tr>
+<tr><th id="190">190</th><td>  }</td></tr>
+<tr><th id="191">191</th><td>}</td></tr>
+<tr><th id="192">192</th><td><a class="macro" href="../include/libc-symbols.h.html#565" title="extern __typeof (_dl_exception_create_format) __EI__dl_exception_create_format __asm__(&quot;&quot; &quot;_dl_exception_create_format&quot;); extern __typeof (_dl_exception_create_format) __EI__dl_exception_create_format __attribute__((alias (&quot;&quot; &quot;__GI__dl_exception_create_format&quot;)));" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__GI__dl_exception_create_format" title='_dl_exception_create_format' data-ref="__GI__dl_exception_create_format" data-ref-filename="__GI__dl_exception_create_format">_dl_exception_create_format</a>)</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><em>void</em></td></tr>
+<tr><th id="195">195</th><td><dfn class="decl def fn" id="__GI__dl_exception_free" title='_dl_exception_free' data-ref="__GI__dl_exception_free" data-ref-filename="__GI__dl_exception_free">_dl_exception_free</dfn> (<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_exception" title='dl_exception' data-ref="dl_exception" data-ref-filename="dl_exception">dl_exception</a> *<dfn class="local col4 decl" id="24exception" title='exception' data-type='struct dl_exception *' data-ref="24exception" data-ref-filename="24exception">exception</dfn>)</td></tr>
+<tr><th id="196">196</th><td>{</td></tr>
+<tr><th id="197">197</th><td>  <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col4 ref" href="#24exception" title='exception' data-ref="24exception" data-ref-filename="24exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::message_buffer" title='dl_exception::message_buffer' data-ref="dl_exception::message_buffer" data-ref-filename="dl_exception..message_buffer">message_buffer</a>);</td></tr>
+<tr><th id="198">198</th><td>  <a class="local col4 ref" href="#24exception" title='exception' data-ref="24exception" data-ref-filename="24exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::objname" title='dl_exception::objname' data-ref="dl_exception::objname" data-ref-filename="dl_exception..objname">objname</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="199">199</th><td>  <a class="local col4 ref" href="#24exception" title='exception' data-ref="24exception" data-ref-filename="24exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::errstring" title='dl_exception::errstring' data-ref="dl_exception::errstring" data-ref-filename="dl_exception..errstring">errstring</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="200">200</th><td>  <a class="local col4 ref" href="#24exception" title='exception' data-ref="24exception" data-ref-filename="24exception">exception</a>-&gt;<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#dl_exception::message_buffer" title='dl_exception::message_buffer' data-ref="dl_exception::message_buffer" data-ref-filename="dl_exception..message_buffer">message_buffer</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="201">201</th><td>}</td></tr>
+<tr><th id="202">202</th><td><a class="macro" href="../include/libc-symbols.h.html#565" title="extern __typeof (_dl_exception_free) __EI__dl_exception_free __asm__(&quot;&quot; &quot;_dl_exception_free&quot;); extern __typeof (_dl_exception_free) __EI__dl_exception_free __attribute__((alias (&quot;&quot; &quot;__GI__dl_exception_free&quot;)));" data-ref="_M/rtld_hidden_def">rtld_hidden_def</a> (<a class="ref fn" href="#__GI__dl_exception_free" title='_dl_exception_free' data-ref="__GI__dl_exception_free" data-ref-filename="__GI__dl_exception_free">_dl_exception_free</a>)</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.27 revision <em>2.27</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
