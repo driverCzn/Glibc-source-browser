@@ -1,0 +1,407 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-support.c source code [glibc_src_2.26/elf/dl-support.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/elf/dl-support.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>elf</a>/<a href='dl-support.c.html'>dl-support.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Support for dynamic linking code in static libc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1996-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><i>/* This file defines some things that for the dynamic linker are defined in</i></td></tr>
+<tr><th id="20">20</th><td><i>   rtld.c and dl-sysdep.c in ways appropriate to bootstrap dynamic linking.  */</i></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../sysdeps/x86_64/dl-machine.h.html">&lt;dl-machine.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/dl-cache.h.html">&lt;dl-cache.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/64/dl-librecon.h.html">&lt;dl-librecon.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/dl-procinfo.h.html">&lt;dl-procinfo.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../sysdeps/generic/unsecvars.h.html">&lt;unsecvars.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../sysdeps/x86_64/hp-timing.h.html">&lt;hp-timing.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../include/stackinfo.h.html">&lt;stackinfo.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><b>extern</b> <em>char</em> *<dfn class="decl" id="__progname" title='__progname' data-ref="__progname" data-ref-filename="__progname">__progname</dfn>;</td></tr>
+<tr><th id="39">39</th><td><em>char</em> **<dfn class="decl def" id="_dl_argv" title='_dl_argv' data-ref="_dl_argv" data-ref-filename="_dl_argv">_dl_argv</dfn> = &amp;<a class="ref" href="#__progname" title='__progname' data-ref="__progname" data-ref-filename="__progname">__progname</a>;	<i>/* This is checked for some error messages.  */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><i>/* Name of the architecture.  */</i></td></tr>
+<tr><th id="42">42</th><td><em>const</em> <em>char</em> *<dfn class="decl def" id="_dl_platform" title='_dl_platform' data-ref="_dl_platform" data-ref-filename="_dl_platform">_dl_platform</dfn>;</td></tr>
+<tr><th id="43">43</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl def" id="_dl_platformlen" title='_dl_platformlen' data-ref="_dl_platformlen" data-ref-filename="_dl_platformlen">_dl_platformlen</dfn>;</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><em>int</em> <dfn class="decl def" id="_dl_debug_mask" title='_dl_debug_mask' data-ref="_dl_debug_mask" data-ref-filename="_dl_debug_mask">_dl_debug_mask</dfn>;</td></tr>
+<tr><th id="46">46</th><td><em>int</em> <dfn class="decl def" id="_dl_lazy" title='_dl_lazy' data-ref="_dl_lazy" data-ref-filename="_dl_lazy">_dl_lazy</dfn>;</td></tr>
+<tr><th id="47">47</th><td><a class="macro" href="link.h.html#30" title="Elf64_Addr" data-ref="_M/ElfW">ElfW</a>(Addr) <dfn class="decl def" id="_dl_use_load_bias" title='_dl_use_load_bias' data-ref="_dl_use_load_bias" data-ref-filename="_dl_use_load_bias">_dl_use_load_bias</dfn> = -<var>2</var>;</td></tr>
+<tr><th id="48">48</th><td><em>int</em> <dfn class="decl def" id="_dl_dynamic_weak" title='_dl_dynamic_weak' data-ref="_dl_dynamic_weak" data-ref-filename="_dl_dynamic_weak">_dl_dynamic_weak</dfn>;</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/* If nonzero print warnings about problematic situations.  */</i></td></tr>
+<tr><th id="51">51</th><td><em>int</em> <dfn class="decl def" id="_dl_verbose" title='_dl_verbose' data-ref="_dl_verbose" data-ref-filename="_dl_verbose">_dl_verbose</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><i>/* We never do profiling.  */</i></td></tr>
+<tr><th id="54">54</th><td><em>const</em> <em>char</em> *<dfn class="decl def" id="_dl_profile" title='_dl_profile' data-ref="_dl_profile" data-ref-filename="_dl_profile">_dl_profile</dfn>;</td></tr>
+<tr><th id="55">55</th><td><em>const</em> <em>char</em> *<dfn class="decl def" id="_dl_profile_output" title='_dl_profile_output' data-ref="_dl_profile_output" data-ref-filename="_dl_profile_output">_dl_profile_output</dfn>;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><i>/* Names of shared object for which the RUNPATHs and RPATHs should be</i></td></tr>
+<tr><th id="58">58</th><td><i>   ignored.  */</i></td></tr>
+<tr><th id="59">59</th><td><em>const</em> <em>char</em> *<dfn class="decl def" id="_dl_inhibit_rpath" title='_dl_inhibit_rpath' data-ref="_dl_inhibit_rpath" data-ref-filename="_dl_inhibit_rpath">_dl_inhibit_rpath</dfn>;</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* The map for the object we will profile.  */</i></td></tr>
+<tr><th id="62">62</th><td><b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="decl def" id="_dl_profile_map" title='_dl_profile_map' data-ref="_dl_profile_map" data-ref-filename="_dl_profile_map">_dl_profile_map</dfn>;</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/* This is the address of the last stack address ever used.  */</i></td></tr>
+<tr><th id="65">65</th><td><em>void</em> *<dfn class="decl def" id="__libc_stack_end" title='__libc_stack_end' data-ref="__libc_stack_end" data-ref-filename="__libc_stack_end">__libc_stack_end</dfn>;</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><i>/* Path where the binary is found.  */</i></td></tr>
+<tr><th id="68">68</th><td><em>const</em> <em>char</em> *<dfn class="decl def" id="_dl_origin_path" title='_dl_origin_path' data-ref="_dl_origin_path" data-ref-filename="_dl_origin_path">_dl_origin_path</dfn>;</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><i>/* Nonzero if runtime lookup should not update the .got/.plt.  */</i></td></tr>
+<tr><th id="71">71</th><td><em>int</em> <dfn class="decl def" id="_dl_bind_not" title='_dl_bind_not' data-ref="_dl_bind_not" data-ref-filename="_dl_bind_not">_dl_bind_not</dfn>;</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><i  data-doc="_dl_main_map">/* A dummy link map for the executable, used by dlopen to access the global</i></td></tr>
+<tr><th id="74">74</th><td><i  data-doc="_dl_main_map">   scope.  We don't export any symbols ourselves, so this can be minimal.  */</i></td></tr>
+<tr><th id="75">75</th><td><em>static</em> <b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> <dfn class="tu decl def" id="_dl_main_map" title='_dl_main_map' data-type='struct link_map' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</dfn> =</td></tr>
+<tr><th id="76">76</th><td>  {</td></tr>
+<tr><th id="77">77</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_name" title='link_map::l_name' data-ref="link_map::l_name" data-ref-filename="link_map..l_name">l_name</a> = (<em>char</em> *) <q>""</q>,</td></tr>
+<tr><th id="78">78</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_real" title='link_map::l_real' data-ref="link_map::l_real" data-ref-filename="link_map..l_real">l_real</a> = &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='a' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>,</td></tr>
+<tr><th id="79">79</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_ns" title='link_map::l_ns' data-ref="link_map::l_ns" data-ref-filename="link_map..l_ns">l_ns</a> = <a class="macro" href="../dlfcn/dlfcn.h.html#47" title="0" data-ref="_M/LM_ID_BASE">LM_ID_BASE</a>,</td></tr>
+<tr><th id="80">80</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_libname" title='link_map::l_libname' data-ref="link_map::l_libname" data-ref-filename="link_map..l_libname">l_libname</a> = &amp;(<b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#libname_list" title='libname_list' data-ref="libname_list" data-ref-filename="libname_list">libname_list</a>) { .<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::name" title='libname_list::name' data-ref="libname_list::name" data-ref-filename="libname_list..name">name</a> = <q>""</q>, .<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#libname_list::dont_free" title='libname_list::dont_free' data-ref="libname_list::dont_free" data-ref-filename="libname_list..dont_free">dont_free</a> = <var>1</var> },</td></tr>
+<tr><th id="81">81</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a> =</td></tr>
+<tr><th id="82">82</th><td>      {</td></tr>
+<tr><th id="83">83</th><td>	.<a class="ref field" href="../include/link.h.html#r_scope_elem::r_list" title='r_scope_elem::r_list' data-ref="r_scope_elem::r_list" data-ref-filename="r_scope_elem..r_list">r_list</a> = &amp;(<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *) { &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='a' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a> },</td></tr>
+<tr><th id="84">84</th><td>	.<a class="ref field" href="../include/link.h.html#r_scope_elem::r_nlist" title='r_scope_elem::r_nlist' data-ref="r_scope_elem::r_nlist" data-ref-filename="r_scope_elem..r_nlist">r_nlist</a> = <var>1</var>,</td></tr>
+<tr><th id="85">85</th><td>      },</td></tr>
+<tr><th id="86">86</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_symbolic_searchlist" title='link_map::l_symbolic_searchlist' data-ref="link_map::l_symbolic_searchlist" data-ref-filename="link_map..l_symbolic_searchlist">l_symbolic_searchlist</a> = { .<a class="ref field" href="../include/link.h.html#r_scope_elem::r_list" title='r_scope_elem::r_list' data-ref="r_scope_elem::r_list" data-ref-filename="r_scope_elem..r_list">r_list</a> = &amp;(<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *) { <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> } },</td></tr>
+<tr><th id="87">87</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_type" title='link_map::l_type' data-ref="link_map::l_type" data-ref-filename="link_map..l_type">l_type</a> = <a class="enum" href="../include/link.h.html#link_map::lt_executable" title='link_map::lt_executable' data-ref="link_map::lt_executable" data-ref-filename="link_map..lt_executable">lt_executable</a>,</td></tr>
+<tr><th id="88">88</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a> = { &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a> },</td></tr>
+<tr><th id="89">89</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_scope_max" title='link_map::l_scope_max' data-ref="link_map::l_scope_max" data-ref-filename="link_map..l_scope_max">l_scope_max</a> = (<b>sizeof</b> (<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>)</td></tr>
+<tr><th id="90">90</th><td>		    / <b>sizeof</b> (<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>[<var>0</var>])),</td></tr>
+<tr><th id="91">91</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_scope" title='link_map::l_scope' data-ref="link_map::l_scope" data-ref-filename="link_map..l_scope">l_scope</a> = <a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_scope_mem" title='link_map::l_scope_mem' data-ref="link_map::l_scope_mem" data-ref-filename="link_map..l_scope_mem">l_scope_mem</a>,</td></tr>
+<tr><th id="92">92</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_local_scope" title='link_map::l_local_scope' data-ref="link_map::l_local_scope" data-ref-filename="link_map..l_local_scope">l_local_scope</a> = { &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a> },</td></tr>
+<tr><th id="93">93</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_used" title='link_map::l_used' data-ref="link_map::l_used" data-ref-filename="link_map..l_used">l_used</a> = <var>1</var>,</td></tr>
+<tr><th id="94">94</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_tls_offset" title='link_map::l_tls_offset' data-ref="link_map::l_tls_offset" data-ref-filename="link_map..l_tls_offset">l_tls_offset</a> = <a class="macro" href="../include/link.h.html#295" title="0" data-ref="_M/NO_TLS_OFFSET">NO_TLS_OFFSET</a>,</td></tr>
+<tr><th id="95">95</th><td>    .<a class="ref field" href="../include/link.h.html#link_map::l_serial" title='link_map::l_serial' data-ref="link_map::l_serial" data-ref-filename="link_map..l_serial">l_serial</a> = <var>1</var>,</td></tr>
+<tr><th id="96">96</th><td>  };</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i>/* Namespace information.  */</i></td></tr>
+<tr><th id="99">99</th><td><b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces" title='link_namespaces' data-ref="link_namespaces" data-ref-filename="link_namespaces">link_namespaces</a> <dfn class="decl def" id="_dl_ns" title='_dl_ns' data-ref="_dl_ns" data-ref-filename="_dl_ns">_dl_ns</dfn>[<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#295" title="1" data-ref="_M/DL_NNS">DL_NNS</a>] =</td></tr>
+<tr><th id="100">100</th><td>  {</td></tr>
+<tr><th id="101">101</th><td>    [<a class="macro" href="../dlfcn/dlfcn.h.html#47" title="0" data-ref="_M/LM_ID_BASE">LM_ID_BASE</a>] =</td></tr>
+<tr><th id="102">102</th><td>      {</td></tr>
+<tr><th id="103">103</th><td>	.<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_loaded" title='link_namespaces::_ns_loaded' data-ref="link_namespaces::_ns_loaded" data-ref-filename="link_namespaces.._ns_loaded">_ns_loaded</a> = &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='a' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>,</td></tr>
+<tr><th id="104">104</th><td>	.<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_nloaded" title='link_namespaces::_ns_nloaded' data-ref="link_namespaces::_ns_nloaded" data-ref-filename="link_namespaces.._ns_nloaded">_ns_nloaded</a> = <var>1</var>,</td></tr>
+<tr><th id="105">105</th><td>	.<a class="ref field" href="../sysdeps/generic/ldsodefs.h.html#link_namespaces::_ns_main_searchlist" title='link_namespaces::_ns_main_searchlist' data-ref="link_namespaces::_ns_main_searchlist" data-ref-filename="link_namespaces.._ns_main_searchlist">_ns_main_searchlist</a> = &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_searchlist" title='link_map::l_searchlist' data-ref="link_map::l_searchlist" data-ref-filename="link_map..l_searchlist">l_searchlist</a>,</td></tr>
+<tr><th id="106">106</th><td>      }</td></tr>
+<tr><th id="107">107</th><td>  };</td></tr>
+<tr><th id="108">108</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl def" id="_dl_nns" title='_dl_nns' data-ref="_dl_nns" data-ref-filename="_dl_nns">_dl_nns</dfn> = <var>1</var>;</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><i>/* Incremented whenever something may have been added to dl_loaded. */</i></td></tr>
+<tr><th id="111">111</th><td><em>unsigned</em> <em>long</em> <em>long</em> <dfn class="decl def" id="_dl_load_adds" title='_dl_load_adds' data-ref="_dl_load_adds" data-ref-filename="_dl_load_adds">_dl_load_adds</dfn> = <var>1</var>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i>/* Fake scope of the main application.  */</i></td></tr>
+<tr><th id="114">114</th><td><b>struct</b> <a class="type" href="../include/link.h.html#r_scope_elem" title='r_scope_elem' data-ref="r_scope_elem" data-ref-filename="r_scope_elem">r_scope_elem</a> <dfn class="decl def" id="_dl_initial_searchlist" title='_dl_initial_searchlist' data-ref="_dl_initial_searchlist" data-ref-filename="_dl_initial_searchlist">_dl_initial_searchlist</dfn> =</td></tr>
+<tr><th id="115">115</th><td>  {</td></tr>
+<tr><th id="116">116</th><td>    .<a class="ref field" href="../include/link.h.html#r_scope_elem::r_list" title='r_scope_elem::r_list' data-ref="r_scope_elem::r_list" data-ref-filename="r_scope_elem..r_list">r_list</a> = &amp;(<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *) { &amp;<a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='a' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a> },</td></tr>
+<tr><th id="117">117</th><td>    .<a class="ref field" href="../include/link.h.html#r_scope_elem::r_nlist" title='r_scope_elem::r_nlist' data-ref="r_scope_elem::r_nlist" data-ref-filename="r_scope_elem..r_nlist">r_nlist</a> = <var>1</var>,</td></tr>
+<tr><th id="118">118</th><td>  };</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="120">ifndef</span> <span class="macro" data-ref="_M/HAVE_INLINED_SYSCALLS">HAVE_INLINED_SYSCALLS</span></u></td></tr>
+<tr><th id="121">121</th><td><i>/* Nonzero during startup.  */</i></td></tr>
+<tr><th id="122">122</th><td><em>int</em> _dl_starting_up = <var>1</var>;</td></tr>
+<tr><th id="123">123</th><td><u>#<span data-ppcond="120">endif</span></u></td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><i>/* Random data provided by the kernel.  */</i></td></tr>
+<tr><th id="126">126</th><td><em>void</em> *<dfn class="decl def" id="_dl_random" title='_dl_random' data-ref="_dl_random" data-ref-filename="_dl_random">_dl_random</dfn>;</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><i>/* Get architecture specific initializer.  */</i></td></tr>
+<tr><th id="129">129</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/dl-procinfo.c.html">&lt;dl-procinfo.c&gt;</a></u></td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><i>/* Initial value of the CPU clock.  */</i></td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="132">ifndef</span> <span class="macro" data-ref="_M/HP_TIMING_NONAVAIL">HP_TIMING_NONAVAIL</span></u></td></tr>
+<tr><th id="133">133</th><td><a class="typedef" href="../sysdeps/x86_64/hp-timing.h.html#hp_timing_t" title='hp_timing_t' data-type='unsigned long long' data-ref="hp_timing_t" data-ref-filename="hp_timing_t">hp_timing_t</a> <dfn class="decl def" id="_dl_cpuclock_offset" title='_dl_cpuclock_offset' data-ref="_dl_cpuclock_offset" data-ref-filename="_dl_cpuclock_offset">_dl_cpuclock_offset</dfn>;</td></tr>
+<tr><th id="134">134</th><td><u>#<span data-ppcond="132">endif</span></u></td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><em>void</em> (*<dfn class="decl def" id="_dl_init_static_tls" title='_dl_init_static_tls' data-ref="_dl_init_static_tls" data-ref-filename="_dl_init_static_tls">_dl_init_static_tls</dfn>) (<b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *) = &amp;<a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_nothread_init_static_tls" title='_dl_nothread_init_static_tls' data-ref="_dl_nothread_init_static_tls" data-ref-filename="_dl_nothread_init_static_tls">_dl_nothread_init_static_tls</a>;</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl def" id="_dl_pagesize" title='_dl_pagesize' data-ref="_dl_pagesize" data-ref-filename="_dl_pagesize">_dl_pagesize</dfn> = <a class="macro" href="../../include/asm-generic/param.h.html#10" title="4096" data-ref="_M/EXEC_PAGESIZE">EXEC_PAGESIZE</a>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><em>int</em> <dfn class="decl def" id="_dl_inhibit_cache" title='_dl_inhibit_cache' data-ref="_dl_inhibit_cache" data-ref-filename="_dl_inhibit_cache">_dl_inhibit_cache</dfn>;</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><em>unsigned</em> <em>int</em> <dfn class="decl def" id="_dl_osversion" title='_dl_osversion' data-ref="_dl_osversion" data-ref-filename="_dl_osversion">_dl_osversion</dfn>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><i>/* All known directories in sorted order.  */</i></td></tr>
+<tr><th id="145">145</th><td><b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#r_search_path_elem" title='r_search_path_elem' data-ref="r_search_path_elem" data-ref-filename="r_search_path_elem">r_search_path_elem</a> *<dfn class="decl def" id="_dl_all_dirs" title='_dl_all_dirs' data-ref="_dl_all_dirs" data-ref-filename="_dl_all_dirs">_dl_all_dirs</dfn>;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><i>/* All directories after startup.  */</i></td></tr>
+<tr><th id="148">148</th><td><b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#r_search_path_elem" title='r_search_path_elem' data-ref="r_search_path_elem" data-ref-filename="r_search_path_elem">r_search_path_elem</a> *<dfn class="decl def" id="_dl_init_all_dirs" title='_dl_init_all_dirs' data-ref="_dl_init_all_dirs" data-ref-filename="_dl_init_all_dirs">_dl_init_all_dirs</dfn>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><i>/* The object to be initialized first.  */</i></td></tr>
+<tr><th id="151">151</th><td><b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="decl def" id="_dl_initfirst" title='_dl_initfirst' data-ref="_dl_initfirst" data-ref-filename="_dl_initfirst">_dl_initfirst</dfn>;</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><i>/* Descriptor to write debug messages to.  */</i></td></tr>
+<tr><th id="154">154</th><td><em>int</em> <dfn class="decl def" id="_dl_debug_fd" title='_dl_debug_fd' data-ref="_dl_debug_fd" data-ref-filename="_dl_debug_fd">_dl_debug_fd</dfn> = <a class="macro" href="../posix/unistd.h.html#215" title="2" data-ref="_M/STDERR_FILENO">STDERR_FILENO</a>;</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><em>int</em> <dfn class="decl def" id="_dl_correct_cache_id" title='_dl_correct_cache_id' data-ref="_dl_correct_cache_id" data-ref-filename="_dl_correct_cache_id">_dl_correct_cache_id</dfn> = <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/dl-cache.h.html#19" title="0x303" data-ref="_M/_DL_CACHE_DEFAULT_ID">_DL_CACHE_DEFAULT_ID</a>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><a class="macro" href="link.h.html#30" title="Elf64_auxv_t" data-ref="_M/ElfW">ElfW</a>(auxv_t) *<dfn class="decl def" id="_dl_auxv" title='_dl_auxv' data-ref="_dl_auxv" data-ref-filename="_dl_auxv">_dl_auxv</dfn>;</td></tr>
+<tr><th id="159">159</th><td><em>const</em> <a class="macro" href="link.h.html#30" title="Elf64_Phdr" data-ref="_M/ElfW">ElfW</a>(Phdr) *<dfn class="decl def" id="_dl_phdr" title='_dl_phdr' data-ref="_dl_phdr" data-ref-filename="_dl_phdr">_dl_phdr</dfn>;</td></tr>
+<tr><th id="160">160</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl def" id="_dl_phnum" title='_dl_phnum' data-ref="_dl_phnum" data-ref-filename="_dl_phnum">_dl_phnum</dfn>;</td></tr>
+<tr><th id="161">161</th><td><a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="decl def" id="_dl_hwcap" title='_dl_hwcap' data-ref="_dl_hwcap" data-ref-filename="_dl_hwcap">_dl_hwcap</dfn> <b>__attribute__</b> ((nocommon));</td></tr>
+<tr><th id="162">162</th><td><a class="typedef" href="../bits/stdint-uintn.h.html#uint64_t" title='uint64_t' data-type='__uint64_t' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="decl def" id="_dl_hwcap2" title='_dl_hwcap2' data-ref="_dl_hwcap2" data-ref-filename="_dl_hwcap2">_dl_hwcap2</dfn> <b>__attribute__</b> ((nocommon));</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><i>/* The value of the FPU control word the kernel will preset in hardware.  */</i></td></tr>
+<tr><th id="165">165</th><td><a class="typedef" href="../sysdeps/x86/fpu_control.h.html#fpu_control_t" title='fpu_control_t' data-type='unsigned short' data-ref="fpu_control_t" data-ref-filename="fpu_control_t">fpu_control_t</a> <dfn class="decl def" id="_dl_fpu_control" title='_dl_fpu_control' data-ref="_dl_fpu_control" data-ref-filename="_dl_fpu_control">_dl_fpu_control</dfn> = <a class="macro" href="../sysdeps/x86/fpu_control.h.html#85" title="0x037f" data-ref="_M/_FPU_DEFAULT">_FPU_DEFAULT</a>;</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="167">if</span> !<span class="macro" title="1" data-ref="_M/HAVE_TUNABLES">HAVE_TUNABLES</span></u></td></tr>
+<tr><th id="168">168</th><td><i>/* This is not initialized to HWCAP_IMPORTANT, matching the definition</i></td></tr>
+<tr><th id="169">169</th><td><i>   of _dl_important_hwcaps, below, where no hwcap strings are ever</i></td></tr>
+<tr><th id="170">170</th><td><i>   used.  This mask is still used to mediate the lookups in the cache</i></td></tr>
+<tr><th id="171">171</th><td><i>   file.  Since there is no way to set this nonzero (we don't grok the</i></td></tr>
+<tr><th id="172">172</th><td><i>   LD_HWCAP_MASK environment variable here), there is no real point in</i></td></tr>
+<tr><th id="173">173</th><td><i>   setting _dl_hwcap nonzero below, but we do anyway.  */</i></td></tr>
+<tr><th id="174">174</th><td>uint64_t _dl_hwcap_mask <b>__attribute__</b> ((nocommon));</td></tr>
+<tr><th id="175">175</th><td><u>#<span data-ppcond="167">endif</span></u></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/* Prevailing state of the stack.  Generally this includes PF_X, indicating it's</i></td></tr>
+<tr><th id="178">178</th><td><i> * executable but this isn't true for all platforms.  */</i></td></tr>
+<tr><th id="179">179</th><td><a class="macro" href="link.h.html#30" title="Elf64_Word" data-ref="_M/ElfW">ElfW</a>(Word) <dfn class="decl def" id="_dl_stack_flags" title='_dl_stack_flags' data-ref="_dl_stack_flags" data-ref-filename="_dl_stack_flags">_dl_stack_flags</dfn> = <a class="macro" href="../sysdeps/x86_64/stackinfo.h.html#31" title="((1 &lt;&lt; 2)|(1 &lt;&lt; 1)|(1 &lt;&lt; 0))" data-ref="_M/DEFAULT_STACK_PERMS">DEFAULT_STACK_PERMS</a>;</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td><i>/* If loading a shared object requires that we make the stack executable</i></td></tr>
+<tr><th id="182">182</th><td><i>   when it was not, we do it by calling this function.</i></td></tr>
+<tr><th id="183">183</th><td><i>   It returns an errno code or zero on success.  */</i></td></tr>
+<tr><th id="184">184</th><td><em>int</em> (*<dfn class="decl def" id="_dl_make_stack_executable_hook" title='_dl_make_stack_executable_hook' data-ref="_dl_make_stack_executable_hook" data-ref-filename="_dl_make_stack_executable_hook">_dl_make_stack_executable_hook</dfn>) (<em>void</em> **) <a class="macro" href="../include/libc-symbols.h.html#194" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="185">185</th><td>  = <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_make_stack_executable" title='_dl_make_stack_executable' data-ref="_dl_make_stack_executable" data-ref-filename="_dl_make_stack_executable">_dl_make_stack_executable</a>;</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><i>/* Function in libpthread to wait for termination of lookups.  */</i></td></tr>
+<tr><th id="189">189</th><td><em>void</em> (*<dfn class="decl def" id="_dl_wait_lookup_done" title='_dl_wait_lookup_done' data-ref="_dl_wait_lookup_done" data-ref-filename="_dl_wait_lookup_done">_dl_wait_lookup_done</dfn>) (<em>void</em>);</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td><b>struct</b> <a class="type" href="../sysdeps/generic/ldsodefs.h.html#dl_scope_free_list" title='dl_scope_free_list' data-ref="dl_scope_free_list" data-ref-filename="dl_scope_free_list">dl_scope_free_list</a> *<dfn class="decl def" id="_dl_scope_free_list" title='_dl_scope_free_list' data-ref="_dl_scope_free_list" data-ref-filename="_dl_scope_free_list">_dl_scope_free_list</dfn>;</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><u>#<span data-ppcond="193">ifdef</span> <span class="macro" data-ref="_M/NEED_DL_SYSINFO">NEED_DL_SYSINFO</span></u></td></tr>
+<tr><th id="194">194</th><td><i>/* Needed for improved syscall handling on at least x86/Linux.  */</i></td></tr>
+<tr><th id="195">195</th><td>uintptr_t _dl_sysinfo = DL_SYSINFO_DEFAULT;</td></tr>
+<tr><th id="196">196</th><td><u>#<span data-ppcond="193">endif</span></u></td></tr>
+<tr><th id="197">197</th><td><u>#<span data-ppcond="197">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/dl-sysdep.h.html#26" data-ref="_M/NEED_DL_SYSINFO_DSO">NEED_DL_SYSINFO_DSO</a></u></td></tr>
+<tr><th id="198">198</th><td><i>/* Address of the ELF headers in the vsyscall page.  */</i></td></tr>
+<tr><th id="199">199</th><td><em>const</em> <a class="macro" href="link.h.html#30" title="Elf64_Ehdr" data-ref="_M/ElfW">ElfW</a>(Ehdr) *<dfn class="decl def" id="_dl_sysinfo_dso" title='_dl_sysinfo_dso' data-ref="_dl_sysinfo_dso" data-ref-filename="_dl_sysinfo_dso">_dl_sysinfo_dso</dfn>;</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><b>struct</b> <a class="type" href="../include/link.h.html#link_map" title='link_map' data-ref="link_map" data-ref-filename="link_map">link_map</a> *<dfn class="decl def" id="_dl_sysinfo_map" title='_dl_sysinfo_map' data-ref="_dl_sysinfo_map" data-ref-filename="_dl_sysinfo_map">_dl_sysinfo_map</dfn>;</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><u># include <a href="get-dynamic-info.h.html">"get-dynamic-info.h"</a></u></td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="197">endif</span></u></td></tr>
+<tr><th id="205">205</th><td><u>#include <a href="setup-vdso.h.html">"setup-vdso.h"</a></u></td></tr>
+<tr><th id="206">206</th><td></td></tr>
+<tr><th id="207">207</th><td><i>/* During the program run we must not modify the global data of</i></td></tr>
+<tr><th id="208">208</th><td><i>   loaded shared object simultanously in two threads.  Therefore we</i></td></tr>
+<tr><th id="209">209</th><td><i>   protect `_dl_open' and `_dl_close' in dl-close.c.</i></td></tr>
+<tr><th id="210">210</th><td><i></i></td></tr>
+<tr><th id="211">211</th><td><i>   This must be a recursive lock since the initializer function of</i></td></tr>
+<tr><th id="212">212</th><td><i>   the loaded object might as well require a call to this function.</i></td></tr>
+<tr><th id="213">213</th><td><i>   At this time it is not anymore a problem to modify the tables.  */</i></td></tr>
+<tr><th id="214">214</th><td><a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#95" title="__rtld_lock_recursive_t _dl_load_lock = {{ { 0, 0, 0, 0, PTHREAD_MUTEX_RECURSIVE_NP, 0, 0, { 0, 0 } } }};" data-ref="_M/__rtld_lock_define_initialized_recursive">__rtld_lock_define_initialized_recursive</a> (, <dfn class="decl def" id="_dl_load_lock" title='_dl_load_lock' data-ref="_dl_load_lock" data-ref-filename="_dl_load_lock">_dl_load_lock</dfn>)</td></tr>
+<tr><th id="215">215</th><td><i>/* This lock is used to keep __dl_iterate_phdr from inspecting the</i></td></tr>
+<tr><th id="216">216</th><td><i>   list of loaded objects while an object is added to or removed from</i></td></tr>
+<tr><th id="217">217</th><td><i>   that list.  */</i></td></tr>
+<tr><th id="218">218</th><td><a class="macro" href="../sysdeps/nptl/libc-lockP.h.html#95" title="__rtld_lock_recursive_t _dl_load_write_lock = {{ { 0, 0, 0, 0, PTHREAD_MUTEX_RECURSIVE_NP, 0, 0, { 0, 0 } } }};" data-ref="_M/__rtld_lock_define_initialized_recursive">__rtld_lock_define_initialized_recursive</a> (, <dfn class="decl def" id="_dl_load_write_lock" title='_dl_load_write_lock' data-ref="_dl_load_write_lock" data-ref-filename="_dl_load_write_lock">_dl_load_write_lock</dfn>)</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td><u>#<span data-ppcond="221">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/ldsodefs.h.html#22" data-ref="_M/HAVE_AUX_VECTOR">HAVE_AUX_VECTOR</a></u></td></tr>
+<tr><th id="222">222</th><td><em>int</em> <dfn class="decl def" id="_dl_clktck" title='_dl_clktck' data-ref="_dl_clktck" data-ref-filename="_dl_clktck">_dl_clktck</dfn>;</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><em>void</em></td></tr>
+<tr><th id="225">225</th><td><a class="macro" href="../include/libc-symbols.h.html#194" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="226">226</th><td><dfn class="decl def fn" id="_dl_aux_init" title='_dl_aux_init' data-ref="_dl_aux_init" data-ref-filename="_dl_aux_init">_dl_aux_init</dfn> (<a class="macro" href="link.h.html#30" title="Elf64_auxv_t" data-ref="_M/ElfW">ElfW</a>(auxv_t) *<dfn class="local col6 decl" id="16av" title='av' data-type='Elf64_auxv_t *' data-ref="16av" data-ref-filename="16av">av</dfn>)</td></tr>
+<tr><th id="227">227</th><td>{</td></tr>
+<tr><th id="228">228</th><td>  <em>int</em> <dfn class="local col7 decl" id="17seen" title='seen' data-type='int' data-ref="17seen" data-ref-filename="17seen">seen</dfn> = <var>0</var>;</td></tr>
+<tr><th id="229">229</th><td>  <a class="typedef" href="../posix/sys/types.h.html#uid_t" title='uid_t' data-type='__uid_t' data-ref="uid_t" data-ref-filename="uid_t">uid_t</a> <dfn class="local col8 decl" id="18uid" title='uid' data-type='uid_t' data-ref="18uid" data-ref-filename="18uid">uid</dfn> = <var>0</var>;</td></tr>
+<tr><th id="230">230</th><td>  <a class="typedef" href="../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> <dfn class="local col9 decl" id="19gid" title='gid' data-type='gid_t' data-ref="19gid" data-ref-filename="19gid">gid</dfn> = <var>0</var>;</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_auxv" title='_dl_auxv' data-ref="_dl_auxv" data-ref-filename="_dl_auxv">_dl_auxv</a> = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>;</td></tr>
+<tr><th id="233">233</th><td>  <b>for</b> (; <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_type" title='(anonymous struct)::a_type' data-ref="(anonymous)::a_type" data-ref-filename="(anonymous)..a_type">a_type</a> != <a class="macro" href="elf.h.html#1115" title="0" data-ref="_M/AT_NULL">AT_NULL</a>; ++<a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>)</td></tr>
+<tr><th id="234">234</th><td>    <b>switch</b> (<a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_type" title='(anonymous struct)::a_type' data-ref="(anonymous)::a_type" data-ref-filename="(anonymous)..a_type">a_type</a>)</td></tr>
+<tr><th id="235">235</th><td>      {</td></tr>
+<tr><th id="236">236</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1121" title="6" data-ref="_M/AT_PAGESZ">AT_PAGESZ</a>:</td></tr>
+<tr><th id="237">237</th><td>	<b>if</b> (<a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a> != <var>0</var>)</td></tr>
+<tr><th id="238">238</th><td>	  <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_pagesize" data-ref="_M/GLRO">GLRO</a>(dl_pagesize) = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="239">239</th><td>	<b>break</b>;</td></tr>
+<tr><th id="240">240</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1130" title="17" data-ref="_M/AT_CLKTCK">AT_CLKTCK</a>:</td></tr>
+<tr><th id="241">241</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_clktck" data-ref="_M/GLRO">GLRO</a>(dl_clktck) = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="242">242</th><td>	<b>break</b>;</td></tr>
+<tr><th id="243">243</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1118" title="3" data-ref="_M/AT_PHDR">AT_PHDR</a>:</td></tr>
+<tr><th id="244">244</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_phdr" data-ref="_M/GL">GL</a>(dl_phdr) = (<em>const</em> <em>void</em> *) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="245">245</th><td>	<b>break</b>;</td></tr>
+<tr><th id="246">246</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1120" title="5" data-ref="_M/AT_PHNUM">AT_PHNUM</a>:</td></tr>
+<tr><th id="247">247</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_phnum" data-ref="_M/GL">GL</a>(dl_phnum) = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="248">248</th><td>	<b>break</b>;</td></tr>
+<tr><th id="249">249</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1133" title="15" data-ref="_M/AT_PLATFORM">AT_PLATFORM</a>:</td></tr>
+<tr><th id="250">250</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_platform" data-ref="_M/GLRO">GLRO</a>(dl_platform) = (<em>void</em> *) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="251">251</th><td>	<b>break</b>;</td></tr>
+<tr><th id="252">252</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1134" title="16" data-ref="_M/AT_HWCAP">AT_HWCAP</a>:</td></tr>
+<tr><th id="253">253</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_hwcap" data-ref="_M/GLRO">GLRO</a>(dl_hwcap) = (<em>unsigned</em> <em>long</em> <em>int</em>) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="254">254</th><td>	<b>break</b>;</td></tr>
+<tr><th id="255">255</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1156" title="26" data-ref="_M/AT_HWCAP2">AT_HWCAP2</a>:</td></tr>
+<tr><th id="256">256</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_hwcap2" data-ref="_M/GLRO">GLRO</a>(dl_hwcap2) = (<em>unsigned</em> <em>long</em> <em>int</em>) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="257">257</th><td>	<b>break</b>;</td></tr>
+<tr><th id="258">258</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1139" title="18" data-ref="_M/AT_FPUCW">AT_FPUCW</a>:</td></tr>
+<tr><th id="259">259</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#452" title="_dl_fpu_control" data-ref="_M/GLRO">GLRO</a>(dl_fpu_control) = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="260">260</th><td>	<b>break</b>;</td></tr>
+<tr><th id="261">261</th><td><u>#<span data-ppcond="261">ifdef</span> <span class="macro" data-ref="_M/NEED_DL_SYSINFO">NEED_DL_SYSINFO</span></u></td></tr>
+<tr><th id="262">262</th><td>      <b>case</b> AT_SYSINFO:</td></tr>
+<tr><th id="263">263</th><td>	GL(dl_sysinfo) = av-&gt;a_un.a_val;</td></tr>
+<tr><th id="264">264</th><td>	<b>break</b>;</td></tr>
+<tr><th id="265">265</th><td><u>#<span data-ppcond="261">endif</span></u></td></tr>
+<tr><th id="266">266</th><td><u>#<span data-ppcond="266">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/dl-sysdep.h.html#26" data-ref="_M/NEED_DL_SYSINFO_DSO">NEED_DL_SYSINFO_DSO</a></u></td></tr>
+<tr><th id="267">267</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1164" title="33" data-ref="_M/AT_SYSINFO_EHDR">AT_SYSINFO_EHDR</a>:</td></tr>
+<tr><th id="268">268</th><td>	<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_sysinfo_dso" data-ref="_M/GL">GL</a>(dl_sysinfo_dso) = (<em>void</em> *) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="269">269</th><td>	<b>break</b>;</td></tr>
+<tr><th id="270">270</th><td><u>#<span data-ppcond="266">endif</span></u></td></tr>
+<tr><th id="271">271</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1126" title="11" data-ref="_M/AT_UID">AT_UID</a>:</td></tr>
+<tr><th id="272">272</th><td>	<a class="local col8 ref" href="#18uid" title='uid' data-ref="18uid" data-ref-filename="18uid">uid</a> ^= <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="273">273</th><td>	<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> |= <var>1</var>;</td></tr>
+<tr><th id="274">274</th><td>	<b>break</b>;</td></tr>
+<tr><th id="275">275</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1127" title="12" data-ref="_M/AT_EUID">AT_EUID</a>:</td></tr>
+<tr><th id="276">276</th><td>	<a class="local col8 ref" href="#18uid" title='uid' data-ref="18uid" data-ref-filename="18uid">uid</a> ^= <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="277">277</th><td>	<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> |= <var>2</var>;</td></tr>
+<tr><th id="278">278</th><td>	<b>break</b>;</td></tr>
+<tr><th id="279">279</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1128" title="13" data-ref="_M/AT_GID">AT_GID</a>:</td></tr>
+<tr><th id="280">280</th><td>	<a class="local col9 ref" href="#19gid" title='gid' data-ref="19gid" data-ref-filename="19gid">gid</a> ^= <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="281">281</th><td>	<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> |= <var>4</var>;</td></tr>
+<tr><th id="282">282</th><td>	<b>break</b>;</td></tr>
+<tr><th id="283">283</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1129" title="14" data-ref="_M/AT_EGID">AT_EGID</a>:</td></tr>
+<tr><th id="284">284</th><td>	<a class="local col9 ref" href="#19gid" title='gid' data-ref="19gid" data-ref-filename="19gid">gid</a> ^= <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="285">285</th><td>	<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> |= <var>8</var>;</td></tr>
+<tr><th id="286">286</th><td>	<b>break</b>;</td></tr>
+<tr><th id="287">287</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1150" title="23" data-ref="_M/AT_SECURE">AT_SECURE</a>:</td></tr>
+<tr><th id="288">288</th><td>	<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> = -<var>1</var>;</td></tr>
+<tr><th id="289">289</th><td>	<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a> = <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="290">290</th><td>	<a class="ref" href="../include/unistd.h.html#__libc_enable_secure_decided" title='__libc_enable_secure_decided' data-ref="__libc_enable_secure_decided" data-ref-filename="__libc_enable_secure_decided">__libc_enable_secure_decided</a> = <var>1</var>;</td></tr>
+<tr><th id="291">291</th><td>	<b>break</b>;</td></tr>
+<tr><th id="292">292</th><td>      <b>case</b> <a class="macro" href="elf.h.html#1154" title="25" data-ref="_M/AT_RANDOM">AT_RANDOM</a>:</td></tr>
+<tr><th id="293">293</th><td>	<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_random" title='_dl_random' data-ref="_dl_random" data-ref-filename="_dl_random">_dl_random</a> = (<em>void</em> *) <a class="local col6 ref" href="#16av" title='av' data-ref="16av" data-ref-filename="16av">av</a>-&gt;<a class="ref field" href="elf.h.html#(anonymous)::a_un" title='(anonymous struct)::a_un' data-ref="(anonymous)::a_un" data-ref-filename="(anonymous)..a_un">a_un</a>.<a class="ref field" href="elf.h.html#(anonymousstruct)::(anonymous)::a_val" title='(anonymous struct)::(anonymous union)::a_val' data-ref="(anonymousstruct)::(anonymous)::a_val" data-ref-filename="(anonymousstruct)..(anonymous)..a_val">a_val</a>;</td></tr>
+<tr><th id="294">294</th><td>	<b>break</b>;</td></tr>
+<tr><th id="295">295</th><td><u># <span data-ppcond="295">ifdef</span> <span class="macro" data-ref="_M/DL_PLATFORM_AUXV">DL_PLATFORM_AUXV</span></u></td></tr>
+<tr><th id="296">296</th><td>      DL_PLATFORM_AUXV</td></tr>
+<tr><th id="297">297</th><td><u># <span data-ppcond="295">endif</span></u></td></tr>
+<tr><th id="298">298</th><td>      }</td></tr>
+<tr><th id="299">299</th><td>  <b>if</b> (<a class="local col7 ref" href="#17seen" title='seen' data-ref="17seen" data-ref-filename="17seen">seen</a> == <var>0xf</var>)</td></tr>
+<tr><th id="300">300</th><td>    {</td></tr>
+<tr><th id="301">301</th><td>      <a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a> = <a class="local col8 ref" href="#18uid" title='uid' data-ref="18uid" data-ref-filename="18uid">uid</a> != <var>0</var> || <a class="local col9 ref" href="#19gid" title='gid' data-ref="19gid" data-ref-filename="19gid">gid</a> != <var>0</var>;</td></tr>
+<tr><th id="302">302</th><td>      <a class="ref" href="../include/unistd.h.html#__libc_enable_secure_decided" title='__libc_enable_secure_decided' data-ref="__libc_enable_secure_decided" data-ref-filename="__libc_enable_secure_decided">__libc_enable_secure_decided</a> = <var>1</var>;</td></tr>
+<tr><th id="303">303</th><td>    }</td></tr>
+<tr><th id="304">304</th><td>}</td></tr>
+<tr><th id="305">305</th><td><u>#<span data-ppcond="221">endif</span></u></td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td><em>void</em></td></tr>
+<tr><th id="309">309</th><td><a class="macro" href="../include/libc-symbols.h.html#194" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="310">310</th><td><dfn class="decl def fn" id="_dl_non_dynamic_init" title='_dl_non_dynamic_init' data-ref="_dl_non_dynamic_init" data-ref-filename="_dl_non_dynamic_init">_dl_non_dynamic_init</dfn> (<em>void</em>)</td></tr>
+<tr><th id="311">311</th><td>{</td></tr>
+<tr><th id="312">312</th><td>  <a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_origin" title='link_map::l_origin' data-ref="link_map::l_origin" data-ref-filename="link_map..l_origin">l_origin</a> = <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_get_origin" title='_dl_get_origin' data-ref="_dl_get_origin" data-ref-filename="_dl_get_origin">_dl_get_origin</a> ();</td></tr>
+<tr><th id="313">313</th><td>  <a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_phdr" title='link_map::l_phdr' data-ref="link_map::l_phdr" data-ref-filename="link_map..l_phdr">l_phdr</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_phdr" data-ref="_M/GL">GL</a>(dl_phdr);</td></tr>
+<tr><th id="314">314</th><td>  <a class="tu ref" href="#_dl_main_map" title='_dl_main_map' data-use='m' data-ref="_dl_main_map" data-ref-filename="_dl_main_map">_dl_main_map</a>.<a class="ref field" href="../include/link.h.html#link_map::l_phnum" title='link_map::l_phnum' data-ref="link_map::l_phnum" data-ref-filename="link_map..l_phnum">l_phnum</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_phnum" data-ref="_M/GL">GL</a>(dl_phnum);</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/x86_64/hp-timing.h.html#24" title="(1)" data-ref="_M/HP_SMALL_TIMING_AVAIL">HP_SMALL_TIMING_AVAIL</a>)</td></tr>
+<tr><th id="317">317</th><td>    <a class="macro" href="../sysdeps/x86_64/hp-timing.h.html#33" title="({ unsigned int _hi, _lo; asm volatile (&quot;rdtsc&quot; : &quot;=a&quot; (_lo), &quot;=d&quot; (_hi)); (_dl_cpuclock_offset) = ((unsigned long long int) _hi &lt;&lt; 32) | _lo; })" data-ref="_M/HP_TIMING_NOW">HP_TIMING_NOW</a> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_cpuclock_offset" title='_dl_cpuclock_offset' data-ref="_dl_cpuclock_offset" data-ref-filename="_dl_cpuclock_offset">_dl_cpuclock_offset</a>);</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_verbose" title='_dl_verbose' data-ref="_dl_verbose" data-ref-filename="_dl_verbose">_dl_verbose</a> = *(<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_WARN"</q>) ?: <q>""</q>) == <kbd>'\0'</kbd> ? <var>0</var> : <var>1</var>;</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>  <i>/* Set up the data structures for the system-supplied DSO early,</i></td></tr>
+<tr><th id="322">322</th><td><i>     so they can influence _dl_init_paths.  */</i></td></tr>
+<tr><th id="323">323</th><td>  <a class="ref fn" href="setup-vdso.h.html#setup_vdso" title='setup_vdso' data-ref="setup_vdso" data-ref-filename="setup_vdso">setup_vdso</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td>  <i>/* Initialize the data structures for the search paths for shared</i></td></tr>
+<tr><th id="326">326</th><td><i>     objects.  */</i></td></tr>
+<tr><th id="327">327</th><td>  <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_init_paths" title='_dl_init_paths' data-ref="_dl_init_paths" data-ref-filename="_dl_init_paths">_dl_init_paths</a> (<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_LIBRARY_PATH"</q>));</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td>  <i>/* Remember the last search directory added at startup.  */</i></td></tr>
+<tr><th id="330">330</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_init_all_dirs" title='_dl_init_all_dirs' data-ref="_dl_init_all_dirs" data-ref-filename="_dl_init_all_dirs">_dl_init_all_dirs</a> = <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#277" title="_dl_all_dirs" data-ref="_M/GL">GL</a>(dl_all_dirs);</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_lazy" title='_dl_lazy' data-ref="_dl_lazy" data-ref-filename="_dl_lazy">_dl_lazy</a> = *(<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_BIND_NOW"</q>) ?: <q>""</q>) == <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_bind_not" title='_dl_bind_not' data-ref="_dl_bind_not" data-ref-filename="_dl_bind_not">_dl_bind_not</a> = *(<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_BIND_NOT"</q>) ?: <q>""</q>) != <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="335">335</th><td></td></tr>
+<tr><th id="336">336</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_dynamic_weak" title='_dl_dynamic_weak' data-ref="_dl_dynamic_weak" data-ref-filename="_dl_dynamic_weak">_dl_dynamic_weak</a> = *(<a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_DYNAMIC_WEAK"</q>) ?: <q>""</q>) == <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td>  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_profile_output" title='_dl_profile_output' data-ref="_dl_profile_output" data-ref-filename="_dl_profile_output">_dl_profile_output</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#getenv" title='getenv' data-ref="getenv" data-ref-filename="getenv">getenv</a> (<q>"LD_PROFILE_OUTPUT"</q>);</td></tr>
+<tr><th id="339">339</th><td>  <b>if</b> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_profile_output" title='_dl_profile_output' data-ref="_dl_profile_output" data-ref-filename="_dl_profile_output">_dl_profile_output</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_profile_output" title='_dl_profile_output' data-ref="_dl_profile_output" data-ref-filename="_dl_profile_output">_dl_profile_output</a>[<var>0</var>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="340">340</th><td>    <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_profile_output" title='_dl_profile_output' data-ref="_dl_profile_output" data-ref-filename="_dl_profile_output">_dl_profile_output</a></td></tr>
+<tr><th id="341">341</th><td>      = &amp;<q>"/var/tmp\0/var/profile"</q>[<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a> ? <var>9</var> : <var>0</var>];</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>  <b>if</b> (<a class="ref" href="../include/unistd.h.html#__libc_enable_secure" title='__libc_enable_secure' data-ref="__libc_enable_secure" data-ref-filename="__libc_enable_secure">__libc_enable_secure</a>)</td></tr>
+<tr><th id="344">344</th><td>    {</td></tr>
+<tr><th id="345">345</th><td>      <em>static</em> <em>const</em> <em>char</em> <dfn class="local col0 decl" id="20unsecure_envvars" title='unsecure_envvars' data-type='const char [300]' data-ref="20unsecure_envvars" data-ref-filename="20unsecure_envvars">unsecure_envvars</dfn>[] =</td></tr>
+<tr><th id="346">346</th><td>	<a class="macro" href="../sysdeps/generic/unsecvars.h.html#10" title="&quot;GCONV_PATH\0&quot; &quot;GETCONF_DIR\0&quot; &quot;HOSTALIASES\0&quot; &quot;LD_AUDIT\0&quot; &quot;LD_DEBUG\0&quot; &quot;LD_DEBUG_OUTPUT\0&quot; &quot;LD_DYNAMIC_WEAK\0&quot; &quot;LD_HWCAP_MASK\0&quot; &quot;LD_LIBRARY_PATH\0&quot; &quot;LD_ORIGIN_PATH\0&quot; &quot;LD_PRELOAD\0&quot; &quot;LD_PROFILE\0&quot; &quot;LD_SHOW_AUXV\0&quot; &quot;LD_USE_LOAD_BIAS\0&quot; &quot;LOCALDOMAIN\0&quot; &quot;LOCPATH\0&quot; &quot;MALLOC_TRACE\0&quot; &quot;NIS_PATH\0&quot; &quot;NLSPATH\0&quot; &quot;RESOLV_HOST_CONF\0&quot; &quot;RES_OPTIONS\0&quot; &quot;TMPDIR\0&quot; &quot;TZDIR\0&quot;" data-ref="_M/UNSECURE_ENVVARS">UNSECURE_ENVVARS</a></td></tr>
+<tr><th id="347">347</th><td><u>#<span data-ppcond="347">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/64/dl-librecon.h.html#42" data-ref="_M/EXTRA_UNSECURE_ENVVARS">EXTRA_UNSECURE_ENVVARS</a></u></td></tr>
+<tr><th id="348">348</th><td>	<a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/64/dl-librecon.h.html#42" title="&quot;LD_PREFER_MAP_32BIT_EXEC\0&quot;" data-ref="_M/EXTRA_UNSECURE_ENVVARS">EXTRA_UNSECURE_ENVVARS</a></td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="347">endif</span></u></td></tr>
+<tr><th id="350">350</th><td>	;</td></tr>
+<tr><th id="351">351</th><td>      <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="21cp" title='cp' data-type='const char *' data-ref="21cp" data-ref-filename="21cp">cp</dfn> = <a class="local col0 ref" href="#20unsecure_envvars" title='unsecure_envvars' data-ref="20unsecure_envvars" data-ref-filename="20unsecure_envvars">unsecure_envvars</a>;</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>      <b>while</b> (<a class="local col1 ref" href="#21cp" title='cp' data-ref="21cp" data-ref-filename="21cp">cp</a> &lt; <a class="local col0 ref" href="#20unsecure_envvars" title='unsecure_envvars' data-ref="20unsecure_envvars" data-ref-filename="20unsecure_envvars">unsecure_envvars</a> + <b>sizeof</b> (<a class="local col0 ref" href="#20unsecure_envvars" title='unsecure_envvars' data-ref="20unsecure_envvars" data-ref-filename="20unsecure_envvars">unsecure_envvars</a>))</td></tr>
+<tr><th id="354">354</th><td>	{</td></tr>
+<tr><th id="355">355</th><td>	  <a class="ref fn" href="../include/stdlib.h.html#__unsetenv" title='__unsetenv' data-ref="__unsetenv" data-ref-filename="__unsetenv">__unsetenv</a> (<a class="local col1 ref" href="#21cp" title='cp' data-ref="21cp" data-ref-filename="21cp">cp</a>);</td></tr>
+<tr><th id="356">356</th><td>	  <a class="local col1 ref" href="#21cp" title='cp' data-ref="21cp" data-ref-filename="21cp">cp</a> = (<em>const</em> <em>char</em> *) <a class="ref fn" href="../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a> (<a class="local col1 ref" href="#21cp" title='cp' data-ref="21cp" data-ref-filename="21cp">cp</a>, <kbd>'\0'</kbd>) + <var>1</var>;</td></tr>
+<tr><th id="357">357</th><td>	}</td></tr>
+<tr><th id="358">358</th><td></td></tr>
+<tr><th id="359">359</th><td><u>#<span data-ppcond="359">if</span> !<span class="macro" title="1" data-ref="_M/HAVE_TUNABLES">HAVE_TUNABLES</span></u></td></tr>
+<tr><th id="360">360</th><td>      <b>if</b> (__access (<q>"/etc/suid-debug"</q>, F_OK) != <var>0</var>)</td></tr>
+<tr><th id="361">361</th><td>	__unsetenv (<q>"MALLOC_CHECK_"</q>);</td></tr>
+<tr><th id="362">362</th><td><u>#<span data-ppcond="359">endif</span></u></td></tr>
+<tr><th id="363">363</th><td>    }</td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td><u>#<span data-ppcond="365">ifdef</span> <a class="macro" href="../sysdeps/x86_64/dl-machine.h.html#220" data-ref="_M/DL_PLATFORM_INIT">DL_PLATFORM_INIT</a></u></td></tr>
+<tr><th id="366">366</th><td>  <a class="macro" href="../sysdeps/x86_64/dl-machine.h.html#220" title="dl_platform_init ()" data-ref="_M/DL_PLATFORM_INIT">DL_PLATFORM_INIT</a>;</td></tr>
+<tr><th id="367">367</th><td><u>#<span data-ppcond="365">endif</span></u></td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><u>#<span data-ppcond="369">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/dl-librecon.h.html#53" data-ref="_M/DL_OSVERSION_INIT">DL_OSVERSION_INIT</a></u></td></tr>
+<tr><th id="370">370</th><td>  <a class="macro" href="../sysdeps/unix/sysv/linux/dl-librecon.h.html#53" title="do { char *assume_kernel = getenv (&quot;LD_ASSUME_KERNEL&quot;); if (assume_kernel) _dl_osversion_init (assume_kernel); } while (0)" data-ref="_M/DL_OSVERSION_INIT">DL_OSVERSION_INIT</a>;</td></tr>
+<tr><th id="371">371</th><td><u>#<span data-ppcond="369">endif</span></u></td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>  <i>/* Now determine the length of the platform string.  */</i></td></tr>
+<tr><th id="374">374</th><td>  <b>if</b> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_platform" title='_dl_platform' data-ref="_dl_platform" data-ref-filename="_dl_platform">_dl_platform</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="375">375</th><td>    <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_platformlen" title='_dl_platformlen' data-ref="_dl_platformlen" data-ref-filename="_dl_platformlen">_dl_platformlen</a> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_platform" title='_dl_platform' data-ref="_dl_platform" data-ref-filename="_dl_platform">_dl_platform</a>);</td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td>  <i>/* Scan for a program header telling us the stack is nonexecutable.  */</i></td></tr>
+<tr><th id="378">378</th><td>  <b>if</b> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_phdr" title='_dl_phdr' data-ref="_dl_phdr" data-ref-filename="_dl_phdr">_dl_phdr</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="379">379</th><td>    <b>for</b> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint_fast16_t" title='uint_fast16_t' data-type='unsigned long' data-ref="uint_fast16_t" data-ref-filename="uint_fast16_t">uint_fast16_t</a> <dfn class="local col2 decl" id="22i" title='i' data-type='uint_fast16_t' data-ref="22i" data-ref-filename="22i">i</dfn> = <var>0</var>; <a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a> &lt; <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_phnum" title='_dl_phnum' data-ref="_dl_phnum" data-ref-filename="_dl_phnum">_dl_phnum</a>; ++<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>)</td></tr>
+<tr><th id="380">380</th><td>      <b>if</b> (<a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_phdr" title='_dl_phdr' data-ref="_dl_phdr" data-ref-filename="_dl_phdr">_dl_phdr</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>].<a class="ref field" href="elf.h.html#(anonymous)::p_type" title='(anonymous struct)::p_type' data-ref="(anonymous)::p_type" data-ref-filename="(anonymous)..p_type">p_type</a> == <a class="macro" href="elf.h.html#721" title="0x6474e551" data-ref="_M/PT_GNU_STACK">PT_GNU_STACK</a>)</td></tr>
+<tr><th id="381">381</th><td>	{</td></tr>
+<tr><th id="382">382</th><td>	  <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_stack_flags" title='_dl_stack_flags' data-ref="_dl_stack_flags" data-ref-filename="_dl_stack_flags">_dl_stack_flags</a> = <a class="ref" href="../sysdeps/generic/ldsodefs.h.html#_dl_phdr" title='_dl_phdr' data-ref="_dl_phdr" data-ref-filename="_dl_phdr">_dl_phdr</a>[<a class="local col2 ref" href="#22i" title='i' data-ref="22i" data-ref-filename="22i">i</a>].<a class="ref field" href="elf.h.html#(anonymous)::p_flags" title='(anonymous struct)::p_flags' data-ref="(anonymous)::p_flags" data-ref-filename="(anonymous)..p_flags">p_flags</a>;</td></tr>
+<tr><th id="383">383</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="384">384</th><td>	}</td></tr>
+<tr><th id="385">385</th><td>}</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td><u>#<span data-ppcond="387">ifdef</span> <span class="macro" data-ref="_M/DL_SYSINFO_IMPLEMENTATION">DL_SYSINFO_IMPLEMENTATION</span></u></td></tr>
+<tr><th id="388">388</th><td>DL_SYSINFO_IMPLEMENTATION</td></tr>
+<tr><th id="389">389</th><td><u>#<span data-ppcond="387">endif</span></u></td></tr>
+<tr><th id="390">390</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

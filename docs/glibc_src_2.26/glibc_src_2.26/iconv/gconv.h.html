@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>gconv.h source code [glibc_src_2.26/iconv/gconv.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="__gconv_info,__gconv_step,__gconv_step_data "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/iconv/gconv.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>iconv</a>/<a href='gconv.h.html'>gconv.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1997-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><i>/* This header provides no interface for a user to the internals of</i></td></tr>
+<tr><th id="19">19</th><td><i>   the gconv implementation in the libc.  Therefore there is no use</i></td></tr>
+<tr><th id="20">20</th><td><i>   for these definitions beside for writing additional gconv modules.  */</i></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="22">ifndef</span> <span class="macro" data-ref="_M/_GCONV_H">_GCONV_H</span></u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/_GCONV_H" data-ref="_M/_GCONV_H">_GCONV_H</dfn>	1</u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/features.h.html">&lt;features.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/bits/types/__mbstate_t.h.html">&lt;bits/types/__mbstate_t.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/bits/types/wint_t.h.html">&lt;bits/types/wint_t.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/__need_size_t" data-ref="_M/__need_size_t">__need_size_t</dfn></u></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/__need_wchar_t" data-ref="_M/__need_wchar_t">__need_wchar_t</dfn></u></td></tr>
+<tr><th id="31">31</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* ISO 10646 value used to signal invalid value.  */</i></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/__UNKNOWN_10646_CHAR" data-ref="_M/__UNKNOWN_10646_CHAR">__UNKNOWN_10646_CHAR</dfn>	((wchar_t) 0xfffd)</u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/* Error codes for gconv functions.  */</i></td></tr>
+<tr><th id="37">37</th><td><b>enum</b></td></tr>
+<tr><th id="38">38</th><td>{</td></tr>
+<tr><th id="39">39</th><td>  <dfn class="enum" id="__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</dfn> = <var>0</var>,</td></tr>
+<tr><th id="40">40</th><td>  <dfn class="enum" id="__GCONV_NOCONV" title='__GCONV_NOCONV' data-ref="__GCONV_NOCONV" data-ref-filename="__GCONV_NOCONV">__GCONV_NOCONV</dfn>,</td></tr>
+<tr><th id="41">41</th><td>  <dfn class="enum" id="__GCONV_NODB" title='__GCONV_NODB' data-ref="__GCONV_NODB" data-ref-filename="__GCONV_NODB">__GCONV_NODB</dfn>,</td></tr>
+<tr><th id="42">42</th><td>  <dfn class="enum" id="__GCONV_NOMEM" title='__GCONV_NOMEM' data-ref="__GCONV_NOMEM" data-ref-filename="__GCONV_NOMEM">__GCONV_NOMEM</dfn>,</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>  <dfn class="enum" id="__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</dfn>,</td></tr>
+<tr><th id="45">45</th><td>  <dfn class="enum" id="__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</dfn>,</td></tr>
+<tr><th id="46">46</th><td>  <dfn class="enum" id="__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</dfn>,</td></tr>
+<tr><th id="47">47</th><td>  <dfn class="enum" id="__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</dfn>,</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>  <dfn class="enum" id="__GCONV_ILLEGAL_DESCRIPTOR" title='__GCONV_ILLEGAL_DESCRIPTOR' data-ref="__GCONV_ILLEGAL_DESCRIPTOR" data-ref-filename="__GCONV_ILLEGAL_DESCRIPTOR">__GCONV_ILLEGAL_DESCRIPTOR</dfn>,</td></tr>
+<tr><th id="50">50</th><td>  <dfn class="enum" id="__GCONV_INTERNAL_ERROR" title='__GCONV_INTERNAL_ERROR' data-ref="__GCONV_INTERNAL_ERROR" data-ref-filename="__GCONV_INTERNAL_ERROR">__GCONV_INTERNAL_ERROR</dfn></td></tr>
+<tr><th id="51">51</th><td>};</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><i>/* Flags the `__gconv_open' function can set.  */</i></td></tr>
+<tr><th id="55">55</th><td><b>enum</b></td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>  <dfn class="enum" id="__GCONV_IS_LAST" title='__GCONV_IS_LAST' data-ref="__GCONV_IS_LAST" data-ref-filename="__GCONV_IS_LAST">__GCONV_IS_LAST</dfn> = <var>0x0001</var>,</td></tr>
+<tr><th id="58">58</th><td>  <dfn class="enum" id="__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</dfn> = <var>0x0002</var>,</td></tr>
+<tr><th id="59">59</th><td>  <dfn class="enum" id="__GCONV_SWAP" title='__GCONV_SWAP' data-ref="__GCONV_SWAP" data-ref-filename="__GCONV_SWAP">__GCONV_SWAP</dfn> = <var>0x0004</var>,</td></tr>
+<tr><th id="60">60</th><td>  <dfn class="enum" id="__GCONV_TRANSLIT" title='__GCONV_TRANSLIT' data-ref="__GCONV_TRANSLIT" data-ref-filename="__GCONV_TRANSLIT">__GCONV_TRANSLIT</dfn> = <var>0x0008</var></td></tr>
+<tr><th id="61">61</th><td>};</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/* Forward declarations.  */</i></td></tr>
+<tr><th id="65">65</th><td><b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a>;</td></tr>
+<tr><th id="66">66</th><td><b>struct</b> <a class="type" href="#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a>;</td></tr>
+<tr><th id="67">67</th><td><b>struct</b> <dfn class="type" id="__gconv_loaded_object" title='__gconv_loaded_object' data-ref="__gconv_loaded_object" data-ref-filename="__gconv_loaded_object">__gconv_loaded_object</dfn>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><i>/* Type of a conversion function.  */</i></td></tr>
+<tr><th id="71">71</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="__gconv_fct" title='__gconv_fct' data-type='int (*)(struct __gconv_step *, struct __gconv_step_data *, const unsigned char **, const unsigned char *, unsigned char **, size_t *, int, int)' data-ref="__gconv_fct" data-ref-filename="__gconv_fct">__gconv_fct</dfn>) (<b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *, <b>struct</b> <a class="type" href="#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *,</td></tr>
+<tr><th id="72">72</th><td>			    <em>const</em> <em>unsigned</em> <em>char</em> **, <em>const</em> <em>unsigned</em> <em>char</em> *,</td></tr>
+<tr><th id="73">73</th><td>			    <em>unsigned</em> <em>char</em> **, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i>/* Type of a specialized conversion function for a single byte to INTERNAL.  */</i></td></tr>
+<tr><th id="76">76</th><td><b>typedef</b> <a class="typedef" href="../wcsmbs/bits/types/wint_t.h.html#wint_t" title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</a> (*<dfn class="typedef" id="__gconv_btowc_fct" title='__gconv_btowc_fct' data-type='wint_t (*)(struct __gconv_step *, unsigned char)' data-ref="__gconv_btowc_fct" data-ref-filename="__gconv_btowc_fct">__gconv_btowc_fct</dfn>) (<b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *, <em>unsigned</em> <em>char</em>);</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><i>/* Constructor and destructor for local data for conversion step.  */</i></td></tr>
+<tr><th id="79">79</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="__gconv_init_fct" title='__gconv_init_fct' data-type='int (*)(struct __gconv_step *)' data-ref="__gconv_init_fct" data-ref-filename="__gconv_init_fct">__gconv_init_fct</dfn>) (<b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *);</td></tr>
+<tr><th id="80">80</th><td><b>typedef</b> <em>void</em> (*<dfn class="typedef" id="__gconv_end_fct" title='__gconv_end_fct' data-type='void (*)(struct __gconv_step *)' data-ref="__gconv_end_fct" data-ref-filename="__gconv_end_fct">__gconv_end_fct</dfn>) (<b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *);</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td><i>/* Description of a conversion step.  */</i></td></tr>
+<tr><th id="84">84</th><td><b>struct</b> <dfn class="type def" id="__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</dfn></td></tr>
+<tr><th id="85">85</th><td>{</td></tr>
+<tr><th id="86">86</th><td>  <b>struct</b> <a class="type" href="#__gconv_loaded_object" title='__gconv_loaded_object' data-ref="__gconv_loaded_object" data-ref-filename="__gconv_loaded_object">__gconv_loaded_object</a> *<dfn class="decl field" id="__gconv_step::__shlib_handle" title='__gconv_step::__shlib_handle' data-ref="__gconv_step::__shlib_handle" data-ref-filename="__gconv_step..__shlib_handle">__shlib_handle</dfn>;</td></tr>
+<tr><th id="87">87</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="__gconv_step::__modname" title='__gconv_step::__modname' data-ref="__gconv_step::__modname" data-ref-filename="__gconv_step..__modname">__modname</dfn>;</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__counter" title='__gconv_step::__counter' data-ref="__gconv_step::__counter" data-ref-filename="__gconv_step..__counter">__counter</dfn>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>  <em>char</em> *<dfn class="decl field" id="__gconv_step::__from_name" title='__gconv_step::__from_name' data-ref="__gconv_step::__from_name" data-ref-filename="__gconv_step..__from_name">__from_name</dfn>;</td></tr>
+<tr><th id="92">92</th><td>  <em>char</em> *<dfn class="decl field" id="__gconv_step::__to_name" title='__gconv_step::__to_name' data-ref="__gconv_step::__to_name" data-ref-filename="__gconv_step..__to_name">__to_name</dfn>;</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>  <a class="typedef" href="#__gconv_fct" title='__gconv_fct' data-type='int (*)(struct __gconv_step *, struct __gconv_step_data *, const unsigned char **, const unsigned char *, unsigned char **, size_t *, int, int)' data-ref="__gconv_fct" data-ref-filename="__gconv_fct">__gconv_fct</a> <dfn class="decl field" id="__gconv_step::__fct" title='__gconv_step::__fct' data-ref="__gconv_step::__fct" data-ref-filename="__gconv_step..__fct">__fct</dfn>;</td></tr>
+<tr><th id="95">95</th><td>  <a class="typedef" href="#__gconv_btowc_fct" title='__gconv_btowc_fct' data-type='wint_t (*)(struct __gconv_step *, unsigned char)' data-ref="__gconv_btowc_fct" data-ref-filename="__gconv_btowc_fct">__gconv_btowc_fct</a> <dfn class="decl field" id="__gconv_step::__btowc_fct" title='__gconv_step::__btowc_fct' data-ref="__gconv_step::__btowc_fct" data-ref-filename="__gconv_step..__btowc_fct">__btowc_fct</dfn>;</td></tr>
+<tr><th id="96">96</th><td>  <a class="typedef" href="#__gconv_init_fct" title='__gconv_init_fct' data-type='int (*)(struct __gconv_step *)' data-ref="__gconv_init_fct" data-ref-filename="__gconv_init_fct">__gconv_init_fct</a> <dfn class="decl field" id="__gconv_step::__init_fct" title='__gconv_step::__init_fct' data-ref="__gconv_step::__init_fct" data-ref-filename="__gconv_step..__init_fct">__init_fct</dfn>;</td></tr>
+<tr><th id="97">97</th><td>  <a class="typedef" href="#__gconv_end_fct" title='__gconv_end_fct' data-type='void (*)(struct __gconv_step *)' data-ref="__gconv_end_fct" data-ref-filename="__gconv_end_fct">__gconv_end_fct</a> <dfn class="decl field" id="__gconv_step::__end_fct" title='__gconv_step::__end_fct' data-ref="__gconv_step::__end_fct" data-ref-filename="__gconv_step..__end_fct">__end_fct</dfn>;</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>  <i>/* Information about the number of bytes needed or produced in this</i></td></tr>
+<tr><th id="100">100</th><td><i>     step.  This helps optimizing the buffer sizes.  */</i></td></tr>
+<tr><th id="101">101</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__min_needed_from" title='__gconv_step::__min_needed_from' data-ref="__gconv_step::__min_needed_from" data-ref-filename="__gconv_step..__min_needed_from">__min_needed_from</dfn>;</td></tr>
+<tr><th id="102">102</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__max_needed_from" title='__gconv_step::__max_needed_from' data-ref="__gconv_step::__max_needed_from" data-ref-filename="__gconv_step..__max_needed_from">__max_needed_from</dfn>;</td></tr>
+<tr><th id="103">103</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__min_needed_to" title='__gconv_step::__min_needed_to' data-ref="__gconv_step::__min_needed_to" data-ref-filename="__gconv_step..__min_needed_to">__min_needed_to</dfn>;</td></tr>
+<tr><th id="104">104</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__max_needed_to" title='__gconv_step::__max_needed_to' data-ref="__gconv_step::__max_needed_to" data-ref-filename="__gconv_step..__max_needed_to">__max_needed_to</dfn>;</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>  <i>/* Flag whether this is a stateful encoding or not.  */</i></td></tr>
+<tr><th id="107">107</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step::__stateful" title='__gconv_step::__stateful' data-ref="__gconv_step::__stateful" data-ref-filename="__gconv_step..__stateful">__stateful</dfn>;</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>  <em>void</em> *<dfn class="decl field" id="__gconv_step::__data" title='__gconv_step::__data' data-ref="__gconv_step::__data" data-ref-filename="__gconv_step..__data">__data</dfn>;		<i>/* Pointer to step-local data.  */</i></td></tr>
+<tr><th id="110">110</th><td>};</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i>/* Additional data for steps in use of conversion descriptor.  This is</i></td></tr>
+<tr><th id="113">113</th><td><i>   allocated by the `init' function.  */</i></td></tr>
+<tr><th id="114">114</th><td><b>struct</b> <dfn class="type def" id="__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</dfn></td></tr>
+<tr><th id="115">115</th><td>{</td></tr>
+<tr><th id="116">116</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="decl field" id="__gconv_step_data::__outbuf" title='__gconv_step_data::__outbuf' data-ref="__gconv_step_data::__outbuf" data-ref-filename="__gconv_step_data..__outbuf">__outbuf</dfn>;    <i>/* Output buffer for this step.  */</i></td></tr>
+<tr><th id="117">117</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="decl field" id="__gconv_step_data::__outbufend" title='__gconv_step_data::__outbufend' data-ref="__gconv_step_data::__outbufend" data-ref-filename="__gconv_step_data..__outbufend">__outbufend</dfn>; <i>/* Address of first byte after the output</i></td></tr>
+<tr><th id="118">118</th><td><i>				 buffer.  */</i></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>  <i>/* Is this the last module in the chain.  */</i></td></tr>
+<tr><th id="121">121</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</dfn>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>  <i>/* Counter for number of invocations of the module function for this</i></td></tr>
+<tr><th id="124">124</th><td><i>     descriptor.  */</i></td></tr>
+<tr><th id="125">125</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step_data::__invocation_counter" title='__gconv_step_data::__invocation_counter' data-ref="__gconv_step_data::__invocation_counter" data-ref-filename="__gconv_step_data..__invocation_counter">__invocation_counter</dfn>;</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>  <i>/* Flag whether this is an internal use of the module (in the mb*towc*</i></td></tr>
+<tr><th id="128">128</th><td><i>     and wc*tomb* functions) or regular with iconv(3).  */</i></td></tr>
+<tr><th id="129">129</th><td>  <em>int</em> <dfn class="decl field" id="__gconv_step_data::__internal_use" title='__gconv_step_data::__internal_use' data-ref="__gconv_step_data::__internal_use" data-ref-filename="__gconv_step_data..__internal_use">__internal_use</dfn>;</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>  <a class="typedef" href="../wcsmbs/bits/types/__mbstate_t.h.html#__mbstate_t" title='__mbstate_t' data-type='struct __mbstate_t' data-ref="__mbstate_t" data-ref-filename="__mbstate_t">__mbstate_t</a> *<dfn class="decl field" id="__gconv_step_data::__statep" title='__gconv_step_data::__statep' data-ref="__gconv_step_data::__statep" data-ref-filename="__gconv_step_data..__statep">__statep</dfn>;</td></tr>
+<tr><th id="132">132</th><td>  <a class="typedef" href="../wcsmbs/bits/types/__mbstate_t.h.html#__mbstate_t" title='__mbstate_t' data-type='struct __mbstate_t' data-ref="__mbstate_t" data-ref-filename="__mbstate_t">__mbstate_t</a> <dfn class="decl field" id="__gconv_step_data::__state" title='__gconv_step_data::__state' data-ref="__gconv_step_data::__state" data-ref-filename="__gconv_step_data..__state">__state</dfn>;	<i>/* This element must not be used directly by</i></td></tr>
+<tr><th id="133">133</th><td><i>			   any module; always use STATEP!  */</i></td></tr>
+<tr><th id="134">134</th><td>};</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i>/* Combine conversion step description with data.  */</i></td></tr>
+<tr><th id="138">138</th><td><b>typedef</b> <b>struct</b> <dfn class="type def" id="__gconv_info" title='__gconv_info' data-ref="__gconv_info" data-ref-filename="__gconv_info"><a class="type" href="#__gconv_info" title='__gconv_info' data-ref="__gconv_info" data-ref-filename="__gconv_info">__gconv_info</a></dfn></td></tr>
+<tr><th id="139">139</th><td>{</td></tr>
+<tr><th id="140">140</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="__gconv_info::__nsteps" title='__gconv_info::__nsteps' data-ref="__gconv_info::__nsteps" data-ref-filename="__gconv_info..__nsteps">__nsteps</dfn>;</td></tr>
+<tr><th id="141">141</th><td>  <b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="decl field" id="__gconv_info::__steps" title='__gconv_info::__steps' data-ref="__gconv_info::__steps" data-ref-filename="__gconv_info..__steps">__steps</dfn>;</td></tr>
+<tr><th id="142">142</th><td>  <b>__extension__</b> <b>struct</b> <a class="type" href="#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> <dfn class="decl field" id="__gconv_info::__data" title='__gconv_info::__data' data-ref="__gconv_info::__data" data-ref-filename="__gconv_info..__data">__data</dfn>[<var>0</var>];</td></tr>
+<tr><th id="143">143</th><td>} *<dfn class="typedef" id="__gconv_t" title='__gconv_t' data-type='struct __gconv_info *' data-ref="__gconv_t" data-ref-filename="__gconv_t">__gconv_t</dfn>;</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><i>/* Transliteration using the locale's data.  */</i></td></tr>
+<tr><th id="146">146</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__gconv_transliterate" title='__gconv_transliterate' data-ref="__gconv_transliterate" data-ref-filename="__gconv_transliterate">__gconv_transliterate</dfn> (<b>struct</b> <a class="type" href="#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col1 decl" id="1step" title='step' data-type='struct __gconv_step *' data-ref="1step" data-ref-filename="1step">step</dfn>,</td></tr>
+<tr><th id="147">147</th><td>				  <b>struct</b> <a class="type" href="#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col2 decl" id="2step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="2step_data" data-ref-filename="2step_data">step_data</dfn>,</td></tr>
+<tr><th id="148">148</th><td>				  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col3 decl" id="3inbufstart" title='inbufstart' data-type='const unsigned char *' data-ref="3inbufstart" data-ref-filename="3inbufstart">inbufstart</dfn>,</td></tr>
+<tr><th id="149">149</th><td>				  <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col4 decl" id="4inbufp" title='inbufp' data-type='const unsigned char **' data-ref="4inbufp" data-ref-filename="4inbufp">inbufp</dfn>,</td></tr>
+<tr><th id="150">150</th><td>				  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col5 decl" id="5inbufend" title='inbufend' data-type='const unsigned char *' data-ref="5inbufend" data-ref-filename="5inbufend">inbufend</dfn>,</td></tr>
+<tr><th id="151">151</th><td>				  <em>unsigned</em> <em>char</em> **<dfn class="local col6 decl" id="6outbufstart" title='outbufstart' data-type='unsigned char **' data-ref="6outbufstart" data-ref-filename="6outbufstart">outbufstart</dfn>,</td></tr>
+<tr><th id="152">152</th><td>				  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col7 decl" id="7irreversible" title='irreversible' data-type='size_t *' data-ref="7irreversible" data-ref-filename="7irreversible">irreversible</dfn>);</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><u>#<span data-ppcond="22">endif</span> /* gconv.h */</u></td></tr>
+<tr><th id="155">155</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../argp/argp-eexst.c.html'>glibc_src_2.26/argp/argp-eexst.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

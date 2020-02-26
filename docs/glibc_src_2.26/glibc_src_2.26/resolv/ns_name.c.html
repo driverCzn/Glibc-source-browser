@@ -1,0 +1,748 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ns_name.c source code [glibc_src_2.26/resolv/ns_name.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/resolv/ns_name.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>resolv</a>/<a href='ns_name.c.html'>ns_name.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (c) 1996,1999 by Internet Software Consortium.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Permission to use, copy, modify, and distribute this software for any</i></td></tr>
+<tr><th id="6">6</th><td><i> * purpose with or without fee is hereby granted, provided that the above</i></td></tr>
+<tr><th id="7">7</th><td><i> * copyright notice and this permission notice appear in all copies.</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES</i></td></tr>
+<tr><th id="10">10</th><td><i> * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF</i></td></tr>
+<tr><th id="11">11</th><td><i> * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR</i></td></tr>
+<tr><th id="12">12</th><td><i> * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES</i></td></tr>
+<tr><th id="13">13</th><td><i> * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN</i></td></tr>
+<tr><th id="14">14</th><td><i> * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT</i></td></tr>
+<tr><th id="15">15</th><td><i> * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</i></td></tr>
+<tr><th id="16">16</th><td><i> */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/netinet/in.h.html">&lt;netinet/in.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/arpa/nameser.h.html">&lt;arpa/nameser.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/resolv.h.html">&lt;resolv.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u># define <dfn class="macro" id="_M/SPRINTF" data-ref="_M/SPRINTF">SPRINTF</dfn>(x) ((size_t)sprintf x)</u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i  data-doc="digits">/* Data. */</i></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><em>static</em> <em>const</em> <em>char</em>	<dfn class="tu decl def" id="digits" title='digits' data-type='const char [11]' data-ref="digits" data-ref-filename="digits">digits</dfn>[] = <q>"0123456789"</q>;</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i  data-doc="special">/* Forward. */</i></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><em>static</em> <em>int</em>		<a class="tu decl fn" href="#special" title='special' data-type='int special(int )' data-ref="special" data-ref-filename="special">special</a>(<em>int</em>);</td></tr>
+<tr><th id="39">39</th><td><em>static</em> <em>int</em>		<a class="tu decl fn" href="#printable" title='printable' data-type='int printable(int )' data-ref="printable" data-ref-filename="printable">printable</a>(<em>int</em>);</td></tr>
+<tr><th id="40">40</th><td><em>static</em> <em>int</em>		<a class="tu decl fn" href="#dn_find" title='dn_find' data-type='int dn_find(const u_char * , const u_char * , const u_char *const * , const u_char *const * )' data-ref="dn_find" data-ref-filename="dn_find">dn_find</a>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *,</td></tr>
+<tr><th id="41">41</th><td>				<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *,</td></tr>
+<tr><th id="42">42</th><td>				<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *);</td></tr>
+<tr><th id="43">43</th><td><em>static</em> <em>int</em>		<a class="tu decl fn" href="#labellen" title='labellen' data-type='int labellen(const u_char * )' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><i>/* Public. */</i></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><i>/*%</i></td></tr>
+<tr><th id="48">48</th><td><i> *	Convert an encoded domain name to printable ascii as per RFC1035.</i></td></tr>
+<tr><th id="49">49</th><td><i></i></td></tr>
+<tr><th id="50">50</th><td><i> * return:</i></td></tr>
+<tr><th id="51">51</th><td><i> *\li	Number of bytes written to buffer, or -1 (with errno set)</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * notes:</i></td></tr>
+<tr><th id="54">54</th><td><i> *\li	The root is returned as "."</i></td></tr>
+<tr><th id="55">55</th><td><i> *\li	All other domains are returned in non absolute form</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td><em>int</em></td></tr>
+<tr><th id="58">58</th><td><dfn class="decl def fn" id="ns_name_ntop" title='ns_name_ntop' data-ref="ns_name_ntop" data-ref-filename="ns_name_ntop">ns_name_ntop</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="1src" title='src' data-type='const u_char *' data-ref="1src" data-ref-filename="1src">src</dfn>, <em>char</em> *<dfn class="local col2 decl" id="2dst" title='dst' data-type='char *' data-ref="2dst" data-ref-filename="2dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="3dstsiz" title='dstsiz' data-type='size_t' data-ref="3dstsiz" data-ref-filename="3dstsiz">dstsiz</dfn>)</td></tr>
+<tr><th id="59">59</th><td>{</td></tr>
+<tr><th id="60">60</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col4 decl" id="4cp" title='cp' data-type='const u_char *' data-ref="4cp" data-ref-filename="4cp">cp</dfn>;</td></tr>
+<tr><th id="61">61</th><td>	<em>char</em> *<dfn class="local col5 decl" id="5dn" title='dn' data-type='char *' data-ref="5dn" data-ref-filename="5dn">dn</dfn>, *<dfn class="local col6 decl" id="6eom" title='eom' data-type='char *' data-ref="6eom" data-ref-filename="6eom">eom</dfn>;</td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> <dfn class="local col7 decl" id="7c" title='c' data-type='u_char' data-ref="7c" data-ref-filename="7c">c</dfn>;</td></tr>
+<tr><th id="63">63</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col8 decl" id="8n" title='n' data-type='u_int' data-ref="8n" data-ref-filename="8n">n</dfn>;</td></tr>
+<tr><th id="64">64</th><td>	<em>int</em> <dfn class="local col9 decl" id="9l" title='l' data-type='int' data-ref="9l" data-ref-filename="9l">l</dfn>;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>	<a class="local col4 ref" href="#4cp" title='cp' data-ref="4cp" data-ref-filename="4cp">cp</a> = <a class="local col1 ref" href="#1src" title='src' data-ref="1src" data-ref-filename="1src">src</a>;</td></tr>
+<tr><th id="67">67</th><td>	<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> = <a class="local col2 ref" href="#2dst" title='dst' data-ref="2dst" data-ref-filename="2dst">dst</a>;</td></tr>
+<tr><th id="68">68</th><td>	<a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a> = <a class="local col2 ref" href="#2dst" title='dst' data-ref="2dst" data-ref-filename="2dst">dst</a> + <a class="local col3 ref" href="#3dstsiz" title='dstsiz' data-ref="3dstsiz" data-ref-filename="3dstsiz">dstsiz</a>;</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>	<b>while</b> ((<a class="local col8 ref" href="#8n" title='n' data-ref="8n" data-ref-filename="8n">n</a> = *<a class="local col4 ref" href="#4cp" title='cp' data-ref="4cp" data-ref-filename="4cp">cp</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="71">71</th><td>		<b>if</b> ((<a class="local col8 ref" href="#8n" title='n' data-ref="8n" data-ref-filename="8n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) == <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="72">72</th><td>			<i>/* Some kind of compression pointer. */</i></td></tr>
+<tr><th id="73">73</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="74">74</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="75">75</th><td>		}</td></tr>
+<tr><th id="76">76</th><td>		<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> != <a class="local col2 ref" href="#2dst" title='dst' data-ref="2dst" data-ref-filename="2dst">dst</a>) {</td></tr>
+<tr><th id="77">77</th><td>			<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="78">78</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="79">79</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="80">80</th><td>			}</td></tr>
+<tr><th id="81">81</th><td>			*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <kbd>'.'</kbd>;</td></tr>
+<tr><th id="82">82</th><td>		}</td></tr>
+<tr><th id="83">83</th><td>		<b>if</b> ((<a class="local col9 ref" href="#9l" title='l' data-ref="9l" data-ref-filename="9l">l</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col4 ref" href="#4cp" title='cp' data-ref="4cp" data-ref-filename="4cp">cp</a> - <var>1</var>)) &lt; <var>0</var>) {</td></tr>
+<tr><th id="84">84</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="85">85</th><td>			<b>return</b>(-<var>1</var>);</td></tr>
+<tr><th id="86">86</th><td>		}</td></tr>
+<tr><th id="87">87</th><td>		<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> + <a class="local col9 ref" href="#9l" title='l' data-ref="9l" data-ref-filename="9l">l</a> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="88">88</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="89">89</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="90">90</th><td>		}</td></tr>
+<tr><th id="91">91</th><td>		<b>for</b> ((<em>void</em>)<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>; <a class="local col9 ref" href="#9l" title='l' data-ref="9l" data-ref-filename="9l">l</a> &gt; <var>0</var>; <a class="local col9 ref" href="#9l" title='l' data-ref="9l" data-ref-filename="9l">l</a>--) {</td></tr>
+<tr><th id="92">92</th><td>			<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a> = *<a class="local col4 ref" href="#4cp" title='cp' data-ref="4cp" data-ref-filename="4cp">cp</a>++;</td></tr>
+<tr><th id="93">93</th><td>			<b>if</b> (<a class="tu ref fn" href="#special" title='special' data-use='c' data-ref="special" data-ref-filename="special">special</a>(<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a>)) {</td></tr>
+<tr><th id="94">94</th><td>				<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> + <var>1</var> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="95">95</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="96">96</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="97">97</th><td>				}</td></tr>
+<tr><th id="98">98</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <kbd>'\\'</kbd>;</td></tr>
+<tr><th id="99">99</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = (<em>char</em>)<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a>;</td></tr>
+<tr><th id="100">100</th><td>			} <b>else</b> <b>if</b> (!<a class="tu ref fn" href="#printable" title='printable' data-use='c' data-ref="printable" data-ref-filename="printable">printable</a>(<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a>)) {</td></tr>
+<tr><th id="101">101</th><td>				<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> + <var>3</var> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="102">102</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="103">103</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="104">104</th><td>				}</td></tr>
+<tr><th id="105">105</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <kbd>'\\'</kbd>;</td></tr>
+<tr><th id="106">106</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>[<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a> / <var>100</var>];</td></tr>
+<tr><th id="107">107</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>[(<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a> % <var>100</var>) / <var>10</var>];</td></tr>
+<tr><th id="108">108</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>[<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a> % <var>10</var>];</td></tr>
+<tr><th id="109">109</th><td>			} <b>else</b> {</td></tr>
+<tr><th id="110">110</th><td>				<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="111">111</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="112">112</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="113">113</th><td>				}</td></tr>
+<tr><th id="114">114</th><td>				*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = (<em>char</em>)<a class="local col7 ref" href="#7c" title='c' data-ref="7c" data-ref-filename="7c">c</a>;</td></tr>
+<tr><th id="115">115</th><td>			}</td></tr>
+<tr><th id="116">116</th><td>		}</td></tr>
+<tr><th id="117">117</th><td>	}</td></tr>
+<tr><th id="118">118</th><td>	<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> == <a class="local col2 ref" href="#2dst" title='dst' data-ref="2dst" data-ref-filename="2dst">dst</a>) {</td></tr>
+<tr><th id="119">119</th><td>		<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="120">120</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="121">121</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="122">122</th><td>		}</td></tr>
+<tr><th id="123">123</th><td>		*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <kbd>'.'</kbd>;</td></tr>
+<tr><th id="124">124</th><td>	}</td></tr>
+<tr><th id="125">125</th><td>	<b>if</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> &gt;= <a class="local col6 ref" href="#6eom" title='eom' data-ref="6eom" data-ref-filename="6eom">eom</a>) {</td></tr>
+<tr><th id="126">126</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="127">127</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="128">128</th><td>	}</td></tr>
+<tr><th id="129">129</th><td>	*<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="130">130</th><td>	<b>return</b> (<a class="local col5 ref" href="#5dn" title='dn' data-ref="5dn" data-ref-filename="5dn">dn</a> - <a class="local col2 ref" href="#2dst" title='dst' data-ref="2dst" data-ref-filename="2dst">dst</a>);</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_ntop)</td></tr>
+<tr><th id="133">133</th><td><a class="macro" href="../include/libc-symbols.h.html#125" title="extern __typeof (ns_name_ntop) __ns_name_ntop __attribute__ ((alias (&quot;ns_name_ntop&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="ref fn" href="#ns_name_ntop" title='ns_name_ntop' data-ref="ns_name_ntop" data-ref-filename="ns_name_ntop">ns_name_ntop</a>, <dfn class="decl def fn" id="__ns_name_ntop" title='__ns_name_ntop' data-ref="__ns_name_ntop" data-ref-filename="__ns_name_ntop">__ns_name_ntop</dfn>)</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><i>/*%</i></td></tr>
+<tr><th id="136">136</th><td><i> *	Convert an ascii string into an encoded domain name as per RFC1035.</i></td></tr>
+<tr><th id="137">137</th><td><i> *</i></td></tr>
+<tr><th id="138">138</th><td><i> * return:</i></td></tr>
+<tr><th id="139">139</th><td><i> *</i></td></tr>
+<tr><th id="140">140</th><td><i> *\li	-1 if it fails</i></td></tr>
+<tr><th id="141">141</th><td><i> *\li	1 if string was fully qualified</i></td></tr>
+<tr><th id="142">142</th><td><i> *\li	0 is string was not fully qualified</i></td></tr>
+<tr><th id="143">143</th><td><i> *</i></td></tr>
+<tr><th id="144">144</th><td><i> * notes:</i></td></tr>
+<tr><th id="145">145</th><td><i> *\li	Enforces label and domain length limits.</i></td></tr>
+<tr><th id="146">146</th><td><i> */</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><em>int</em></td></tr>
+<tr><th id="149">149</th><td><dfn class="decl def fn" id="ns_name_pton" title='ns_name_pton' data-ref="ns_name_pton" data-ref-filename="ns_name_pton">ns_name_pton</dfn>(<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="10src" title='src' data-type='const char *' data-ref="10src" data-ref-filename="10src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="11dst" title='dst' data-type='u_char *' data-ref="11dst" data-ref-filename="11dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="12dstsiz" title='dstsiz' data-type='size_t' data-ref="12dstsiz" data-ref-filename="12dstsiz">dstsiz</dfn>)</td></tr>
+<tr><th id="150">150</th><td>{</td></tr>
+<tr><th id="151">151</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col3 decl" id="13label" title='label' data-type='u_char *' data-ref="13label" data-ref-filename="13label">label</dfn>, *<dfn class="local col4 decl" id="14bp" title='bp' data-type='u_char *' data-ref="14bp" data-ref-filename="14bp">bp</dfn>, *<dfn class="local col5 decl" id="15eom" title='eom' data-type='u_char *' data-ref="15eom" data-ref-filename="15eom">eom</dfn>;</td></tr>
+<tr><th id="152">152</th><td>	<em>int</em> <dfn class="local col6 decl" id="16c" title='c' data-type='int' data-ref="16c" data-ref-filename="16c">c</dfn>, <dfn class="local col7 decl" id="17n" title='n' data-type='int' data-ref="17n" data-ref-filename="17n">n</dfn>, <dfn class="local col8 decl" id="18escaped" title='escaped' data-type='int' data-ref="18escaped" data-ref-filename="18escaped">escaped</dfn>;</td></tr>
+<tr><th id="153">153</th><td>	<em>char</em> *<dfn class="local col9 decl" id="19cp" title='cp' data-type='char *' data-ref="19cp" data-ref-filename="19cp">cp</dfn>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<a class="local col8 ref" href="#18escaped" title='escaped' data-ref="18escaped" data-ref-filename="18escaped">escaped</a> = <var>0</var>;</td></tr>
+<tr><th id="156">156</th><td>	<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> = <a class="local col1 ref" href="#11dst" title='dst' data-ref="11dst" data-ref-filename="11dst">dst</a>;</td></tr>
+<tr><th id="157">157</th><td>	<a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a> = <a class="local col1 ref" href="#11dst" title='dst' data-ref="11dst" data-ref-filename="11dst">dst</a> + <a class="local col2 ref" href="#12dstsiz" title='dstsiz' data-ref="12dstsiz" data-ref-filename="12dstsiz">dstsiz</a>;</td></tr>
+<tr><th id="158">158</th><td>	<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> = <a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a>++;</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>	<b>while</b> ((<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = *<a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="161">161</th><td>		<b>if</b> (<a class="local col8 ref" href="#18escaped" title='escaped' data-ref="18escaped" data-ref-filename="18escaped">escaped</a>) {</td></tr>
+<tr><th id="162">162</th><td>			<b>if</b> ((<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a>(<a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>, <a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="163">163</th><td>				<a class="local col7 ref" href="#17n" title='n' data-ref="17n" data-ref-filename="17n">n</a> = (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> - <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>) * <var>100</var>;</td></tr>
+<tr><th id="164">164</th><td>				<b>if</b> ((<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = *<a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a>++) == <var>0</var> ||</td></tr>
+<tr><th id="165">165</th><td>				    (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a>(<a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>, <a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>)) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="166">166</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="167">167</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="168">168</th><td>				}</td></tr>
+<tr><th id="169">169</th><td>				<a class="local col7 ref" href="#17n" title='n' data-ref="17n" data-ref-filename="17n">n</a> += (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> - <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>) * <var>10</var>;</td></tr>
+<tr><th id="170">170</th><td>				<b>if</b> ((<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = *<a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a>++) == <var>0</var> ||</td></tr>
+<tr><th id="171">171</th><td>				    (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> = <a class="ref fn" href="../string/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a>(<a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>, <a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>)) == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="172">172</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="173">173</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="174">174</th><td>				}</td></tr>
+<tr><th id="175">175</th><td>				<a class="local col7 ref" href="#17n" title='n' data-ref="17n" data-ref-filename="17n">n</a> += (<a class="local col9 ref" href="#19cp" title='cp' data-ref="19cp" data-ref-filename="19cp">cp</a> - <a class="tu ref" href="#digits" title='digits' data-use='r' data-ref="digits" data-ref-filename="digits">digits</a>);</td></tr>
+<tr><th id="176">176</th><td>				<b>if</b> (<a class="local col7 ref" href="#17n" title='n' data-ref="17n" data-ref-filename="17n">n</a> &gt; <var>255</var>) {</td></tr>
+<tr><th id="177">177</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="178">178</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="179">179</th><td>				}</td></tr>
+<tr><th id="180">180</th><td>				<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = <a class="local col7 ref" href="#17n" title='n' data-ref="17n" data-ref-filename="17n">n</a>;</td></tr>
+<tr><th id="181">181</th><td>			}</td></tr>
+<tr><th id="182">182</th><td>			<a class="local col8 ref" href="#18escaped" title='escaped' data-ref="18escaped" data-ref-filename="18escaped">escaped</a> = <var>0</var>;</td></tr>
+<tr><th id="183">183</th><td>		} <b>else</b> <b>if</b> (<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> == <kbd>'\\'</kbd>) {</td></tr>
+<tr><th id="184">184</th><td>			<a class="local col8 ref" href="#18escaped" title='escaped' data-ref="18escaped" data-ref-filename="18escaped">escaped</a> = <var>1</var>;</td></tr>
+<tr><th id="185">185</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="186">186</th><td>		} <b>else</b> <b>if</b> (<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> == <kbd>'.'</kbd>) {</td></tr>
+<tr><th id="187">187</th><td>			<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = (<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> - <a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> - <var>1</var>);</td></tr>
+<tr><th id="188">188</th><td>			<b>if</b> ((<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) != <var>0</var>) {	<i>/*%&lt; Label too big. */</i></td></tr>
+<tr><th id="189">189</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="190">190</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="191">191</th><td>			}</td></tr>
+<tr><th id="192">192</th><td>			<b>if</b> (<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> &gt;= <a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a>) {</td></tr>
+<tr><th id="193">193</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="194">194</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="195">195</th><td>			}</td></tr>
+<tr><th id="196">196</th><td>			*<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> = <a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>;</td></tr>
+<tr><th id="197">197</th><td>			<i>/* Fully qualified ? */</i></td></tr>
+<tr><th id="198">198</th><td>			<b>if</b> (*<a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a> == <kbd>'\0'</kbd>) {</td></tr>
+<tr><th id="199">199</th><td>				<b>if</b> (<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> != <var>0</var>) {</td></tr>
+<tr><th id="200">200</th><td>					<b>if</b> (<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> &gt;= <a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a>) {</td></tr>
+<tr><th id="201">201</th><td>						<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="202">202</th><td>						<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="203">203</th><td>					}</td></tr>
+<tr><th id="204">204</th><td>					*<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="205">205</th><td>				}</td></tr>
+<tr><th id="206">206</th><td>				<b>if</b> ((<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> - <a class="local col1 ref" href="#11dst" title='dst' data-ref="11dst" data-ref-filename="11dst">dst</a>) &gt; <a class="macro" href="arpa/nameser_compat.h.html#80" title="255" data-ref="_M/MAXCDNAME">MAXCDNAME</a>) {</td></tr>
+<tr><th id="207">207</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="208">208</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="209">209</th><td>				}</td></tr>
+<tr><th id="210">210</th><td>				<b>return</b> (<var>1</var>);</td></tr>
+<tr><th id="211">211</th><td>			}</td></tr>
+<tr><th id="212">212</th><td>			<b>if</b> (<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> == <var>0</var> || *<a class="local col0 ref" href="#10src" title='src' data-ref="10src" data-ref-filename="10src">src</a> == <kbd>'.'</kbd>) {</td></tr>
+<tr><th id="213">213</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="214">214</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="215">215</th><td>			}</td></tr>
+<tr><th id="216">216</th><td>			<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> = <a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a>++;</td></tr>
+<tr><th id="217">217</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="218">218</th><td>		}</td></tr>
+<tr><th id="219">219</th><td>		<b>if</b> (<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> &gt;= <a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a>) {</td></tr>
+<tr><th id="220">220</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="221">221</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="222">222</th><td>		}</td></tr>
+<tr><th id="223">223</th><td>		*<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a>++ = (<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a>)<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>;</td></tr>
+<tr><th id="224">224</th><td>	}</td></tr>
+<tr><th id="225">225</th><td>	<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> = (<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> - <a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> - <var>1</var>);</td></tr>
+<tr><th id="226">226</th><td>	<b>if</b> ((<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) != <var>0</var>) {		<i>/*%&lt; Label too big. */</i></td></tr>
+<tr><th id="227">227</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="228">228</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="229">229</th><td>	}</td></tr>
+<tr><th id="230">230</th><td>	<b>if</b> (<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> &gt;= <a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a>) {</td></tr>
+<tr><th id="231">231</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="232">232</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="233">233</th><td>	}</td></tr>
+<tr><th id="234">234</th><td>	*<a class="local col3 ref" href="#13label" title='label' data-ref="13label" data-ref-filename="13label">label</a> = <a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a>;</td></tr>
+<tr><th id="235">235</th><td>	<b>if</b> (<a class="local col6 ref" href="#16c" title='c' data-ref="16c" data-ref-filename="16c">c</a> != <var>0</var>) {</td></tr>
+<tr><th id="236">236</th><td>		<b>if</b> (<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> &gt;= <a class="local col5 ref" href="#15eom" title='eom' data-ref="15eom" data-ref-filename="15eom">eom</a>) {</td></tr>
+<tr><th id="237">237</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="238">238</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="239">239</th><td>		}</td></tr>
+<tr><th id="240">240</th><td>		*<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a>++ = <var>0</var>;</td></tr>
+<tr><th id="241">241</th><td>	}</td></tr>
+<tr><th id="242">242</th><td>	<b>if</b> ((<a class="local col4 ref" href="#14bp" title='bp' data-ref="14bp" data-ref-filename="14bp">bp</a> - <a class="local col1 ref" href="#11dst" title='dst' data-ref="11dst" data-ref-filename="11dst">dst</a>) &gt; <a class="macro" href="arpa/nameser_compat.h.html#80" title="255" data-ref="_M/MAXCDNAME">MAXCDNAME</a>) {	<i>/*%&lt; src too big */</i></td></tr>
+<tr><th id="243">243</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="244">244</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="245">245</th><td>	}</td></tr>
+<tr><th id="246">246</th><td>	<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="247">247</th><td>}</td></tr>
+<tr><th id="248">248</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_pton)</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><i>/*%</i></td></tr>
+<tr><th id="251">251</th><td><i> *	Convert a network strings labels into all lowercase.</i></td></tr>
+<tr><th id="252">252</th><td><i> *</i></td></tr>
+<tr><th id="253">253</th><td><i> * return:</i></td></tr>
+<tr><th id="254">254</th><td><i> *\li	Number of bytes written to buffer, or -1 (with errno set)</i></td></tr>
+<tr><th id="255">255</th><td><i> *</i></td></tr>
+<tr><th id="256">256</th><td><i> * notes:</i></td></tr>
+<tr><th id="257">257</th><td><i> *\li	Enforces label and domain length limits.</i></td></tr>
+<tr><th id="258">258</th><td><i> */</i></td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><em>int</em></td></tr>
+<tr><th id="261">261</th><td><dfn class="decl def fn" id="ns_name_ntol" title='ns_name_ntol' data-ref="ns_name_ntol" data-ref-filename="ns_name_ntol">ns_name_ntol</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col0 decl" id="20src" title='src' data-type='const u_char *' data-ref="20src" data-ref-filename="20src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="21dst" title='dst' data-type='u_char *' data-ref="21dst" data-ref-filename="21dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="22dstsiz" title='dstsiz' data-type='size_t' data-ref="22dstsiz" data-ref-filename="22dstsiz">dstsiz</dfn>)</td></tr>
+<tr><th id="262">262</th><td>{</td></tr>
+<tr><th id="263">263</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col3 decl" id="23cp" title='cp' data-type='const u_char *' data-ref="23cp" data-ref-filename="23cp">cp</dfn>;</td></tr>
+<tr><th id="264">264</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col4 decl" id="24dn" title='dn' data-type='u_char *' data-ref="24dn" data-ref-filename="24dn">dn</dfn>, *<dfn class="local col5 decl" id="25eom" title='eom' data-type='u_char *' data-ref="25eom" data-ref-filename="25eom">eom</dfn>;</td></tr>
+<tr><th id="265">265</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> <dfn class="local col6 decl" id="26c" title='c' data-type='u_char' data-ref="26c" data-ref-filename="26c">c</dfn>;</td></tr>
+<tr><th id="266">266</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col7 decl" id="27n" title='n' data-type='u_int' data-ref="27n" data-ref-filename="27n">n</dfn>;</td></tr>
+<tr><th id="267">267</th><td>	<em>int</em> <dfn class="local col8 decl" id="28l" title='l' data-type='int' data-ref="28l" data-ref-filename="28l">l</dfn>;</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	<a class="local col3 ref" href="#23cp" title='cp' data-ref="23cp" data-ref-filename="23cp">cp</a> = <a class="local col0 ref" href="#20src" title='src' data-ref="20src" data-ref-filename="20src">src</a>;</td></tr>
+<tr><th id="270">270</th><td>	<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a> = <a class="local col1 ref" href="#21dst" title='dst' data-ref="21dst" data-ref-filename="21dst">dst</a>;</td></tr>
+<tr><th id="271">271</th><td>	<a class="local col5 ref" href="#25eom" title='eom' data-ref="25eom" data-ref-filename="25eom">eom</a> = <a class="local col1 ref" href="#21dst" title='dst' data-ref="21dst" data-ref-filename="21dst">dst</a> + <a class="local col2 ref" href="#22dstsiz" title='dstsiz' data-ref="22dstsiz" data-ref-filename="22dstsiz">dstsiz</a>;</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>	<b>if</b> (<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a> &gt;= <a class="local col5 ref" href="#25eom" title='eom' data-ref="25eom" data-ref-filename="25eom">eom</a>) {</td></tr>
+<tr><th id="274">274</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="275">275</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="276">276</th><td>	}</td></tr>
+<tr><th id="277">277</th><td>	<b>while</b> ((<a class="local col7 ref" href="#27n" title='n' data-ref="27n" data-ref-filename="27n">n</a> = *<a class="local col3 ref" href="#23cp" title='cp' data-ref="23cp" data-ref-filename="23cp">cp</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="278">278</th><td>		<b>if</b> ((<a class="local col7 ref" href="#27n" title='n' data-ref="27n" data-ref-filename="27n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) == <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="279">279</th><td>			<i>/* Some kind of compression pointer. */</i></td></tr>
+<tr><th id="280">280</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="281">281</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="282">282</th><td>		}</td></tr>
+<tr><th id="283">283</th><td>		*<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a>++ = <a class="local col7 ref" href="#27n" title='n' data-ref="27n" data-ref-filename="27n">n</a>;</td></tr>
+<tr><th id="284">284</th><td>		<b>if</b> ((<a class="local col8 ref" href="#28l" title='l' data-ref="28l" data-ref-filename="28l">l</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col3 ref" href="#23cp" title='cp' data-ref="23cp" data-ref-filename="23cp">cp</a> - <var>1</var>)) &lt; <var>0</var>) {</td></tr>
+<tr><th id="285">285</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="286">286</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="287">287</th><td>		}</td></tr>
+<tr><th id="288">288</th><td>		<b>if</b> (<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a> + <a class="local col8 ref" href="#28l" title='l' data-ref="28l" data-ref-filename="28l">l</a> &gt;= <a class="local col5 ref" href="#25eom" title='eom' data-ref="25eom" data-ref-filename="25eom">eom</a>) {</td></tr>
+<tr><th id="289">289</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="290">290</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="291">291</th><td>		}</td></tr>
+<tr><th id="292">292</th><td>		<b>for</b> ((<em>void</em>)<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>; <a class="local col8 ref" href="#28l" title='l' data-ref="28l" data-ref-filename="28l">l</a> &gt; <var>0</var>; <a class="local col8 ref" href="#28l" title='l' data-ref="28l" data-ref-filename="28l">l</a>--) {</td></tr>
+<tr><th id="293">293</th><td>			<a class="local col6 ref" href="#26c" title='c' data-ref="26c" data-ref-filename="26c">c</a> = *<a class="local col3 ref" href="#23cp" title='cp' data-ref="23cp" data-ref-filename="23cp">cp</a>++;</td></tr>
+<tr><th id="294">294</th><td>			<b>if</b> (<a class="macro" href="../ctype/ctype.h.html#198" title="((*__ctype_b_loc ())[(int) ((c))] &amp; (unsigned short int) _ISupper)" data-ref="_M/isupper">isupper</a>(<a class="local col6 ref" href="#26c" title='c' data-ref="26c" data-ref-filename="26c">c</a>))</td></tr>
+<tr><th id="295">295</th><td>				*<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a>++ = <a class="macro" href="../ctype/ctype.h.html#220" title="(__extension__ ({ int __res; if (sizeof (c) &gt; 1) { if (__builtin_constant_p (c)) { int __c = (c); __res = __c &lt; -128 || __c &gt; 255 ? __c : (*__ctype_tolower_loc ())[__c]; } else __res = tolower (c); } else __res = (*__ctype_tolower_loc ())[(int) (c)]; __res; }))" data-ref="_M/tolower">tolower</a>(<a class="local col6 ref" href="#26c" title='c' data-ref="26c" data-ref-filename="26c">c</a>);</td></tr>
+<tr><th id="296">296</th><td>			<b>else</b></td></tr>
+<tr><th id="297">297</th><td>				*<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a>++ = <a class="local col6 ref" href="#26c" title='c' data-ref="26c" data-ref-filename="26c">c</a>;</td></tr>
+<tr><th id="298">298</th><td>		}</td></tr>
+<tr><th id="299">299</th><td>	}</td></tr>
+<tr><th id="300">300</th><td>	*<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="301">301</th><td>	<b>return</b> (<a class="local col4 ref" href="#24dn" title='dn' data-ref="24dn" data-ref-filename="24dn">dn</a> - <a class="local col1 ref" href="#21dst" title='dst' data-ref="21dst" data-ref-filename="21dst">dst</a>);</td></tr>
+<tr><th id="302">302</th><td>}</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td><i>/*%</i></td></tr>
+<tr><th id="305">305</th><td><i> *	Unpack a domain name from a message, source may be compressed.</i></td></tr>
+<tr><th id="306">306</th><td><i> *</i></td></tr>
+<tr><th id="307">307</th><td><i> * return:</i></td></tr>
+<tr><th id="308">308</th><td><i> *\li	-1 if it fails, or consumed octets if it succeeds.</i></td></tr>
+<tr><th id="309">309</th><td><i> */</i></td></tr>
+<tr><th id="310">310</th><td><em>int</em></td></tr>
+<tr><th id="311">311</th><td><dfn class="decl def fn" id="ns_name_unpack" title='ns_name_unpack' data-ref="ns_name_unpack" data-ref-filename="ns_name_unpack">ns_name_unpack</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col9 decl" id="29msg" title='msg' data-type='const u_char *' data-ref="29msg" data-ref-filename="29msg">msg</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col0 decl" id="30eom" title='eom' data-type='const u_char *' data-ref="30eom" data-ref-filename="30eom">eom</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="31src" title='src' data-type='const u_char *' data-ref="31src" data-ref-filename="31src">src</dfn>,</td></tr>
+<tr><th id="312">312</th><td>	       <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col2 decl" id="32dst" title='dst' data-type='u_char *' data-ref="32dst" data-ref-filename="32dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="33dstsiz" title='dstsiz' data-type='size_t' data-ref="33dstsiz" data-ref-filename="33dstsiz">dstsiz</dfn>)</td></tr>
+<tr><th id="313">313</th><td>{</td></tr>
+<tr><th id="314">314</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col4 decl" id="34srcp" title='srcp' data-type='const u_char *' data-ref="34srcp" data-ref-filename="34srcp">srcp</dfn>, *<dfn class="local col5 decl" id="35dstlim" title='dstlim' data-type='const u_char *' data-ref="35dstlim" data-ref-filename="35dstlim">dstlim</dfn>;</td></tr>
+<tr><th id="315">315</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col6 decl" id="36dstp" title='dstp' data-type='u_char *' data-ref="36dstp" data-ref-filename="36dstp">dstp</dfn>;</td></tr>
+<tr><th id="316">316</th><td>	<em>int</em> <dfn class="local col7 decl" id="37n" title='n' data-type='int' data-ref="37n" data-ref-filename="37n">n</dfn>, <dfn class="local col8 decl" id="38len" title='len' data-type='int' data-ref="38len" data-ref-filename="38len">len</dfn>, <dfn class="local col9 decl" id="39checked" title='checked' data-type='int' data-ref="39checked" data-ref-filename="39checked">checked</dfn>, <dfn class="local col0 decl" id="40l" title='l' data-type='int' data-ref="40l" data-ref-filename="40l">l</dfn>;</td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td>	<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> = -<var>1</var>;</td></tr>
+<tr><th id="319">319</th><td>	<a class="local col9 ref" href="#39checked" title='checked' data-ref="39checked" data-ref-filename="39checked">checked</a> = <var>0</var>;</td></tr>
+<tr><th id="320">320</th><td>	<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a> = <a class="local col2 ref" href="#32dst" title='dst' data-ref="32dst" data-ref-filename="32dst">dst</a>;</td></tr>
+<tr><th id="321">321</th><td>	<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> = <a class="local col1 ref" href="#31src" title='src' data-ref="31src" data-ref-filename="31src">src</a>;</td></tr>
+<tr><th id="322">322</th><td>	<a class="local col5 ref" href="#35dstlim" title='dstlim' data-ref="35dstlim" data-ref-filename="35dstlim">dstlim</a> = <a class="local col2 ref" href="#32dst" title='dst' data-ref="32dst" data-ref-filename="32dst">dst</a> + <a class="local col3 ref" href="#33dstsiz" title='dstsiz' data-ref="33dstsiz" data-ref-filename="33dstsiz">dstsiz</a>;</td></tr>
+<tr><th id="323">323</th><td>	<b>if</b> (<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &lt; <a class="local col9 ref" href="#29msg" title='msg' data-ref="29msg" data-ref-filename="29msg">msg</a> || <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &gt;= <a class="local col0 ref" href="#30eom" title='eom' data-ref="30eom" data-ref-filename="30eom">eom</a>) {</td></tr>
+<tr><th id="324">324</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="325">325</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="326">326</th><td>	}</td></tr>
+<tr><th id="327">327</th><td>	<i>/* Fetch next label in domain name. */</i></td></tr>
+<tr><th id="328">328</th><td>	<b>while</b> ((<a class="local col7 ref" href="#37n" title='n' data-ref="37n" data-ref-filename="37n">n</a> = *<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="329">329</th><td>		<i>/* Check for indirection. */</i></td></tr>
+<tr><th id="330">330</th><td>		<b>switch</b> (<a class="local col7 ref" href="#37n" title='n' data-ref="37n" data-ref-filename="37n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="331">331</th><td>		<b>case</b> <var>0</var>:</td></tr>
+<tr><th id="332">332</th><td>			<i>/* Limit checks. */</i></td></tr>
+<tr><th id="333">333</th><td>			<b>if</b> ((<a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> - <var>1</var>)) &lt; <var>0</var>) {</td></tr>
+<tr><th id="334">334</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="335">335</th><td>				<b>return</b>(-<var>1</var>);</td></tr>
+<tr><th id="336">336</th><td>			}</td></tr>
+<tr><th id="337">337</th><td>			<b>if</b> (<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a> + <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a> + <var>1</var> &gt;= <a class="local col5 ref" href="#35dstlim" title='dstlim' data-ref="35dstlim" data-ref-filename="35dstlim">dstlim</a> || <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> + <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a> &gt;= <a class="local col0 ref" href="#30eom" title='eom' data-ref="30eom" data-ref-filename="30eom">eom</a>) {</td></tr>
+<tr><th id="338">338</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="339">339</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="340">340</th><td>			}</td></tr>
+<tr><th id="341">341</th><td>			<a class="local col9 ref" href="#39checked" title='checked' data-ref="39checked" data-ref-filename="39checked">checked</a> += <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a> + <var>1</var>;</td></tr>
+<tr><th id="342">342</th><td>			*<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a>++ = <a class="local col7 ref" href="#37n" title='n' data-ref="37n" data-ref-filename="37n">n</a>;</td></tr>
+<tr><th id="343">343</th><td>			<a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a>, <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a>, <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a>);</td></tr>
+<tr><th id="344">344</th><td>			<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a> += <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a>;</td></tr>
+<tr><th id="345">345</th><td>			<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> += <a class="local col0 ref" href="#40l" title='l' data-ref="40l" data-ref-filename="40l">l</a>;</td></tr>
+<tr><th id="346">346</th><td>			<b>break</b>;</td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td>		<b>case</b> <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>:</td></tr>
+<tr><th id="349">349</th><td>			<b>if</b> (<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &gt;= <a class="local col0 ref" href="#30eom" title='eom' data-ref="30eom" data-ref-filename="30eom">eom</a>) {</td></tr>
+<tr><th id="350">350</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="351">351</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="352">352</th><td>			}</td></tr>
+<tr><th id="353">353</th><td>			<b>if</b> (<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="354">354</th><td>				<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> = <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> - <a class="local col1 ref" href="#31src" title='src' data-ref="31src" data-ref-filename="31src">src</a> + <var>1</var>;</td></tr>
+<tr><th id="355">355</th><td>			<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> = <a class="local col9 ref" href="#29msg" title='msg' data-ref="29msg" data-ref-filename="29msg">msg</a> + (((<a class="local col7 ref" href="#37n" title='n' data-ref="37n" data-ref-filename="37n">n</a> &amp; <var>0x3f</var>) &lt;&lt; <var>8</var>) | (*<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &amp; <var>0xff</var>));</td></tr>
+<tr><th id="356">356</th><td>			<b>if</b> (<a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &lt; <a class="local col9 ref" href="#29msg" title='msg' data-ref="29msg" data-ref-filename="29msg">msg</a> || <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> &gt;= <a class="local col0 ref" href="#30eom" title='eom' data-ref="30eom" data-ref-filename="30eom">eom</a>) {  <i>/*%&lt; Out of range. */</i></td></tr>
+<tr><th id="357">357</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="358">358</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="359">359</th><td>			}</td></tr>
+<tr><th id="360">360</th><td>			<a class="local col9 ref" href="#39checked" title='checked' data-ref="39checked" data-ref-filename="39checked">checked</a> += <var>2</var>;</td></tr>
+<tr><th id="361">361</th><td>			<i>/*</i></td></tr>
+<tr><th id="362">362</th><td><i>			 * Check for loops in the compressed name;</i></td></tr>
+<tr><th id="363">363</th><td><i>			 * if we've looked at the whole message,</i></td></tr>
+<tr><th id="364">364</th><td><i>			 * there must be a loop.</i></td></tr>
+<tr><th id="365">365</th><td><i>			 */</i></td></tr>
+<tr><th id="366">366</th><td>			<b>if</b> (<a class="local col9 ref" href="#39checked" title='checked' data-ref="39checked" data-ref-filename="39checked">checked</a> &gt;= <a class="local col0 ref" href="#30eom" title='eom' data-ref="30eom" data-ref-filename="30eom">eom</a> - <a class="local col9 ref" href="#29msg" title='msg' data-ref="29msg" data-ref-filename="29msg">msg</a>) {</td></tr>
+<tr><th id="367">367</th><td>				<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="368">368</th><td>				<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="369">369</th><td>			}</td></tr>
+<tr><th id="370">370</th><td>			<b>break</b>;</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>		<b>default</b>:</td></tr>
+<tr><th id="373">373</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="374">374</th><td>			<b>return</b> (-<var>1</var>);			<i>/*%&lt; flag error */</i></td></tr>
+<tr><th id="375">375</th><td>		}</td></tr>
+<tr><th id="376">376</th><td>	}</td></tr>
+<tr><th id="377">377</th><td>	*<a class="local col6 ref" href="#36dstp" title='dstp' data-ref="36dstp" data-ref-filename="36dstp">dstp</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="378">378</th><td>	<b>if</b> (<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="379">379</th><td>		<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a> = <a class="local col4 ref" href="#34srcp" title='srcp' data-ref="34srcp" data-ref-filename="34srcp">srcp</a> - <a class="local col1 ref" href="#31src" title='src' data-ref="31src" data-ref-filename="31src">src</a>;</td></tr>
+<tr><th id="380">380</th><td>	<b>return</b> (<a class="local col8 ref" href="#38len" title='len' data-ref="38len" data-ref-filename="38len">len</a>);</td></tr>
+<tr><th id="381">381</th><td>}</td></tr>
+<tr><th id="382">382</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_unpack)</td></tr>
+<tr><th id="383">383</th><td><a class="macro" href="../include/libc-symbols.h.html#125" title="extern __typeof (ns_name_unpack) __ns_name_unpack __attribute__ ((alias (&quot;ns_name_unpack&quot;)));" data-ref="_M/strong_alias">strong_alias</a> (<a class="ref fn" href="#ns_name_unpack" title='ns_name_unpack' data-ref="ns_name_unpack" data-ref-filename="ns_name_unpack">ns_name_unpack</a>, <dfn class="decl def fn" id="__ns_name_unpack" title='__ns_name_unpack' data-ref="__ns_name_unpack" data-ref-filename="__ns_name_unpack">__ns_name_unpack</dfn>)</td></tr>
+<tr><th id="384">384</th><td></td></tr>
+<tr><th id="385">385</th><td><i>/*%</i></td></tr>
+<tr><th id="386">386</th><td><i> *	Pack domain name 'domain' into 'comp_dn'.</i></td></tr>
+<tr><th id="387">387</th><td><i> *</i></td></tr>
+<tr><th id="388">388</th><td><i> * return:</i></td></tr>
+<tr><th id="389">389</th><td><i> *\li	Size of the compressed name, or -1.</i></td></tr>
+<tr><th id="390">390</th><td><i> *</i></td></tr>
+<tr><th id="391">391</th><td><i> * notes:</i></td></tr>
+<tr><th id="392">392</th><td><i> *\li	'dnptrs' is an array of pointers to previous compressed names.</i></td></tr>
+<tr><th id="393">393</th><td><i> *\li	dnptrs[0] is a pointer to the beginning of the message. The array</i></td></tr>
+<tr><th id="394">394</th><td><i> *	ends with NULL.</i></td></tr>
+<tr><th id="395">395</th><td><i> *\li	'lastdnptr' is a pointer to the end of the array pointed to</i></td></tr>
+<tr><th id="396">396</th><td><i> *	by 'dnptrs'.</i></td></tr>
+<tr><th id="397">397</th><td><i> *</i></td></tr>
+<tr><th id="398">398</th><td><i> * Side effects:</i></td></tr>
+<tr><th id="399">399</th><td><i> *\li	The list of pointers in dnptrs is updated for labels inserted into</i></td></tr>
+<tr><th id="400">400</th><td><i> *	the message as we compress the name.  If 'dnptr' is NULL, we don't</i></td></tr>
+<tr><th id="401">401</th><td><i> *	try to compress names. If 'lastdnptr' is NULL, we don't update the</i></td></tr>
+<tr><th id="402">402</th><td><i> *	list.</i></td></tr>
+<tr><th id="403">403</th><td><i> */</i></td></tr>
+<tr><th id="404">404</th><td><em>int</em></td></tr>
+<tr><th id="405">405</th><td><dfn class="decl def fn" id="ns_name_pack" title='ns_name_pack' data-ref="ns_name_pack" data-ref-filename="ns_name_pack">ns_name_pack</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="41src" title='src' data-type='const u_char *' data-ref="41src" data-ref-filename="41src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col2 decl" id="42dst" title='dst' data-type='u_char *' data-ref="42dst" data-ref-filename="42dst">dst</dfn>, <em>int</em> <dfn class="local col3 decl" id="43dstsiz" title='dstsiz' data-type='int' data-ref="43dstsiz" data-ref-filename="43dstsiz">dstsiz</dfn>,</td></tr>
+<tr><th id="406">406</th><td>	     <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col4 decl" id="44dnptrs" title='dnptrs' data-type='const u_char **' data-ref="44dnptrs" data-ref-filename="44dnptrs">dnptrs</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col5 decl" id="45lastdnptr" title='lastdnptr' data-type='const u_char **' data-ref="45lastdnptr" data-ref-filename="45lastdnptr">lastdnptr</dfn>)</td></tr>
+<tr><th id="407">407</th><td>{</td></tr>
+<tr><th id="408">408</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col6 decl" id="46dstp" title='dstp' data-type='u_char *' data-ref="46dstp" data-ref-filename="46dstp">dstp</dfn>;</td></tr>
+<tr><th id="409">409</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col7 decl" id="47cpp" title='cpp' data-type='const u_char **' data-ref="47cpp" data-ref-filename="47cpp">cpp</dfn>, **<dfn class="local col8 decl" id="48lpp" title='lpp' data-type='const u_char **' data-ref="48lpp" data-ref-filename="48lpp">lpp</dfn>, *<dfn class="local col9 decl" id="49eob" title='eob' data-type='const u_char *' data-ref="49eob" data-ref-filename="49eob">eob</dfn>, *<dfn class="local col0 decl" id="50msg" title='msg' data-type='const u_char *' data-ref="50msg" data-ref-filename="50msg">msg</dfn>;</td></tr>
+<tr><th id="410">410</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="51srcp" title='srcp' data-type='const u_char *' data-ref="51srcp" data-ref-filename="51srcp">srcp</dfn>;</td></tr>
+<tr><th id="411">411</th><td>	<em>int</em> <dfn class="local col2 decl" id="52n" title='n' data-type='int' data-ref="52n" data-ref-filename="52n">n</dfn>, <dfn class="local col3 decl" id="53l" title='l' data-type='int' data-ref="53l" data-ref-filename="53l">l</dfn>, <dfn class="local col4 decl" id="54first" title='first' data-type='int' data-ref="54first" data-ref-filename="54first">first</dfn> = <var>1</var>;</td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td>	<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a> = <a class="local col1 ref" href="#41src" title='src' data-ref="41src" data-ref-filename="41src">src</a>;</td></tr>
+<tr><th id="414">414</th><td>	<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> = <a class="local col2 ref" href="#42dst" title='dst' data-ref="42dst" data-ref-filename="42dst">dst</a>;</td></tr>
+<tr><th id="415">415</th><td>	<a class="local col9 ref" href="#49eob" title='eob' data-ref="49eob" data-ref-filename="49eob">eob</a> = <a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> + <a class="local col3 ref" href="#43dstsiz" title='dstsiz' data-ref="43dstsiz" data-ref-filename="43dstsiz">dstsiz</a>;</td></tr>
+<tr><th id="416">416</th><td>	<a class="local col8 ref" href="#48lpp" title='lpp' data-ref="48lpp" data-ref-filename="48lpp">lpp</a> = <a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="417">417</th><td>	<b>if</b> (<a class="local col4 ref" href="#44dnptrs" title='dnptrs' data-ref="44dnptrs" data-ref-filename="44dnptrs">dnptrs</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="418">418</th><td>		<b>if</b> ((<a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a> = *<a class="local col4 ref" href="#44dnptrs" title='dnptrs' data-ref="44dnptrs" data-ref-filename="44dnptrs">dnptrs</a>++) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="419">419</th><td>			<b>for</b> (<a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a> = <a class="local col4 ref" href="#44dnptrs" title='dnptrs' data-ref="44dnptrs" data-ref-filename="44dnptrs">dnptrs</a>; *<a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>; <a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a>++)</td></tr>
+<tr><th id="420">420</th><td>				(<em>void</em>)<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="421">421</th><td>			<a class="local col8 ref" href="#48lpp" title='lpp' data-ref="48lpp" data-ref-filename="48lpp">lpp</a> = <a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a>;	<i>/*%&lt; end of list to search */</i></td></tr>
+<tr><th id="422">422</th><td>		}</td></tr>
+<tr><th id="423">423</th><td>	} <b>else</b></td></tr>
+<tr><th id="424">424</th><td>		<a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="425">425</th><td></td></tr>
+<tr><th id="426">426</th><td>	<i>/* make sure the domain we are about to add is legal */</i></td></tr>
+<tr><th id="427">427</th><td>	<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> = <var>0</var>;</td></tr>
+<tr><th id="428">428</th><td>	<b>do</b> {</td></tr>
+<tr><th id="429">429</th><td>		<em>int</em> <dfn class="local col5 decl" id="55l0" title='l0' data-type='int' data-ref="55l0" data-ref-filename="55l0">l0</dfn>;</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td>		<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> = *<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>;</td></tr>
+<tr><th id="432">432</th><td>		<b>if</b> ((<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) == <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="433">433</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="434">434</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="435">435</th><td>		}</td></tr>
+<tr><th id="436">436</th><td>		<b>if</b> ((<a class="local col5 ref" href="#55l0" title='l0' data-ref="55l0" data-ref-filename="55l0">l0</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>)) &lt; <var>0</var>) {</td></tr>
+<tr><th id="437">437</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="438">438</th><td>			<b>return</b>(-<var>1</var>);</td></tr>
+<tr><th id="439">439</th><td>		}</td></tr>
+<tr><th id="440">440</th><td>		<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> += <a class="local col5 ref" href="#55l0" title='l0' data-ref="55l0" data-ref-filename="55l0">l0</a> + <var>1</var>;</td></tr>
+<tr><th id="441">441</th><td>		<b>if</b> (<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> &gt; <a class="macro" href="arpa/nameser_compat.h.html#80" title="255" data-ref="_M/MAXCDNAME">MAXCDNAME</a>) {</td></tr>
+<tr><th id="442">442</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="443">443</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="444">444</th><td>		}</td></tr>
+<tr><th id="445">445</th><td>		<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a> += <a class="local col5 ref" href="#55l0" title='l0' data-ref="55l0" data-ref-filename="55l0">l0</a> + <var>1</var>;</td></tr>
+<tr><th id="446">446</th><td>	} <b>while</b> (<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> != <var>0</var>);</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td>	<i>/* from here on we need to reset compression pointer array on error */</i></td></tr>
+<tr><th id="449">449</th><td>	<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a> = <a class="local col1 ref" href="#41src" title='src' data-ref="41src" data-ref-filename="41src">src</a>;</td></tr>
+<tr><th id="450">450</th><td>	<b>do</b> {</td></tr>
+<tr><th id="451">451</th><td>		<i>/* Look to see if we can use pointers. */</i></td></tr>
+<tr><th id="452">452</th><td>		<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> = *<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>;</td></tr>
+<tr><th id="453">453</th><td>		<b>if</b> (<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> != <var>0</var> &amp;&amp; <a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="454">454</th><td>			<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> = <a class="tu ref fn" href="#dn_find" title='dn_find' data-use='c' data-ref="dn_find" data-ref-filename="dn_find">dn_find</a>(<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>, <a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a>, (<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *)<a class="local col4 ref" href="#44dnptrs" title='dnptrs' data-ref="44dnptrs" data-ref-filename="44dnptrs">dnptrs</a>,</td></tr>
+<tr><th id="455">455</th><td>				    (<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *)<a class="local col8 ref" href="#48lpp" title='lpp' data-ref="48lpp" data-ref-filename="48lpp">lpp</a>);</td></tr>
+<tr><th id="456">456</th><td>			<b>if</b> (<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> &gt;= <var>0</var>) {</td></tr>
+<tr><th id="457">457</th><td>				<b>if</b> (<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> + <var>1</var> &gt;= <a class="local col9 ref" href="#49eob" title='eob' data-ref="49eob" data-ref-filename="49eob">eob</a>) {</td></tr>
+<tr><th id="458">458</th><td>					<b>goto</b> <a class="lbl" href="#56cleanup" data-ref="56cleanup" data-ref-filename="56cleanup">cleanup</a>;</td></tr>
+<tr><th id="459">459</th><td>				}</td></tr>
+<tr><th id="460">460</th><td>				*<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a>++ = (<a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> &gt;&gt; <var>8</var>) | <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>;</td></tr>
+<tr><th id="461">461</th><td>				*<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a>++ = <a class="local col3 ref" href="#53l" title='l' data-ref="53l" data-ref-filename="53l">l</a> % <var>256</var>;</td></tr>
+<tr><th id="462">462</th><td>				<b>return</b> (<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> - <a class="local col2 ref" href="#42dst" title='dst' data-ref="42dst" data-ref-filename="42dst">dst</a>);</td></tr>
+<tr><th id="463">463</th><td>			}</td></tr>
+<tr><th id="464">464</th><td>			<i>/* Not found, save it. */</i></td></tr>
+<tr><th id="465">465</th><td>			<b>if</b> (<a class="local col5 ref" href="#45lastdnptr" title='lastdnptr' data-ref="45lastdnptr" data-ref-filename="45lastdnptr">lastdnptr</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; <a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a> &lt; <a class="local col5 ref" href="#45lastdnptr" title='lastdnptr' data-ref="45lastdnptr" data-ref-filename="45lastdnptr">lastdnptr</a> - <var>1</var> &amp;&amp;</td></tr>
+<tr><th id="466">466</th><td>			    (<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> - <a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a>) &lt; <var>0x4000</var> &amp;&amp; <a class="local col4 ref" href="#54first" title='first' data-ref="54first" data-ref-filename="54first">first</a>) {</td></tr>
+<tr><th id="467">467</th><td>				*<a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a>++ = <a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a>;</td></tr>
+<tr><th id="468">468</th><td>				*<a class="local col7 ref" href="#47cpp" title='cpp' data-ref="47cpp" data-ref-filename="47cpp">cpp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="469">469</th><td>				<a class="local col4 ref" href="#54first" title='first' data-ref="54first" data-ref-filename="54first">first</a> = <var>0</var>;</td></tr>
+<tr><th id="470">470</th><td>			}</td></tr>
+<tr><th id="471">471</th><td>		}</td></tr>
+<tr><th id="472">472</th><td>		<i>/* copy label to buffer */</i></td></tr>
+<tr><th id="473">473</th><td>		<b>if</b> ((<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) == <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="474">474</th><td>			<i>/* Should not happen. */</i></td></tr>
+<tr><th id="475">475</th><td>			<b>goto</b> <a class="lbl" href="#56cleanup" data-ref="56cleanup" data-ref-filename="56cleanup">cleanup</a>;</td></tr>
+<tr><th id="476">476</th><td>		}</td></tr>
+<tr><th id="477">477</th><td>		<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>);</td></tr>
+<tr><th id="478">478</th><td>		<b>if</b> (<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> + <var>1</var> &gt; <a class="local col9 ref" href="#49eob" title='eob' data-ref="49eob" data-ref-filename="49eob">eob</a> - <a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a>) {</td></tr>
+<tr><th id="479">479</th><td>			<b>goto</b> <a class="lbl" href="#56cleanup" data-ref="56cleanup" data-ref-filename="56cleanup">cleanup</a>;</td></tr>
+<tr><th id="480">480</th><td>		}</td></tr>
+<tr><th id="481">481</th><td>		<a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a>, <a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a>, <a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> + <var>1</var>);</td></tr>
+<tr><th id="482">482</th><td>		<a class="local col1 ref" href="#51srcp" title='srcp' data-ref="51srcp" data-ref-filename="51srcp">srcp</a> += <a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> + <var>1</var>;</td></tr>
+<tr><th id="483">483</th><td>		<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> += <a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> + <var>1</var>;</td></tr>
+<tr><th id="484">484</th><td>	} <b>while</b> (<a class="local col2 ref" href="#52n" title='n' data-ref="52n" data-ref-filename="52n">n</a> != <var>0</var>);</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td>	<b>if</b> (<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> &gt; <a class="local col9 ref" href="#49eob" title='eob' data-ref="49eob" data-ref-filename="49eob">eob</a>) {</td></tr>
+<tr><th id="487">487</th><td><dfn class="lbl" id="56cleanup" data-ref="56cleanup" data-ref-filename="56cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="488">488</th><td>		<b>if</b> (<a class="local col0 ref" href="#50msg" title='msg' data-ref="50msg" data-ref-filename="50msg">msg</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="489">489</th><td>			*<a class="local col8 ref" href="#48lpp" title='lpp' data-ref="48lpp" data-ref-filename="48lpp">lpp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="490">490</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="491">491</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="492">492</th><td>	}</td></tr>
+<tr><th id="493">493</th><td>	<b>return</b> (<a class="local col6 ref" href="#46dstp" title='dstp' data-ref="46dstp" data-ref-filename="46dstp">dstp</a> - <a class="local col2 ref" href="#42dst" title='dst' data-ref="42dst" data-ref-filename="42dst">dst</a>);</td></tr>
+<tr><th id="494">494</th><td>}</td></tr>
+<tr><th id="495">495</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_pack)</td></tr>
+<tr><th id="496">496</th><td></td></tr>
+<tr><th id="497">497</th><td><i>/*%</i></td></tr>
+<tr><th id="498">498</th><td><i> *	Expand compressed domain name to presentation format.</i></td></tr>
+<tr><th id="499">499</th><td><i> *</i></td></tr>
+<tr><th id="500">500</th><td><i> * return:</i></td></tr>
+<tr><th id="501">501</th><td><i> *\li	Number of bytes read out of `src', or -1 (with errno set).</i></td></tr>
+<tr><th id="502">502</th><td><i> *</i></td></tr>
+<tr><th id="503">503</th><td><i> * note:</i></td></tr>
+<tr><th id="504">504</th><td><i> *\li	Root domain returns as "." not "".</i></td></tr>
+<tr><th id="505">505</th><td><i> */</i></td></tr>
+<tr><th id="506">506</th><td><em>int</em></td></tr>
+<tr><th id="507">507</th><td><dfn class="decl def fn" id="ns_name_uncompress" title='ns_name_uncompress' data-ref="ns_name_uncompress" data-ref-filename="ns_name_uncompress">ns_name_uncompress</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col7 decl" id="57msg" title='msg' data-type='const u_char *' data-ref="57msg" data-ref-filename="57msg">msg</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col8 decl" id="58eom" title='eom' data-type='const u_char *' data-ref="58eom" data-ref-filename="58eom">eom</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col9 decl" id="59src" title='src' data-type='const u_char *' data-ref="59src" data-ref-filename="59src">src</dfn>,</td></tr>
+<tr><th id="508">508</th><td>		   <em>char</em> *<dfn class="local col0 decl" id="60dst" title='dst' data-type='char *' data-ref="60dst" data-ref-filename="60dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="61dstsiz" title='dstsiz' data-type='size_t' data-ref="61dstsiz" data-ref-filename="61dstsiz">dstsiz</dfn>)</td></tr>
+<tr><th id="509">509</th><td>{</td></tr>
+<tr><th id="510">510</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> <dfn class="local col2 decl" id="62tmp" title='tmp' data-type='u_char [255]' data-ref="62tmp" data-ref-filename="62tmp">tmp</dfn>[<a class="macro" href="arpa/nameser.h.html#61" title="255" data-ref="_M/NS_MAXCDNAME">NS_MAXCDNAME</a>];</td></tr>
+<tr><th id="511">511</th><td>	<em>int</em> <dfn class="local col3 decl" id="63n" title='n' data-type='int' data-ref="63n" data-ref-filename="63n">n</dfn>;</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td>	<b>if</b> ((<a class="local col3 ref" href="#63n" title='n' data-ref="63n" data-ref-filename="63n">n</a> = <a class="ref fn" href="#ns_name_unpack" title='ns_name_unpack' data-ref="ns_name_unpack" data-ref-filename="ns_name_unpack">ns_name_unpack</a>(<a class="local col7 ref" href="#57msg" title='msg' data-ref="57msg" data-ref-filename="57msg">msg</a>, <a class="local col8 ref" href="#58eom" title='eom' data-ref="58eom" data-ref-filename="58eom">eom</a>, <a class="local col9 ref" href="#59src" title='src' data-ref="59src" data-ref-filename="59src">src</a>, <a class="local col2 ref" href="#62tmp" title='tmp' data-ref="62tmp" data-ref-filename="62tmp">tmp</a>, <b>sizeof</b> <a class="local col2 ref" href="#62tmp" title='tmp' data-ref="62tmp" data-ref-filename="62tmp">tmp</a>)) == -<var>1</var>)</td></tr>
+<tr><th id="514">514</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="515">515</th><td>	<b>if</b> (<a class="ref fn" href="#ns_name_ntop" title='ns_name_ntop' data-ref="ns_name_ntop" data-ref-filename="ns_name_ntop">ns_name_ntop</a>(<a class="local col2 ref" href="#62tmp" title='tmp' data-ref="62tmp" data-ref-filename="62tmp">tmp</a>, <a class="local col0 ref" href="#60dst" title='dst' data-ref="60dst" data-ref-filename="60dst">dst</a>, <a class="local col1 ref" href="#61dstsiz" title='dstsiz' data-ref="61dstsiz" data-ref-filename="61dstsiz">dstsiz</a>) == -<var>1</var>)</td></tr>
+<tr><th id="516">516</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="517">517</th><td>	<b>return</b> (<a class="local col3 ref" href="#63n" title='n' data-ref="63n" data-ref-filename="63n">n</a>);</td></tr>
+<tr><th id="518">518</th><td>}</td></tr>
+<tr><th id="519">519</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_uncompress)</td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td><i>/*%</i></td></tr>
+<tr><th id="522">522</th><td><i> *	Compress a domain name into wire format, using compression pointers.</i></td></tr>
+<tr><th id="523">523</th><td><i> *</i></td></tr>
+<tr><th id="524">524</th><td><i> * return:</i></td></tr>
+<tr><th id="525">525</th><td><i> *\li	Number of bytes consumed in `dst' or -1 (with errno set).</i></td></tr>
+<tr><th id="526">526</th><td><i> *</i></td></tr>
+<tr><th id="527">527</th><td><i> * notes:</i></td></tr>
+<tr><th id="528">528</th><td><i> *\li	'dnptrs' is an array of pointers to previous compressed names.</i></td></tr>
+<tr><th id="529">529</th><td><i> *\li	dnptrs[0] is a pointer to the beginning of the message.</i></td></tr>
+<tr><th id="530">530</th><td><i> *\li	The list ends with NULL.  'lastdnptr' is a pointer to the end of the</i></td></tr>
+<tr><th id="531">531</th><td><i> *	array pointed to by 'dnptrs'. Side effect is to update the list of</i></td></tr>
+<tr><th id="532">532</th><td><i> *	pointers for labels inserted into the message as we compress the name.</i></td></tr>
+<tr><th id="533">533</th><td><i> *\li	If 'dnptr' is NULL, we don't try to compress names. If 'lastdnptr'</i></td></tr>
+<tr><th id="534">534</th><td><i> *	is NULL, we don't update the list.</i></td></tr>
+<tr><th id="535">535</th><td><i> */</i></td></tr>
+<tr><th id="536">536</th><td><em>int</em></td></tr>
+<tr><th id="537">537</th><td><dfn class="decl def fn" id="ns_name_compress" title='ns_name_compress' data-ref="ns_name_compress" data-ref-filename="ns_name_compress">ns_name_compress</dfn>(<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="64src" title='src' data-type='const char *' data-ref="64src" data-ref-filename="64src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col5 decl" id="65dst" title='dst' data-type='u_char *' data-ref="65dst" data-ref-filename="65dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="66dstsiz" title='dstsiz' data-type='size_t' data-ref="66dstsiz" data-ref-filename="66dstsiz">dstsiz</dfn>,</td></tr>
+<tr><th id="538">538</th><td>		 <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col7 decl" id="67dnptrs" title='dnptrs' data-type='const u_char **' data-ref="67dnptrs" data-ref-filename="67dnptrs">dnptrs</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col8 decl" id="68lastdnptr" title='lastdnptr' data-type='const u_char **' data-ref="68lastdnptr" data-ref-filename="68lastdnptr">lastdnptr</dfn>)</td></tr>
+<tr><th id="539">539</th><td>{</td></tr>
+<tr><th id="540">540</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> <dfn class="local col9 decl" id="69tmp" title='tmp' data-type='u_char [255]' data-ref="69tmp" data-ref-filename="69tmp">tmp</dfn>[<a class="macro" href="arpa/nameser.h.html#61" title="255" data-ref="_M/NS_MAXCDNAME">NS_MAXCDNAME</a>];</td></tr>
+<tr><th id="541">541</th><td></td></tr>
+<tr><th id="542">542</th><td>	<b>if</b> (<a class="ref fn" href="#ns_name_pton" title='ns_name_pton' data-ref="ns_name_pton" data-ref-filename="ns_name_pton">ns_name_pton</a>(<a class="local col4 ref" href="#64src" title='src' data-ref="64src" data-ref-filename="64src">src</a>, <a class="local col9 ref" href="#69tmp" title='tmp' data-ref="69tmp" data-ref-filename="69tmp">tmp</a>, <b>sizeof</b> <a class="local col9 ref" href="#69tmp" title='tmp' data-ref="69tmp" data-ref-filename="69tmp">tmp</a>) == -<var>1</var>)</td></tr>
+<tr><th id="543">543</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="544">544</th><td>	<b>return</b> (<a class="ref fn" href="#ns_name_pack" title='ns_name_pack' data-ref="ns_name_pack" data-ref-filename="ns_name_pack">ns_name_pack</a>(<a class="local col9 ref" href="#69tmp" title='tmp' data-ref="69tmp" data-ref-filename="69tmp">tmp</a>, <a class="local col5 ref" href="#65dst" title='dst' data-ref="65dst" data-ref-filename="65dst">dst</a>, <a class="local col6 ref" href="#66dstsiz" title='dstsiz' data-ref="66dstsiz" data-ref-filename="66dstsiz">dstsiz</a>, <a class="local col7 ref" href="#67dnptrs" title='dnptrs' data-ref="67dnptrs" data-ref-filename="67dnptrs">dnptrs</a>, <a class="local col8 ref" href="#68lastdnptr" title='lastdnptr' data-ref="68lastdnptr" data-ref-filename="68lastdnptr">lastdnptr</a>));</td></tr>
+<tr><th id="545">545</th><td>}</td></tr>
+<tr><th id="546">546</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_compress)</td></tr>
+<tr><th id="547">547</th><td></td></tr>
+<tr><th id="548">548</th><td><i>/*%</i></td></tr>
+<tr><th id="549">549</th><td><i> * Reset dnptrs so that there are no active references to pointers at or</i></td></tr>
+<tr><th id="550">550</th><td><i> * after src.</i></td></tr>
+<tr><th id="551">551</th><td><i> */</i></td></tr>
+<tr><th id="552">552</th><td><em>void</em></td></tr>
+<tr><th id="553">553</th><td><dfn class="decl def fn" id="ns_name_rollback" title='ns_name_rollback' data-ref="ns_name_rollback" data-ref-filename="ns_name_rollback">ns_name_rollback</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col0 decl" id="70src" title='src' data-type='const u_char *' data-ref="70src" data-ref-filename="70src">src</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col1 decl" id="71dnptrs" title='dnptrs' data-type='const u_char **' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</dfn>,</td></tr>
+<tr><th id="554">554</th><td>		 <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col2 decl" id="72lastdnptr" title='lastdnptr' data-type='const u_char **' data-ref="72lastdnptr" data-ref-filename="72lastdnptr">lastdnptr</dfn>)</td></tr>
+<tr><th id="555">555</th><td>{</td></tr>
+<tr><th id="556">556</th><td>	<b>while</b> (<a class="local col1 ref" href="#71dnptrs" title='dnptrs' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</a> &lt; <a class="local col2 ref" href="#72lastdnptr" title='lastdnptr' data-ref="72lastdnptr" data-ref-filename="72lastdnptr">lastdnptr</a> &amp;&amp; *<a class="local col1 ref" href="#71dnptrs" title='dnptrs' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="557">557</th><td>		<b>if</b> (*<a class="local col1 ref" href="#71dnptrs" title='dnptrs' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</a> &gt;= <a class="local col0 ref" href="#70src" title='src' data-ref="70src" data-ref-filename="70src">src</a>) {</td></tr>
+<tr><th id="558">558</th><td>			*<a class="local col1 ref" href="#71dnptrs" title='dnptrs' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="559">559</th><td>			<b>break</b>;</td></tr>
+<tr><th id="560">560</th><td>		}</td></tr>
+<tr><th id="561">561</th><td>		<a class="local col1 ref" href="#71dnptrs" title='dnptrs' data-ref="71dnptrs" data-ref-filename="71dnptrs">dnptrs</a>++;</td></tr>
+<tr><th id="562">562</th><td>	}</td></tr>
+<tr><th id="563">563</th><td>}</td></tr>
+<tr><th id="564">564</th><td></td></tr>
+<tr><th id="565">565</th><td><i>/*%</i></td></tr>
+<tr><th id="566">566</th><td><i> *	Advance *ptrptr to skip over the compressed name it points at.</i></td></tr>
+<tr><th id="567">567</th><td><i> *</i></td></tr>
+<tr><th id="568">568</th><td><i> * return:</i></td></tr>
+<tr><th id="569">569</th><td><i> *\li	0 on success, -1 (with errno set) on failure.</i></td></tr>
+<tr><th id="570">570</th><td><i> */</i></td></tr>
+<tr><th id="571">571</th><td><em>int</em></td></tr>
+<tr><th id="572">572</th><td><dfn class="decl def fn" id="ns_name_skip" title='ns_name_skip' data-ref="ns_name_skip" data-ref-filename="ns_name_skip">ns_name_skip</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> **<dfn class="local col3 decl" id="73ptrptr" title='ptrptr' data-type='const u_char **' data-ref="73ptrptr" data-ref-filename="73ptrptr">ptrptr</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col4 decl" id="74eom" title='eom' data-type='const u_char *' data-ref="74eom" data-ref-filename="74eom">eom</dfn>)</td></tr>
+<tr><th id="573">573</th><td>{</td></tr>
+<tr><th id="574">574</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col5 decl" id="75cp" title='cp' data-type='const u_char *' data-ref="75cp" data-ref-filename="75cp">cp</dfn>;</td></tr>
+<tr><th id="575">575</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col6 decl" id="76n" title='n' data-type='u_int' data-ref="76n" data-ref-filename="76n">n</dfn>;</td></tr>
+<tr><th id="576">576</th><td></td></tr>
+<tr><th id="577">577</th><td>	<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a> = *<a class="local col3 ref" href="#73ptrptr" title='ptrptr' data-ref="73ptrptr" data-ref-filename="73ptrptr">ptrptr</a>;</td></tr>
+<tr><th id="578">578</th><td>	<b>while</b> (<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a> &lt; <a class="local col4 ref" href="#74eom" title='eom' data-ref="74eom" data-ref-filename="74eom">eom</a> &amp;&amp; (<a class="local col6 ref" href="#76n" title='n' data-ref="76n" data-ref-filename="76n">n</a> = *<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="579">579</th><td>		<i>/* Check for indirection. */</i></td></tr>
+<tr><th id="580">580</th><td>		<b>switch</b> (<a class="local col6 ref" href="#76n" title='n' data-ref="76n" data-ref-filename="76n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="581">581</th><td>		<b>case</b> <var>0</var>:			<i>/*%&lt; normal case, n == len */</i></td></tr>
+<tr><th id="582">582</th><td>			<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a> += <a class="local col6 ref" href="#76n" title='n' data-ref="76n" data-ref-filename="76n">n</a>;</td></tr>
+<tr><th id="583">583</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="584">584</th><td>		<b>case</b> <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>:	<i>/*%&lt; indirection */</i></td></tr>
+<tr><th id="585">585</th><td>			<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a>++;</td></tr>
+<tr><th id="586">586</th><td>			<b>break</b>;</td></tr>
+<tr><th id="587">587</th><td>		<b>default</b>:		<i>/*%&lt; illegal type */</i></td></tr>
+<tr><th id="588">588</th><td>			<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="589">589</th><td>			<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="590">590</th><td>		}</td></tr>
+<tr><th id="591">591</th><td>		<b>break</b>;</td></tr>
+<tr><th id="592">592</th><td>	}</td></tr>
+<tr><th id="593">593</th><td>	<b>if</b> (<a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a> &gt; <a class="local col4 ref" href="#74eom" title='eom' data-ref="74eom" data-ref-filename="74eom">eom</a>) {</td></tr>
+<tr><th id="594">594</th><td>		<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="595">595</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="596">596</th><td>	}</td></tr>
+<tr><th id="597">597</th><td>	*<a class="local col3 ref" href="#73ptrptr" title='ptrptr' data-ref="73ptrptr" data-ref-filename="73ptrptr">ptrptr</a> = <a class="local col5 ref" href="#75cp" title='cp' data-ref="75cp" data-ref-filename="75cp">cp</a>;</td></tr>
+<tr><th id="598">598</th><td>	<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="599">599</th><td>}</td></tr>
+<tr><th id="600">600</th><td><a class="macro" href="../include/libc-symbols.h.html#611" title="" data-ref="_M/libresolv_hidden_def">libresolv_hidden_def</a> (ns_name_skip)</td></tr>
+<tr><th id="601">601</th><td></td></tr>
+<tr><th id="602">602</th><td><i>/* Private. */</i></td></tr>
+<tr><th id="603">603</th><td></td></tr>
+<tr><th id="604">604</th><td><i  data-doc="special">/*%</i></td></tr>
+<tr><th id="605">605</th><td><i  data-doc="special"> *	Thinking in noninternationalized USASCII (per the DNS spec),</i></td></tr>
+<tr><th id="606">606</th><td><i  data-doc="special"> *	is this character special ("in need of quoting") ?</i></td></tr>
+<tr><th id="607">607</th><td><i  data-doc="special"> *</i></td></tr>
+<tr><th id="608">608</th><td><i  data-doc="special"> * return:</i></td></tr>
+<tr><th id="609">609</th><td><i  data-doc="special"> *\li	boolean.</i></td></tr>
+<tr><th id="610">610</th><td><i  data-doc="special"> */</i></td></tr>
+<tr><th id="611">611</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="612">612</th><td><dfn class="tu decl def fn" id="special" title='special' data-type='int special(int ch)' data-ref="special" data-ref-filename="special">special</dfn>(<em>int</em> <dfn class="local col7 decl" id="77ch" title='ch' data-type='int' data-ref="77ch" data-ref-filename="77ch">ch</dfn>) {</td></tr>
+<tr><th id="613">613</th><td>	<b>switch</b> (<a class="local col7 ref" href="#77ch" title='ch' data-ref="77ch" data-ref-filename="77ch">ch</a>) {</td></tr>
+<tr><th id="614">614</th><td>	<b>case</b> <var>0x22</var>: <i>/*%&lt; '"' */</i></td></tr>
+<tr><th id="615">615</th><td>	<b>case</b> <var>0x2E</var>: <i>/*%&lt; '.' */</i></td></tr>
+<tr><th id="616">616</th><td>	<b>case</b> <var>0x3B</var>: <i>/*%&lt; ';' */</i></td></tr>
+<tr><th id="617">617</th><td>	<b>case</b> <var>0x5C</var>: <i>/*%&lt; '\\' */</i></td></tr>
+<tr><th id="618">618</th><td>	<b>case</b> <var>0x28</var>: <i>/*%&lt; '(' */</i></td></tr>
+<tr><th id="619">619</th><td>	<b>case</b> <var>0x29</var>: <i>/*%&lt; ')' */</i></td></tr>
+<tr><th id="620">620</th><td>	<i>/* Special modifiers in zone files. */</i></td></tr>
+<tr><th id="621">621</th><td>	<b>case</b> <var>0x40</var>: <i>/*%&lt; '@' */</i></td></tr>
+<tr><th id="622">622</th><td>	<b>case</b> <var>0x24</var>: <i>/*%&lt; '$' */</i></td></tr>
+<tr><th id="623">623</th><td>		<b>return</b> (<var>1</var>);</td></tr>
+<tr><th id="624">624</th><td>	<b>default</b>:</td></tr>
+<tr><th id="625">625</th><td>		<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="626">626</th><td>	}</td></tr>
+<tr><th id="627">627</th><td>}</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td><i  data-doc="printable">/*%</i></td></tr>
+<tr><th id="630">630</th><td><i  data-doc="printable"> *	Thinking in noninternationalized USASCII (per the DNS spec),</i></td></tr>
+<tr><th id="631">631</th><td><i  data-doc="printable"> *	is this character visible and not a space when printed ?</i></td></tr>
+<tr><th id="632">632</th><td><i  data-doc="printable"> *</i></td></tr>
+<tr><th id="633">633</th><td><i  data-doc="printable"> * return:</i></td></tr>
+<tr><th id="634">634</th><td><i  data-doc="printable"> *\li	boolean.</i></td></tr>
+<tr><th id="635">635</th><td><i  data-doc="printable"> */</i></td></tr>
+<tr><th id="636">636</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="637">637</th><td><dfn class="tu decl def fn" id="printable" title='printable' data-type='int printable(int ch)' data-ref="printable" data-ref-filename="printable">printable</dfn>(<em>int</em> <dfn class="local col8 decl" id="78ch" title='ch' data-type='int' data-ref="78ch" data-ref-filename="78ch">ch</dfn>) {</td></tr>
+<tr><th id="638">638</th><td>	<b>return</b> (<a class="local col8 ref" href="#78ch" title='ch' data-ref="78ch" data-ref-filename="78ch">ch</a> &gt; <var>0x20</var> &amp;&amp; <a class="local col8 ref" href="#78ch" title='ch' data-ref="78ch" data-ref-filename="78ch">ch</a> &lt; <var>0x7f</var>);</td></tr>
+<tr><th id="639">639</th><td>}</td></tr>
+<tr><th id="640">640</th><td></td></tr>
+<tr><th id="641">641</th><td><i  data-doc="mklower">/*%</i></td></tr>
+<tr><th id="642">642</th><td><i  data-doc="mklower"> *	Thinking in noninternationalized USASCII (per the DNS spec),</i></td></tr>
+<tr><th id="643">643</th><td><i  data-doc="mklower"> *	convert this character to lower case if it's upper case.</i></td></tr>
+<tr><th id="644">644</th><td><i  data-doc="mklower"> */</i></td></tr>
+<tr><th id="645">645</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="646">646</th><td><dfn class="tu decl def fn" id="mklower" title='mklower' data-type='int mklower(int ch)' data-ref="mklower" data-ref-filename="mklower">mklower</dfn>(<em>int</em> <dfn class="local col9 decl" id="79ch" title='ch' data-type='int' data-ref="79ch" data-ref-filename="79ch">ch</dfn>) {</td></tr>
+<tr><th id="647">647</th><td>	<b>if</b> (<a class="local col9 ref" href="#79ch" title='ch' data-ref="79ch" data-ref-filename="79ch">ch</a> &gt;= <var>0x41</var> &amp;&amp; <a class="local col9 ref" href="#79ch" title='ch' data-ref="79ch" data-ref-filename="79ch">ch</a> &lt;= <var>0x5A</var>)</td></tr>
+<tr><th id="648">648</th><td>		<b>return</b> (<a class="local col9 ref" href="#79ch" title='ch' data-ref="79ch" data-ref-filename="79ch">ch</a> + <var>0x20</var>);</td></tr>
+<tr><th id="649">649</th><td>	<b>return</b> (<a class="local col9 ref" href="#79ch" title='ch' data-ref="79ch" data-ref-filename="79ch">ch</a>);</td></tr>
+<tr><th id="650">650</th><td>}</td></tr>
+<tr><th id="651">651</th><td></td></tr>
+<tr><th id="652">652</th><td><i  data-doc="dn_find">/*%</i></td></tr>
+<tr><th id="653">653</th><td><i  data-doc="dn_find"> *	Search for the counted-label name in an array of compressed names.</i></td></tr>
+<tr><th id="654">654</th><td><i  data-doc="dn_find"> *</i></td></tr>
+<tr><th id="655">655</th><td><i  data-doc="dn_find"> * return:</i></td></tr>
+<tr><th id="656">656</th><td><i  data-doc="dn_find"> *\li	offset from msg if found, or -1.</i></td></tr>
+<tr><th id="657">657</th><td><i  data-doc="dn_find"> *</i></td></tr>
+<tr><th id="658">658</th><td><i  data-doc="dn_find"> * notes:</i></td></tr>
+<tr><th id="659">659</th><td><i  data-doc="dn_find"> *\li	dnptrs is the pointer to the first name on the list,</i></td></tr>
+<tr><th id="660">660</th><td><i  data-doc="dn_find"> *\li	not the pointer to the start of the message.</i></td></tr>
+<tr><th id="661">661</th><td><i  data-doc="dn_find"> */</i></td></tr>
+<tr><th id="662">662</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="663">663</th><td><dfn class="tu decl def fn" id="dn_find" title='dn_find' data-type='int dn_find(const u_char * domain, const u_char * msg, const u_char *const * dnptrs, const u_char *const * lastdnptr)' data-ref="dn_find" data-ref-filename="dn_find">dn_find</dfn>(<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col0 decl" id="80domain" title='domain' data-type='const u_char *' data-ref="80domain" data-ref-filename="80domain">domain</dfn>, <em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col1 decl" id="81msg" title='msg' data-type='const u_char *' data-ref="81msg" data-ref-filename="81msg">msg</dfn>,</td></tr>
+<tr><th id="664">664</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *<dfn class="local col2 decl" id="82dnptrs" title='dnptrs' data-type='const u_char *const *' data-ref="82dnptrs" data-ref-filename="82dnptrs">dnptrs</dfn>,</td></tr>
+<tr><th id="665">665</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *<dfn class="local col3 decl" id="83lastdnptr" title='lastdnptr' data-type='const u_char *const *' data-ref="83lastdnptr" data-ref-filename="83lastdnptr">lastdnptr</dfn>)</td></tr>
+<tr><th id="666">666</th><td>{</td></tr>
+<tr><th id="667">667</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col4 decl" id="84dn" title='dn' data-type='const u_char *' data-ref="84dn" data-ref-filename="84dn">dn</dfn>, *<dfn class="local col5 decl" id="85cp" title='cp' data-type='const u_char *' data-ref="85cp" data-ref-filename="85cp">cp</dfn>, *<dfn class="local col6 decl" id="86sp" title='sp' data-type='const u_char *' data-ref="86sp" data-ref-filename="86sp">sp</dfn>;</td></tr>
+<tr><th id="668">668</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> * <em>const</em> *<dfn class="local col7 decl" id="87cpp" title='cpp' data-type='const u_char *const *' data-ref="87cpp" data-ref-filename="87cpp">cpp</dfn>;</td></tr>
+<tr><th id="669">669</th><td>	<a class="typedef" href="../posix/sys/types.h.html#u_int" title='u_int' data-type='__u_int' data-ref="u_int" data-ref-filename="u_int">u_int</a> <dfn class="local col8 decl" id="88n" title='n' data-type='u_int' data-ref="88n" data-ref-filename="88n">n</dfn>;</td></tr>
+<tr><th id="670">670</th><td></td></tr>
+<tr><th id="671">671</th><td>	<b>for</b> (<a class="local col7 ref" href="#87cpp" title='cpp' data-ref="87cpp" data-ref-filename="87cpp">cpp</a> = <a class="local col2 ref" href="#82dnptrs" title='dnptrs' data-ref="82dnptrs" data-ref-filename="82dnptrs">dnptrs</a>; <a class="local col7 ref" href="#87cpp" title='cpp' data-ref="87cpp" data-ref-filename="87cpp">cpp</a> &lt; <a class="local col3 ref" href="#83lastdnptr" title='lastdnptr' data-ref="83lastdnptr" data-ref-filename="83lastdnptr">lastdnptr</a>; <a class="local col7 ref" href="#87cpp" title='cpp' data-ref="87cpp" data-ref-filename="87cpp">cpp</a>++) {</td></tr>
+<tr><th id="672">672</th><td>		<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> = *<a class="local col7 ref" href="#87cpp" title='cpp' data-ref="87cpp" data-ref-filename="87cpp">cpp</a>;</td></tr>
+<tr><th id="673">673</th><td>		<i>/*</i></td></tr>
+<tr><th id="674">674</th><td><i>		 * terminate search on:</i></td></tr>
+<tr><th id="675">675</th><td><i>		 * root label</i></td></tr>
+<tr><th id="676">676</th><td><i>		 * compression pointer</i></td></tr>
+<tr><th id="677">677</th><td><i>		 * unusable offset</i></td></tr>
+<tr><th id="678">678</th><td><i>		 */</i></td></tr>
+<tr><th id="679">679</th><td>		<b>while</b> (*<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> != <var>0</var> &amp;&amp; (*<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) == <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="680">680</th><td>		       (<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> - <a class="local col1 ref" href="#81msg" title='msg' data-ref="81msg" data-ref-filename="81msg">msg</a>) &lt; <var>0x4000</var>) {</td></tr>
+<tr><th id="681">681</th><td>			<a class="local col4 ref" href="#84dn" title='dn' data-ref="84dn" data-ref-filename="84dn">dn</a> = <a class="local col0 ref" href="#80domain" title='domain' data-ref="80domain" data-ref-filename="80domain">domain</a>;</td></tr>
+<tr><th id="682">682</th><td>			<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a> = <a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a>;</td></tr>
+<tr><th id="683">683</th><td>			<b>while</b> ((<a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> = *<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a>++) != <var>0</var>) {</td></tr>
+<tr><th id="684">684</th><td>				<i>/*</i></td></tr>
+<tr><th id="685">685</th><td><i>				 * check for indirection</i></td></tr>
+<tr><th id="686">686</th><td><i>				 */</i></td></tr>
+<tr><th id="687">687</th><td>				<b>switch</b> (<a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> &amp; <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>) {</td></tr>
+<tr><th id="688">688</th><td>				<b>case</b> <var>0</var>:		<i>/*%&lt; normal case, n == len */</i></td></tr>
+<tr><th id="689">689</th><td>					<a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> = <a class="tu ref fn" href="#labellen" title='labellen' data-use='c' data-ref="labellen" data-ref-filename="labellen">labellen</a>(<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a> - <var>1</var>); <i>/*%&lt; XXX */</i></td></tr>
+<tr><th id="690">690</th><td>					<b>if</b> (<a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> != *<a class="local col4 ref" href="#84dn" title='dn' data-ref="84dn" data-ref-filename="84dn">dn</a>++)</td></tr>
+<tr><th id="691">691</th><td>						<b>goto</b> <a class="lbl" href="#89next" data-ref="89next" data-ref-filename="89next">next</a>;</td></tr>
+<tr><th id="692">692</th><td></td></tr>
+<tr><th id="693">693</th><td>					<b>for</b> ((<em>void</em>)<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>; <a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> &gt; <var>0</var>; <a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a>--)</td></tr>
+<tr><th id="694">694</th><td>						<b>if</b> (<a class="tu ref fn" href="#mklower" title='mklower' data-use='c' data-ref="mklower" data-ref-filename="mklower">mklower</a>(*<a class="local col4 ref" href="#84dn" title='dn' data-ref="84dn" data-ref-filename="84dn">dn</a>++) !=</td></tr>
+<tr><th id="695">695</th><td>						    <a class="tu ref fn" href="#mklower" title='mklower' data-use='c' data-ref="mklower" data-ref-filename="mklower">mklower</a>(*<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a>++))</td></tr>
+<tr><th id="696">696</th><td>							<b>goto</b> <a class="lbl" href="#89next" data-ref="89next" data-ref-filename="89next">next</a>;</td></tr>
+<tr><th id="697">697</th><td>					<i>/* Is next root for both ? */</i></td></tr>
+<tr><th id="698">698</th><td>					<b>if</b> (*<a class="local col4 ref" href="#84dn" title='dn' data-ref="84dn" data-ref-filename="84dn">dn</a> == <kbd>'\0'</kbd> &amp;&amp; *<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="699">699</th><td>						<b>return</b> (<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> - <a class="local col1 ref" href="#81msg" title='msg' data-ref="81msg" data-ref-filename="81msg">msg</a>);</td></tr>
+<tr><th id="700">700</th><td>					<b>if</b> (*<a class="local col4 ref" href="#84dn" title='dn' data-ref="84dn" data-ref-filename="84dn">dn</a>)</td></tr>
+<tr><th id="701">701</th><td>						<b>continue</b>;</td></tr>
+<tr><th id="702">702</th><td>					<b>goto</b> <a class="lbl" href="#89next" data-ref="89next" data-ref-filename="89next">next</a>;</td></tr>
+<tr><th id="703">703</th><td>				<b>case</b> <a class="macro" href="arpa/nameser.h.html#71" title="0xc0" data-ref="_M/NS_CMPRSFLGS">NS_CMPRSFLGS</a>:	<i>/*%&lt; indirection */</i></td></tr>
+<tr><th id="704">704</th><td>					<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a> = <a class="local col1 ref" href="#81msg" title='msg' data-ref="81msg" data-ref-filename="81msg">msg</a> + (((<a class="local col8 ref" href="#88n" title='n' data-ref="88n" data-ref-filename="88n">n</a> &amp; <var>0x3f</var>) &lt;&lt; <var>8</var>) | *<a class="local col5 ref" href="#85cp" title='cp' data-ref="85cp" data-ref-filename="85cp">cp</a>);</td></tr>
+<tr><th id="705">705</th><td>					<b>break</b>;</td></tr>
+<tr><th id="706">706</th><td></td></tr>
+<tr><th id="707">707</th><td>				<b>default</b>:	<i>/*%&lt; illegal type */</i></td></tr>
+<tr><th id="708">708</th><td>					<a class="macro" href="../include/errno.h.html#37" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#73" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="709">709</th><td>					<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="710">710</th><td>				}</td></tr>
+<tr><th id="711">711</th><td>			}</td></tr>
+<tr><th id="712">712</th><td>  <dfn class="lbl" id="89next" data-ref="89next" data-ref-filename="89next">next</dfn>: ;</td></tr>
+<tr><th id="713">713</th><td>			<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> += *<a class="local col6 ref" href="#86sp" title='sp' data-ref="86sp" data-ref-filename="86sp">sp</a> + <var>1</var>;</td></tr>
+<tr><th id="714">714</th><td>		}</td></tr>
+<tr><th id="715">715</th><td>	}</td></tr>
+<tr><th id="716">716</th><td>	<a class="macro" href="../include/errno.h.html#37" title="(errno = (2))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>);</td></tr>
+<tr><th id="717">717</th><td>	<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="718">718</th><td>}</td></tr>
+<tr><th id="719">719</th><td></td></tr>
+<tr><th id="720">720</th><td><i  data-doc="labellen">/* Return the length of the encoded label starting at LP, or -1 for</i></td></tr>
+<tr><th id="721">721</th><td><i  data-doc="labellen">   compression references and extended label types.  */</i></td></tr>
+<tr><th id="722">722</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="723">723</th><td><dfn class="tu decl def fn" id="labellen" title='labellen' data-type='int labellen(const unsigned char * lp)' data-ref="labellen" data-ref-filename="labellen">labellen</dfn> (<em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col0 decl" id="90lp" title='lp' data-type='const unsigned char *' data-ref="90lp" data-ref-filename="90lp">lp</dfn>)</td></tr>
+<tr><th id="724">724</th><td>{</td></tr>
+<tr><th id="725">725</th><td>  <b>if</b> (*<a class="local col0 ref" href="#90lp" title='lp' data-ref="90lp" data-ref-filename="90lp">lp</a> &lt;= <var>63</var>)</td></tr>
+<tr><th id="726">726</th><td>    <b>return</b> *<a class="local col0 ref" href="#90lp" title='lp' data-ref="90lp" data-ref-filename="90lp">lp</a>;</td></tr>
+<tr><th id="727">727</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="728">728</th><td>}</td></tr>
+<tr><th id="729">729</th><td></td></tr>
+<tr><th id="730">730</th><td><i class="doc">/*!<span class="command"> \file</span> */</i></td></tr>
+<tr><th id="731">731</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

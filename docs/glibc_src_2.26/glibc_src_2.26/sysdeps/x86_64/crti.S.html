@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>crti.S source code [glibc_src_2.26/sysdeps/x86_64/crti.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/x86_64/crti.S'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.26</a>/<a href='..'>sysdeps</a>/<a href='./'>x86_64</a>/<a href='crti.S.html'>crti.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Special .init and .fini section support for x86-64.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2012-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   In addition to the permissions in the GNU Lesser General Public</i></td></tr>
+<tr><th id="11">11</th><td><i>   License, the Free Software Foundation gives you unlimited</i></td></tr>
+<tr><th id="12">12</th><td><i>   permission to link the compiled version of this file with other</i></td></tr>
+<tr><th id="13">13</th><td><i>   programs, and to distribute those programs without any restriction</i></td></tr>
+<tr><th id="14">14</th><td><i>   coming from the use of this file. (The GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License restrictions do apply in other respects; for example, they</i></td></tr>
+<tr><th id="16">16</th><td><i>   cover modification of the file, and distribution when not linked</i></td></tr>
+<tr><th id="17">17</th><td><i>   into another program.)</i></td></tr>
+<tr><th id="18">18</th><td><i></i></td></tr>
+<tr><th id="19">19</th><td><i>   Note that people who make modified versions of this file are not</i></td></tr>
+<tr><th id="20">20</th><td><i>   obligated to grant this special exception for their modified</i></td></tr>
+<tr><th id="21">21</th><td><i>   versions; it is their choice whether to do so. The GNU Lesser</i></td></tr>
+<tr><th id="22">22</th><td><i>   General Public License gives permission to release a modified</i></td></tr>
+<tr><th id="23">23</th><td><i>   version without this exception; this exception also makes it</i></td></tr>
+<tr><th id="24">24</th><td><i>   possible to release a modified version which carries forward this</i></td></tr>
+<tr><th id="25">25</th><td><i>   exception.</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="28">28</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="29">29</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="30">30</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="31">31</th><td><i></i></td></tr>
+<tr><th id="32">32</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="33">33</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="34">34</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/* crti.S puts a function prologue at the beginning of the .init and</i></td></tr>
+<tr><th id="37">37</th><td><i>   .fini sections and defines global symbols for those addresses, so</i></td></tr>
+<tr><th id="38">38</th><td><i>   they can be called as functions.  The symbols _init and _fini are</i></td></tr>
+<tr><th id="39">39</th><td><i>   magic and cause the linker to emit DT_INIT and DT_FINI.  */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../../include/libc-symbols.h.html">&lt;libc-symbols.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="44">ifndef</span> <span class="macro" data-ref="_M/PREINIT_FUNCTION">PREINIT_FUNCTION</span></u></td></tr>
+<tr><th id="45">45</th><td><u># define <dfn class="macro" id="_M/PREINIT_FUNCTION" data-ref="_M/PREINIT_FUNCTION">PREINIT_FUNCTION</dfn> __gmon_start__</u></td></tr>
+<tr><th id="46">46</th><td><u>#<span data-ppcond="44">endif</span></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#<span data-ppcond="48">ifndef</span> <span class="macro" data-ref="_M/PREINIT_FUNCTION_WEAK">PREINIT_FUNCTION_WEAK</span></u></td></tr>
+<tr><th id="49">49</th><td><u># define <dfn class="macro" id="_M/PREINIT_FUNCTION_WEAK" data-ref="_M/PREINIT_FUNCTION_WEAK">PREINIT_FUNCTION_WEAK</dfn> 1</u></td></tr>
+<tr><th id="50">50</th><td><u>#<span data-ppcond="48">endif</span></u></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="52">if</span> <a class="macro" href="#49" title="1" data-ref="_M/PREINIT_FUNCTION_WEAK">PREINIT_FUNCTION_WEAK</a></u></td></tr>
+<tr><th id="53">53</th><td>	<a class="macro" href="../../include/libc-symbols.h.html#185" title=".weak __gmon_start__" data-ref="_M/weak_extern">weak_extern</a> (<a class="macro" href="#45" title="__gmon_start__" data-ref="_M/PREINIT_FUNCTION">PREINIT_FUNCTION</a>)</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="52">else</span></u></td></tr>
+<tr><th id="55">55</th><td>	.hidden PREINIT_FUNCTION</td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="52">endif</span></u></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>	.section .init,<q>"ax"</q>,@progbits</td></tr>
+<tr><th id="59">59</th><td>	.p2align <var>2</var></td></tr>
+<tr><th id="60">60</th><td>	.globl _init</td></tr>
+<tr><th id="61">61</th><td>	.type _init, @function</td></tr>
+<tr><th id="62">62</th><td>_init:</td></tr>
+<tr><th id="63">63</th><td>	<i>/* Maintain 16-byte stack alignment for called functions.  */</i></td></tr>
+<tr><th id="64">64</th><td>	subq $<var>8</var>, %rsp</td></tr>
+<tr><th id="65">65</th><td><u>#<span data-ppcond="65">if</span> <a class="macro" href="#49" title="1" data-ref="_M/PREINIT_FUNCTION_WEAK">PREINIT_FUNCTION_WEAK</a></u></td></tr>
+<tr><th id="66">66</th><td>	movq <a class="macro" href="#45" title="__gmon_start__" data-ref="_M/PREINIT_FUNCTION">PREINIT_FUNCTION</a>@GOTPCREL(%rip), %rax</td></tr>
+<tr><th id="67">67</th><td>	testq %rax, %rax</td></tr>
+<tr><th id="68">68</th><td>	je .Lno_weak_fn</td></tr>
+<tr><th id="69">69</th><td>	call *%rax</td></tr>
+<tr><th id="70">70</th><td>.Lno_weak_fn:</td></tr>
+<tr><th id="71">71</th><td><u>#<span data-ppcond="65">else</span></u></td></tr>
+<tr><th id="72">72</th><td>	call PREINIT_FUNCTION</td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="65">endif</span></u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	.section .fini,<q>"ax"</q>,@progbits</td></tr>
+<tr><th id="76">76</th><td>	.p2align <var>2</var></td></tr>
+<tr><th id="77">77</th><td>	.globl _fini</td></tr>
+<tr><th id="78">78</th><td>	.type _fini, @function</td></tr>
+<tr><th id="79">79</th><td>_fini:</td></tr>
+<tr><th id="80">80</th><td>	subq $<var>8</var>, %rsp</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

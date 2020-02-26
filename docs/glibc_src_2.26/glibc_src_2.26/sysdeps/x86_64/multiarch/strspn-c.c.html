@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>strspn-c.c source code [glibc_src_2.26/sysdeps/x86_64/multiarch/strspn-c.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/x86_64/multiarch/strspn-c.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.26</a>/<a href='../..'>sysdeps</a>/<a href='..'>x86_64</a>/<a href='./'>multiarch</a>/<a href='strspn-c.c.html'>strspn-c.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* strspn with SSE4.2 intrinsics</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2009-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Intel Corporation.</i></td></tr>
+<tr><th id="4">4</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include &lt;nmmintrin.h&gt;</u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="varshift.h.html">"varshift.h"</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><i>/* We use 0x12:</i></td></tr>
+<tr><th id="25">25</th><td><i>	_SIDD_SBYTE_OPS</i></td></tr>
+<tr><th id="26">26</th><td><i>	| _SIDD_CMP_EQUAL_ANY</i></td></tr>
+<tr><th id="27">27</th><td><i>	| _SIDD_NEGATIVE_POLARITY</i></td></tr>
+<tr><th id="28">28</th><td><i>	| _SIDD_LEAST_SIGNIFICANT</i></td></tr>
+<tr><th id="29">29</th><td><i>   on pcmpistri to compare xmm/mem128</i></td></tr>
+<tr><th id="30">30</th><td><i></i></td></tr>
+<tr><th id="31">31</th><td><i>   0 1 2 3 4 5 6 7 8 9 A B C D E F</i></td></tr>
+<tr><th id="32">32</th><td><i>   X X X X X X X X X X X X X X X X</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>   against xmm</i></td></tr>
+<tr><th id="35">35</th><td><i></i></td></tr>
+<tr><th id="36">36</th><td><i>   0 1 2 3 4 5 6 7 8 9 A B C D E F</i></td></tr>
+<tr><th id="37">37</th><td><i>   A A A A A A A A A A A A A A A A</i></td></tr>
+<tr><th id="38">38</th><td><i></i></td></tr>
+<tr><th id="39">39</th><td><i>   to find out if the first 16byte data element has any non-A byte and</i></td></tr>
+<tr><th id="40">40</th><td><i>   the offset of the first byte.  There are 2 cases:</i></td></tr>
+<tr><th id="41">41</th><td><i></i></td></tr>
+<tr><th id="42">42</th><td><i>   1. The first 16byte data element has the non-A byte, including</i></td></tr>
+<tr><th id="43">43</th><td><i>      EOS, at the offset X.</i></td></tr>
+<tr><th id="44">44</th><td><i>   2. The first 16byte data element is valid and doesn't have the non-A</i></td></tr>
+<tr><th id="45">45</th><td><i>      byte.</i></td></tr>
+<tr><th id="46">46</th><td><i></i></td></tr>
+<tr><th id="47">47</th><td><i>   Here is the table of ECX, CFlag, ZFlag and SFlag for 2 cases:</i></td></tr>
+<tr><th id="48">48</th><td><i></i></td></tr>
+<tr><th id="49">49</th><td><i>   case		ECX	CFlag	ZFlag	SFlag</i></td></tr>
+<tr><th id="50">50</th><td><i>    1		 X	  1	 0/1	  0</i></td></tr>
+<tr><th id="51">51</th><td><i>    2		16	  0	  0	  0</i></td></tr>
+<tr><th id="52">52</th><td><i></i></td></tr>
+<tr><th id="53">53</th><td><i>   We exit from the loop for case 1.  */</i></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><b>extern</b> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl fn" id="__strspn_sse2" title='__strspn_sse2' data-ref="__strspn_sse2" data-ref-filename="__strspn_sse2">__strspn_sse2</dfn> (<em>const</em> <em>char</em> *, <em>const</em> <em>char</em> *);</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="59">59</th><td><b>__attribute__</b> ((section (<q>".text.sse4.2"</q>)))</td></tr>
+<tr><th id="60">60</th><td><dfn class="decl def fn" id="__strspn_sse42" title='__strspn_sse42' data-ref="__strspn_sse42" data-ref-filename="__strspn_sse42">__strspn_sse42</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1s" title='s' data-type='const char *' data-ref="1s" data-ref-filename="1s">s</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2a" title='a' data-type='const char *' data-ref="2a" data-ref-filename="2a">a</dfn>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>  <b>if</b> (*<a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a> == <var>0</var>)</td></tr>
+<tr><th id="63">63</th><td>    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>  <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3aligned" title='aligned' data-type='const char *' data-ref="3aligned" data-ref-filename="3aligned">aligned</dfn>;</td></tr>
+<tr><th id="66">66</th><td>  <span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> <dfn class="local col4 decl" id="4mask" title='mask' data-type='__m128i' data-ref="4mask" data-ref-filename="4mask">mask</dfn>;</td></tr>
+<tr><th id="67">67</th><td>  <em>int</em> <dfn class="local col5 decl" id="5offset" title='offset' data-type='int' data-ref="5offset" data-ref-filename="5offset">offset</dfn> = (<em>int</em>) ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a> &amp; <var>15</var>);</td></tr>
+<tr><th id="68">68</th><td>  <b>if</b> (<a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a> != <var>0</var>)</td></tr>
+<tr><th id="69">69</th><td>    {</td></tr>
+<tr><th id="70">70</th><td>      <i>/* Load masks.  */</i></td></tr>
+<tr><th id="71">71</th><td>      <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> = (<em>const</em> <em>char</em> *) ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a> &amp; -<var>16L</var>);</td></tr>
+<tr><th id="72">72</th><td>      <span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> <dfn class="local col6 decl" id="6mask0" title='mask0' data-type='__m128i' data-ref="6mask0" data-ref-filename="6mask0">mask0</dfn> = <span class='ref fn' title='_mm_load_si128' data-ref="_mm_load_si128" data-ref-filename="_mm_load_si128">_mm_load_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a>);</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>      <a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a> = <a class="ref fn" href="varshift.h.html#__m128i_shift_right" title='__m128i_shift_right' data-ref="__m128i_shift_right" data-ref-filename="__m128i_shift_right">__m128i_shift_right</a> (<a class="local col6 ref" href="#6mask0" title='mask0' data-ref="6mask0" data-ref-filename="6mask0">mask0</a>, <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a>);</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>      <i>/* Find where the NULL terminator is.  */</i></td></tr>
+<tr><th id="77">77</th><td>      <em>int</em> <dfn class="local col7 decl" id="7length" title='length' data-type='int' data-ref="7length" data-ref-filename="7length">length</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(mask), (__v16qi)(__m128i)(mask), (int)(0x3a))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <var>0x3a</var>);</td></tr>
+<tr><th id="78">78</th><td>      <b>if</b> (<a class="local col7 ref" href="#7length" title='length' data-ref="7length" data-ref-filename="7length">length</a> == <var>16</var> - <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a>)</td></tr>
+<tr><th id="79">79</th><td>	{</td></tr>
+<tr><th id="80">80</th><td>	  <i>/* There is no NULL terminator.  */</i></td></tr>
+<tr><th id="81">81</th><td>	  <span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> <dfn class="local col8 decl" id="8mask1" title='mask1' data-type='__m128i' data-ref="8mask1" data-ref-filename="8mask1">mask1</dfn> = <span class='ref fn' title='_mm_load_si128' data-ref="_mm_load_si128" data-ref-filename="_mm_load_si128">_mm_load_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) (<a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> + <var>16</var>));</td></tr>
+<tr><th id="82">82</th><td>	  <em>int</em> <dfn class="local col9 decl" id="9index" title='index' data-type='int' data-ref="9index" data-ref-filename="9index">index</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(mask1), (__v16qi)(__m128i)(mask1), (int)(0x3a))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col8 ref" href="#8mask1" title='mask1' data-ref="8mask1" data-ref-filename="8mask1">mask1</a>, <a class="local col8 ref" href="#8mask1" title='mask1' data-ref="8mask1" data-ref-filename="8mask1">mask1</a>, <var>0x3a</var>);</td></tr>
+<tr><th id="83">83</th><td>	  <a class="local col7 ref" href="#7length" title='length' data-ref="7length" data-ref-filename="7length">length</a> += <a class="local col9 ref" href="#9index" title='index' data-ref="9index" data-ref-filename="9index">index</a>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	  <i>/* Don't use SSE4.2 if the length of A &gt; 16.  */</i></td></tr>
+<tr><th id="86">86</th><td>	  <b>if</b> (<a class="local col7 ref" href="#7length" title='length' data-ref="7length" data-ref-filename="7length">length</a> &gt; <var>16</var>)</td></tr>
+<tr><th id="87">87</th><td>	    <b>return</b> <a class="ref fn" href="#__strspn_sse2" title='__strspn_sse2' data-ref="__strspn_sse2" data-ref-filename="__strspn_sse2">__strspn_sse2</a> (<a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>, <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>);</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	  <b>if</b> (<a class="local col9 ref" href="#9index" title='index' data-ref="9index" data-ref-filename="9index">index</a> != <var>0</var>)</td></tr>
+<tr><th id="90">90</th><td>	    {</td></tr>
+<tr><th id="91">91</th><td>	      <i>/* Combine mask0 and mask1.  We could play games with</i></td></tr>
+<tr><th id="92">92</th><td><i>		 palignr, but frankly this data should be in L1 now</i></td></tr>
+<tr><th id="93">93</th><td><i>		 so do the merge via an unaligned load.  */</i></td></tr>
+<tr><th id="94">94</th><td>	      <a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a> = <span class='ref fn' title='_mm_loadu_si128' data-ref="_mm_loadu_si128" data-ref-filename="_mm_loadu_si128">_mm_loadu_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>);</td></tr>
+<tr><th id="95">95</th><td>	    }</td></tr>
+<tr><th id="96">96</th><td>	}</td></tr>
+<tr><th id="97">97</th><td>    }</td></tr>
+<tr><th id="98">98</th><td>  <b>else</b></td></tr>
+<tr><th id="99">99</th><td>    {</td></tr>
+<tr><th id="100">100</th><td>      <i>/* A is aligned.  */</i></td></tr>
+<tr><th id="101">101</th><td>      <a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a> = <span class='ref fn' title='_mm_load_si128' data-ref="_mm_load_si128" data-ref-filename="_mm_load_si128">_mm_load_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>);</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>      <i>/* Find where the NULL terminator is.  */</i></td></tr>
+<tr><th id="104">104</th><td>      <em>int</em> <dfn class="local col0 decl" id="10length" title='length' data-type='int' data-ref="10length" data-ref-filename="10length">length</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(mask), (__v16qi)(__m128i)(mask), (int)(0x3a))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <var>0x3a</var>);</td></tr>
+<tr><th id="105">105</th><td>      <b>if</b> (<a class="local col0 ref" href="#10length" title='length' data-ref="10length" data-ref-filename="10length">length</a> == <var>16</var>)</td></tr>
+<tr><th id="106">106</th><td>	{</td></tr>
+<tr><th id="107">107</th><td>	  <i>/* There is no NULL terminator.  Don't use SSE4.2 if the length</i></td></tr>
+<tr><th id="108">108</th><td><i>	     of A &gt; 16.  */</i></td></tr>
+<tr><th id="109">109</th><td>	  <b>if</b> (<a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>[<var>16</var>] != <var>0</var>)</td></tr>
+<tr><th id="110">110</th><td>	    <b>return</b> <a class="ref fn" href="#__strspn_sse2" title='__strspn_sse2' data-ref="__strspn_sse2" data-ref-filename="__strspn_sse2">__strspn_sse2</a> (<a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>, <a class="local col2 ref" href="#2a" title='a' data-ref="2a" data-ref-filename="2a">a</a>);</td></tr>
+<tr><th id="111">111</th><td>	}</td></tr>
+<tr><th id="112">112</th><td>    }</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a> = (<em>int</em>) ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a> &amp; <var>15</var>);</td></tr>
+<tr><th id="115">115</th><td>  <b>if</b> (<a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a> != <var>0</var>)</td></tr>
+<tr><th id="116">116</th><td>    {</td></tr>
+<tr><th id="117">117</th><td>      <i>/* Check partial string.  */</i></td></tr>
+<tr><th id="118">118</th><td>      <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> = (<em>const</em> <em>char</em> *) ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a> &amp; -<var>16L</var>);</td></tr>
+<tr><th id="119">119</th><td>      <span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> <dfn class="local col1 decl" id="11value" title='value' data-type='__m128i' data-ref="11value" data-ref-filename="11value">value</dfn> = <span class='ref fn' title='_mm_load_si128' data-ref="_mm_load_si128" data-ref-filename="_mm_load_si128">_mm_load_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a>);</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>      <a class="local col1 ref" href="#11value" title='value' data-ref="11value" data-ref-filename="11value">value</a> = <a class="ref fn" href="varshift.h.html#__m128i_shift_right" title='__m128i_shift_right' data-ref="__m128i_shift_right" data-ref-filename="__m128i_shift_right">__m128i_shift_right</a> (<a class="local col1 ref" href="#11value" title='value' data-ref="11value" data-ref-filename="11value">value</a>, <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a>);</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>      <em>int</em> <dfn class="local col2 decl" id="12length" title='length' data-type='int' data-ref="12length" data-ref-filename="12length">length</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(mask), (__v16qi)(__m128i)(value), (int)(0x12))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <a class="local col1 ref" href="#11value" title='value' data-ref="11value" data-ref-filename="11value">value</a>, <var>0x12</var>);</td></tr>
+<tr><th id="124">124</th><td>      <i>/* No need to check CFlag since it is always 1.  */</i></td></tr>
+<tr><th id="125">125</th><td>      <b>if</b> (<a class="local col2 ref" href="#12length" title='length' data-ref="12length" data-ref-filename="12length">length</a> &lt; <var>16</var> - <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a>)</td></tr>
+<tr><th id="126">126</th><td>	<b>return</b> <a class="local col2 ref" href="#12length" title='length' data-ref="12length" data-ref-filename="12length">length</a>;</td></tr>
+<tr><th id="127">127</th><td>      <i>/* Find where the NULL terminator is.  */</i></td></tr>
+<tr><th id="128">128</th><td>      <em>int</em> <dfn class="local col3 decl" id="13index" title='index' data-type='int' data-ref="13index" data-ref-filename="13index">index</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(value), (__v16qi)(__m128i)(value), (int)(0x3a))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col1 ref" href="#11value" title='value' data-ref="11value" data-ref-filename="11value">value</a>, <a class="local col1 ref" href="#11value" title='value' data-ref="11value" data-ref-filename="11value">value</a>, <var>0x3a</var>);</td></tr>
+<tr><th id="129">129</th><td>      <b>if</b> (<a class="local col3 ref" href="#13index" title='index' data-ref="13index" data-ref-filename="13index">index</a> &lt; <var>16</var> - <a class="local col5 ref" href="#5offset" title='offset' data-ref="5offset" data-ref-filename="5offset">offset</a>)</td></tr>
+<tr><th id="130">130</th><td>	<b>return</b> <a class="local col2 ref" href="#12length" title='length' data-ref="12length" data-ref-filename="12length">length</a>;</td></tr>
+<tr><th id="131">131</th><td>      <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> += <var>16</var>;</td></tr>
+<tr><th id="132">132</th><td>    }</td></tr>
+<tr><th id="133">133</th><td>  <b>else</b></td></tr>
+<tr><th id="134">134</th><td>    <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> = <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>;</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="137">137</th><td>    {</td></tr>
+<tr><th id="138">138</th><td>      <span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> <dfn class="local col4 decl" id="14value" title='value' data-type='__m128i' data-ref="14value" data-ref-filename="14value">value</dfn> = <span class='ref fn' title='_mm_load_si128' data-ref="_mm_load_si128" data-ref-filename="_mm_load_si128">_mm_load_si128</span> ((<span class='typedef' title='__m128i' data-type='__attribute__((__vector_size__(2 * sizeof(long long)))) long long' data-ref="__m128i" data-ref-filename="__m128i">__m128i</span> *) <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a>);</td></tr>
+<tr><th id="139">139</th><td>      <em>int</em> <dfn class="local col5 decl" id="15index" title='index' data-type='int' data-ref="15index" data-ref-filename="15index">index</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(mask), (__v16qi)(__m128i)(value), (int)(0x12))" data-ref="_M/_mm_cmpistri">_mm_cmpistri</span> (<a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <a class="local col4 ref" href="#14value" title='value' data-ref="14value" data-ref-filename="14value">value</a>, <var>0x12</var>);</td></tr>
+<tr><th id="140">140</th><td>      <em>int</em> <dfn class="local col6 decl" id="16cflag" title='cflag' data-type='int' data-ref="16cflag" data-ref-filename="16cflag">cflag</dfn> = <span class="macro" title="(int)__builtin_ia32_pcmpistric128((__v16qi)(__m128i)(mask), (__v16qi)(__m128i)(value), (int)(0x12))" data-ref="_M/_mm_cmpistrc">_mm_cmpistrc</span> (<a class="local col4 ref" href="#4mask" title='mask' data-ref="4mask" data-ref-filename="4mask">mask</a>, <a class="local col4 ref" href="#14value" title='value' data-ref="14value" data-ref-filename="14value">value</a>, <var>0x12</var>);</td></tr>
+<tr><th id="141">141</th><td>      <b>if</b> (<a class="local col6 ref" href="#16cflag" title='cflag' data-ref="16cflag" data-ref-filename="16cflag">cflag</a>)</td></tr>
+<tr><th id="142">142</th><td>	<b>return</b> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) (<a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> + <a class="local col5 ref" href="#15index" title='index' data-ref="15index" data-ref-filename="15index">index</a> - <a class="local col1 ref" href="#1s" title='s' data-ref="1s" data-ref-filename="1s">s</a>);</td></tr>
+<tr><th id="143">143</th><td>      <a class="local col3 ref" href="#3aligned" title='aligned' data-ref="3aligned" data-ref-filename="3aligned">aligned</a> += <var>16</var>;</td></tr>
+<tr><th id="144">144</th><td>    }</td></tr>
+<tr><th id="145">145</th><td>}</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

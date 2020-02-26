@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dynarray.h source code [glibc_src_2.26/malloc/dynarray.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="dynarray_finalize_result,dynarray_header "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/malloc/dynarray.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>malloc</a>/<a href='dynarray.h.html'>dynarray.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Type-safe arrays which grow dynamically.  Shared definitions.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><i>/* To use the dynarray facility, you need to include</i></td></tr>
+<tr><th id="20">20</th><td><i>   &lt;malloc/dynarray-skeleton.c&gt; and define the parameter macros</i></td></tr>
+<tr><th id="21">21</th><td><i>   documented in that file.</i></td></tr>
+<tr><th id="22">22</th><td><i></i></td></tr>
+<tr><th id="23">23</th><td><i>   A minimal example which provides a growing list of integers can be</i></td></tr>
+<tr><th id="24">24</th><td><i>   defined like this:</i></td></tr>
+<tr><th id="25">25</th><td><i></i></td></tr>
+<tr><th id="26">26</th><td><i>     struct int_array</i></td></tr>
+<tr><th id="27">27</th><td><i>     {</i></td></tr>
+<tr><th id="28">28</th><td><i>       // Pointer to result array followed by its length,</i></td></tr>
+<tr><th id="29">29</th><td><i>       // as required by DYNARRAY_FINAL_TYPE.</i></td></tr>
+<tr><th id="30">30</th><td><i>       int *array;</i></td></tr>
+<tr><th id="31">31</th><td><i>       size_t length;</i></td></tr>
+<tr><th id="32">32</th><td><i>     };</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>     #define DYNARRAY_STRUCT dynarray_int</i></td></tr>
+<tr><th id="35">35</th><td><i>     #define DYNARRAY_ELEMENT int</i></td></tr>
+<tr><th id="36">36</th><td><i>     #define DYNARRAY_PREFIX dynarray_int_</i></td></tr>
+<tr><th id="37">37</th><td><i>     #define DYNARRAY_FINAL_TYPE struct int_array</i></td></tr>
+<tr><th id="38">38</th><td><i>     #include &lt;malloc/dynarray-skeleton.c&gt;</i></td></tr>
+<tr><th id="39">39</th><td><i></i></td></tr>
+<tr><th id="40">40</th><td><i>   To create a three-element array with elements 1, 2, 3, use this</i></td></tr>
+<tr><th id="41">41</th><td><i>   code:</i></td></tr>
+<tr><th id="42">42</th><td><i></i></td></tr>
+<tr><th id="43">43</th><td><i>     struct dynarray_int dyn;</i></td></tr>
+<tr><th id="44">44</th><td><i>     dynarray_int_init (&amp;dyn);</i></td></tr>
+<tr><th id="45">45</th><td><i>     for (int i = 1; i &lt;= 3; ++i)</i></td></tr>
+<tr><th id="46">46</th><td><i>       {</i></td></tr>
+<tr><th id="47">47</th><td><i>         int *place = dynarray_int_emplace (&amp;dyn);</i></td></tr>
+<tr><th id="48">48</th><td><i>         assert (place != NULL);</i></td></tr>
+<tr><th id="49">49</th><td><i>         *place = i;</i></td></tr>
+<tr><th id="50">50</th><td><i>       }</i></td></tr>
+<tr><th id="51">51</th><td><i>     struct int_array result;</i></td></tr>
+<tr><th id="52">52</th><td><i>     bool ok = dynarray_int_finalize (&amp;dyn, &amp;result);</i></td></tr>
+<tr><th id="53">53</th><td><i>     assert (ok);</i></td></tr>
+<tr><th id="54">54</th><td><i>     assert (result.length == 3);</i></td></tr>
+<tr><th id="55">55</th><td><i>     assert (result.array[0] == 1);</i></td></tr>
+<tr><th id="56">56</th><td><i>     assert (result.array[1] == 2);</i></td></tr>
+<tr><th id="57">57</th><td><i>     assert (result.array[2] == 3);</i></td></tr>
+<tr><th id="58">58</th><td><i>     free (result.array);</i></td></tr>
+<tr><th id="59">59</th><td><i></i></td></tr>
+<tr><th id="60">60</th><td><i>   If the elements contain resources which must be freed, define</i></td></tr>
+<tr><th id="61">61</th><td><i>   DYNARRAY_ELEMENT_FREE appropriately, like this:</i></td></tr>
+<tr><th id="62">62</th><td><i></i></td></tr>
+<tr><th id="63">63</th><td><i>     struct str_array</i></td></tr>
+<tr><th id="64">64</th><td><i>     {</i></td></tr>
+<tr><th id="65">65</th><td><i>       char **array;</i></td></tr>
+<tr><th id="66">66</th><td><i>       size_t length;</i></td></tr>
+<tr><th id="67">67</th><td><i>     };</i></td></tr>
+<tr><th id="68">68</th><td><i></i></td></tr>
+<tr><th id="69">69</th><td><i>     #define DYNARRAY_STRUCT dynarray_str</i></td></tr>
+<tr><th id="70">70</th><td><i>     #define DYNARRAY_ELEMENT char *</i></td></tr>
+<tr><th id="71">71</th><td><i>     #define DYNARRAY_ELEMENT_FREE(ptr) free (*ptr)</i></td></tr>
+<tr><th id="72">72</th><td><i>     #define DYNARRAY_PREFIX dynarray_str_</i></td></tr>
+<tr><th id="73">73</th><td><i>     #define DYNARRAY_FINAL_TYPE struct str_array</i></td></tr>
+<tr><th id="74">74</th><td><i>     #include &lt;malloc/dynarray-skeleton.c&gt;</i></td></tr>
+<tr><th id="75">75</th><td><i></i></td></tr>
+<tr><th id="76">76</th><td><i>   Compared to scratch buffers, dynamic arrays have the following</i></td></tr>
+<tr><th id="77">77</th><td><i>   features:</i></td></tr>
+<tr><th id="78">78</th><td><i></i></td></tr>
+<tr><th id="79">79</th><td><i>   - They have an element type, and are not just an untyped buffer of</i></td></tr>
+<tr><th id="80">80</th><td><i>     bytes.</i></td></tr>
+<tr><th id="81">81</th><td><i></i></td></tr>
+<tr><th id="82">82</th><td><i>   - When growing, previously stored elements are preserved.  (It is</i></td></tr>
+<tr><th id="83">83</th><td><i>     expected that scratch_buffer_grow_preserve and</i></td></tr>
+<tr><th id="84">84</th><td><i>     scratch_buffer_set_array_size eventually go away because all</i></td></tr>
+<tr><th id="85">85</th><td><i>     current users are moved to dynamic arrays.)</i></td></tr>
+<tr><th id="86">86</th><td><i></i></td></tr>
+<tr><th id="87">87</th><td><i>   - Scratch buffers have a more aggressive growth policy because</i></td></tr>
+<tr><th id="88">88</th><td><i>     growing them typically means a retry of an operation (across an</i></td></tr>
+<tr><th id="89">89</th><td><i>     NSS service module boundary), which is expensive.</i></td></tr>
+<tr><th id="90">90</th><td><i></i></td></tr>
+<tr><th id="91">91</th><td><i>   - For the same reason, scratch buffers have a much larger initial</i></td></tr>
+<tr><th id="92">92</th><td><i>     stack allocation.  */</i></td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="94">ifndef</span> <span class="macro" data-ref="_M/_DYNARRAY_H">_DYNARRAY_H</span></u></td></tr>
+<tr><th id="95">95</th><td><u>#define <dfn class="macro" id="_M/_DYNARRAY_H" data-ref="_M/_DYNARRAY_H">_DYNARRAY_H</dfn></u></td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="98">98</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="99">99</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><b>struct</b> <dfn class="type def" id="dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</dfn></td></tr>
+<tr><th id="102">102</th><td>{</td></tr>
+<tr><th id="103">103</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="dynarray_header::used" title='dynarray_header::used' data-ref="dynarray_header::used" data-ref-filename="dynarray_header..used">used</dfn>;</td></tr>
+<tr><th id="104">104</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="dynarray_header::allocated" title='dynarray_header::allocated' data-ref="dynarray_header::allocated" data-ref-filename="dynarray_header..allocated">allocated</dfn>;</td></tr>
+<tr><th id="105">105</th><td>  <em>void</em> *<dfn class="decl field" id="dynarray_header::array" title='dynarray_header::array' data-ref="dynarray_header::array" data-ref-filename="dynarray_header..array">array</dfn>;</td></tr>
+<tr><th id="106">106</th><td>};</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>/* Marker used in the allocated member to indicate that an error was</i></td></tr>
+<tr><th id="109">109</th><td><i>   encountered.  */</i></td></tr>
+<tr><th id="110">110</th><td><em>static</em> <b>inline</b> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="111">111</th><td><dfn class="decl def fn" id="__dynarray_error_marker" title='__dynarray_error_marker' data-ref="__dynarray_error_marker" data-ref-filename="__dynarray_error_marker">__dynarray_error_marker</dfn> (<em>void</em>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="114">114</th><td>}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* Internal function.  See the has_failed function in</i></td></tr>
+<tr><th id="117">117</th><td><i>   dynarray-skeleton.c.  */</i></td></tr>
+<tr><th id="118">118</th><td><em>static</em> <b>inline</b> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="119">119</th><td><dfn class="decl def fn" id="__dynarray_error" title='__dynarray_error' data-ref="__dynarray_error" data-ref-filename="__dynarray_error">__dynarray_error</dfn> (<b>struct</b> <a class="type" href="#dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</a> *<dfn class="local col1 decl" id="1list" title='list' data-type='struct dynarray_header *' data-ref="1list" data-ref-filename="1list">list</dfn>)</td></tr>
+<tr><th id="120">120</th><td>{</td></tr>
+<tr><th id="121">121</th><td>  <b>return</b> <a class="local col1 ref" href="#1list" title='list' data-ref="1list" data-ref-filename="1list">list</a>-&gt;<a class="ref field" href="#dynarray_header::allocated" title='dynarray_header::allocated' data-ref="dynarray_header::allocated" data-ref-filename="dynarray_header..allocated">allocated</a> == <a class="ref fn" href="#__dynarray_error_marker" title='__dynarray_error_marker' data-ref="__dynarray_error_marker" data-ref-filename="__dynarray_error_marker">__dynarray_error_marker</a> ();</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>/* Internal function.  Enlarge the dynamically allocated area of the</i></td></tr>
+<tr><th id="125">125</th><td><i>   array to make room for one more element.  SCRATCH is a pointer to</i></td></tr>
+<tr><th id="126">126</th><td><i>   the scratch area (which is not heap-allocated and must not be</i></td></tr>
+<tr><th id="127">127</th><td><i>   freed).  ELEMENT_SIZE is the size, in bytes, of one element.</i></td></tr>
+<tr><th id="128">128</th><td><i>   Return false on failure, true on success.  */</i></td></tr>
+<tr><th id="129">129</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_dynarray_emplace_enlarge" title='__libc_dynarray_emplace_enlarge' data-ref="__libc_dynarray_emplace_enlarge" data-ref-filename="__libc_dynarray_emplace_enlarge">__libc_dynarray_emplace_enlarge</dfn> (<b>struct</b> <a class="type" href="#dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</a> *,</td></tr>
+<tr><th id="130">130</th><td>                                      <em>void</em> *<dfn class="local col2 decl" id="2scratch" title='scratch' data-type='void *' data-ref="2scratch" data-ref-filename="2scratch">scratch</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="3element_size" title='element_size' data-type='size_t' data-ref="3element_size" data-ref-filename="3element_size">element_size</dfn>);</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><i>/* Internal function.  Enlarge the dynamically allocated area of the</i></td></tr>
+<tr><th id="133">133</th><td><i>   array to make room for at least SIZE elements (which must be larger</i></td></tr>
+<tr><th id="134">134</th><td><i>   than the existing used part of the dynamic array).  SCRATCH is a</i></td></tr>
+<tr><th id="135">135</th><td><i>   pointer to the scratch area (which is not heap-allocated and must</i></td></tr>
+<tr><th id="136">136</th><td><i>   not be freed).  ELEMENT_SIZE is the size, in bytes, of one element.</i></td></tr>
+<tr><th id="137">137</th><td><i>   Return false on failure, true on success.  */</i></td></tr>
+<tr><th id="138">138</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_dynarray_resize" title='__libc_dynarray_resize' data-ref="__libc_dynarray_resize" data-ref-filename="__libc_dynarray_resize">__libc_dynarray_resize</dfn> (<b>struct</b> <a class="type" href="#dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</a> *, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="4size" title='size' data-type='size_t' data-ref="4size" data-ref-filename="4size">size</dfn>,</td></tr>
+<tr><th id="139">139</th><td>                             <em>void</em> *<dfn class="local col5 decl" id="5scratch" title='scratch' data-type='void *' data-ref="5scratch" data-ref-filename="5scratch">scratch</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="6element_size" title='element_size' data-type='size_t' data-ref="6element_size" data-ref-filename="6element_size">element_size</dfn>);</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td><i>/* Internal function.  Like __libc_dynarray_resize, but clear the new</i></td></tr>
+<tr><th id="142">142</th><td><i>   part of the dynamic array.  */</i></td></tr>
+<tr><th id="143">143</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_dynarray_resize_clear" title='__libc_dynarray_resize_clear' data-ref="__libc_dynarray_resize_clear" data-ref-filename="__libc_dynarray_resize_clear">__libc_dynarray_resize_clear</dfn> (<b>struct</b> <a class="type" href="#dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</a> *, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="7size" title='size' data-type='size_t' data-ref="7size" data-ref-filename="7size">size</dfn>,</td></tr>
+<tr><th id="144">144</th><td>                                   <em>void</em> *<dfn class="local col8 decl" id="8scratch" title='scratch' data-type='void *' data-ref="8scratch" data-ref-filename="8scratch">scratch</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col9 decl" id="9element_size" title='element_size' data-type='size_t' data-ref="9element_size" data-ref-filename="9element_size">element_size</dfn>);</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/* Internal type.  */</i></td></tr>
+<tr><th id="147">147</th><td><b>struct</b> <dfn class="type def" id="dynarray_finalize_result" title='dynarray_finalize_result' data-ref="dynarray_finalize_result" data-ref-filename="dynarray_finalize_result">dynarray_finalize_result</dfn></td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td>  <em>void</em> *<dfn class="decl field" id="dynarray_finalize_result::array" title='dynarray_finalize_result::array' data-ref="dynarray_finalize_result::array" data-ref-filename="dynarray_finalize_result..array">array</dfn>;</td></tr>
+<tr><th id="150">150</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="dynarray_finalize_result::length" title='dynarray_finalize_result::length' data-ref="dynarray_finalize_result::length" data-ref-filename="dynarray_finalize_result..length">length</dfn>;</td></tr>
+<tr><th id="151">151</th><td>};</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><i>/* Internal function.  Copy the dynamically-allocated area to an</i></td></tr>
+<tr><th id="154">154</th><td><i>   explicitly-sized heap allocation.  SCRATCH is a pointer to the</i></td></tr>
+<tr><th id="155">155</th><td><i>   embedded scratch space.  ELEMENT_SIZE is the size, in bytes, of the</i></td></tr>
+<tr><th id="156">156</th><td><i>   element type.  On success, true is returned, and pointer and length</i></td></tr>
+<tr><th id="157">157</th><td><i>   are written to *RESULT.  On failure, false is returned.  The caller</i></td></tr>
+<tr><th id="158">158</th><td><i>   has to take care of some of the memory management; this function is</i></td></tr>
+<tr><th id="159">159</th><td><i>   expected to be called from dynarray-skeleton.c.  */</i></td></tr>
+<tr><th id="160">160</th><td><span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="decl fn" id="__libc_dynarray_finalize" title='__libc_dynarray_finalize' data-ref="__libc_dynarray_finalize" data-ref-filename="__libc_dynarray_finalize">__libc_dynarray_finalize</dfn> (<b>struct</b> <a class="type" href="#dynarray_header" title='dynarray_header' data-ref="dynarray_header" data-ref-filename="dynarray_header">dynarray_header</a> *<dfn class="local col0 decl" id="10list" title='list' data-type='struct dynarray_header *' data-ref="10list" data-ref-filename="10list">list</dfn>, <em>void</em> *<dfn class="local col1 decl" id="11scratch" title='scratch' data-type='void *' data-ref="11scratch" data-ref-filename="11scratch">scratch</dfn>,</td></tr>
+<tr><th id="161">161</th><td>                               <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="12element_size" title='element_size' data-type='size_t' data-ref="12element_size" data-ref-filename="12element_size">element_size</dfn>,</td></tr>
+<tr><th id="162">162</th><td>                               <b>struct</b> <a class="type" href="#dynarray_finalize_result" title='dynarray_finalize_result' data-ref="dynarray_finalize_result" data-ref-filename="dynarray_finalize_result">dynarray_finalize_result</a> *<dfn class="local col3 decl" id="13result" title='result' data-type='struct dynarray_finalize_result *' data-ref="13result" data-ref-filename="13result">result</dfn>);</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><i>/* Internal function.  Terminate the process after an index error.</i></td></tr>
+<tr><th id="166">166</th><td><i>   SIZE is the number of elements of the dynamic array.  INDEX is the</i></td></tr>
+<tr><th id="167">167</th><td><i>   lookup index which triggered the failure.  */</i></td></tr>
+<tr><th id="168">168</th><td><em>void</em> <a class="decl fn" href="dynarray_at_failure.c.html#__libc_dynarray_at_failure" title='__libc_dynarray_at_failure' data-ref="__libc_dynarray_at_failure" data-ref-filename="__libc_dynarray_at_failure" id="__libc_dynarray_at_failure">__libc_dynarray_at_failure</a> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14size" title='size' data-type='size_t' data-ref="14size" data-ref-filename="14size">size</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="15index" title='index' data-type='size_t' data-ref="15index" data-ref-filename="15index">index</dfn>)</td></tr>
+<tr><th id="169">169</th><td>  <b>__attribute__</b> ((noreturn));</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td><u>#<span data-ppcond="171">ifndef</span> <span class="macro" data-ref="_M/_ISOMAC">_ISOMAC</span></u></td></tr>
+<tr><th id="172">172</th><td><a class="macro" href="../include/libc-symbols.h.html#522" title="extern __typeof (__libc_dynarray_emplace_enlarge) __libc_dynarray_emplace_enlarge __asm__ (&quot;&quot; &quot;__GI___libc_dynarray_emplace_enlarge&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_dynarray_emplace_enlarge" title='__libc_dynarray_emplace_enlarge' data-ref="__libc_dynarray_emplace_enlarge" data-ref-filename="__libc_dynarray_emplace_enlarge"><a class="ref fn" href="#__libc_dynarray_emplace_enlarge" title='__libc_dynarray_emplace_enlarge' data-ref="__libc_dynarray_emplace_enlarge" data-ref-filename="__libc_dynarray_emplace_enlarge">__libc_dynarray_emplace_enlarge</a></a>)</td></tr>
+<tr><th id="173">173</th><td><a class="macro" href="../include/libc-symbols.h.html#522" title="extern __typeof (__libc_dynarray_resize) __libc_dynarray_resize __asm__ (&quot;&quot; &quot;__GI___libc_dynarray_resize&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_dynarray_resize" title='__libc_dynarray_resize' data-ref="__libc_dynarray_resize" data-ref-filename="__libc_dynarray_resize"><a class="ref fn" href="#__libc_dynarray_resize" title='__libc_dynarray_resize' data-ref="__libc_dynarray_resize" data-ref-filename="__libc_dynarray_resize">__libc_dynarray_resize</a></a>)</td></tr>
+<tr><th id="174">174</th><td><a class="macro" href="../include/libc-symbols.h.html#522" title="extern __typeof (__libc_dynarray_resize_clear) __libc_dynarray_resize_clear __asm__ (&quot;&quot; &quot;__GI___libc_dynarray_resize_clear&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_dynarray_resize_clear" title='__libc_dynarray_resize_clear' data-ref="__libc_dynarray_resize_clear" data-ref-filename="__libc_dynarray_resize_clear"><a class="ref fn" href="#__libc_dynarray_resize_clear" title='__libc_dynarray_resize_clear' data-ref="__libc_dynarray_resize_clear" data-ref-filename="__libc_dynarray_resize_clear">__libc_dynarray_resize_clear</a></a>)</td></tr>
+<tr><th id="175">175</th><td><a class="macro" href="../include/libc-symbols.h.html#522" title="extern __typeof (__libc_dynarray_finalize) __libc_dynarray_finalize __asm__ (&quot;&quot; &quot;__GI___libc_dynarray_finalize&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="#__libc_dynarray_finalize" title='__libc_dynarray_finalize' data-ref="__libc_dynarray_finalize" data-ref-filename="__libc_dynarray_finalize"><a class="ref fn" href="#__libc_dynarray_finalize" title='__libc_dynarray_finalize' data-ref="__libc_dynarray_finalize" data-ref-filename="__libc_dynarray_finalize">__libc_dynarray_finalize</a></a>)</td></tr>
+<tr><th id="176">176</th><td><a class="macro" href="../include/libc-symbols.h.html#522" title="extern __typeof (__libc_dynarray_at_failure) __libc_dynarray_at_failure __asm__ (&quot;&quot; &quot;__GI___libc_dynarray_at_failure&quot;) __attribute__ ((visibility (&quot;hidden&quot;)));" data-ref="_M/libc_hidden_proto">libc_hidden_proto</a> (<a class="decl fn" href="dynarray_at_failure.c.html#__libc_dynarray_at_failure" title='__libc_dynarray_at_failure' data-ref="__libc_dynarray_at_failure" data-ref-filename="__libc_dynarray_at_failure" id="__libc_dynarray_at_failure"><a class="ref fn" href="dynarray_at_failure.c.html#__libc_dynarray_at_failure" title='__libc_dynarray_at_failure' data-ref="__libc_dynarray_at_failure" data-ref-filename="__libc_dynarray_at_failure">__libc_dynarray_at_failure</a></a>)</td></tr>
+<tr><th id="177">177</th><td><u>#<span data-ppcond="171">endif</span></u></td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td><u>#<span data-ppcond="94">endif</span> /* _DYNARRAY_H */</u></td></tr>
+<tr><th id="180">180</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='dynarray_at_failure.c.html'>glibc_src_2.26/malloc/dynarray_at_failure.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

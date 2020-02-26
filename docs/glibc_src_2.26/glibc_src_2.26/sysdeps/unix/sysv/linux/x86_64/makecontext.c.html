@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>makecontext.c source code [glibc_src_2.26/sysdeps/unix/sysv/linux/x86_64/makecontext.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/unix/sysv/linux/x86_64/makecontext.c'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>glibc_src_2.26</a>/<a href='../../../..'>sysdeps</a>/<a href='../../..'>unix</a>/<a href='../..'>sysv</a>/<a href='..'>linux</a>/<a href='./'>x86_64</a>/<a href='makecontext.c.html'>makecontext.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Create new context.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2002-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Andreas Jaeger &lt;aj@suse.de&gt;, 2002.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../../../include/ucontext.h.html">&lt;ucontext.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#include "ucontext_i.h"</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* This implementation can handle any ARGC value but only</i></td></tr>
+<tr><th id="28">28</th><td><i>   normal integer parameters.</i></td></tr>
+<tr><th id="29">29</th><td><i>   makecontext sets up a stack and the registers for the</i></td></tr>
+<tr><th id="30">30</th><td><i>   user context. The stack looks like this:</i></td></tr>
+<tr><th id="31">31</th><td><i>               +-----------------------+</i></td></tr>
+<tr><th id="32">32</th><td><i>               | next context          |</i></td></tr>
+<tr><th id="33">33</th><td><i>               +-----------------------+</i></td></tr>
+<tr><th id="34">34</th><td><i>               | parameter 7-n         |</i></td></tr>
+<tr><th id="35">35</th><td><i>	       +-----------------------+</i></td></tr>
+<tr><th id="36">36</th><td><i>	       | trampoline address    |</i></td></tr>
+<tr><th id="37">37</th><td><i>    %rsp -&gt;    +-----------------------+</i></td></tr>
+<tr><th id="38">38</th><td><i></i></td></tr>
+<tr><th id="39">39</th><td><i>   The registers are set up like this:</i></td></tr>
+<tr><th id="40">40</th><td><i>     %rdi,%rsi,%rdx,%rcx,%r8,%r9: parameter 1 to 6</i></td></tr>
+<tr><th id="41">41</th><td><i>     %rbx   : address of next context</i></td></tr>
+<tr><th id="42">42</th><td><i>     %rsp   : stack pointer.</i></td></tr>
+<tr><th id="43">43</th><td><i>*/</i></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><i>/* XXX: This implementation currently only handles integer arguments.</i></td></tr>
+<tr><th id="46">46</th><td><i>   To handle long int and pointer arguments the va_arg arguments needs</i></td></tr>
+<tr><th id="47">47</th><td><i>   to be changed to long and also the stdlib/tst-setcontext.c file needs</i></td></tr>
+<tr><th id="48">48</th><td><i>   to be changed to pass long arguments to makecontext.  */</i></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><em>void</em></td></tr>
+<tr><th id="52">52</th><td><dfn class="decl def fn" id="__makecontext" title='__makecontext' data-ref="__makecontext" data-ref-filename="__makecontext">__makecontext</dfn> (<a class="typedef" href="../x86/sys/ucontext.h.html#ucontext_t" title='ucontext_t' data-type='struct ucontext_t' data-ref="ucontext_t" data-ref-filename="ucontext_t">ucontext_t</a> *<dfn class="local col8 decl" id="8ucp" title='ucp' data-type='ucontext_t *' data-ref="8ucp" data-ref-filename="8ucp">ucp</dfn>, <em>void</em> (*<dfn class="local col9 decl" id="9func" title='func' data-type='void (*)(void)' data-ref="9func" data-ref-filename="9func">func</dfn>) (<em>void</em>), <em>int</em> <dfn class="local col0 decl" id="10argc" title='argc' data-type='int' data-ref="10argc" data-ref-filename="10argc">argc</dfn>, ...)</td></tr>
+<tr><th id="53">53</th><td>{</td></tr>
+<tr><th id="54">54</th><td>  <b>extern</b> <em>void</em> <dfn class="decl fn" id="__start_context" title='__start_context' data-ref="__start_context" data-ref-filename="__start_context">__start_context</dfn> (<em>void</em>);</td></tr>
+<tr><th id="55">55</th><td>  <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a> *<dfn class="local col1 decl" id="11sp" title='sp' data-type='greg_t *' data-ref="11sp" data-ref-filename="11sp">sp</dfn>;</td></tr>
+<tr><th id="56">56</th><td>  <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="12idx_uc_link" title='idx_uc_link' data-type='unsigned int' data-ref="12idx_uc_link" data-ref-filename="12idx_uc_link">idx_uc_link</dfn>;</td></tr>
+<tr><th id="57">57</th><td>  <span class='typedef' title='va_list' data-type='__builtin_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col3 decl" id="13ap" title='ap' data-type='va_list' data-ref="13ap" data-ref-filename="13ap">ap</dfn>;</td></tr>
+<tr><th id="58">58</th><td>  <em>int</em> <dfn class="local col4 decl" id="14i" title='i' data-type='int' data-ref="14i" data-ref-filename="14i">i</dfn>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* Generate room on stack for parameter if needed and uc_link.  */</i></td></tr>
+<tr><th id="61">61</th><td>  <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a> = (<a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a> *) ((<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_stack" title='ucontext_t::uc_stack' data-ref="ucontext_t::uc_stack" data-ref-filename="ucontext_t..uc_stack">uc_stack</a>.<a class="ref field" href="../bits/types/stack_t.h.html#(anonymous)::ss_sp" title='(anonymous struct)::ss_sp' data-ref="(anonymous)::ss_sp" data-ref-filename="(anonymous)..ss_sp">ss_sp</a></td></tr>
+<tr><th id="62">62</th><td>		   + <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_stack" title='ucontext_t::uc_stack' data-ref="ucontext_t::uc_stack" data-ref-filename="ucontext_t..uc_stack">uc_stack</a>.<a class="ref field" href="../bits/types/stack_t.h.html#(anonymous)::ss_size" title='(anonymous struct)::ss_size' data-ref="(anonymous)::ss_size" data-ref-filename="(anonymous)..ss_size">ss_size</a>);</td></tr>
+<tr><th id="63">63</th><td>  <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a> -= (<a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a> &gt; <var>6</var> ? <a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a> - <var>6</var> : <var>0</var>) + <var>1</var>;</td></tr>
+<tr><th id="64">64</th><td>  <i>/* Align stack and make space for trampoline address.  */</i></td></tr>
+<tr><th id="65">65</th><td>  <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a> = (<a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a> *) ((((<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>) &amp; -<var>16L</var>) - <var>8</var>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>  <a class="local col2 ref" href="#12idx_uc_link" title='idx_uc_link' data-ref="12idx_uc_link" data-ref-filename="12idx_uc_link">idx_uc_link</a> = (<a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a> &gt; <var>6</var> ? <a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a> - <var>6</var> : <var>0</var>) + <var>1</var>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  <i>/* Setup context ucp.  */</i></td></tr>
+<tr><th id="70">70</th><td>  <i>/* Address to jump to.  */</i></td></tr>
+<tr><th id="71">71</th><td>  <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#85" title="REG_RIP" data-ref="_M/REG_RIP">REG_RIP</a>] = (<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col9 ref" href="#9func" title='func' data-ref="9func" data-ref-filename="9func">func</a>;</td></tr>
+<tr><th id="72">72</th><td>  <i>/* Setup rbx.*/</i></td></tr>
+<tr><th id="73">73</th><td>  <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#75" title="REG_RBX" data-ref="_M/REG_RBX">REG_RBX</a>] = (<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) &amp;<a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>[<a class="local col2 ref" href="#12idx_uc_link" title='idx_uc_link' data-ref="12idx_uc_link" data-ref-filename="12idx_uc_link">idx_uc_link</a>];</td></tr>
+<tr><th id="74">74</th><td>  <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#83" title="REG_RSP" data-ref="_M/REG_RSP">REG_RSP</a>] = (<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>  <i>/* Setup stack.  */</i></td></tr>
+<tr><th id="77">77</th><td>  <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>[<var>0</var>] = (<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) &amp;<a class="ref fn" href="#__start_context" title='__start_context' data-ref="__start_context" data-ref-filename="__start_context">__start_context</a>;</td></tr>
+<tr><th id="78">78</th><td>  <a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>[<a class="local col2 ref" href="#12idx_uc_link" title='idx_uc_link' data-ref="12idx_uc_link" data-ref-filename="12idx_uc_link">idx_uc_link</a>] = (<a class="typedef" href="../../../../generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a>) <a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_link" title='ucontext_t::uc_link' data-ref="ucontext_t::uc_link" data-ref-filename="ucontext_t..uc_link">uc_link</a>;</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>  <span class="macro" title="__builtin_va_start(ap, argc)" data-ref="_M/va_start">va_start</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a>);</td></tr>
+<tr><th id="81">81</th><td>  <i>/* Handle arguments.</i></td></tr>
+<tr><th id="82">82</th><td><i></i></td></tr>
+<tr><th id="83">83</th><td><i>     The standard says the parameters must all be int values.  This is</i></td></tr>
+<tr><th id="84">84</th><td><i>     an historic accident and would be done differently today.  For</i></td></tr>
+<tr><th id="85">85</th><td><i>     x86-64 all integer values are passed as 64-bit values and</i></td></tr>
+<tr><th id="86">86</th><td><i>     therefore extending the API to copy 64-bit values instead of</i></td></tr>
+<tr><th id="87">87</th><td><i>     32-bit ints makes sense.  It does not break existing</i></td></tr>
+<tr><th id="88">88</th><td><i>     functionality and it does not violate the standard which says</i></td></tr>
+<tr><th id="89">89</th><td><i>     that passing non-int values means undefined behavior.  */</i></td></tr>
+<tr><th id="90">90</th><td>  <b>for</b> (<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>0</var>; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> &lt; <a class="local col0 ref" href="#10argc" title='argc' data-ref="10argc" data-ref-filename="10argc">argc</a>; ++<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>)</td></tr>
+<tr><th id="91">91</th><td>    <b>switch</b> (<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>)</td></tr>
+<tr><th id="92">92</th><td>      {</td></tr>
+<tr><th id="93">93</th><td>      <b>case</b> <var>0</var>:</td></tr>
+<tr><th id="94">94</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#69" title="REG_RDI" data-ref="_M/REG_RDI">REG_RDI</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="95">95</th><td>	<b>break</b>;</td></tr>
+<tr><th id="96">96</th><td>      <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="97">97</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#71" title="REG_RSI" data-ref="_M/REG_RSI">REG_RSI</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="98">98</th><td>	<b>break</b>;</td></tr>
+<tr><th id="99">99</th><td>      <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="100">100</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#77" title="REG_RDX" data-ref="_M/REG_RDX">REG_RDX</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="101">101</th><td>	<b>break</b>;</td></tr>
+<tr><th id="102">102</th><td>      <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="103">103</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#81" title="REG_RCX" data-ref="_M/REG_RCX">REG_RCX</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="104">104</th><td>	<b>break</b>;</td></tr>
+<tr><th id="105">105</th><td>      <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="106">106</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#53" title="REG_R8" data-ref="_M/REG_R8">REG_R8</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="107">107</th><td>	<b>break</b>;</td></tr>
+<tr><th id="108">108</th><td>      <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="109">109</th><td>	<a class="local col8 ref" href="#8ucp" title='ucp' data-ref="8ucp" data-ref-filename="8ucp">ucp</a>-&gt;<a class="ref field" href="../x86/sys/ucontext.h.html#ucontext_t::uc_mcontext" title='ucontext_t::uc_mcontext' data-ref="ucontext_t::uc_mcontext" data-ref-filename="ucontext_t..uc_mcontext">uc_mcontext</a>.<a class="ref field" href="../x86/sys/ucontext.h.html#135" title='(anonymous struct)::gregs' data-ref="(anonymous)::gregs" data-ref-filename="(anonymous)..gregs">gregs</a>[<a class="macro" href="../x86/sys/ucontext.h.html#55" title="REG_R9" data-ref="_M/REG_R9">REG_R9</a>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="110">110</th><td>	<b>break</b>;</td></tr>
+<tr><th id="111">111</th><td>      <b>default</b>:</td></tr>
+<tr><th id="112">112</th><td>	<i>/* Put value on stack.  */</i></td></tr>
+<tr><th id="113">113</th><td>	<a class="local col1 ref" href="#11sp" title='sp' data-ref="11sp" data-ref-filename="11sp">sp</a>[<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> - <var>5</var>] = <span class="macro" title="__builtin_va_arg(ap, greg_t)" data-ref="_M/va_arg">va_arg</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>, <a class="typedef" href="../x86/sys/ucontext.h.html#greg_t" title='greg_t' data-type='long long' data-ref="greg_t" data-ref-filename="greg_t">greg_t</a>);</td></tr>
+<tr><th id="114">114</th><td>	<b>break</b>;</td></tr>
+<tr><th id="115">115</th><td>      }</td></tr>
+<tr><th id="116">116</th><td>  <span class="macro" title="__builtin_va_end(ap)" data-ref="_M/va_end">va_end</span> (<a class="local col3 ref" href="#13ap" title='ap' data-ref="13ap" data-ref-filename="13ap">ap</a>);</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>}</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><a class="macro" href="../../../../../include/libc-symbols.h.html#136" title="extern __typeof (__makecontext) makecontext __attribute__ ((weak, alias (&quot;__makecontext&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__makecontext" title='__makecontext' data-ref="__makecontext" data-ref-filename="__makecontext">__makecontext</a>, <dfn class="decl def fn" id="makecontext" title='makecontext' data-ref="makecontext" data-ref-filename="makecontext">makecontext</dfn>)</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

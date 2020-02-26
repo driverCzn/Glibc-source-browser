@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>elision-lock.c source code [glibc_src_2.26/sysdeps/unix/sysv/linux/x86/elision-lock.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/unix/sysv/linux/x86/elision-lock.c'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>glibc_src_2.26</a>/<a href='../../../..'>sysdeps</a>/<a href='../../..'>unix</a>/<a href='../..'>sysv</a>/<a href='..'>linux</a>/<a href='./'>x86</a>/<a href='elision-lock.c.html'>elision-lock.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* elision-lock.c: Elided pthread mutex lock.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2011-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../../include/pthread.h.html">&lt;pthread.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../../nptl/pthreadP.h.html">"pthreadP.h"</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../x86_64/lowlevellock.h.html">"lowlevellock.h"</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="hle.h.html">"hle.h"</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="elision-conf.h.html">&lt;elision-conf.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#<span data-ppcond="25">if</span> !defined(<span class="macro" data-ref="_M/LLL_LOCK">LLL_LOCK</span>) &amp;&amp; !defined(<span class="macro" data-ref="_M/EXTRAARG">EXTRAARG</span>)</u></td></tr>
+<tr><th id="26">26</th><td><i>/* Make sure the configuration code is always linked in for static</i></td></tr>
+<tr><th id="27">27</th><td><i>   libraries.  */</i></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="elision-conf.c.html">"elision-conf.c"</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#<span data-ppcond="25">endif</span></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">ifndef</span> <span class="macro" data-ref="_M/EXTRAARG">EXTRAARG</span></u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/EXTRAARG" data-ref="_M/EXTRAARG">EXTRAARG</dfn></u></td></tr>
+<tr><th id="33">33</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="34">ifndef</span> <span class="macro" data-ref="_M/LLL_LOCK">LLL_LOCK</span></u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/LLL_LOCK" data-ref="_M/LLL_LOCK">LLL_LOCK</dfn>(a,b) lll_lock(a,b), 0</u></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/aconf" data-ref="_M/aconf">aconf</dfn> <a class="ref" href="elision-conf.h.html#__elision_aconf" title='__elision_aconf' data-ref="__elision_aconf" data-ref-filename="__elision_aconf">__elision_aconf</a></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><i>/* Adaptive lock using transactions.</i></td></tr>
+<tr><th id="41">41</th><td><i>   By default the lock region is run as a transaction, and when it</i></td></tr>
+<tr><th id="42">42</th><td><i>   aborts or the lock is busy the lock adapts itself.  */</i></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><em>int</em></td></tr>
+<tr><th id="45">45</th><td><dfn class="decl def fn" id="__lll_lock_elision" title='__lll_lock_elision' data-ref="__lll_lock_elision" data-ref-filename="__lll_lock_elision">__lll_lock_elision</dfn> (<em>int</em> *<dfn class="local col8 decl" id="8futex" title='futex' data-type='int *' data-ref="8futex" data-ref-filename="8futex">futex</dfn>, <em>short</em> *<dfn class="local col9 decl" id="9adapt_count" title='adapt_count' data-type='short *' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</dfn>, <a class="macro" href="#32" title="" data-ref="_M/EXTRAARG">EXTRAARG</a> <em>int</em> <dfn class="local col0 decl" id="10private" title='private' data-type='int' data-ref="10private" data-ref-filename="10private">private</dfn>)</td></tr>
+<tr><th id="46">46</th><td>{</td></tr>
+<tr><th id="47">47</th><td>  <i>/* adapt_count can be accessed concurrently; these accesses can be both</i></td></tr>
+<tr><th id="48">48</th><td><i>     inside of transactions (if critical sections are nested and the outer</i></td></tr>
+<tr><th id="49">49</th><td><i>     critical section uses lock elision) and outside of transactions.  Thus,</i></td></tr>
+<tr><th id="50">50</th><td><i>     we need to use atomic accesses to avoid data races.  However, the</i></td></tr>
+<tr><th id="51">51</th><td><i>     value of adapt_count is just a hint, so relaxed MO accesses are</i></td></tr>
+<tr><th id="52">52</th><td><i>     sufficient.  */</i></td></tr>
+<tr><th id="53">53</th><td>  <b>if</b> (<a class="macro" href="../../../../../include/atomic.h.html#575" title="({ if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_load_n ((adapt_count), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>) &lt;= <var>0</var>)</td></tr>
+<tr><th id="54">54</th><td>    {</td></tr>
+<tr><th id="55">55</th><td>      <em>unsigned</em> <dfn class="local col1 decl" id="11status" title='status' data-type='unsigned int' data-ref="11status" data-ref-filename="11status">status</dfn>;</td></tr>
+<tr><th id="56">56</th><td>      <em>int</em> <dfn class="local col2 decl" id="12try_xbegin" title='try_xbegin' data-type='int' data-ref="12try_xbegin" data-ref-filename="12try_xbegin">try_xbegin</dfn>;</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>      <b>for</b> (<a class="local col2 ref" href="#12try_xbegin" title='try_xbegin' data-ref="12try_xbegin" data-ref-filename="12try_xbegin">try_xbegin</a> = <a class="macro" href="#38" title="__elision_aconf" data-ref="_M/aconf">aconf</a>.<a class="ref field" href="elision-conf.h.html#elision_config::retry_try_xbegin" title='elision_config::retry_try_xbegin' data-ref="elision_config::retry_try_xbegin" data-ref-filename="elision_config..retry_try_xbegin">retry_try_xbegin</a>;</td></tr>
+<tr><th id="59">59</th><td>	   <a class="local col2 ref" href="#12try_xbegin" title='try_xbegin' data-ref="12try_xbegin" data-ref-filename="12try_xbegin">try_xbegin</a> &gt; <var>0</var>;</td></tr>
+<tr><th id="60">60</th><td>	   <a class="local col2 ref" href="#12try_xbegin" title='try_xbegin' data-ref="12try_xbegin" data-ref-filename="12try_xbegin">try_xbegin</a>--)</td></tr>
+<tr><th id="61">61</th><td>	{</td></tr>
+<tr><th id="62">62</th><td>	  <b>if</b> ((<a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a> = <a class="ref fn" href="hle.h.html#_xbegin" title='_xbegin' data-ref="_xbegin" data-ref-filename="_xbegin">_xbegin</a>()) == <a class="macro" href="hle.h.html#33" title="(~0u)" data-ref="_M/_XBEGIN_STARTED">_XBEGIN_STARTED</a>)</td></tr>
+<tr><th id="63">63</th><td>	    {</td></tr>
+<tr><th id="64">64</th><td>	      <b>if</b> (*<a class="local col8 ref" href="#8futex" title='futex' data-ref="8futex" data-ref-filename="8futex">futex</a> == <var>0</var>)</td></tr>
+<tr><th id="65">65</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	      <i>/* Lock was busy.  Fall back to normal locking.</i></td></tr>
+<tr><th id="68">68</th><td><i>		 Could also _xend here but xabort with 0xff code</i></td></tr>
+<tr><th id="69">69</th><td><i>		 is more visible in the profiler.  */</i></td></tr>
+<tr><th id="70">70</th><td>	      <a class="ref fn" href="hle.h.html#_xabort" title='_xabort' data-ref="_xabort" data-ref-filename="_xabort">_xabort</a> (<a class="macro" href="hle.h.html#42" title="0xff" data-ref="_M/_ABORT_LOCK_BUSY">_ABORT_LOCK_BUSY</a>);</td></tr>
+<tr><th id="71">71</th><td>	    }</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>	  <b>if</b> (!(<a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a> &amp; <a class="macro" href="hle.h.html#35" title="(1 &lt;&lt; 1)" data-ref="_M/_XABORT_RETRY">_XABORT_RETRY</a>))</td></tr>
+<tr><th id="74">74</th><td>	    {</td></tr>
+<tr><th id="75">75</th><td>	      <b>if</b> ((<a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a> &amp; <a class="macro" href="hle.h.html#34" title="(1 &lt;&lt; 0)" data-ref="_M/_XABORT_EXPLICIT">_XABORT_EXPLICIT</a>)</td></tr>
+<tr><th id="76">76</th><td>			&amp;&amp; <a class="macro" href="hle.h.html#40" title="(((status) &gt;&gt; 24) &amp; 0xff)" data-ref="_M/_XABORT_CODE">_XABORT_CODE</a> (<a class="local col1 ref" href="#11status" title='status' data-ref="11status" data-ref-filename="11status">status</a>) == <a class="macro" href="hle.h.html#42" title="0xff" data-ref="_M/_ABORT_LOCK_BUSY">_ABORT_LOCK_BUSY</a>)</td></tr>
+<tr><th id="77">77</th><td>	        {</td></tr>
+<tr><th id="78">78</th><td>		  <i>/* Right now we skip here.  Better would be to wait a bit</i></td></tr>
+<tr><th id="79">79</th><td><i>		     and retry.  This likely needs some spinning.  See</i></td></tr>
+<tr><th id="80">80</th><td><i>		     above for why relaxed MO is sufficient.  */</i></td></tr>
+<tr><th id="81">81</th><td>		  <b>if</b> (<a class="macro" href="../../../../../include/atomic.h.html#575" title="({ if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_load_n ((adapt_count), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>)</td></tr>
+<tr><th id="82">82</th><td>		      != <a class="macro" href="#38" title="__elision_aconf" data-ref="_M/aconf">aconf</a>.<a class="ref field" href="elision-conf.h.html#elision_config::skip_lock_busy" title='elision_config::skip_lock_busy' data-ref="elision_config::skip_lock_busy" data-ref-filename="elision_config..skip_lock_busy">skip_lock_busy</a>)</td></tr>
+<tr><th id="83">83</th><td>		    <a class="macro" href="../../../../../include/atomic.h.html#582" title="do { if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_store_n ((adapt_count), (__elision_aconf.skip_lock_busy), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>, <a class="macro" href="#38" title="__elision_aconf" data-ref="_M/aconf">aconf</a>.<a class="ref field" href="elision-conf.h.html#elision_config::skip_lock_busy" title='elision_config::skip_lock_busy' data-ref="elision_config::skip_lock_busy" data-ref-filename="elision_config..skip_lock_busy">skip_lock_busy</a>);</td></tr>
+<tr><th id="84">84</th><td>		}</td></tr>
+<tr><th id="85">85</th><td>	      <i>/* Internal abort.  There is no chance for retry.</i></td></tr>
+<tr><th id="86">86</th><td><i>		 Use the normal locking and next time use lock.</i></td></tr>
+<tr><th id="87">87</th><td><i>		 Be careful to avoid writing to the lock.  See above for why</i></td></tr>
+<tr><th id="88">88</th><td><i>		 relaxed MO is sufficient.  */</i></td></tr>
+<tr><th id="89">89</th><td>	      <b>else</b> <b>if</b> (<a class="macro" href="../../../../../include/atomic.h.html#575" title="({ if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_load_n ((adapt_count), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>)</td></tr>
+<tr><th id="90">90</th><td>		  != <a class="macro" href="#38" title="__elision_aconf" data-ref="_M/aconf">aconf</a>.<a class="ref field" href="elision-conf.h.html#elision_config::skip_lock_internal_abort" title='elision_config::skip_lock_internal_abort' data-ref="elision_config::skip_lock_internal_abort" data-ref-filename="elision_config..skip_lock_internal_abort">skip_lock_internal_abort</a>)</td></tr>
+<tr><th id="91">91</th><td>		<a class="macro" href="../../../../../include/atomic.h.html#582" title="do { if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_store_n ((adapt_count), (__elision_aconf.skip_lock_internal_abort), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>,</td></tr>
+<tr><th id="92">92</th><td>		    <a class="macro" href="#38" title="__elision_aconf" data-ref="_M/aconf">aconf</a>.<a class="ref field" href="elision-conf.h.html#elision_config::skip_lock_internal_abort" title='elision_config::skip_lock_internal_abort' data-ref="elision_config::skip_lock_internal_abort" data-ref-filename="elision_config..skip_lock_internal_abort">skip_lock_internal_abort</a>);</td></tr>
+<tr><th id="93">93</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="94">94</th><td>	    }</td></tr>
+<tr><th id="95">95</th><td>	}</td></tr>
+<tr><th id="96">96</th><td>    }</td></tr>
+<tr><th id="97">97</th><td>  <b>else</b></td></tr>
+<tr><th id="98">98</th><td>    {</td></tr>
+<tr><th id="99">99</th><td>      <i>/* Use a normal lock until the threshold counter runs out.</i></td></tr>
+<tr><th id="100">100</th><td><i>	 Lost updates possible.  */</i></td></tr>
+<tr><th id="101">101</th><td>      <a class="macro" href="../../../../../include/atomic.h.html#582" title="do { if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_store_n ((adapt_count), (({ if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_load_n ((adapt_count), 0); }) - 1), 0); } while (0)" data-ref="_M/atomic_store_relaxed">atomic_store_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>,</td></tr>
+<tr><th id="102">102</th><td>	  <a class="macro" href="../../../../../include/atomic.h.html#575" title="({ if ((sizeof (*(adapt_count)) != 1) &amp;&amp; (sizeof (*(adapt_count)) != 2) &amp;&amp; (sizeof (*(adapt_count)) != 4) &amp;&amp; (sizeof (*(adapt_count)) != 8)) __atomic_link_error ();; __atomic_load_n ((adapt_count), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (<a class="local col9 ref" href="#9adapt_count" title='adapt_count' data-ref="9adapt_count" data-ref-filename="9adapt_count">adapt_count</a>) - <var>1</var>);</td></tr>
+<tr><th id="103">103</th><td>    }</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>  <i>/* Use a normal lock here.  */</i></td></tr>
+<tr><th id="106">106</th><td>  <b>return</b> <a class="macro" href="#35" title="(void) ({ int ignore1, ignore2, ignore3; if (__builtin_constant_p (private) &amp;&amp; (private) == 0) __asm __volatile (&quot;lock;&quot; &quot;cmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=&amp;D&quot; (ignore2), &quot;=m&quot; ((*futex)), &quot;=a&quot; (ignore3) : &quot;0&quot; (1), &quot;m&quot; ((*futex)), &quot;3&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;lock;&quot; &quot;cmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=D&quot; (ignore2), &quot;=m&quot; ((*futex)), &quot;=a&quot; (ignore3) : &quot;1&quot; (1), &quot;m&quot; ((*futex)), &quot;3&quot; (0), &quot;0&quot; (private) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); }), 0" data-ref="_M/LLL_LOCK">LLL_LOCK</a> ((*<a class="local col8 ref" href="#8futex" title='futex' data-ref="8futex" data-ref-filename="8futex">futex</a>), <a class="local col0 ref" href="#10private" title='private' data-ref="10private" data-ref-filename="10private">private</a>);</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

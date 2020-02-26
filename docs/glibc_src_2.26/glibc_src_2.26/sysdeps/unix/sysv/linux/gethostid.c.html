@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>gethostid.c source code [glibc_src_2.26/sysdeps/unix/sysv/linux/gethostid.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/unix/sysv/linux/gethostid.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.26</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='gethostid.c.html'>gethostid.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1995-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../../include/alloca.h.html">&lt;alloca.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../include/netdb.h.html">&lt;netdb.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="not-cancel.h.html">&lt;not-cancel.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/HOSTIDFILE" data-ref="_M/HOSTIDFILE">HOSTIDFILE</dfn> "/etc/hostid"</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">ifdef</span> <span class="macro" data-ref="_M/SET_PROCEDURE">SET_PROCEDURE</span></u></td></tr>
+<tr><th id="28">28</th><td><em>int</em></td></tr>
+<tr><th id="29">29</th><td>sethostid (<em>long</em> <em>int</em> id)</td></tr>
+<tr><th id="30">30</th><td>{</td></tr>
+<tr><th id="31">31</th><td>  <em>int</em> fd;</td></tr>
+<tr><th id="32">32</th><td>  ssize_t written;</td></tr>
+<tr><th id="33">33</th><td>  int32_t id32 = id;</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>  <i>/* Test for appropriate rights to set host ID.  */</i></td></tr>
+<tr><th id="36">36</th><td>  <b>if</b> (__libc_enable_secure)</td></tr>
+<tr><th id="37">37</th><td>    {</td></tr>
+<tr><th id="38">38</th><td>      __set_errno (EPERM);</td></tr>
+<tr><th id="39">39</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="40">40</th><td>    }</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>  <i>/* Make sure the ID is not too large.  Needed for bi-arch support.   */</i></td></tr>
+<tr><th id="43">43</th><td>  <b>if</b> (id32 != id)</td></tr>
+<tr><th id="44">44</th><td>    {</td></tr>
+<tr><th id="45">45</th><td>      __set_errno (EOVERFLOW);</td></tr>
+<tr><th id="46">46</th><td>      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="47">47</th><td>    }</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>  <i>/* Open file for writing.  Everybody is allowed to read this file.  */</i></td></tr>
+<tr><th id="50">50</th><td>  fd = open_not_cancel (HOSTIDFILE, O_CREAT|O_WRONLY|O_TRUNC, <var>0644</var>);</td></tr>
+<tr><th id="51">51</th><td>  <b>if</b> (fd &lt; <var>0</var>)</td></tr>
+<tr><th id="52">52</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>  written = write_not_cancel (fd, &amp;id32, <b>sizeof</b> (id32));</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  close_not_cancel_no_status (fd);</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>  <b>return</b> written != <b>sizeof</b> (id32) ? -<var>1</var> : <var>0</var>;</td></tr>
+<tr><th id="59">59</th><td>}</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="27">else</span></u></td></tr>
+<tr><th id="62">62</th><td><u># include <a href="../../../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="63">63</th><td><u># include <a href="../../../../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="64">64</th><td><u># include <a href="../../../../resolv/netdb.h.html">&lt;resolv/netdb.h&gt;</a></u></td></tr>
+<tr><th id="65">65</th><td><u># include <a href="../../../../include/netinet/in.h.html">&lt;netinet/in.h&gt;</a></u></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><em>long</em> <em>int</em></td></tr>
+<tr><th id="68">68</th><td><dfn class="decl def fn" id="gethostid" title='gethostid' data-ref="gethostid" data-ref-filename="gethostid">gethostid</dfn> (<em>void</em>)</td></tr>
+<tr><th id="69">69</th><td>{</td></tr>
+<tr><th id="70">70</th><td>  <em>char</em> <dfn class="local col1 decl" id="1hostname" title='hostname' data-type='char [65]' data-ref="1hostname" data-ref-filename="1hostname">hostname</dfn>[<a class="macro" href="../../../../../include/asm-generic/param.h.html#17" title="64" data-ref="_M/MAXHOSTNAMELEN">MAXHOSTNAMELEN</a> + <var>1</var>];</td></tr>
+<tr><th id="71">71</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="2buflen" title='buflen' data-type='size_t' data-ref="2buflen" data-ref-filename="2buflen">buflen</dfn>;</td></tr>
+<tr><th id="72">72</th><td>  <em>char</em> *<dfn class="local col3 decl" id="3buffer" title='buffer' data-type='char *' data-ref="3buffer" data-ref-filename="3buffer">buffer</dfn>;</td></tr>
+<tr><th id="73">73</th><td>  <b>struct</b> <a class="type" href="../../../../resolv/netdb.h.html#hostent" title='hostent' data-ref="hostent" data-ref-filename="hostent">hostent</a> <dfn class="local col4 decl" id="4hostbuf" title='hostbuf' data-type='struct hostent' data-ref="4hostbuf" data-ref-filename="4hostbuf">hostbuf</dfn>, *<dfn class="local col5 decl" id="5hp" title='hp' data-type='struct hostent *' data-ref="5hp" data-ref-filename="5hp">hp</dfn>;</td></tr>
+<tr><th id="74">74</th><td>  <a class="typedef" href="../../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a> <dfn class="local col6 decl" id="6id" title='id' data-type='int32_t' data-ref="6id" data-ref-filename="6id">id</dfn>;</td></tr>
+<tr><th id="75">75</th><td>  <b>struct</b> <a class="type" href="../../../../inet/netinet/in.h.html#in_addr" title='in_addr' data-ref="in_addr" data-ref-filename="in_addr">in_addr</a> <dfn class="local col7 decl" id="7in" title='in' data-type='struct in_addr' data-ref="7in" data-ref-filename="7in">in</dfn>;</td></tr>
+<tr><th id="76">76</th><td>  <em>int</em> <dfn class="local col8 decl" id="8herr" title='herr' data-type='int' data-ref="8herr" data-ref-filename="8herr">herr</dfn>;</td></tr>
+<tr><th id="77">77</th><td>  <em>int</em> <dfn class="local col9 decl" id="9fd" title='fd' data-type='int' data-ref="9fd" data-ref-filename="9fd">fd</dfn>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>  <i>/* First try to get the ID from a former invocation of sethostid.  */</i></td></tr>
+<tr><th id="80">80</th><td>  <a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a> = <a class="macro" href="not-cancel.h.html#30" title="({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg3 = (long int) (0); long int __arg2 = (long int) (00|0); long int __arg1 = (long int) (&quot;/etc/hostid&quot;); register long int _a3 asm (&quot;rdx&quot;) = __arg3; register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (2) , &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; })" data-ref="_M/open_not_cancel">open_not_cancel</a> (<a class="macro" href="#25" title="&quot;/etc/hostid&quot;" data-ref="_M/HOSTIDFILE">HOSTIDFILE</a>, <a class="macro" href="bits/fcntl-linux.h.html#43" title="00" data-ref="_M/O_RDONLY">O_RDONLY</a>|<a class="macro" href="bits/fcntl-linux.h.html#138" title="0" data-ref="_M/O_LARGEFILE">O_LARGEFILE</a>, <var>0</var>);</td></tr>
+<tr><th id="81">81</th><td>  <b>if</b> (<a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a> &gt;= <var>0</var>)</td></tr>
+<tr><th id="82">82</th><td>    {</td></tr>
+<tr><th id="83">83</th><td>      <a class="typedef" href="../../../../posix/sys/types.h.html#ssize_t" title='ssize_t' data-type='__ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="local col0 decl" id="10n" title='n' data-type='ssize_t' data-ref="10n" data-ref-filename="10n">n</dfn> = <a class="macro" href="not-cancel.h.html#69" title="({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg3 = (long int) (sizeof (id)); long int __arg2 = (long int) (&amp;id); long int __arg1 = (long int) (fd); register long int _a3 asm (&quot;rdx&quot;) = __arg3; register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (0) , &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; })" data-ref="_M/read_not_cancel">read_not_cancel</a> (<a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a>, &amp;<a class="local col6 ref" href="#6id" title='id' data-ref="6id" data-ref-filename="6id">id</a>, <b>sizeof</b> (<a class="local col6 ref" href="#6id" title='id' data-ref="6id" data-ref-filename="6id">id</a>));</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>      <a class="macro" href="not-cancel.h.html#64" title="(void) ({ do { } while (0); ({ unsigned long int resultvar; long int __arg1 = (long int) ((fd)); register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (3) , &quot;r&quot; (_a1) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); })" data-ref="_M/close_not_cancel_no_status">close_not_cancel_no_status</a> (<a class="local col9 ref" href="#9fd" title='fd' data-ref="9fd" data-ref-filename="9fd">fd</a>);</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>      <b>if</b> (<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a> == <b>sizeof</b> (<a class="local col6 ref" href="#6id" title='id' data-ref="6id" data-ref-filename="6id">id</a>))</td></tr>
+<tr><th id="88">88</th><td>	<b>return</b> <a class="local col6 ref" href="#6id" title='id' data-ref="6id" data-ref-filename="6id">id</a>;</td></tr>
+<tr><th id="89">89</th><td>    }</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>  <i>/* Getting from the file was not successful.  An intelligent guess for</i></td></tr>
+<tr><th id="92">92</th><td><i>     a unique number of a host is its IP address.  Return this.  */</i></td></tr>
+<tr><th id="93">93</th><td>  <b>if</b> (<a class="ref fn" href="../../../../include/unistd.h.html#__gethostname" title='__gethostname' data-ref="__gethostname" data-ref-filename="__gethostname">__gethostname</a> (<a class="local col1 ref" href="#1hostname" title='hostname' data-ref="1hostname" data-ref-filename="1hostname">hostname</a>, <a class="macro" href="../../../../../include/asm-generic/param.h.html#17" title="64" data-ref="_M/MAXHOSTNAMELEN">MAXHOSTNAMELEN</a>) &lt; <var>0</var> || <a class="local col1 ref" href="#1hostname" title='hostname' data-ref="1hostname" data-ref-filename="1hostname">hostname</a>[<var>0</var>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="94">94</th><td>    <i>/* This also fails.  Return and arbitrary value.  */</i></td></tr>
+<tr><th id="95">95</th><td>    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>  <a class="local col2 ref" href="#2buflen" title='buflen' data-ref="2buflen" data-ref-filename="2buflen">buflen</a> = <var>1024</var>;</td></tr>
+<tr><th id="98">98</th><td>  <a class="local col3 ref" href="#3buffer" title='buffer' data-ref="3buffer" data-ref-filename="3buffer">buffer</a> = <a class="macro" href="../../../../include/alloca.h.html#15" title="__builtin_alloca (buflen)" data-ref="_M/__alloca">__alloca</a> (<a class="local col2 ref" href="#2buflen" title='buflen' data-ref="2buflen" data-ref-filename="2buflen">buflen</a>);</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <i>/* To get the IP address we need to know the host name.  */</i></td></tr>
+<tr><th id="101">101</th><td>  <b>while</b> (<a class="ref fn" href="../../../../include/netdb.h.html#__gethostbyname_r" title='__gethostbyname_r' data-ref="__gethostbyname_r" data-ref-filename="__gethostbyname_r">__gethostbyname_r</a> (<a class="local col1 ref" href="#1hostname" title='hostname' data-ref="1hostname" data-ref-filename="1hostname">hostname</a>, &amp;<a class="local col4 ref" href="#4hostbuf" title='hostbuf' data-ref="4hostbuf" data-ref-filename="4hostbuf">hostbuf</a>, <a class="local col3 ref" href="#3buffer" title='buffer' data-ref="3buffer" data-ref-filename="3buffer">buffer</a>, <a class="local col2 ref" href="#2buflen" title='buflen' data-ref="2buflen" data-ref-filename="2buflen">buflen</a>, &amp;<a class="local col5 ref" href="#5hp" title='hp' data-ref="5hp" data-ref-filename="5hp">hp</a>, &amp;<a class="local col8 ref" href="#8herr" title='herr' data-ref="8herr" data-ref-filename="8herr">herr</a>)</td></tr>
+<tr><th id="102">102</th><td>	 != <var>0</var></td></tr>
+<tr><th id="103">103</th><td>	 || <a class="local col5 ref" href="#5hp" title='hp' data-ref="5hp" data-ref-filename="5hp">hp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="104">104</th><td>    <b>if</b> (<a class="local col8 ref" href="#8herr" title='herr' data-ref="8herr" data-ref-filename="8herr">herr</a> != <a class="macro" href="../../../../resolv/netdb.h.html#72" title="-1" data-ref="_M/NETDB_INTERNAL">NETDB_INTERNAL</a> || <a class="macro" href="../../../../include/errno.h.html#29" title="__libc_errno" data-ref="_M/errno">errno</a> != <a class="macro" href="../../../../../include/asm-generic/errno-base.h.html#38" title="34" data-ref="_M/ERANGE">ERANGE</a>)</td></tr>
+<tr><th id="105">105</th><td>      <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="106">106</th><td>    <b>else</b></td></tr>
+<tr><th id="107">107</th><td>      <i>/* Enlarge buffer.  */</i></td></tr>
+<tr><th id="108">108</th><td>      <a class="local col3 ref" href="#3buffer" title='buffer' data-ref="3buffer" data-ref-filename="3buffer">buffer</a> = <a class="macro" href="../../../../include/alloca.h.html#31" title="(__typeof (buffer)) ({ size_t __newlen = (((2 * buflen) + 15) &amp; -16); char *__newbuf = __builtin_alloca (__newlen); if (__newbuf + __newlen == (char *) (buffer)) buflen += __newlen; else buflen = __newlen; __newbuf; })" data-ref="_M/extend_alloca">extend_alloca</a> (<a class="local col3 ref" href="#3buffer" title='buffer' data-ref="3buffer" data-ref-filename="3buffer">buffer</a>, <a class="local col2 ref" href="#2buflen" title='buflen' data-ref="2buflen" data-ref-filename="2buflen">buflen</a>, <var>2</var> * <a class="local col2 ref" href="#2buflen" title='buflen' data-ref="2buflen" data-ref-filename="2buflen">buflen</a>);</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>  <a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>.<a class="ref field" href="../../../../inet/netinet/in.h.html#in_addr::s_addr" title='in_addr::s_addr' data-ref="in_addr::s_addr" data-ref-filename="in_addr..s_addr">s_addr</a> = <var>0</var>;</td></tr>
+<tr><th id="111">111</th><td>  <a class="ref fn" href="../../../../string/string.h.html#__GI_memcpy" title='memcpy' data-ref="__GI_memcpy" data-ref-filename="__GI_memcpy">memcpy</a> (&amp;<a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>, <a class="local col5 ref" href="#5hp" title='hp' data-ref="5hp" data-ref-filename="5hp">hp</a>-&gt;<a class="macro" href="../../../../resolv/netdb.h.html#106" title="h_addr_list[0]" data-ref="_M/h_addr">h_addr</a>,</td></tr>
+<tr><th id="112">112</th><td>	  (<em>int</em>) <b>sizeof</b> (<a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>) &lt; <a class="local col5 ref" href="#5hp" title='hp' data-ref="5hp" data-ref-filename="5hp">hp</a>-&gt;<a class="ref field" href="../../../../resolv/netdb.h.html#hostent::h_length" title='hostent::h_length' data-ref="hostent::h_length" data-ref-filename="hostent..h_length">h_length</a> ? (<em>int</em>) <b>sizeof</b> (<a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>) : <a class="local col5 ref" href="#5hp" title='hp' data-ref="5hp" data-ref-filename="5hp">hp</a>-&gt;<a class="ref field" href="../../../../resolv/netdb.h.html#hostent::h_length" title='hostent::h_length' data-ref="hostent::h_length" data-ref-filename="hostent..h_length">h_length</a>);</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <i>/* For the return value to be not exactly the IP address we do some</i></td></tr>
+<tr><th id="115">115</th><td><i>     bit fiddling.  */</i></td></tr>
+<tr><th id="116">116</th><td>  <b>return</b> (<a class="typedef" href="../../../../bits/stdint-intn.h.html#int32_t" title='int32_t' data-type='__int32_t' data-ref="int32_t" data-ref-filename="int32_t">int32_t</a>) (<a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>.<a class="ref field" href="../../../../inet/netinet/in.h.html#in_addr::s_addr" title='in_addr::s_addr' data-ref="in_addr::s_addr" data-ref-filename="in_addr..s_addr">s_addr</a> &lt;&lt; <var>16</var> | <a class="local col7 ref" href="#7in" title='in' data-ref="7in" data-ref-filename="7in">in</a>.<a class="ref field" href="../../../../inet/netinet/in.h.html#in_addr::s_addr" title='in_addr::s_addr' data-ref="in_addr::s_addr" data-ref-filename="in_addr..s_addr">s_addr</a> &gt;&gt; <var>16</var>);</td></tr>
+<tr><th id="117">117</th><td>}</td></tr>
+<tr><th id="118">118</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>fromfp.h source code [glibc_src_2.26/math/fromfp.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/math/fromfp.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>math</a>/<a href='fromfp.h.html'>fromfp.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Round to integer type.  Common helper functions.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2016-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/fenv.h.html">&lt;fenv.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/float.h.html">&lt;float.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/x86_64/fpu/math_private.h.html">&lt;math_private.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* The including file should have defined UNSIGNED to 0 (signed return</i></td></tr>
+<tr><th id="28">28</th><td><i>   type) or 1 (unsigned return type), INEXACT to 0 (no inexact</i></td></tr>
+<tr><th id="29">29</th><td><i>   exceptions) or 1 (raise inexact exceptions) and RET_TYPE to the</i></td></tr>
+<tr><th id="30">30</th><td><i>   return type (intmax_t or uintmax_t).  */</i></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i>/* Return the maximum unbiased exponent for an argument (negative if</i></td></tr>
+<tr><th id="33">33</th><td><i>   NEGATIVE is set) that might be in range for a call to a fromfp</i></td></tr>
+<tr><th id="34">34</th><td><i>   function with width WIDTH (greater than 0, and not exceeding that</i></td></tr>
+<tr><th id="35">35</th><td><i>   of intmax_t).  The truncated argument may still be out of range in</i></td></tr>
+<tr><th id="36">36</th><td><i>   the case of negative arguments, and if not out of range it may</i></td></tr>
+<tr><th id="37">37</th><td><i>   become out of range as a result of rounding.  */</i></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="40">40</th><td><dfn class="decl def fn" id="fromfp_max_exponent" title='fromfp_max_exponent' data-ref="fromfp_max_exponent" data-ref-filename="fromfp_max_exponent">fromfp_max_exponent</dfn> (<span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col1 decl" id="1negative" title='negative' data-type='_Bool' data-ref="1negative" data-ref-filename="1negative">negative</dfn>, <em>int</em> <dfn class="local col2 decl" id="2width" title='width' data-type='int' data-ref="2width" data-ref-filename="2width">width</dfn>)</td></tr>
+<tr><th id="41">41</th><td>{</td></tr>
+<tr><th id="42">42</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp.c.html#1" title="0" data-ref="_M/UNSIGNED">UNSIGNED</a>)</td></tr>
+<tr><th id="43">43</th><td>    <b>return</b> <a class="local col1 ref" href="#1negative" title='negative' data-ref="1negative" data-ref-filename="1negative">negative</a> ? -<var>1</var> : <a class="local col2 ref" href="#2width" title='width' data-ref="2width" data-ref-filename="2width">width</a> - <var>1</var>;</td></tr>
+<tr><th id="44">44</th><td>  <b>else</b></td></tr>
+<tr><th id="45">45</th><td>    <b>return</b> <a class="local col1 ref" href="#1negative" title='negative' data-ref="1negative" data-ref-filename="1negative">negative</a> ? <a class="local col2 ref" href="#2width" title='width' data-ref="2width" data-ref-filename="2width">width</a> - <var>1</var> : <a class="local col2 ref" href="#2width" title='width' data-ref="2width" data-ref-filename="2width">width</a> - <var>2</var>;</td></tr>
+<tr><th id="46">46</th><td>}</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><i>/* Return the result of rounding an integer value X (passed as the</i></td></tr>
+<tr><th id="49">49</th><td><i>   absolute value; NEGATIVE is true if the value is negative), where</i></td></tr>
+<tr><th id="50">50</th><td><i>   HALF_BIT is true if the bit with value 0.5 is set and MORE_BITS is</i></td></tr>
+<tr><th id="51">51</th><td><i>   true if any lower bits are set, in the rounding direction</i></td></tr>
+<tr><th id="52">52</th><td><i>   ROUND.  */</i></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>static</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a></td></tr>
+<tr><th id="55">55</th><td><dfn class="decl def fn" id="fromfp_round" title='fromfp_round' data-ref="fromfp_round" data-ref-filename="fromfp_round">fromfp_round</dfn> (<span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col3 decl" id="3negative" title='negative' data-type='_Bool' data-ref="3negative" data-ref-filename="3negative">negative</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a> <dfn class="local col4 decl" id="4x" title='x' data-type='uintmax_t' data-ref="4x" data-ref-filename="4x">x</dfn>, <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col5 decl" id="5half_bit" title='half_bit' data-type='_Bool' data-ref="5half_bit" data-ref-filename="5half_bit">half_bit</dfn>, <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col6 decl" id="6more_bits" title='more_bits' data-type='_Bool' data-ref="6more_bits" data-ref-filename="6more_bits">more_bits</dfn>,</td></tr>
+<tr><th id="56">56</th><td>	      <em>int</em> <dfn class="local col7 decl" id="7round" title='round' data-type='int' data-ref="7round" data-ref-filename="7round">round</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>  <b>switch</b> (<a class="local col7 ref" href="#7round" title='round' data-ref="7round" data-ref-filename="7round">round</a>)</td></tr>
+<tr><th id="59">59</th><td>    {</td></tr>
+<tr><th id="60">60</th><td>    <b>case</b> <a class="macro" href="math.h.html#174" title="0" data-ref="_M/FP_INT_UPWARD">FP_INT_UPWARD</a>:</td></tr>
+<tr><th id="61">61</th><td>      <b>return</b> <a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a> + (!<a class="local col3 ref" href="#3negative" title='negative' data-ref="3negative" data-ref-filename="3negative">negative</a> &amp;&amp; (<a class="local col5 ref" href="#5half_bit" title='half_bit' data-ref="5half_bit" data-ref-filename="5half_bit">half_bit</a> || <a class="local col6 ref" href="#6more_bits" title='more_bits' data-ref="6more_bits" data-ref-filename="6more_bits">more_bits</a>));</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>    <b>case</b> <a class="macro" href="math.h.html#177" title="1" data-ref="_M/FP_INT_DOWNWARD">FP_INT_DOWNWARD</a>:</td></tr>
+<tr><th id="64">64</th><td>      <b>return</b> <a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a> + (<a class="local col3 ref" href="#3negative" title='negative' data-ref="3negative" data-ref-filename="3negative">negative</a> &amp;&amp; (<a class="local col5 ref" href="#5half_bit" title='half_bit' data-ref="5half_bit" data-ref-filename="5half_bit">half_bit</a> || <a class="local col6 ref" href="#6more_bits" title='more_bits' data-ref="6more_bits" data-ref-filename="6more_bits">more_bits</a>));</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>    <b>case</b> <a class="macro" href="math.h.html#180" title="2" data-ref="_M/FP_INT_TOWARDZERO">FP_INT_TOWARDZERO</a>:</td></tr>
+<tr><th id="67">67</th><td>    <b>default</b>:</td></tr>
+<tr><th id="68">68</th><td>      <i>/* Unknown rounding directions are defined to mean unspecified</i></td></tr>
+<tr><th id="69">69</th><td><i>	 rounding; treat this as truncation.  */</i></td></tr>
+<tr><th id="70">70</th><td>      <b>return</b> <a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>    <b>case</b> <a class="macro" href="math.h.html#183" title="3" data-ref="_M/FP_INT_TONEARESTFROMZERO">FP_INT_TONEARESTFROMZERO</a>:</td></tr>
+<tr><th id="73">73</th><td>      <b>return</b> <a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a> + <a class="local col5 ref" href="#5half_bit" title='half_bit' data-ref="5half_bit" data-ref-filename="5half_bit">half_bit</a>;</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>    <b>case</b> <a class="macro" href="math.h.html#186" title="4" data-ref="_M/FP_INT_TONEAREST">FP_INT_TONEAREST</a>:</td></tr>
+<tr><th id="76">76</th><td>      <b>return</b> <a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a> + (<a class="local col5 ref" href="#5half_bit" title='half_bit' data-ref="5half_bit" data-ref-filename="5half_bit">half_bit</a> &amp;&amp; ((<a class="local col4 ref" href="#4x" title='x' data-ref="4x" data-ref-filename="4x">x</a> &amp; <var>1</var>) || <a class="local col6 ref" href="#6more_bits" title='more_bits' data-ref="6more_bits" data-ref-filename="6more_bits">more_bits</a>));</td></tr>
+<tr><th id="77">77</th><td>    }</td></tr>
+<tr><th id="78">78</th><td>}</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><i>/* Integer rounding, of a value whose exponent EXPONENT did not exceed</i></td></tr>
+<tr><th id="81">81</th><td><i>   the maximum exponent MAX_EXPONENT and so did not necessarily</i></td></tr>
+<tr><th id="82">82</th><td><i>   overflow, has produced X (possibly wrapping to 0); the sign is</i></td></tr>
+<tr><th id="83">83</th><td><i>   negative if NEGATIVE is true.  Return whether this overflowed the</i></td></tr>
+<tr><th id="84">84</th><td><i>   allowed width.  */</i></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="87">87</th><td><dfn class="decl def fn" id="fromfp_overflowed" title='fromfp_overflowed' data-ref="fromfp_overflowed" data-ref-filename="fromfp_overflowed">fromfp_overflowed</dfn> (<span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col8 decl" id="8negative" title='negative' data-type='_Bool' data-ref="8negative" data-ref-filename="8negative">negative</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a> <dfn class="local col9 decl" id="9x" title='x' data-type='uintmax_t' data-ref="9x" data-ref-filename="9x">x</dfn>, <em>int</em> <dfn class="local col0 decl" id="10exponent" title='exponent' data-type='int' data-ref="10exponent" data-ref-filename="10exponent">exponent</dfn>, <em>int</em> <dfn class="local col1 decl" id="11max_exponent" title='max_exponent' data-type='int' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</dfn>)</td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp.c.html#1" title="0" data-ref="_M/UNSIGNED">UNSIGNED</a>)</td></tr>
+<tr><th id="90">90</th><td>    {</td></tr>
+<tr><th id="91">91</th><td>      <b>if</b> (<a class="local col8 ref" href="#8negative" title='negative' data-ref="8negative" data-ref-filename="8negative">negative</a>)</td></tr>
+<tr><th id="92">92</th><td>	<b>return</b> <a class="local col9 ref" href="#9x" title='x' data-ref="9x" data-ref-filename="9x">x</a> != <var>0</var>;</td></tr>
+<tr><th id="93">93</th><td>      <b>else</b> <b>if</b> (<a class="local col1 ref" href="#11max_exponent" title='max_exponent' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</a> == <a class="macro" href="../sysdeps/generic/stdint.h.html#318" title="64" data-ref="_M/INTMAX_WIDTH">INTMAX_WIDTH</a> - <var>1</var>)</td></tr>
+<tr><th id="94">94</th><td>	<b>return</b> <a class="local col0 ref" href="#10exponent" title='exponent' data-ref="10exponent" data-ref-filename="10exponent">exponent</a> == <a class="macro" href="../sysdeps/generic/stdint.h.html#318" title="64" data-ref="_M/INTMAX_WIDTH">INTMAX_WIDTH</a> - <var>1</var> &amp;&amp; <a class="local col9 ref" href="#9x" title='x' data-ref="9x" data-ref-filename="9x">x</a> == <var>0</var>;</td></tr>
+<tr><th id="95">95</th><td>      <b>else</b></td></tr>
+<tr><th id="96">96</th><td>	<b>return</b> <a class="local col9 ref" href="#9x" title='x' data-ref="9x" data-ref-filename="9x">x</a> == (<var>1ULL</var> &lt;&lt; (<a class="local col1 ref" href="#11max_exponent" title='max_exponent' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</a> + <var>1</var>));</td></tr>
+<tr><th id="97">97</th><td>    }</td></tr>
+<tr><th id="98">98</th><td>  <b>else</b></td></tr>
+<tr><th id="99">99</th><td>    {</td></tr>
+<tr><th id="100">100</th><td>      <b>if</b> (<a class="local col8 ref" href="#8negative" title='negative' data-ref="8negative" data-ref-filename="8negative">negative</a>)</td></tr>
+<tr><th id="101">101</th><td>	<b>return</b> <a class="local col0 ref" href="#10exponent" title='exponent' data-ref="10exponent" data-ref-filename="10exponent">exponent</a> == <a class="local col1 ref" href="#11max_exponent" title='max_exponent' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</a> &amp;&amp; <a class="local col9 ref" href="#9x" title='x' data-ref="9x" data-ref-filename="9x">x</a> != (<var>1ULL</var> &lt;&lt; <a class="local col1 ref" href="#11max_exponent" title='max_exponent' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</a>);</td></tr>
+<tr><th id="102">102</th><td>      <b>else</b></td></tr>
+<tr><th id="103">103</th><td>	<b>return</b> <a class="local col9 ref" href="#9x" title='x' data-ref="9x" data-ref-filename="9x">x</a> == (<var>1ULL</var> &lt;&lt; (<a class="local col1 ref" href="#11max_exponent" title='max_exponent' data-ref="11max_exponent" data-ref-filename="11max_exponent">max_exponent</a> + <var>1</var>));</td></tr>
+<tr><th id="104">104</th><td>    }</td></tr>
+<tr><th id="105">105</th><td>}</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><i>/* Handle a domain error for a call to a fromfp function with an</i></td></tr>
+<tr><th id="108">108</th><td><i>   argument which is negative if NEGATIVE is set, and specified width</i></td></tr>
+<tr><th id="109">109</th><td><i>   (not exceeding that of intmax_t) WIDTH.  The return value is</i></td></tr>
+<tr><th id="110">110</th><td><i>   unspecified (with it being unclear if the result needs to fit</i></td></tr>
+<tr><th id="111">111</th><td><i>   within WIDTH bits in this case); we choose to saturate to the given</i></td></tr>
+<tr><th id="112">112</th><td><i>   number of bits (treating NaNs like any other value).  */</i></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><em>static</em> <a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp_main.c.html#32" title="intmax_t" data-ref="_M/RET_TYPE">RET_TYPE</a></td></tr>
+<tr><th id="115">115</th><td><dfn class="decl def fn" id="fromfp_domain_error" title='fromfp_domain_error' data-ref="fromfp_domain_error" data-ref-filename="fromfp_domain_error">fromfp_domain_error</dfn> (<span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col2 decl" id="12negative" title='negative' data-type='_Bool' data-ref="12negative" data-ref-filename="12negative">negative</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="13width" title='width' data-type='unsigned int' data-ref="13width" data-ref-filename="13width">width</dfn>)</td></tr>
+<tr><th id="116">116</th><td>{</td></tr>
+<tr><th id="117">117</th><td>  <a class="ref fn" href="../sysdeps/x86/fpu/bits/fenv.h.html#157" title='feraiseexcept' data-ref="feraiseexcept" data-ref-filename="feraiseexcept">feraiseexcept</a> (<a class="macro" href="../sysdeps/x86/fpu/bits/fenv.h.html#27" title="0x01" data-ref="_M/FE_INVALID">FE_INVALID</a>);</td></tr>
+<tr><th id="118">118</th><td>  <a class="macro" href="../include/errno.h.html#37" title="(errno = (33))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#37" title="33" data-ref="_M/EDOM">EDOM</a>);</td></tr>
+<tr><th id="119">119</th><td>  <i>/* The return value is unspecified; we choose to saturate to the</i></td></tr>
+<tr><th id="120">120</th><td><i>     given number of bits (treating NaNs like any other value).  */</i></td></tr>
+<tr><th id="121">121</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp.c.html#1" title="0" data-ref="_M/UNSIGNED">UNSIGNED</a>)</td></tr>
+<tr><th id="122">122</th><td>    {</td></tr>
+<tr><th id="123">123</th><td>      <b>if</b> (<a class="local col2 ref" href="#12negative" title='negative' data-ref="12negative" data-ref-filename="12negative">negative</a>)</td></tr>
+<tr><th id="124">124</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="125">125</th><td>      <b>else</b> <b>if</b> (<a class="local col3 ref" href="#13width" title='width' data-ref="13width" data-ref-filename="13width">width</a> == <a class="macro" href="../sysdeps/generic/stdint.h.html#318" title="64" data-ref="_M/INTMAX_WIDTH">INTMAX_WIDTH</a>)</td></tr>
+<tr><th id="126">126</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="127">127</th><td>      <b>else</b></td></tr>
+<tr><th id="128">128</th><td>	<b>return</b> (<var>1ULL</var> &lt;&lt; <a class="local col3 ref" href="#13width" title='width' data-ref="13width" data-ref-filename="13width">width</a>) - <var>1</var>;</td></tr>
+<tr><th id="129">129</th><td>    }</td></tr>
+<tr><th id="130">130</th><td>  <b>else</b></td></tr>
+<tr><th id="131">131</th><td>    {</td></tr>
+<tr><th id="132">132</th><td>      <b>if</b> (<a class="local col3 ref" href="#13width" title='width' data-ref="13width" data-ref-filename="13width">width</a> == <var>0</var>)</td></tr>
+<tr><th id="133">133</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="134">134</th><td>      <b>else</b> <b>if</b> (<a class="local col2 ref" href="#12negative" title='negative' data-ref="12negative" data-ref-filename="12negative">negative</a>)</td></tr>
+<tr><th id="135">135</th><td>	<b>return</b> -(<var>1ULL</var> &lt;&lt; (<a class="local col3 ref" href="#13width" title='width' data-ref="13width" data-ref-filename="13width">width</a> - <var>1</var>));</td></tr>
+<tr><th id="136">136</th><td>      <b>else</b></td></tr>
+<tr><th id="137">137</th><td>	<b>return</b> (<var>1ULL</var> &lt;&lt; (<a class="local col3 ref" href="#13width" title='width' data-ref="13width" data-ref-filename="13width">width</a> - <var>1</var>)) - <var>1</var>;</td></tr>
+<tr><th id="138">138</th><td>    }</td></tr>
+<tr><th id="139">139</th><td>}</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td><i>/* Given X, the absolute value of a floating-point number (negative if</i></td></tr>
+<tr><th id="142">142</th><td><i>   NEGATIVE is set) truncated towards zero, where HALF_BIT is true if</i></td></tr>
+<tr><th id="143">143</th><td><i>   the bit with value 0.5 is set and MORE_BITS is true if any lower</i></td></tr>
+<tr><th id="144">144</th><td><i>   bits are set, round it in the rounding direction ROUND, handle</i></td></tr>
+<tr><th id="145">145</th><td><i>   errors and exceptions and return the appropriate return value for a</i></td></tr>
+<tr><th id="146">146</th><td><i>   fromfp function.  X originally had floating-point exponent</i></td></tr>
+<tr><th id="147">147</th><td><i>   EXPONENT, which does not exceed MAX_EXPONENT, the return value from</i></td></tr>
+<tr><th id="148">148</th><td><i>   fromfp_max_exponent with width WIDTH.  */</i></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><em>static</em> <a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp_main.c.html#32" title="intmax_t" data-ref="_M/RET_TYPE">RET_TYPE</a></td></tr>
+<tr><th id="151">151</th><td><dfn class="decl def fn" id="fromfp_round_and_return" title='fromfp_round_and_return' data-ref="fromfp_round_and_return" data-ref-filename="fromfp_round_and_return">fromfp_round_and_return</dfn> (<span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col4 decl" id="14negative" title='negative' data-type='_Bool' data-ref="14negative" data-ref-filename="14negative">negative</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a> <dfn class="local col5 decl" id="15x" title='x' data-type='uintmax_t' data-ref="15x" data-ref-filename="15x">x</dfn>, <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col6 decl" id="16half_bit" title='half_bit' data-type='_Bool' data-ref="16half_bit" data-ref-filename="16half_bit">half_bit</dfn>,</td></tr>
+<tr><th id="152">152</th><td>			 <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col7 decl" id="17more_bits" title='more_bits' data-type='_Bool' data-ref="17more_bits" data-ref-filename="17more_bits">more_bits</dfn>, <em>int</em> <dfn class="local col8 decl" id="18round" title='round' data-type='int' data-ref="18round" data-ref-filename="18round">round</dfn>, <em>int</em> <dfn class="local col9 decl" id="19exponent" title='exponent' data-type='int' data-ref="19exponent" data-ref-filename="19exponent">exponent</dfn>,</td></tr>
+<tr><th id="153">153</th><td>			 <em>int</em> <dfn class="local col0 decl" id="20max_exponent" title='max_exponent' data-type='int' data-ref="20max_exponent" data-ref-filename="20max_exponent">max_exponent</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="21width" title='width' data-type='unsigned int' data-ref="21width" data-ref-filename="21width">width</dfn>)</td></tr>
+<tr><th id="154">154</th><td>{</td></tr>
+<tr><th id="155">155</th><td>  <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintmax_t" title='uintmax_t' data-type='__uintmax_t' data-ref="uintmax_t" data-ref-filename="uintmax_t">uintmax_t</a> <dfn class="local col2 decl" id="22uret" title='uret' data-type='uintmax_t' data-ref="22uret" data-ref-filename="22uret">uret</dfn> = <a class="ref fn" href="#fromfp_round" title='fromfp_round' data-ref="fromfp_round" data-ref-filename="fromfp_round">fromfp_round</a> (<a class="local col4 ref" href="#14negative" title='negative' data-ref="14negative" data-ref-filename="14negative">negative</a>, <a class="local col5 ref" href="#15x" title='x' data-ref="15x" data-ref-filename="15x">x</a>, <a class="local col6 ref" href="#16half_bit" title='half_bit' data-ref="16half_bit" data-ref-filename="16half_bit">half_bit</a>, <a class="local col7 ref" href="#17more_bits" title='more_bits' data-ref="17more_bits" data-ref-filename="17more_bits">more_bits</a>, <a class="local col8 ref" href="#18round" title='round' data-ref="18round" data-ref-filename="18round">round</a>);</td></tr>
+<tr><th id="156">156</th><td>  <b>if</b> (<a class="ref fn" href="#fromfp_overflowed" title='fromfp_overflowed' data-ref="fromfp_overflowed" data-ref-filename="fromfp_overflowed">fromfp_overflowed</a> (<a class="local col4 ref" href="#14negative" title='negative' data-ref="14negative" data-ref-filename="14negative">negative</a>, <a class="local col2 ref" href="#22uret" title='uret' data-ref="22uret" data-ref-filename="22uret">uret</a>, <a class="local col9 ref" href="#19exponent" title='exponent' data-ref="19exponent" data-ref-filename="19exponent">exponent</a>, <a class="local col0 ref" href="#20max_exponent" title='max_exponent' data-ref="20max_exponent" data-ref-filename="20max_exponent">max_exponent</a>))</td></tr>
+<tr><th id="157">157</th><td>    <b>return</b> <a class="ref fn" href="#fromfp_domain_error" title='fromfp_domain_error' data-ref="fromfp_domain_error" data-ref-filename="fromfp_domain_error">fromfp_domain_error</a> (<a class="local col4 ref" href="#14negative" title='negative' data-ref="14negative" data-ref-filename="14negative">negative</a>, <a class="local col1 ref" href="#21width" title='width' data-ref="21width" data-ref-filename="21width">width</a>);</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp.c.html#2" title="0" data-ref="_M/INEXACT">INEXACT</a> &amp;&amp; (<a class="local col6 ref" href="#16half_bit" title='half_bit' data-ref="16half_bit" data-ref-filename="16half_bit">half_bit</a> || <a class="local col7 ref" href="#17more_bits" title='more_bits' data-ref="17more_bits" data-ref-filename="17more_bits">more_bits</a>))</td></tr>
+<tr><th id="160">160</th><td>    {</td></tr>
+<tr><th id="161">161</th><td>      <i>/* There is no need for this to use the specific floating-point</i></td></tr>
+<tr><th id="162">162</th><td><i>	 type for which this header is included, and there is no need</i></td></tr>
+<tr><th id="163">163</th><td><i>	 for this header to know that type at all, so just use float</i></td></tr>
+<tr><th id="164">164</th><td><i>	 here.  */</i></td></tr>
+<tr><th id="165">165</th><td>      <em>float</em> <dfn class="local col3 decl" id="23force_inexact" title='force_inexact' data-type='float' data-ref="23force_inexact" data-ref-filename="23force_inexact">force_inexact</dfn> = <var>1.0f</var> + <span class="macro" title="1.17549435e-38F" data-ref="_M/FLT_MIN">FLT_MIN</span>;</td></tr>
+<tr><th id="166">166</th><td>      <a class="macro" href="../sysdeps/i386/fpu/fenv_private.h.html#17" title="do { if (sizeof (force_inexact) &lt;= sizeof (double) || __builtin_types_compatible_p (__typeof (force_inexact), _Float128)) __asm __volatile (&quot;&quot; : : &quot;x&quot; (force_inexact)); else __asm __volatile (&quot;&quot; : : &quot;f&quot; (force_inexact)); } while (0)" data-ref="_M/math_force_eval">math_force_eval</a> (<a class="local col3 ref" href="#23force_inexact" title='force_inexact' data-ref="23force_inexact" data-ref-filename="23force_inexact">force_inexact</a>);</td></tr>
+<tr><th id="167">167</th><td>    }</td></tr>
+<tr><th id="168">168</th><td>  <b>if</b> (<a class="macro" href="../sysdeps/ieee754/dbl-64/s_fromfp.c.html#1" title="0" data-ref="_M/UNSIGNED">UNSIGNED</a>)</td></tr>
+<tr><th id="169">169</th><td>    <i>/* A negative argument not rounding to zero will already have</i></td></tr>
+<tr><th id="170">170</th><td><i>       produced a domain error.  */</i></td></tr>
+<tr><th id="171">171</th><td>    <b>return</b> <a class="local col2 ref" href="#22uret" title='uret' data-ref="22uret" data-ref-filename="22uret">uret</a>;</td></tr>
+<tr><th id="172">172</th><td>  <b>else</b></td></tr>
+<tr><th id="173">173</th><td>    <b>return</b> <a class="local col4 ref" href="#14negative" title='negative' data-ref="14negative" data-ref-filename="14negative">negative</a> ? -<a class="local col2 ref" href="#22uret" title='uret' data-ref="22uret" data-ref-filename="22uret">uret</a> : <a class="local col2 ref" href="#22uret" title='uret' data-ref="22uret" data-ref-filename="22uret">uret</a>;</td></tr>
+<tr><th id="174">174</th><td>}</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../sysdeps/ieee754/dbl-64/s_fromfp.c.html'>glibc_src_2.26/sysdeps/ieee754/dbl-64/s_fromfp.c</a><br/>Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

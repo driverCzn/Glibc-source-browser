@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>efgcvt.c source code [glibc_src_2.26/misc/efgcvt.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/misc/efgcvt.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>misc</a>/<a href='efgcvt.c.html'>efgcvt.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Compatibility functions for floating point formatting.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/math.h.html">&lt;math.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/float.h.html">&lt;float.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/nptl/libc-lock.h.html">&lt;libc-lock.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/generic/math_ldbl_opt.h.html">&lt;math_ldbl_opt.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">ifndef</span> <span class="macro" data-ref="_M/FLOAT_TYPE">FLOAT_TYPE</span></u></td></tr>
+<tr><th id="28">28</th><td><u># define <dfn class="macro" id="_M/FLOAT_TYPE" data-ref="_M/FLOAT_TYPE">FLOAT_TYPE</dfn> double</u></td></tr>
+<tr><th id="29">29</th><td><u># define <dfn class="macro" id="_M/FUNC_PREFIX" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</dfn></u></td></tr>
+<tr><th id="30">30</th><td><u># define <dfn class="macro" id="_M/FLOAT_FMT_FLAG" data-ref="_M/FLOAT_FMT_FLAG">FLOAT_FMT_FLAG</dfn></u></td></tr>
+<tr><th id="31">31</th><td><i>/* Actually we have to write (DBL_DIG + log10 (DBL_MAX_10_EXP)) but we</i></td></tr>
+<tr><th id="32">32</th><td><i>   don't have log10 available in the preprocessor.  */</i></td></tr>
+<tr><th id="33">33</th><td><u># define <dfn class="macro" id="_M/MAXDIG" data-ref="_M/MAXDIG">MAXDIG</dfn> (NDIGIT_MAX + 3)</u></td></tr>
+<tr><th id="34">34</th><td><u># define <dfn class="macro" id="_M/FCVT_MAXDIG" data-ref="_M/FCVT_MAXDIG">FCVT_MAXDIG</dfn> (DBL_MAX_10_EXP + MAXDIG)</u></td></tr>
+<tr><th id="35">35</th><td><u># <span data-ppcond="35">if</span> <span class="macro" title="53" data-ref="_M/DBL_MANT_DIG">DBL_MANT_DIG</span> == 53</u></td></tr>
+<tr><th id="36">36</th><td><u>#  define <dfn class="macro" id="_M/NDIGIT_MAX" data-ref="_M/NDIGIT_MAX">NDIGIT_MAX</dfn> 17</u></td></tr>
+<tr><th id="37">37</th><td><u># <span data-ppcond="35">elif</span> DBL_MANT_DIG == 24</u></td></tr>
+<tr><th id="38">38</th><td><u>#  define NDIGIT_MAX 9</u></td></tr>
+<tr><th id="39">39</th><td><u># elif DBL_MANT_DIG == 56</u></td></tr>
+<tr><th id="40">40</th><td><u>#  define NDIGIT_MAX 18</u></td></tr>
+<tr><th id="41">41</th><td><u># else</u></td></tr>
+<tr><th id="42">42</th><td><i>/* See IEEE 854 5.6, table 2 for this formula.  Unfortunately we need a</i></td></tr>
+<tr><th id="43">43</th><td><i>   compile time constant here, so we cannot use it.  */</i></td></tr>
+<tr><th id="44">44</th><td><u>#  error "NDIGIT_MAX must be precomputed"</u></td></tr>
+<tr><th id="45">45</th><td><u>#  define NDIGIT_MAX (lrint (ceil (M_LN2 / M_LN10 * DBL_MANT_DIG + 1.0)))</u></td></tr>
+<tr><th id="46">46</th><td><u># <span data-ppcond="35">endif</span></u></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="27">else</span></u></td></tr>
+<tr><th id="48">48</th><td><u># define LONG_DOUBLE_CVT</u></td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><u>#define <dfn class="macro" id="_M/APPEND" data-ref="_M/APPEND">APPEND</dfn>(a, b) APPEND2 (a, b)</u></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/APPEND2" data-ref="_M/APPEND2">APPEND2</dfn>(a, b) a##b</u></td></tr>
+<tr><th id="53">53</th><td><u>#define <dfn class="macro" id="_M/__APPEND" data-ref="_M/__APPEND">__APPEND</dfn>(a, b) __APPEND2 (a, b)</u></td></tr>
+<tr><th id="54">54</th><td><u>#define <dfn class="macro" id="_M/__APPEND2" data-ref="_M/__APPEND2">__APPEND2</dfn>(a, b) __##a##b</u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><u>#define <dfn class="macro" id="_M/FCVT_BUFFER" data-ref="_M/FCVT_BUFFER">FCVT_BUFFER</dfn> APPEND (FUNC_PREFIX, <dfn class="tu decl def" id="fcvt_buffer" title='fcvt_buffer' data-type='char [20]' data-ref="fcvt_buffer" data-ref-filename="fcvt_buffer"><a class="tu ref" href="#62" title='fcvt_buffer' data-use='r' data-ref="fcvt_buffer" data-ref-filename="fcvt_buffer"><a class="tu ref" href="#62" title='fcvt_buffer' data-use='r' data-ref="fcvt_buffer" data-ref-filename="fcvt_buffer"><a class="tu ref" href="#62" title='fcvt_buffer' data-use='r' data-ref="fcvt_buffer" data-ref-filename="fcvt_buffer">fcvt_buffer</a></a></a></dfn>)</u></td></tr>
+<tr><th id="58">58</th><td><u>#define <dfn class="macro" id="_M/FCVT_BUFPTR" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</dfn> APPEND (FUNC_PREFIX, <dfn class="tu decl def" id="fcvt_bufptr" title='fcvt_bufptr' data-type='char *' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr"><a class="tu ref" href="#64" title='fcvt_bufptr' data-use='r' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr"><a class="tu ref" href="#64" title='fcvt_bufptr' data-use='w' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr"><a class="tu ref" href="#64" title='fcvt_bufptr' data-use='r' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr"><a class="tu ref" href="#64" title='fcvt_bufptr' data-use='r' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr"><a class="tu ref" href="#64" title='fcvt_bufptr' data-use='r' data-ref="fcvt_bufptr" data-ref-filename="fcvt_bufptr">fcvt_bufptr</a></a></a></a></a></dfn>)</u></td></tr>
+<tr><th id="59">59</th><td><u>#define <dfn class="macro" id="_M/ECVT_BUFFER" data-ref="_M/ECVT_BUFFER">ECVT_BUFFER</dfn> APPEND (FUNC_PREFIX, <dfn class="tu decl def" id="ecvt_buffer" title='ecvt_buffer' data-type='char [20]' data-ref="ecvt_buffer" data-ref-filename="ecvt_buffer"><a class="tu ref" href="#63" title='ecvt_buffer' data-use='r' data-ref="ecvt_buffer" data-ref-filename="ecvt_buffer"><a class="tu ref" href="#63" title='ecvt_buffer' data-use='r' data-ref="ecvt_buffer" data-ref-filename="ecvt_buffer">ecvt_buffer</a></a></dfn>)</u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><em>static</em> <em>char</em> <a class="macro" href="#57" title="fcvt_buffer" data-ref="_M/FCVT_BUFFER">FCVT_BUFFER</a>[<a class="macro" href="#33" title="(17 + 3)" data-ref="_M/MAXDIG">MAXDIG</a>];</td></tr>
+<tr><th id="63">63</th><td><em>static</em> <em>char</em> <a class="macro" href="#59" title="ecvt_buffer" data-ref="_M/ECVT_BUFFER">ECVT_BUFFER</a>[<a class="macro" href="#33" title="(17 + 3)" data-ref="_M/MAXDIG">MAXDIG</a>];</td></tr>
+<tr><th id="64">64</th><td><a class="macro" href="../include/libc-symbols.h.html#219" title="asm (&quot;.section &quot; &quot;__libc_freeres_ptrs, \&quot;aw\&quot;, %nobits&quot; &quot;\n\t.previous&quot;); static char *fcvt_bufptr __attribute__ ((section (&quot;__libc_freeres_ptrs&quot; &quot;\n\t#&quot;)))" data-ref="_M/libc_freeres_ptr">libc_freeres_ptr</a> (<em>static</em> <em>char</em> *<a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a>);</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><em>char</em> *</td></tr>
+<tr><th id="67">67</th><td><a class="macro" href="#53" title="__fcvt" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, fcvt) (<a class="macro" href="#28" title="double" data-ref="_M/FLOAT_TYPE">FLOAT_TYPE</a> <dfn class="local col1 decl" id="1value" title='value' data-type='double' data-ref="1value" data-ref-filename="1value">value</dfn>, <em>int</em> <dfn class="local col2 decl" id="2ndigit" title='ndigit' data-type='int' data-ref="2ndigit" data-ref-filename="2ndigit">ndigit</dfn>, <em>int</em> *<dfn class="local col3 decl" id="3decpt" title='decpt' data-type='int *' data-ref="3decpt" data-ref-filename="3decpt">decpt</dfn>,</td></tr>
+<tr><th id="68">68</th><td>			      <em>int</em> *<dfn class="local col4 decl" id="4sign" title='sign' data-type='int *' data-ref="4sign" data-ref-filename="4sign">sign</dfn>)</td></tr>
+<tr><th id="69">69</th><td>{</td></tr>
+<tr><th id="70">70</th><td>  <b>if</b> (<a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="71">71</th><td>    {</td></tr>
+<tr><th id="72">72</th><td>      <b>if</b> (<a class="macro" href="#53" title="__fcvt_r" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, fcvt_r) (<a class="local col1 ref" href="#1value" title='value' data-ref="1value" data-ref-filename="1value">value</a>, <a class="local col2 ref" href="#2ndigit" title='ndigit' data-ref="2ndigit" data-ref-filename="2ndigit">ndigit</a>, <a class="local col3 ref" href="#3decpt" title='decpt' data-ref="3decpt" data-ref-filename="3decpt">decpt</a>, <a class="local col4 ref" href="#4sign" title='sign' data-ref="4sign" data-ref-filename="4sign">sign</a>,</td></tr>
+<tr><th id="73">73</th><td>					  <a class="macro" href="#57" title="fcvt_buffer" data-ref="_M/FCVT_BUFFER">FCVT_BUFFER</a>, <a class="macro" href="#33" title="(17 + 3)" data-ref="_M/MAXDIG">MAXDIG</a>) != -<var>1</var>)</td></tr>
+<tr><th id="74">74</th><td>	<b>return</b> <a class="macro" href="#57" title="fcvt_buffer" data-ref="_M/FCVT_BUFFER">FCVT_BUFFER</a>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>      <a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a> = (<em>char</em> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="macro" href="#34" title="(308 + (17 + 3))" data-ref="_M/FCVT_MAXDIG">FCVT_MAXDIG</a>);</td></tr>
+<tr><th id="77">77</th><td>      <b>if</b> (<a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="78">78</th><td>	<b>return</b> <a class="macro" href="#57" title="fcvt_buffer" data-ref="_M/FCVT_BUFFER">FCVT_BUFFER</a>;</td></tr>
+<tr><th id="79">79</th><td>    }</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>  (<em>void</em>) <a class="macro" href="#53" title="__fcvt_r" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, fcvt_r) (<a class="local col1 ref" href="#1value" title='value' data-ref="1value" data-ref-filename="1value">value</a>, <a class="local col2 ref" href="#2ndigit" title='ndigit' data-ref="2ndigit" data-ref-filename="2ndigit">ndigit</a>, <a class="local col3 ref" href="#3decpt" title='decpt' data-ref="3decpt" data-ref-filename="3decpt">decpt</a>, <a class="local col4 ref" href="#4sign" title='sign' data-ref="4sign" data-ref-filename="4sign">sign</a>,</td></tr>
+<tr><th id="82">82</th><td>					 <a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a>, <a class="macro" href="#34" title="(308 + (17 + 3))" data-ref="_M/FCVT_MAXDIG">FCVT_MAXDIG</a>);</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>  <b>return</b> <a class="macro" href="#58" title="fcvt_bufptr" data-ref="_M/FCVT_BUFPTR">FCVT_BUFPTR</a>;</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><em>char</em> *</td></tr>
+<tr><th id="89">89</th><td><a class="macro" href="#53" title="__ecvt" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, ecvt) (<a class="macro" href="#28" title="double" data-ref="_M/FLOAT_TYPE">FLOAT_TYPE</a> <dfn class="local col5 decl" id="5value" title='value' data-type='double' data-ref="5value" data-ref-filename="5value">value</dfn>, <em>int</em> <dfn class="local col6 decl" id="6ndigit" title='ndigit' data-type='int' data-ref="6ndigit" data-ref-filename="6ndigit">ndigit</dfn>, <em>int</em> *<dfn class="local col7 decl" id="7decpt" title='decpt' data-type='int *' data-ref="7decpt" data-ref-filename="7decpt">decpt</dfn>,</td></tr>
+<tr><th id="90">90</th><td>			      <em>int</em> *<dfn class="local col8 decl" id="8sign" title='sign' data-type='int *' data-ref="8sign" data-ref-filename="8sign">sign</dfn>)</td></tr>
+<tr><th id="91">91</th><td>{</td></tr>
+<tr><th id="92">92</th><td>  (<em>void</em>) <a class="macro" href="#53" title="__ecvt_r" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, ecvt_r) (<a class="local col5 ref" href="#5value" title='value' data-ref="5value" data-ref-filename="5value">value</a>, <a class="local col6 ref" href="#6ndigit" title='ndigit' data-ref="6ndigit" data-ref-filename="6ndigit">ndigit</a>, <a class="local col7 ref" href="#7decpt" title='decpt' data-ref="7decpt" data-ref-filename="7decpt">decpt</a>, <a class="local col8 ref" href="#8sign" title='sign' data-ref="8sign" data-ref-filename="8sign">sign</a>,</td></tr>
+<tr><th id="93">93</th><td>					 <a class="macro" href="#59" title="ecvt_buffer" data-ref="_M/ECVT_BUFFER">ECVT_BUFFER</a>, <a class="macro" href="#33" title="(17 + 3)" data-ref="_M/MAXDIG">MAXDIG</a>);</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>  <b>return</b> <a class="macro" href="#59" title="ecvt_buffer" data-ref="_M/ECVT_BUFFER">ECVT_BUFFER</a>;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><em>char</em> *</td></tr>
+<tr><th id="99">99</th><td><a class="macro" href="#53" title="__gcvt" data-ref="_M/__APPEND">__APPEND</a> (<a class="macro" href="#29" title="" data-ref="_M/FUNC_PREFIX">FUNC_PREFIX</a>, gcvt) (<a class="macro" href="#28" title="double" data-ref="_M/FLOAT_TYPE">FLOAT_TYPE</a> <dfn class="local col9 decl" id="9value" title='value' data-type='double' data-ref="9value" data-ref-filename="9value">value</dfn>, <em>int</em> <dfn class="local col0 decl" id="10ndigit" title='ndigit' data-type='int' data-ref="10ndigit" data-ref-filename="10ndigit">ndigit</dfn>, <em>char</em> *<dfn class="local col1 decl" id="11buf" title='buf' data-type='char *' data-ref="11buf" data-ref-filename="11buf">buf</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>  <a class="ref fn" href="../libio/stdio.h.html#sprintf" title='sprintf' data-ref="sprintf" data-ref-filename="sprintf">sprintf</a> (<a class="local col1 ref" href="#11buf" title='buf' data-ref="11buf" data-ref-filename="11buf">buf</a>, <q>"%.*"</q> <a class="macro" href="#30" title="" data-ref="_M/FLOAT_FMT_FLAG">FLOAT_FMT_FLAG</a> <q>"g"</q>, <a class="macro" href="sys/param.h.html#102" title="(((ndigit)&lt;(17))?(ndigit):(17))" data-ref="_M/MIN">MIN</a> (<a class="local col0 ref" href="#10ndigit" title='ndigit' data-ref="10ndigit" data-ref-filename="10ndigit">ndigit</a>, <a class="macro" href="#36" title="17" data-ref="_M/NDIGIT_MAX">NDIGIT_MAX</a>), <a class="local col9 ref" href="#9value" title='value' data-ref="9value" data-ref-filename="9value">value</a>);</td></tr>
+<tr><th id="102">102</th><td>  <b>return</b> <a class="local col1 ref" href="#11buf" title='buf' data-ref="11buf" data-ref-filename="11buf">buf</a>;</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><u>#<span data-ppcond="105">if</span> <a class="macro" href="../sysdeps/generic/math_ldbl_opt.h.html#9" title="0" data-ref="_M/LONG_DOUBLE_COMPAT">LONG_DOUBLE_COMPAT</a> (libc, GLIBC_2_0)</u></td></tr>
+<tr><th id="106">106</th><td><u># ifdef LONG_DOUBLE_CVT</u></td></tr>
+<tr><th id="107">107</th><td><u>#  define cvt_symbol(symbol) \</u></td></tr>
+<tr><th id="108">108</th><td><u>  cvt_symbol_1 (libc, __APPEND (FUNC_PREFIX, symbol), \</u></td></tr>
+<tr><th id="109">109</th><td><u>	      APPEND (FUNC_PREFIX, symbol), GLIBC_2_4)</u></td></tr>
+<tr><th id="110">110</th><td><u>#  define cvt_symbol_1(lib, local, symbol, version) \</u></td></tr>
+<tr><th id="111">111</th><td><u>    versioned_symbol (lib, local, symbol, version)</u></td></tr>
+<tr><th id="112">112</th><td><u># else</u></td></tr>
+<tr><th id="113">113</th><td><u>#  define cvt_symbol(symbol) \</u></td></tr>
+<tr><th id="114">114</th><td><u>  cvt_symbol_1 (libc, __APPEND (FUNC_PREFIX, symbol), \</u></td></tr>
+<tr><th id="115">115</th><td><u>	      APPEND (q, symbol), GLIBC_2_0); \</u></td></tr>
+<tr><th id="116">116</th><td><u>  strong_alias (__APPEND (FUNC_PREFIX, symbol), APPEND (FUNC_PREFIX, symbol))</u></td></tr>
+<tr><th id="117">117</th><td><u>#  define cvt_symbol_1(lib, local, symbol, version) \</u></td></tr>
+<tr><th id="118">118</th><td><u>  compat_symbol (lib, local, symbol, version)</u></td></tr>
+<tr><th id="119">119</th><td><u># endif</u></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="105">else</span></u></td></tr>
+<tr><th id="121">121</th><td><u># define <dfn class="macro" id="_M/cvt_symbol" data-ref="_M/cvt_symbol">cvt_symbol</dfn>(symbol) \</u></td></tr>
+<tr><th id="122">122</th><td><u>  strong_alias (__APPEND (FUNC_PREFIX, symbol), APPEND (FUNC_PREFIX, symbol))</u></td></tr>
+<tr><th id="123">123</th><td><u>#<span data-ppcond="105">endif</span></u></td></tr>
+<tr><th id="124">124</th><td><a class="macro" href="#121" title="extern __typeof (__fcvt) fcvt __attribute__ ((alias (&quot;__fcvt&quot;)));" data-ref="_M/cvt_symbol">cvt_symbol</a>(<dfn class="decl def fn" id="fcvt" title='fcvt' data-ref="fcvt" data-ref-filename="fcvt">fcvt</dfn>);</td></tr>
+<tr><th id="125">125</th><td><a class="macro" href="#121" title="extern __typeof (__ecvt) ecvt __attribute__ ((alias (&quot;__ecvt&quot;)));" data-ref="_M/cvt_symbol">cvt_symbol</a>(<dfn class="decl def fn" id="ecvt" title='ecvt' data-ref="ecvt" data-ref-filename="ecvt">ecvt</dfn>);</td></tr>
+<tr><th id="126">126</th><td><a class="macro" href="#121" title="extern __typeof (__gcvt) gcvt __attribute__ ((alias (&quot;__gcvt&quot;)));" data-ref="_M/cvt_symbol">cvt_symbol</a>(<dfn class="decl def fn" id="gcvt" title='gcvt' data-ref="gcvt" data-ref-filename="gcvt">gcvt</dfn>);</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

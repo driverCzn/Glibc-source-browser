@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_cancel.c source code [glibc_src_2.26/nptl/pthread_cancel.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/nptl/pthread_cancel.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.26</a>/<a href='./'>nptl</a>/<a href='pthread_cancel.c.html'>pthread_cancel.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2002-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2002.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/signal.h.html">&lt;signal.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="pthreadP.h.html">"pthreadP.h"</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><em>int</em></td></tr>
+<tr><th id="28">28</th><td><dfn class="decl def fn" id="__pthread_cancel" title='__pthread_cancel' data-ref="__pthread_cancel" data-ref-filename="__pthread_cancel">__pthread_cancel</dfn> (<a class="typedef" href="../sysdeps/nptl/bits/pthreadtypes.h.html#pthread_t" title='pthread_t' data-type='unsigned long' data-ref="pthread_t" data-ref-filename="pthread_t">pthread_t</a> <dfn class="local col1 decl" id="1th" title='th' data-type='pthread_t' data-ref="1th" data-ref-filename="1th">th</dfn>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>  <em>volatile</em> <b>struct</b> <a class="type" href="descr.h.html#pthread" title='pthread' data-ref="pthread" data-ref-filename="pthread">pthread</a> *<dfn class="local col2 decl" id="2pd" title='pd' data-type='volatile struct pthread *' data-ref="2pd" data-ref-filename="2pd">pd</dfn> = (<em>volatile</em> <b>struct</b> <a class="type" href="descr.h.html#pthread" title='pthread' data-ref="pthread" data-ref-filename="pthread">pthread</a> *) <a class="local col1 ref" href="#1th" title='th' data-ref="1th" data-ref-filename="1th">th</a>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>  <i>/* Make sure the descriptor is valid.  */</i></td></tr>
+<tr><th id="33">33</th><td>  <b>if</b> (<a class="macro" href="pthreadP.h.html#242" title="__builtin_expect ((pd)-&gt;tid &lt;= 0, 0)" data-ref="_M/INVALID_TD_P">INVALID_TD_P</a> (<a class="local col2 ref" href="#2pd" title='pd' data-ref="2pd" data-ref-filename="2pd">pd</a>))</td></tr>
+<tr><th id="34">34</th><td>    <i>/* Not a valid thread handle.  */</i></td></tr>
+<tr><th id="35">35</th><td>    <b>return</b> <a class="macro" href="../../include/asm-generic/errno-base.h.html#7" title="3" data-ref="_M/ESRCH">ESRCH</a>;</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#<span data-ppcond="37">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="38">38</th><td>  <a class="ref fn" href="pthreadP.h.html#pthread_cancel_init" title='pthread_cancel_init' data-ref="pthread_cancel_init" data-ref-filename="pthread_cancel_init">pthread_cancel_init</a> ();</td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="37">endif</span></u></td></tr>
+<tr><th id="40">40</th><td>  <em>int</em> <dfn class="local col3 decl" id="3result" title='result' data-type='int' data-ref="3result" data-ref-filename="3result">result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="41">41</th><td>  <em>int</em> <dfn class="local col4 decl" id="4oldval" title='oldval' data-type='int' data-ref="4oldval" data-ref-filename="4oldval">oldval</dfn>;</td></tr>
+<tr><th id="42">42</th><td>  <em>int</em> <dfn class="local col5 decl" id="5newval" title='newval' data-type='int' data-ref="5newval" data-ref-filename="5newval">newval</dfn>;</td></tr>
+<tr><th id="43">43</th><td>  <b>do</b></td></tr>
+<tr><th id="44">44</th><td>    {</td></tr>
+<tr><th id="45">45</th><td>    <dfn class="lbl" id="6again" data-ref="6again" data-ref-filename="6again">again</dfn>:</td></tr>
+<tr><th id="46">46</th><td>      <a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a> = <a class="local col2 ref" href="#2pd" title='pd' data-ref="2pd" data-ref-filename="2pd">pd</a>-&gt;<a class="ref field" href="descr.h.html#pthread::cancelhandling" title='pthread::cancelhandling' data-ref="pthread::cancelhandling" data-ref-filename="pthread..cancelhandling">cancelhandling</a>;</td></tr>
+<tr><th id="47">47</th><td>      <a class="local col5 ref" href="#5newval" title='newval' data-ref="5newval" data-ref-filename="5newval">newval</a> = <a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a> | <a class="macro" href="descr.h.html#283" title="(0x01 &lt;&lt; 2)" data-ref="_M/CANCELING_BITMASK">CANCELING_BITMASK</a> | <a class="macro" href="descr.h.html#286" title="(0x01 &lt;&lt; 3)" data-ref="_M/CANCELED_BITMASK">CANCELED_BITMASK</a>;</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>      <i>/* Avoid doing unnecessary work.  The atomic operation can</i></td></tr>
+<tr><th id="50">50</th><td><i>	 potentially be expensive if the bug has to be locked and</i></td></tr>
+<tr><th id="51">51</th><td><i>	 remote cache lines have to be invalidated.  */</i></td></tr>
+<tr><th id="52">52</th><td>      <b>if</b> (<a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a> == <a class="local col5 ref" href="#5newval" title='newval' data-ref="5newval" data-ref-filename="5newval">newval</a>)</td></tr>
+<tr><th id="53">53</th><td>	<b>break</b>;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>      <i>/* If the cancellation is handled asynchronously just send a</i></td></tr>
+<tr><th id="56">56</th><td><i>	 signal.  We avoid this if possible since it's more</i></td></tr>
+<tr><th id="57">57</th><td><i>	 expensive.  */</i></td></tr>
+<tr><th id="58">58</th><td>      <b>if</b> (<a class="macro" href="descr.h.html#302" title="(((newval) &amp; ((0x01 &lt;&lt; 0) | (0x01 &lt;&lt; 1) | (0x01 &lt;&lt; 3) | (0x01 &lt;&lt; 4) | 0xffffff80 | (0x01 &lt;&lt; 5))) == ((0x01 &lt;&lt; 1) | (0x01 &lt;&lt; 3)))" data-ref="_M/CANCEL_ENABLED_AND_CANCELED_AND_ASYNCHRONOUS">CANCEL_ENABLED_AND_CANCELED_AND_ASYNCHRONOUS</a> (<a class="local col5 ref" href="#5newval" title='newval' data-ref="5newval" data-ref-filename="5newval">newval</a>))</td></tr>
+<tr><th id="59">59</th><td>	{</td></tr>
+<tr><th id="60">60</th><td>	  <i>/* Mark the cancellation as "in progress".  */</i></td></tr>
+<tr><th id="61">61</th><td>	  <b>if</b> (<a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#66" title="(! __sync_bool_compare_and_swap (&amp;pd-&gt;cancelhandling, oldval, oldval | (0x01 &lt;&lt; 2)))" data-ref="_M/atomic_compare_and_exchange_bool_acq">atomic_compare_and_exchange_bool_acq</a> (&amp;<a class="local col2 ref" href="#2pd" title='pd' data-ref="2pd" data-ref-filename="2pd">pd</a>-&gt;<a class="ref field" href="descr.h.html#pthread::cancelhandling" title='pthread::cancelhandling' data-ref="pthread::cancelhandling" data-ref-filename="pthread..cancelhandling">cancelhandling</a>,</td></tr>
+<tr><th id="62">62</th><td>						    <a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a> | <a class="macro" href="descr.h.html#283" title="(0x01 &lt;&lt; 2)" data-ref="_M/CANCELING_BITMASK">CANCELING_BITMASK</a>,</td></tr>
+<tr><th id="63">63</th><td>						    <a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a>))</td></tr>
+<tr><th id="64">64</th><td>	    <b>goto</b> <a class="lbl" href="#6again" data-ref="6again" data-ref-filename="6again">again</a>;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="66">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/nptl-signals.h.html#23" data-ref="_M/SIGCANCEL">SIGCANCEL</a></u></td></tr>
+<tr><th id="67">67</th><td>	  <i>/* The cancellation handler will take care of marking the</i></td></tr>
+<tr><th id="68">68</th><td><i>	     thread as canceled.  */</i></td></tr>
+<tr><th id="69">69</th><td>	  <a class="typedef" href="../posix/sys/types.h.html#pid_t" title='pid_t' data-type='__pid_t' data-ref="pid_t" data-ref-filename="pid_t">pid_t</a> <dfn class="local col7 decl" id="7pid" title='pid' data-type='pid_t' data-ref="7pid" data-ref-filename="7pid">pid</dfn> = <a class="ref fn" href="../include/unistd.h.html#__getpid" title='__getpid' data-ref="__getpid" data-ref-filename="__getpid">__getpid</a> ();</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	  <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html#219" title="do { } while (0)" data-ref="_M/INTERNAL_SYSCALL_DECL">INTERNAL_SYSCALL_DECL</a> (err);</td></tr>
+<tr><th id="72">72</th><td>	  <em>int</em> <dfn class="local col8 decl" id="8val" title='val' data-type='int' data-ref="8val" data-ref-filename="8val">val</dfn> = <a class="macro" href="../sysdeps/unix/sysdep.h.html#57" title="({ unsigned long int resultvar; long int __arg3 = (long int) (32); long int __arg2 = (long int) (pd-&gt;tid); long int __arg1 = (long int) (pid); register long int _a3 asm (&quot;rdx&quot;) = __arg3; register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (234) , &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; })" data-ref="_M/INTERNAL_SYSCALL_CALL">INTERNAL_SYSCALL_CALL</a> (tgkill, err, <a class="local col7 ref" href="#7pid" title='pid' data-ref="7pid" data-ref-filename="7pid">pid</a>, <a class="local col2 ref" href="#2pd" title='pd' data-ref="2pd" data-ref-filename="2pd">pd</a>-&gt;<a class="ref field" href="descr.h.html#pthread::tid" title='pthread::tid' data-ref="pthread::tid" data-ref-filename="pthread..tid">tid</a>,</td></tr>
+<tr><th id="73">73</th><td>					   <a class="macro" href="../sysdeps/unix/sysv/linux/nptl-signals.h.html#23" title="32" data-ref="_M/SIGCANCEL">SIGCANCEL</a>);</td></tr>
+<tr><th id="74">74</th><td>	  <b>if</b> (<a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html#253" title="((unsigned long int) (long int) (val) &gt;= -4095L)" data-ref="_M/INTERNAL_SYSCALL_ERROR_P">INTERNAL_SYSCALL_ERROR_P</a> (<a class="local col8 ref" href="#8val" title='val' data-ref="8val" data-ref-filename="8val">val</a>, err))</td></tr>
+<tr><th id="75">75</th><td>	    <a class="local col3 ref" href="#3result" title='result' data-ref="3result" data-ref-filename="3result">result</a> = <a class="macro" href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html#257" title="(-(val))" data-ref="_M/INTERNAL_SYSCALL_ERRNO">INTERNAL_SYSCALL_ERRNO</a> (<a class="local col8 ref" href="#8val" title='val' data-ref="8val" data-ref-filename="8val">val</a>, err);</td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="66">else</span></u></td></tr>
+<tr><th id="77">77</th><td>          <i>/* It should be impossible to get here at all, since</i></td></tr>
+<tr><th id="78">78</th><td><i>             pthread_setcanceltype should never have allowed</i></td></tr>
+<tr><th id="79">79</th><td><i>             PTHREAD_CANCEL_ASYNCHRONOUS to be set.  */</i></td></tr>
+<tr><th id="80">80</th><td>          abort ();</td></tr>
+<tr><th id="81">81</th><td><u>#<span data-ppcond="66">endif</span></u></td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="84">84</th><td>	}</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<i>/* A single-threaded process should be able to kill itself, since</i></td></tr>
+<tr><th id="87">87</th><td><i>	   there is nothing in the POSIX specification that says that it</i></td></tr>
+<tr><th id="88">88</th><td><i>	   cannot.  So we set multiple_threads to true so that cancellation</i></td></tr>
+<tr><th id="89">89</th><td><i>	   points get executed.  */</i></td></tr>
+<tr><th id="90">90</th><td>	<a class="macro" href="../sysdeps/x86_64/nptl/tls.h.html#244" title="({ if (sizeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) == 1) asm volatile (&quot;movb %b0,%%fs:%P1&quot; : : &quot;iq&quot; (1), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else if (sizeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) == 4) asm volatile (&quot;movl %0,%%fs:%P1&quot; : : &quot;nr&quot; (1), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); else { if (sizeof (({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})-&gt;header.multiple_threads) != 8) abort (); asm volatile (&quot;movq %q0,%%fs:%P1&quot; : : &quot;nr&quot; ((uint64_t) ((__typeof__ (*(0 ? (__typeof__ (0 ? (__typeof__ ((__typeof__ (1)) 0) *) 0 : (void *) ((__builtin_classify_type ((__typeof__ (1)) 0) == 5)))) 0 : (__typeof__ (0 ? (intptr_t *) 0 : (void *) (!((__builtin_classify_type ((__typeof__ (1)) 0) == 5))))) 0))) (1))), &quot;i&quot; (__builtin_offsetof(struct pthread, header.multiple_threads))); }})" data-ref="_M/THREAD_SETMEM">THREAD_SETMEM</a> (<a class="macro" href="../sysdeps/x86_64/nptl/tls.h.html#172" title="({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;})" data-ref="_M/THREAD_SELF">THREAD_SELF</a>, <a class="ref field" href="descr.h.html#pthread::(anonymous)::header" title='pthread::(anonymous union)::header' data-ref="pthread::(anonymous)::header" data-ref-filename="pthread..(anonymous)..header">header</a>.<a class="ref field" href="../sysdeps/x86_64/nptl/tls.h.html#(anonymous)::multiple_threads" title='(anonymous struct)::multiple_threads' data-ref="(anonymous)::multiple_threads" data-ref-filename="(anonymous)..multiple_threads">multiple_threads</a>, <var>1</var>);</td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="91">ifndef</span> <span class="macro" data-ref="_M/TLS_MULTIPLE_THREADS_IN_TCB">TLS_MULTIPLE_THREADS_IN_TCB</span></u></td></tr>
+<tr><th id="92">92</th><td>	<a class="ref" href="pthreadP.h.html#__pthread_multiple_threads" title='__pthread_multiple_threads' data-ref="__pthread_multiple_threads" data-ref-filename="__pthread_multiple_threads">__pthread_multiple_threads</a> = *<a class="ref" href="pthreadP.h.html#__libc_multiple_threads_ptr" title='__libc_multiple_threads_ptr' data-ref="__libc_multiple_threads_ptr" data-ref-filename="__libc_multiple_threads_ptr">__libc_multiple_threads_ptr</a> = <var>1</var>;</td></tr>
+<tr><th id="93">93</th><td><u>#<span data-ppcond="91">endif</span></u></td></tr>
+<tr><th id="94">94</th><td>    }</td></tr>
+<tr><th id="95">95</th><td>  <i>/* Mark the thread as canceled.  This has to be done</i></td></tr>
+<tr><th id="96">96</th><td><i>     atomically since other bits could be modified as well.  */</i></td></tr>
+<tr><th id="97">97</th><td>  <b>while</b> (<a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#66" title="(! __sync_bool_compare_and_swap (&amp;pd-&gt;cancelhandling, oldval, newval))" data-ref="_M/atomic_compare_and_exchange_bool_acq">atomic_compare_and_exchange_bool_acq</a> (&amp;<a class="local col2 ref" href="#2pd" title='pd' data-ref="2pd" data-ref-filename="2pd">pd</a>-&gt;<a class="ref field" href="descr.h.html#pthread::cancelhandling" title='pthread::cancelhandling' data-ref="pthread::cancelhandling" data-ref-filename="pthread..cancelhandling">cancelhandling</a>, <a class="local col5 ref" href="#5newval" title='newval' data-ref="5newval" data-ref-filename="5newval">newval</a>,</td></tr>
+<tr><th id="98">98</th><td>					       <a class="local col4 ref" href="#4oldval" title='oldval' data-ref="4oldval" data-ref-filename="4oldval">oldval</a>));</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <b>return</b> <a class="local col3 ref" href="#3result" title='result' data-ref="3result" data-ref-filename="3result">result</a>;</td></tr>
+<tr><th id="101">101</th><td>}</td></tr>
+<tr><th id="102">102</th><td><a class="macro" href="../include/libc-symbols.h.html#136" title="extern __typeof (__pthread_cancel) pthread_cancel __attribute__ ((weak, alias (&quot;__pthread_cancel&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__pthread_cancel" title='__pthread_cancel' data-ref="__pthread_cancel" data-ref-filename="__pthread_cancel">__pthread_cancel</a>, <dfn class="decl def fn" id="pthread_cancel" title='pthread_cancel' data-ref="pthread_cancel" data-ref-filename="pthread_cancel">pthread_cancel</dfn>)</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><a class="macro" href="pthreadP.h.html#610" title="" data-ref="_M/PTHREAD_STATIC_FN_REQUIRE">PTHREAD_STATIC_FN_REQUIRE</a> (__pthread_create)</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

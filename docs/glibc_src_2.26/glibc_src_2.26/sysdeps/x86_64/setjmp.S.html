@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>setjmp.S source code [glibc_src_2.26/sysdeps/x86_64/setjmp.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.26/sysdeps/x86_64/setjmp.S'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.26</a>/<a href='..'>sysdeps</a>/<a href='./'>x86_64</a>/<a href='setjmp.S.html'>setjmp.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* setjmp for x86-64.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2001-2017 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="jmpbuf-offsets.h.html">&lt;jmpbuf-offsets.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../generic/asm-syntax.h.html">&lt;asm-syntax.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/stap-probe.h.html">&lt;stap-probe.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><a class="macro" href="sysdep.h.html#41" title=".globl __sigsetjmp; .type __sigsetjmp,@function; .align 1&lt;&lt;4; __sigsetjmp: .cfi_startproc;" data-ref="_M/ENTRY">ENTRY</a> (<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><span class='warning' title="declaration of built-in function &apos;__sigsetjmp&apos; requires inclusion of the header &lt;setjmp.h&gt;"><dfn class="decl def" id="__sigsetjmp" title='__sigsetjmp' data-ref="__sigsetjmp" data-ref-filename="__sigsetjmp">__sigsetjmp</dfn></span></span>)</td></tr>
+<tr><th id="25">25</th><td>	<i>/* Save registers.  */</i></td></tr>
+<tr><th id="26">26</th><td>	<span class='error' title="unknown type name &apos;movq&apos;">movq</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>rbx, (<a class="macro" href="jmpbuf-offsets.h.html#21" title="0" data-ref="_M/JB_RBX">JB_RBX</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">ifdef</span> <a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a></u></td></tr>
+<tr><th id="28">28</th><td><u># <span data-ppcond="28">ifdef</span> <span class="macro" data-ref="_M/__ILP32__">__ILP32__</span></u></td></tr>
+<tr><th id="29">29</th><td>	<i>/* Save the high bits of %rbp first, since PTR_MANGLE will</i></td></tr>
+<tr><th id="30">30</th><td><i>	   only handle the low bits but we cannot presume %rbp is</i></td></tr>
+<tr><th id="31">31</th><td><i>	   being used as a pointer and truncate it.  Here we write all</i></td></tr>
+<tr><th id="32">32</th><td><i>	   of %rbp, but the low bits will be overwritten below.  */</i></td></tr>
+<tr><th id="33">33</th><td>	movq %rbp, (JB_RBP*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="34">34</th><td><u># <span data-ppcond="28">endif</span></u></td></tr>
+<tr><th id="35">35</th><td>	mov %<a class="macro" href="sysdep.h.html#122" title="rbp" data-ref="_M/RBP_LP">RBP_LP</a>, %<a class="macro" href="sysdep.h.html#121" title="rax" data-ref="_M/RAX_LP">RAX_LP</a></td></tr>
+<tr><th id="36">36</th><td>	<a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" title="xor __pointer_chk_guard_local(%rip), %rax; rol $2*8+1, %rax" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a> (%<a class="macro" href="sysdep.h.html#121" title="rax" data-ref="_M/RAX_LP">RAX_LP</a>)</td></tr>
+<tr><th id="37">37</th><td>	mov %<a class="macro" href="sysdep.h.html#121" title="rax" data-ref="_M/RAX_LP">RAX_LP</a>, (<a class="macro" href="jmpbuf-offsets.h.html#22" title="1" data-ref="_M/JB_RBP">JB_RBP</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="27">else</span></u></td></tr>
+<tr><th id="39">39</th><td>	movq %rbp, (JB_RBP*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="41">41</th><td>	movq %r12, (<a class="macro" href="jmpbuf-offsets.h.html#23" title="2" data-ref="_M/JB_R12">JB_R12</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="42">42</th><td>	movq %r13, (<a class="macro" href="jmpbuf-offsets.h.html#24" title="3" data-ref="_M/JB_R13">JB_R13</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="43">43</th><td>	movq %r14, (<a class="macro" href="jmpbuf-offsets.h.html#25" title="4" data-ref="_M/JB_R14">JB_R14</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="44">44</th><td>	movq %r15, (<a class="macro" href="jmpbuf-offsets.h.html#26" title="5" data-ref="_M/JB_R15">JB_R15</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="45">45</th><td>	lea <var>8</var>(%rsp), %<a class="macro" href="sysdep.h.html#126" title="rdx" data-ref="_M/RDX_LP">RDX_LP</a>	<i>/* Save SP as it will be after we return.  */</i></td></tr>
+<tr><th id="46">46</th><td><u>#<span data-ppcond="46">ifdef</span> <a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a></u></td></tr>
+<tr><th id="47">47</th><td>	<a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" title="xor __pointer_chk_guard_local(%rip), %rdx; rol $2*8+1, %rdx" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a> (%<a class="macro" href="sysdep.h.html#126" title="rdx" data-ref="_M/RDX_LP">RDX_LP</a>)</td></tr>
+<tr><th id="48">48</th><td><u>#<span data-ppcond="46">endif</span></u></td></tr>
+<tr><th id="49">49</th><td>	movq %rdx, (<a class="macro" href="jmpbuf-offsets.h.html#27" title="6" data-ref="_M/JB_RSP">JB_RSP</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="50">50</th><td>	mov (%rsp), %<a class="macro" href="sysdep.h.html#121" title="rax" data-ref="_M/RAX_LP">RAX_LP</a>	<i>/* Save PC we are returning to now.  */</i></td></tr>
+<tr><th id="51">51</th><td>	<a class="macro" href="../../include/stap-probe.h.html#69" title="" data-ref="_M/LIBC_PROBE">LIBC_PROBE</a> (setjmp, <var>3</var>, LP_SIZE@%RDI_LP, -<var>4</var>@%esi, LP_SIZE@%RAX_LP)</td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="52">ifdef</span> <a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a></u></td></tr>
+<tr><th id="53">53</th><td>	<a class="macro" href="../unix/sysv/linux/x86_64/sysdep.h.html#354" title="xor __pointer_chk_guard_local(%rip), %rax; rol $2*8+1, %rax" data-ref="_M/PTR_MANGLE">PTR_MANGLE</a> (%<a class="macro" href="sysdep.h.html#121" title="rax" data-ref="_M/RAX_LP">RAX_LP</a>)</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="52">endif</span></u></td></tr>
+<tr><th id="55">55</th><td>	movq %rax, (<a class="macro" href="jmpbuf-offsets.h.html#28" title="7" data-ref="_M/JB_PC">JB_PC</a>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="57">if</span> <a class="macro" href="../../include/libc-symbols.h.html#35" title="(18 == 18)" data-ref="_M/IS_IN">IS_IN</a> (rtld)</u></td></tr>
+<tr><th id="58">58</th><td>	<i>/* In ld.so we never save the signal mask.  */</i></td></tr>
+<tr><th id="59">59</th><td>	xorl %eax, %eax</td></tr>
+<tr><th id="60">60</th><td>	retq</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="57">else</span></u></td></tr>
+<tr><th id="62">62</th><td>	<i>/* Make a tail call to __sigjmp_save; it takes the same args.  */</i></td></tr>
+<tr><th id="63">63</th><td>	jmp __sigjmp_save</td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="57">endif</span></u></td></tr>
+<tr><th id="65">65</th><td><a class="macro" href="sysdep.h.html#50" title=".cfi_endproc; .size __sigsetjmp,.-__sigsetjmp;" data-ref="_M/END">END</a> (__sigsetjmp)</td></tr>
+<tr><th id="66">66</th><td><a class="macro" href="../../include/libc-symbols.h.html#497" title=".globl __GI___sigsetjmp ; .set __GI___sigsetjmp,__sigsetjmp" data-ref="_M/hidden_def">hidden_def</a> (__sigsetjmp)</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-25</em> from project glibc_src_2.26 revision <em>2.26</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
