@@ -1,0 +1,1344 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>gconv_simple.c source code [glibc_src_2.23/iconv/gconv_simple.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/iconv/gconv_simple.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>iconv</a>/<a href='gconv_simple.c.html'>gconv_simple.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Simple transformations functions.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1997-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1997.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/byteswap.h.html">&lt;byteswap.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/dlfcn.h.html">&lt;dlfcn.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/endian.h.html">&lt;endian.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/gconv.h.html">&lt;gconv.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="gconv_int.h.html">&lt;gconv_int.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/BUILTIN_ALIAS" data-ref="_M/BUILTIN_ALIAS">BUILTIN_ALIAS</dfn>(s1, s2) /* nothing */</u></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/BUILTIN_TRANSFORMATION" data-ref="_M/BUILTIN_TRANSFORMATION">BUILTIN_TRANSFORMATION</dfn>(From, To, Cost, Name, Fct, BtowcFct, \</u></td></tr>
+<tr><th id="34">34</th><td><u>			       MinF, MaxF, MinT, MaxT) \</u></td></tr>
+<tr><th id="35">35</th><td><u>  extern int Fct (struct __gconv_step *, struct __gconv_step_data *,	      \</u></td></tr>
+<tr><th id="36">36</th><td><u>		  const unsigned char **, const unsigned char *,	      \</u></td></tr>
+<tr><th id="37">37</th><td><u>		  unsigned char **, size_t *, int, int);</u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="gconv_builtin.h.html">"gconv_builtin.h"</a></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="41">ifndef</span> <a class="macro" href="../../include/asm-generic/errno.h.html#66" data-ref="_M/EILSEQ">EILSEQ</a></u></td></tr>
+<tr><th id="42">42</th><td><u># define EILSEQ EINVAL</u></td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="41">endif</span></u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i>/* Specialized conversion function for a single byte to INTERNAL, recognizing</i></td></tr>
+<tr><th id="47">47</th><td><i>   only ASCII characters.  */</i></td></tr>
+<tr><th id="48">48</th><td><span class='typedef' title='wint_t' data-type='unsigned int' data-ref="wint_t" data-ref-filename="wint_t">wint_t</span></td></tr>
+<tr><th id="49">49</th><td><dfn class="decl def fn" id="__gconv_btwoc_ascii" title='__gconv_btwoc_ascii' data-ref="__gconv_btwoc_ascii" data-ref-filename="__gconv_btwoc_ascii">__gconv_btwoc_ascii</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col1 decl" id="1step" title='step' data-type='struct __gconv_step *' data-ref="1step" data-ref-filename="1step">step</dfn>, <em>unsigned</em> <em>char</em> <dfn class="local col2 decl" id="2c" title='c' data-type='unsigned char' data-ref="2c" data-ref-filename="2c">c</dfn>)</td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td>  <b>if</b> (<a class="local col2 ref" href="#2c" title='c' data-ref="2c" data-ref-filename="2c">c</a> &lt; <var>0x80</var>)</td></tr>
+<tr><th id="52">52</th><td>    <b>return</b> <a class="local col2 ref" href="#2c" title='c' data-ref="2c" data-ref-filename="2c">c</a>;</td></tr>
+<tr><th id="53">53</th><td>  <b>else</b></td></tr>
+<tr><th id="54">54</th><td>    <b>return</b> <a class="macro" href="../wcsmbs/wchar.h.html#122" title="(0xffffffffu)" data-ref="_M/WEOF">WEOF</a>;</td></tr>
+<tr><th id="55">55</th><td>}</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* Transform from the internal, UCS4-like format, to UCS4.  The</i></td></tr>
+<tr><th id="59">59</th><td><i>   difference between the internal ucs4 format and the real UCS4</i></td></tr>
+<tr><th id="60">60</th><td><i>   format is, if any, the endianess.  The Unicode/ISO 10646 says that</i></td></tr>
+<tr><th id="61">61</th><td><i>   unless some higher protocol specifies it differently, the byte</i></td></tr>
+<tr><th id="62">62</th><td><i>   order is big endian.*/</i></td></tr>
+<tr><th id="63">63</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="64">64</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="65">65</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="66">66</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="67">67</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="68">68</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_ucs4_loop</u></td></tr>
+<tr><th id="69">69</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_ucs4_loop /* This is not used.  */</u></td></tr>
+<tr><th id="70">70</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_ucs4</u></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="75">75</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="76">76</th><td><dfn class="tu decl def fn" id="internal_ucs4_loop" title='internal_ucs4_loop' data-type='int internal_ucs4_loop(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="internal_ucs4_loop" data-ref-filename="internal_ucs4_loop">internal_ucs4_loop</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col3 decl" id="3step" title='step' data-type='struct __gconv_step *' data-ref="3step" data-ref-filename="3step">step</dfn>,</td></tr>
+<tr><th id="77">77</th><td>		    <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col4 decl" id="4step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="4step_data" data-ref-filename="4step_data">step_data</dfn>,</td></tr>
+<tr><th id="78">78</th><td>		    <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col5 decl" id="5inptrp" title='inptrp' data-type='const unsigned char **' data-ref="5inptrp" data-ref-filename="5inptrp">inptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col6 decl" id="6inend" title='inend' data-type='const unsigned char *' data-ref="6inend" data-ref-filename="6inend">inend</dfn>,</td></tr>
+<tr><th id="79">79</th><td>		    <em>unsigned</em> <em>char</em> **<dfn class="local col7 decl" id="7outptrp" title='outptrp' data-type='unsigned char **' data-ref="7outptrp" data-ref-filename="7outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col8 decl" id="8outend" title='outend' data-type='unsigned char *' data-ref="8outend" data-ref-filename="8outend">outend</dfn>,</td></tr>
+<tr><th id="80">80</th><td>		    <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col9 decl" id="9irreversible" title='irreversible' data-type='size_t *' data-ref="9irreversible" data-ref-filename="9irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="81">81</th><td>{</td></tr>
+<tr><th id="82">82</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col0 decl" id="10inptr" title='inptr' data-type='const unsigned char *' data-ref="10inptr" data-ref-filename="10inptr">inptr</dfn> = *<a class="local col5 ref" href="#5inptrp" title='inptrp' data-ref="5inptrp" data-ref-filename="5inptrp">inptrp</a>;</td></tr>
+<tr><th id="83">83</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="local col1 decl" id="11outptr" title='outptr' data-type='unsigned char *' data-ref="11outptr" data-ref-filename="11outptr">outptr</dfn> = *<a class="local col7 ref" href="#7outptrp" title='outptrp' data-ref="7outptrp" data-ref-filename="7outptrp">outptrp</a>;</td></tr>
+<tr><th id="84">84</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col2 decl" id="12n_convert" title='n_convert' data-type='size_t' data-ref="12n_convert" data-ref-filename="12n_convert">n_convert</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((inend - inptr)&lt;(outend - outptr))?(inend - inptr):(outend - outptr))" data-ref="_M/MIN">MIN</a> (<a class="local col6 ref" href="#6inend" title='inend' data-ref="6inend" data-ref-filename="6inend">inend</a> - <a class="local col0 ref" href="#10inptr" title='inptr' data-ref="10inptr" data-ref-filename="10inptr">inptr</a>, <a class="local col8 ref" href="#8outend" title='outend' data-ref="8outend" data-ref-filename="8outend">outend</a> - <a class="local col1 ref" href="#11outptr" title='outptr' data-ref="11outptr" data-ref-filename="11outptr">outptr</a>) / <var>4</var>;</td></tr>
+<tr><th id="85">85</th><td>  <em>int</em> <dfn class="local col3 decl" id="13result" title='result' data-type='int' data-ref="13result" data-ref-filename="13result">result</dfn>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="87">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="88">88</th><td>  <i>/* Sigh, we have to do some real work.  */</i></td></tr>
+<tr><th id="89">89</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14cnt" title='cnt' data-type='size_t' data-ref="14cnt" data-ref-filename="14cnt">cnt</dfn>;</td></tr>
+<tr><th id="90">90</th><td>  <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *<dfn class="local col5 decl" id="15outptr32" title='outptr32' data-type='uint32_t *' data-ref="15outptr32" data-ref-filename="15outptr32">outptr32</dfn> = (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col1 ref" href="#11outptr" title='outptr' data-ref="11outptr" data-ref-filename="11outptr">outptr</a>;</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>  <b>for</b> (<a class="local col4 ref" href="#14cnt" title='cnt' data-ref="14cnt" data-ref-filename="14cnt">cnt</a> = <var>0</var>; <a class="local col4 ref" href="#14cnt" title='cnt' data-ref="14cnt" data-ref-filename="14cnt">cnt</a> &lt; <a class="local col2 ref" href="#12n_convert" title='n_convert' data-ref="12n_convert" data-ref-filename="12n_convert">n_convert</a>; ++<a class="local col4 ref" href="#14cnt" title='cnt' data-ref="14cnt" data-ref-filename="14cnt">cnt</a>, <a class="local col0 ref" href="#10inptr" title='inptr' data-ref="10inptr" data-ref-filename="10inptr">inptr</a> += <var>4</var>)</td></tr>
+<tr><th id="93">93</th><td>    *<a class="local col5 ref" href="#15outptr32" title='outptr32' data-ref="15outptr32" data-ref-filename="15outptr32">outptr32</a>++ = <a class="macro" href="../string/byteswap.h.html#34" title="(__extension__ ({ unsigned int __v, __x = (*(const uint32_t *) inptr); if (__builtin_constant_p (__x)) __v = ((((__x) &amp; 0xff000000) &gt;&gt; 24) | (((__x) &amp; 0x00ff0000) &gt;&gt; 8) | (((__x) &amp; 0x0000ff00) &lt;&lt; 8) | (((__x) &amp; 0x000000ff) &lt;&lt; 24)); else __asm__ (&quot;bswap %0&quot; : &quot;=r&quot; (__v) : &quot;0&quot; (__x)); __v; }))" data-ref="_M/bswap_32">bswap_32</a> (*(<em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col0 ref" href="#10inptr" title='inptr' data-ref="10inptr" data-ref-filename="10inptr">inptr</a>);</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>  *<a class="local col5 ref" href="#5inptrp" title='inptrp' data-ref="5inptrp" data-ref-filename="5inptrp">inptrp</a> = <a class="local col0 ref" href="#10inptr" title='inptr' data-ref="10inptr" data-ref-filename="10inptr">inptr</a>;</td></tr>
+<tr><th id="96">96</th><td>  *<a class="local col7 ref" href="#7outptrp" title='outptrp' data-ref="7outptrp" data-ref-filename="7outptrp">outptrp</a> = (<em>unsigned</em> <em>char</em> *) <a class="local col5 ref" href="#15outptr32" title='outptr32' data-ref="15outptr32" data-ref-filename="15outptr32">outptr32</a>;</td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="87">elif</span> __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="98">98</th><td>  <i>/* Simply copy the data.  */</i></td></tr>
+<tr><th id="99">99</th><td>  *inptrp = inptr + n_convert * <var>4</var>;</td></tr>
+<tr><th id="100">100</th><td>  *outptrp = __mempcpy (outptr, inptr, n_convert * <var>4</var>);</td></tr>
+<tr><th id="101">101</th><td><u>#else</u></td></tr>
+<tr><th id="102">102</th><td><u># error "This endianess is not supported."</u></td></tr>
+<tr><th id="103">103</th><td><u>#<span data-ppcond="87">endif</span></u></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="106">106</th><td>  <b>if</b> (*<a class="local col5 ref" href="#5inptrp" title='inptrp' data-ref="5inptrp" data-ref-filename="5inptrp">inptrp</a> == <a class="local col6 ref" href="#6inend" title='inend' data-ref="6inend" data-ref-filename="6inend">inend</a>)</td></tr>
+<tr><th id="107">107</th><td>    <a class="local col3 ref" href="#13result" title='result' data-ref="13result" data-ref-filename="13result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</a>;</td></tr>
+<tr><th id="108">108</th><td>  <b>else</b> <b>if</b> (*<a class="local col7 ref" href="#7outptrp" title='outptrp' data-ref="7outptrp" data-ref-filename="7outptrp">outptrp</a> + <var>4</var> &gt; <a class="local col8 ref" href="#8outend" title='outend' data-ref="8outend" data-ref-filename="8outend">outend</a>)</td></tr>
+<tr><th id="109">109</th><td>    <a class="local col3 ref" href="#13result" title='result' data-ref="13result" data-ref-filename="13result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</a>;</td></tr>
+<tr><th id="110">110</th><td>  <b>else</b></td></tr>
+<tr><th id="111">111</th><td>    <a class="local col3 ref" href="#13result" title='result' data-ref="13result" data-ref-filename="13result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>  <b>return</b> <a class="local col3 ref" href="#13result" title='result' data-ref="13result" data-ref-filename="13result">result</a>;</td></tr>
+<tr><th id="114">114</th><td>}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><u>#<span data-ppcond="116">if</span> !<a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a></u></td></tr>
+<tr><th id="117">117</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="118">118</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="119">119</th><td>internal_ucs4_loop_unaligned (<b>struct</b> __gconv_step *step,</td></tr>
+<tr><th id="120">120</th><td>			      <b>struct</b> __gconv_step_data *step_data,</td></tr>
+<tr><th id="121">121</th><td>			      <em>const</em> <em>unsigned</em> <em>char</em> **inptrp,</td></tr>
+<tr><th id="122">122</th><td>			      <em>const</em> <em>unsigned</em> <em>char</em> *inend,</td></tr>
+<tr><th id="123">123</th><td>			      <em>unsigned</em> <em>char</em> **outptrp, <em>unsigned</em> <em>char</em> *outend,</td></tr>
+<tr><th id="124">124</th><td>			      size_t *irreversible)</td></tr>
+<tr><th id="125">125</th><td>{</td></tr>
+<tr><th id="126">126</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *inptr = *inptrp;</td></tr>
+<tr><th id="127">127</th><td>  <em>unsigned</em> <em>char</em> *outptr = *outptrp;</td></tr>
+<tr><th id="128">128</th><td>  size_t n_convert = MIN (inend - inptr, outend - outptr) / <var>4</var>;</td></tr>
+<tr><th id="129">129</th><td>  <em>int</em> result;</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><u># if __BYTE_ORDER == __LITTLE_ENDIAN</u></td></tr>
+<tr><th id="132">132</th><td>  <i>/* Sigh, we have to do some real work.  */</i></td></tr>
+<tr><th id="133">133</th><td>  size_t cnt;</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>  <b>for</b> (cnt = <var>0</var>; cnt &lt; n_convert; ++cnt, inptr += <var>4</var>, outptr += <var>4</var>)</td></tr>
+<tr><th id="136">136</th><td>    {</td></tr>
+<tr><th id="137">137</th><td>      outptr[<var>0</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="138">138</th><td>      outptr[<var>1</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="139">139</th><td>      outptr[<var>2</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="140">140</th><td>      outptr[<var>3</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="141">141</th><td>    }</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>  *inptrp = inptr;</td></tr>
+<tr><th id="144">144</th><td>  *outptrp = outptr;</td></tr>
+<tr><th id="145">145</th><td><u># elif __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="146">146</th><td>  <i>/* Simply copy the data.  */</i></td></tr>
+<tr><th id="147">147</th><td>  *inptrp = inptr + n_convert * <var>4</var>;</td></tr>
+<tr><th id="148">148</th><td>  *outptrp = __mempcpy (outptr, inptr, n_convert * <var>4</var>);</td></tr>
+<tr><th id="149">149</th><td><u># else</u></td></tr>
+<tr><th id="150">150</th><td><u>#  error "This endianess is not supported."</u></td></tr>
+<tr><th id="151">151</th><td><u># endif</u></td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="154">154</th><td>  <b>if</b> (*inptrp == inend)</td></tr>
+<tr><th id="155">155</th><td>    result = __GCONV_EMPTY_INPUT;</td></tr>
+<tr><th id="156">156</th><td>  <b>else</b> <b>if</b> (*outptrp + <var>4</var> &gt; outend)</td></tr>
+<tr><th id="157">157</th><td>    result = __GCONV_FULL_OUTPUT;</td></tr>
+<tr><th id="158">158</th><td>  <b>else</b></td></tr>
+<tr><th id="159">159</th><td>    result = __GCONV_INCOMPLETE_INPUT;</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="162">162</th><td>}</td></tr>
+<tr><th id="163">163</th><td><u>#<span data-ppcond="116">endif</span></u></td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="167">167</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="168">168</th><td><dfn class="tu decl def fn" id="internal_ucs4_loop_single" title='internal_ucs4_loop_single' data-type='int internal_ucs4_loop_single(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="internal_ucs4_loop_single" data-ref-filename="internal_ucs4_loop_single">internal_ucs4_loop_single</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col6 decl" id="16step" title='step' data-type='struct __gconv_step *' data-ref="16step" data-ref-filename="16step">step</dfn>,</td></tr>
+<tr><th id="169">169</th><td>			   <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col7 decl" id="17step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="17step_data" data-ref-filename="17step_data">step_data</dfn>,</td></tr>
+<tr><th id="170">170</th><td>			   <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col8 decl" id="18inptrp" title='inptrp' data-type='const unsigned char **' data-ref="18inptrp" data-ref-filename="18inptrp">inptrp</dfn>,</td></tr>
+<tr><th id="171">171</th><td>			   <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col9 decl" id="19inend" title='inend' data-type='const unsigned char *' data-ref="19inend" data-ref-filename="19inend">inend</dfn>,</td></tr>
+<tr><th id="172">172</th><td>			   <em>unsigned</em> <em>char</em> **<dfn class="local col0 decl" id="20outptrp" title='outptrp' data-type='unsigned char **' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col1 decl" id="21outend" title='outend' data-type='unsigned char *' data-ref="21outend" data-ref-filename="21outend">outend</dfn>,</td></tr>
+<tr><th id="173">173</th><td>			   <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col2 decl" id="22irreversible" title='irreversible' data-type='size_t *' data-ref="22irreversible" data-ref-filename="22irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="174">174</th><td>{</td></tr>
+<tr><th id="175">175</th><td>  <a class="typedef" href="../wcsmbs/wchar.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> *<dfn class="local col3 decl" id="23state" title='state' data-type='mbstate_t *' data-ref="23state" data-ref-filename="23state">state</dfn> = <a class="local col7 ref" href="#17step_data" title='step_data' data-ref="17step_data" data-ref-filename="17step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__statep" title='__gconv_step_data::__statep' data-ref="__gconv_step_data::__statep" data-ref-filename="__gconv_step_data..__statep">__statep</a>;</td></tr>
+<tr><th id="176">176</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="24cnt" title='cnt' data-type='size_t' data-ref="24cnt" data-ref-filename="24cnt">cnt</dfn> = <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp; <var>7</var>;</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>  <b>while</b> (*<a class="local col8 ref" href="#18inptrp" title='inptrp' data-ref="18inptrp" data-ref-filename="18inptrp">inptrp</a> &lt; <a class="local col9 ref" href="#19inend" title='inend' data-ref="19inend" data-ref-filename="19inend">inend</a> &amp;&amp; <a class="local col4 ref" href="#24cnt" title='cnt' data-ref="24cnt" data-ref-filename="24cnt">cnt</a> &lt; <var>4</var>)</td></tr>
+<tr><th id="179">179</th><td>    <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<a class="local col4 ref" href="#24cnt" title='cnt' data-ref="24cnt" data-ref-filename="24cnt">cnt</a>++] = *(*<a class="local col8 ref" href="#18inptrp" title='inptrp' data-ref="18inptrp" data-ref-filename="18inptrp">inptrp</a>)++;</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((cnt &lt; 4))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#24cnt" title='cnt' data-ref="24cnt" data-ref-filename="24cnt">cnt</a> &lt; <var>4</var>))</td></tr>
+<tr><th id="182">182</th><td>    {</td></tr>
+<tr><th id="183">183</th><td>      <i>/* Still not enough bytes.  Store the ones in the input buffer.  */</i></td></tr>
+<tr><th id="184">184</th><td>      <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="185">185</th><td>      <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> |= <a class="local col4 ref" href="#24cnt" title='cnt' data-ref="24cnt" data-ref-filename="24cnt">cnt</a>;</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>      <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="188">188</th><td>    }</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><u>#<span data-ppcond="190">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="191">191</th><td>  (*<a class="local col0 ref" href="#20outptrp" title='outptrp' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</a>)[<var>0</var>] = <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>3</var>];</td></tr>
+<tr><th id="192">192</th><td>  (*<a class="local col0 ref" href="#20outptrp" title='outptrp' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</a>)[<var>1</var>] = <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>2</var>];</td></tr>
+<tr><th id="193">193</th><td>  (*<a class="local col0 ref" href="#20outptrp" title='outptrp' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</a>)[<var>2</var>] = <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>1</var>];</td></tr>
+<tr><th id="194">194</th><td>  (*<a class="local col0 ref" href="#20outptrp" title='outptrp' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</a>)[<var>3</var>] = <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>0</var>];</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td><u>#<span data-ppcond="190">elif</span> __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="197">197</th><td>  <i>/* XXX unaligned */</i></td></tr>
+<tr><th id="198">198</th><td>  (*outptrp)[<var>0</var>] = state-&gt;__value.__wchb[<var>0</var>];</td></tr>
+<tr><th id="199">199</th><td>  (*outptrp)[<var>1</var>] = state-&gt;__value.__wchb[<var>1</var>];</td></tr>
+<tr><th id="200">200</th><td>  (*outptrp)[<var>2</var>] = state-&gt;__value.__wchb[<var>2</var>];</td></tr>
+<tr><th id="201">201</th><td>  (*outptrp)[<var>3</var>] = state-&gt;__value.__wchb[<var>3</var>];</td></tr>
+<tr><th id="202">202</th><td><u>#else</u></td></tr>
+<tr><th id="203">203</th><td><u># error "This endianess is not supported."</u></td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="190">endif</span></u></td></tr>
+<tr><th id="205">205</th><td>  *<a class="local col0 ref" href="#20outptrp" title='outptrp' data-ref="20outptrp" data-ref-filename="20outptrp">outptrp</a> += <var>4</var>;</td></tr>
+<tr><th id="206">206</th><td></td></tr>
+<tr><th id="207">207</th><td>  <i>/* Clear the state buffer.  */</i></td></tr>
+<tr><th id="208">208</th><td>  <a class="local col3 ref" href="#23state" title='state' data-ref="23state" data-ref-filename="23state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</a>;</td></tr>
+<tr><th id="211">211</th><td>}</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td><i>/* Transform from UCS4 to the internal, UCS4-like format.  Unlike</i></td></tr>
+<tr><th id="217">217</th><td><i>   for the other direction we have to check for correct values here.  */</i></td></tr>
+<tr><th id="218">218</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="219">219</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="220">220</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="221">221</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="222">222</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="223">223</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		ucs4_internal_loop</u></td></tr>
+<tr><th id="224">224</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			ucs4_internal_loop /* This is not used.  */</u></td></tr>
+<tr><th id="225">225</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_ucs4_internal</u></td></tr>
+<tr><th id="226">226</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="230">230</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="231">231</th><td><dfn class="tu decl def fn" id="ucs4_internal_loop" title='ucs4_internal_loop' data-type='int ucs4_internal_loop(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="ucs4_internal_loop" data-ref-filename="ucs4_internal_loop">ucs4_internal_loop</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col4 decl" id="54step" title='step' data-type='struct __gconv_step *' data-ref="54step" data-ref-filename="54step">step</dfn>,</td></tr>
+<tr><th id="232">232</th><td>		    <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col5 decl" id="55step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="55step_data" data-ref-filename="55step_data">step_data</dfn>,</td></tr>
+<tr><th id="233">233</th><td>		    <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col6 decl" id="56inptrp" title='inptrp' data-type='const unsigned char **' data-ref="56inptrp" data-ref-filename="56inptrp">inptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col7 decl" id="57inend" title='inend' data-type='const unsigned char *' data-ref="57inend" data-ref-filename="57inend">inend</dfn>,</td></tr>
+<tr><th id="234">234</th><td>		    <em>unsigned</em> <em>char</em> **<dfn class="local col8 decl" id="58outptrp" title='outptrp' data-type='unsigned char **' data-ref="58outptrp" data-ref-filename="58outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col9 decl" id="59outend" title='outend' data-type='unsigned char *' data-ref="59outend" data-ref-filename="59outend">outend</dfn>,</td></tr>
+<tr><th id="235">235</th><td>		    <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col0 decl" id="60irreversible" title='irreversible' data-type='size_t *' data-ref="60irreversible" data-ref-filename="60irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="236">236</th><td>{</td></tr>
+<tr><th id="237">237</th><td>  <em>int</em> <dfn class="local col1 decl" id="61flags" title='flags' data-type='int' data-ref="61flags" data-ref-filename="61flags">flags</dfn> = <a class="local col5 ref" href="#55step_data" title='step_data' data-ref="55step_data" data-ref-filename="55step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</a>;</td></tr>
+<tr><th id="238">238</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col2 decl" id="62inptr" title='inptr' data-type='const unsigned char *' data-ref="62inptr" data-ref-filename="62inptr">inptr</dfn> = *<a class="local col6 ref" href="#56inptrp" title='inptrp' data-ref="56inptrp" data-ref-filename="56inptrp">inptrp</a>;</td></tr>
+<tr><th id="239">239</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="local col3 decl" id="63outptr" title='outptr' data-type='unsigned char *' data-ref="63outptr" data-ref-filename="63outptr">outptr</dfn> = *<a class="local col8 ref" href="#58outptrp" title='outptrp' data-ref="58outptrp" data-ref-filename="58outptrp">outptrp</a>;</td></tr>
+<tr><th id="240">240</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="64n_convert" title='n_convert' data-type='size_t' data-ref="64n_convert" data-ref-filename="64n_convert">n_convert</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((inend - inptr)&lt;(outend - outptr))?(inend - inptr):(outend - outptr))" data-ref="_M/MIN">MIN</a> (<a class="local col7 ref" href="#57inend" title='inend' data-ref="57inend" data-ref-filename="57inend">inend</a> - <a class="local col2 ref" href="#62inptr" title='inptr' data-ref="62inptr" data-ref-filename="62inptr">inptr</a>, <a class="local col9 ref" href="#59outend" title='outend' data-ref="59outend" data-ref-filename="59outend">outend</a> - <a class="local col3 ref" href="#63outptr" title='outptr' data-ref="63outptr" data-ref-filename="63outptr">outptr</a>) / <var>4</var>;</td></tr>
+<tr><th id="241">241</th><td>  <em>int</em> <dfn class="local col5 decl" id="65result" title='result' data-type='int' data-ref="65result" data-ref-filename="65result">result</dfn>;</td></tr>
+<tr><th id="242">242</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="66cnt" title='cnt' data-type='size_t' data-ref="66cnt" data-ref-filename="66cnt">cnt</dfn>;</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>  <b>for</b> (<a class="local col6 ref" href="#66cnt" title='cnt' data-ref="66cnt" data-ref-filename="66cnt">cnt</a> = <var>0</var>; <a class="local col6 ref" href="#66cnt" title='cnt' data-ref="66cnt" data-ref-filename="66cnt">cnt</a> &lt; <a class="local col4 ref" href="#64n_convert" title='n_convert' data-ref="64n_convert" data-ref-filename="64n_convert">n_convert</a>; ++<a class="local col6 ref" href="#66cnt" title='cnt' data-ref="66cnt" data-ref-filename="66cnt">cnt</a>, <a class="local col2 ref" href="#62inptr" title='inptr' data-ref="62inptr" data-ref-filename="62inptr">inptr</a> += <var>4</var>)</td></tr>
+<tr><th id="245">245</th><td>    {</td></tr>
+<tr><th id="246">246</th><td>      <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col7 decl" id="67inval" title='inval' data-type='uint32_t' data-ref="67inval" data-ref-filename="67inval">inval</dfn>;</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td><u>#<span data-ppcond="248">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="249">249</th><td>      <a class="local col7 ref" href="#67inval" title='inval' data-ref="67inval" data-ref-filename="67inval">inval</a> = <a class="macro" href="../string/byteswap.h.html#34" title="(__extension__ ({ unsigned int __v, __x = (*(const uint32_t *) inptr); if (__builtin_constant_p (__x)) __v = ((((__x) &amp; 0xff000000) &gt;&gt; 24) | (((__x) &amp; 0x00ff0000) &gt;&gt; 8) | (((__x) &amp; 0x0000ff00) &lt;&lt; 8) | (((__x) &amp; 0x000000ff) &lt;&lt; 24)); else __asm__ (&quot;bswap %0&quot; : &quot;=r&quot; (__v) : &quot;0&quot; (__x)); __v; }))" data-ref="_M/bswap_32">bswap_32</a> (*(<em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col2 ref" href="#62inptr" title='inptr' data-ref="62inptr" data-ref-filename="62inptr">inptr</a>);</td></tr>
+<tr><th id="250">250</th><td><u>#<span data-ppcond="248">else</span></u></td></tr>
+<tr><th id="251">251</th><td>      inval = *(<em>const</em> uint32_t *) inptr;</td></tr>
+<tr><th id="252">252</th><td><u>#<span data-ppcond="248">endif</span></u></td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((inval &gt; 0x7fffffff))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col7 ref" href="#67inval" title='inval' data-ref="67inval" data-ref-filename="67inval">inval</a> &gt; <var>0x7fffffff</var>))</td></tr>
+<tr><th id="255">255</th><td>	{</td></tr>
+<tr><th id="256">256</th><td>	  <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="257">257</th><td><i>	     this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="258">258</th><td><i>	     represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="259">259</th><td><i>	     UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="260">260</th><td>	  <b>if</b> (<a class="local col0 ref" href="#60irreversible" title='irreversible' data-ref="60irreversible" data-ref-filename="60irreversible">irreversible</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="261">261</th><td>	    <i>/* We are transliterating, don't try to correct anything.  */</i></td></tr>
+<tr><th id="262">262</th><td>	    <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	  <b>if</b> (<a class="local col1 ref" href="#61flags" title='flags' data-ref="61flags" data-ref-filename="61flags">flags</a> &amp; <a class="enum" href="gconv.h.html#__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</a>)</td></tr>
+<tr><th id="265">265</th><td>	    {</td></tr>
+<tr><th id="266">266</th><td>	      <i>/* Just ignore this character.  */</i></td></tr>
+<tr><th id="267">267</th><td>	      ++*<a class="local col0 ref" href="#60irreversible" title='irreversible' data-ref="60irreversible" data-ref-filename="60irreversible">irreversible</a>;</td></tr>
+<tr><th id="268">268</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="269">269</th><td>	    }</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td>	  *<a class="local col6 ref" href="#56inptrp" title='inptrp' data-ref="56inptrp" data-ref-filename="56inptrp">inptrp</a> = <a class="local col2 ref" href="#62inptr" title='inptr' data-ref="62inptr" data-ref-filename="62inptr">inptr</a>;</td></tr>
+<tr><th id="272">272</th><td>	  *<a class="local col8 ref" href="#58outptrp" title='outptrp' data-ref="58outptrp" data-ref-filename="58outptrp">outptrp</a> = <a class="local col3 ref" href="#63outptr" title='outptr' data-ref="63outptr" data-ref-filename="63outptr">outptr</a>;</td></tr>
+<tr><th id="273">273</th><td>	  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="274">274</th><td>	}</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td>      *((<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col3 ref" href="#63outptr" title='outptr' data-ref="63outptr" data-ref-filename="63outptr">outptr</a>) = <a class="local col7 ref" href="#67inval" title='inval' data-ref="67inval" data-ref-filename="67inval">inval</a>;</td></tr>
+<tr><th id="277">277</th><td>      <a class="local col3 ref" href="#63outptr" title='outptr' data-ref="63outptr" data-ref-filename="63outptr">outptr</a> += <b>sizeof</b> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a>);</td></tr>
+<tr><th id="278">278</th><td>    }</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td>  *<a class="local col6 ref" href="#56inptrp" title='inptrp' data-ref="56inptrp" data-ref-filename="56inptrp">inptrp</a> = <a class="local col2 ref" href="#62inptr" title='inptr' data-ref="62inptr" data-ref-filename="62inptr">inptr</a>;</td></tr>
+<tr><th id="281">281</th><td>  *<a class="local col8 ref" href="#58outptrp" title='outptrp' data-ref="58outptrp" data-ref-filename="58outptrp">outptrp</a> = <a class="local col3 ref" href="#63outptr" title='outptr' data-ref="63outptr" data-ref-filename="63outptr">outptr</a>;</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="284">284</th><td>  <b>if</b> (*<a class="local col6 ref" href="#56inptrp" title='inptrp' data-ref="56inptrp" data-ref-filename="56inptrp">inptrp</a> == <a class="local col7 ref" href="#57inend" title='inend' data-ref="57inend" data-ref-filename="57inend">inend</a>)</td></tr>
+<tr><th id="285">285</th><td>    <a class="local col5 ref" href="#65result" title='result' data-ref="65result" data-ref-filename="65result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</a>;</td></tr>
+<tr><th id="286">286</th><td>  <b>else</b> <b>if</b> (*<a class="local col8 ref" href="#58outptrp" title='outptrp' data-ref="58outptrp" data-ref-filename="58outptrp">outptrp</a> + <var>4</var> &gt; <a class="local col9 ref" href="#59outend" title='outend' data-ref="59outend" data-ref-filename="59outend">outend</a>)</td></tr>
+<tr><th id="287">287</th><td>    <a class="local col5 ref" href="#65result" title='result' data-ref="65result" data-ref-filename="65result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</a>;</td></tr>
+<tr><th id="288">288</th><td>  <b>else</b></td></tr>
+<tr><th id="289">289</th><td>    <a class="local col5 ref" href="#65result" title='result' data-ref="65result" data-ref-filename="65result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td>  <b>return</b> <a class="local col5 ref" href="#65result" title='result' data-ref="65result" data-ref-filename="65result">result</a>;</td></tr>
+<tr><th id="292">292</th><td>}</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td><u>#<span data-ppcond="294">if</span> !<a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a></u></td></tr>
+<tr><th id="295">295</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="296">296</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="297">297</th><td>ucs4_internal_loop_unaligned (<b>struct</b> __gconv_step *step,</td></tr>
+<tr><th id="298">298</th><td>			      <b>struct</b> __gconv_step_data *step_data,</td></tr>
+<tr><th id="299">299</th><td>			      <em>const</em> <em>unsigned</em> <em>char</em> **inptrp,</td></tr>
+<tr><th id="300">300</th><td>			      <em>const</em> <em>unsigned</em> <em>char</em> *inend,</td></tr>
+<tr><th id="301">301</th><td>			      <em>unsigned</em> <em>char</em> **outptrp, <em>unsigned</em> <em>char</em> *outend,</td></tr>
+<tr><th id="302">302</th><td>			      size_t *irreversible)</td></tr>
+<tr><th id="303">303</th><td>{</td></tr>
+<tr><th id="304">304</th><td>  <em>int</em> flags = step_data-&gt;__flags;</td></tr>
+<tr><th id="305">305</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *inptr = *inptrp;</td></tr>
+<tr><th id="306">306</th><td>  <em>unsigned</em> <em>char</em> *outptr = *outptrp;</td></tr>
+<tr><th id="307">307</th><td>  size_t n_convert = MIN (inend - inptr, outend - outptr) / <var>4</var>;</td></tr>
+<tr><th id="308">308</th><td>  <em>int</em> result;</td></tr>
+<tr><th id="309">309</th><td>  size_t cnt;</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>  <b>for</b> (cnt = <var>0</var>; cnt &lt; n_convert; ++cnt, inptr += <var>4</var>)</td></tr>
+<tr><th id="312">312</th><td>    {</td></tr>
+<tr><th id="313">313</th><td>      <b>if</b> (__glibc_unlikely (inptr[<var>0</var>] &gt; <var>0x80</var>))</td></tr>
+<tr><th id="314">314</th><td>	{</td></tr>
+<tr><th id="315">315</th><td>	  <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="316">316</th><td><i>	     this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="317">317</th><td><i>	     represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="318">318</th><td><i>	     UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="319">319</th><td>	  <b>if</b> (irreversible == NULL)</td></tr>
+<tr><th id="320">320</th><td>	    <i>/* We are transliterating, don't try to correct anything.  */</i></td></tr>
+<tr><th id="321">321</th><td>	    <b>return</b> __GCONV_ILLEGAL_INPUT;</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td>	  <b>if</b> (flags &amp; __GCONV_IGNORE_ERRORS)</td></tr>
+<tr><th id="324">324</th><td>	    {</td></tr>
+<tr><th id="325">325</th><td>	      <i>/* Just ignore this character.  */</i></td></tr>
+<tr><th id="326">326</th><td>	      ++*irreversible;</td></tr>
+<tr><th id="327">327</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="328">328</th><td>	    }</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td>	  *inptrp = inptr;</td></tr>
+<tr><th id="331">331</th><td>	  *outptrp = outptr;</td></tr>
+<tr><th id="332">332</th><td>	  <b>return</b> __GCONV_ILLEGAL_INPUT;</td></tr>
+<tr><th id="333">333</th><td>	}</td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td><u># if __BYTE_ORDER == __LITTLE_ENDIAN</u></td></tr>
+<tr><th id="336">336</th><td>      outptr[<var>3</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="337">337</th><td>      outptr[<var>2</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="338">338</th><td>      outptr[<var>1</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="339">339</th><td>      outptr[<var>0</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="340">340</th><td><u># else</u></td></tr>
+<tr><th id="341">341</th><td>      outptr[<var>0</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="342">342</th><td>      outptr[<var>1</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="343">343</th><td>      outptr[<var>2</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="344">344</th><td>      outptr[<var>3</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="345">345</th><td><u># endif</u></td></tr>
+<tr><th id="346">346</th><td>      outptr += <var>4</var>;</td></tr>
+<tr><th id="347">347</th><td>    }</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td>  *inptrp = inptr;</td></tr>
+<tr><th id="350">350</th><td>  *outptrp = outptr;</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="353">353</th><td>  <b>if</b> (*inptrp == inend)</td></tr>
+<tr><th id="354">354</th><td>    result = __GCONV_EMPTY_INPUT;</td></tr>
+<tr><th id="355">355</th><td>  <b>else</b> <b>if</b> (*outptrp + <var>4</var> &gt; outend)</td></tr>
+<tr><th id="356">356</th><td>    result = __GCONV_FULL_OUTPUT;</td></tr>
+<tr><th id="357">357</th><td>  <b>else</b></td></tr>
+<tr><th id="358">358</th><td>    result = __GCONV_INCOMPLETE_INPUT;</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="361">361</th><td>}</td></tr>
+<tr><th id="362">362</th><td><u>#<span data-ppcond="294">endif</span></u></td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="366">366</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="367">367</th><td><dfn class="tu decl def fn" id="ucs4_internal_loop_single" title='ucs4_internal_loop_single' data-type='int ucs4_internal_loop_single(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="ucs4_internal_loop_single" data-ref-filename="ucs4_internal_loop_single">ucs4_internal_loop_single</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col8 decl" id="68step" title='step' data-type='struct __gconv_step *' data-ref="68step" data-ref-filename="68step">step</dfn>,</td></tr>
+<tr><th id="368">368</th><td>			   <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col9 decl" id="69step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="69step_data" data-ref-filename="69step_data">step_data</dfn>,</td></tr>
+<tr><th id="369">369</th><td>			   <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col0 decl" id="70inptrp" title='inptrp' data-type='const unsigned char **' data-ref="70inptrp" data-ref-filename="70inptrp">inptrp</dfn>,</td></tr>
+<tr><th id="370">370</th><td>			   <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col1 decl" id="71inend" title='inend' data-type='const unsigned char *' data-ref="71inend" data-ref-filename="71inend">inend</dfn>,</td></tr>
+<tr><th id="371">371</th><td>			   <em>unsigned</em> <em>char</em> **<dfn class="local col2 decl" id="72outptrp" title='outptrp' data-type='unsigned char **' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col3 decl" id="73outend" title='outend' data-type='unsigned char *' data-ref="73outend" data-ref-filename="73outend">outend</dfn>,</td></tr>
+<tr><th id="372">372</th><td>			   <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col4 decl" id="74irreversible" title='irreversible' data-type='size_t *' data-ref="74irreversible" data-ref-filename="74irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="373">373</th><td>{</td></tr>
+<tr><th id="374">374</th><td>  <a class="typedef" href="../wcsmbs/wchar.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> *<dfn class="local col5 decl" id="75state" title='state' data-type='mbstate_t *' data-ref="75state" data-ref-filename="75state">state</dfn> = <a class="local col9 ref" href="#69step_data" title='step_data' data-ref="69step_data" data-ref-filename="69step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__statep" title='__gconv_step_data::__statep' data-ref="__gconv_step_data::__statep" data-ref-filename="__gconv_step_data..__statep">__statep</a>;</td></tr>
+<tr><th id="375">375</th><td>  <em>int</em> <dfn class="local col6 decl" id="76flags" title='flags' data-type='int' data-ref="76flags" data-ref-filename="76flags">flags</dfn> = <a class="local col9 ref" href="#69step_data" title='step_data' data-ref="69step_data" data-ref-filename="69step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</a>;</td></tr>
+<tr><th id="376">376</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="77cnt" title='cnt' data-type='size_t' data-ref="77cnt" data-ref-filename="77cnt">cnt</dfn> = <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp; <var>7</var>;</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>  <b>while</b> (*<a class="local col0 ref" href="#70inptrp" title='inptrp' data-ref="70inptrp" data-ref-filename="70inptrp">inptrp</a> &lt; <a class="local col1 ref" href="#71inend" title='inend' data-ref="71inend" data-ref-filename="71inend">inend</a> &amp;&amp; <a class="local col7 ref" href="#77cnt" title='cnt' data-ref="77cnt" data-ref-filename="77cnt">cnt</a> &lt; <var>4</var>)</td></tr>
+<tr><th id="379">379</th><td>    <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<a class="local col7 ref" href="#77cnt" title='cnt' data-ref="77cnt" data-ref-filename="77cnt">cnt</a>++] = *(*<a class="local col0 ref" href="#70inptrp" title='inptrp' data-ref="70inptrp" data-ref-filename="70inptrp">inptrp</a>)++;</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((cnt &lt; 4))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col7 ref" href="#77cnt" title='cnt' data-ref="77cnt" data-ref-filename="77cnt">cnt</a> &lt; <var>4</var>))</td></tr>
+<tr><th id="382">382</th><td>    {</td></tr>
+<tr><th id="383">383</th><td>      <i>/* Still not enough bytes.  Store the ones in the input buffer.  */</i></td></tr>
+<tr><th id="384">384</th><td>      <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="385">385</th><td>      <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> |= <a class="local col7 ref" href="#77cnt" title='cnt' data-ref="77cnt" data-ref-filename="77cnt">cnt</a>;</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>      <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="388">388</th><td>    }</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>  <b>if</b> (<a class="macro" href="../intl/loadinfo.h.html#44" title="(((unsigned char *) state-&gt;__value.__wchb)[0] &gt; 0x80)" data-ref="_M/__builtin_expect">__builtin_expect</a> (((<em>unsigned</em> <em>char</em> *) <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>)[<var>0</var>] &gt; <var>0x80</var>,</td></tr>
+<tr><th id="391">391</th><td>			<var>0</var>))</td></tr>
+<tr><th id="392">392</th><td>    {</td></tr>
+<tr><th id="393">393</th><td>      <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="394">394</th><td><i>	 this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="395">395</th><td><i>	 represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="396">396</th><td><i>	 UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="397">397</th><td>      <b>if</b> (!(<a class="local col6 ref" href="#76flags" title='flags' data-ref="76flags" data-ref-filename="76flags">flags</a> &amp; <a class="enum" href="gconv.h.html#__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</a>))</td></tr>
+<tr><th id="398">398</th><td>	{</td></tr>
+<tr><th id="399">399</th><td>	  *<a class="local col0 ref" href="#70inptrp" title='inptrp' data-ref="70inptrp" data-ref-filename="70inptrp">inptrp</a> -= <a class="local col7 ref" href="#77cnt" title='cnt' data-ref="77cnt" data-ref-filename="77cnt">cnt</a> - (<a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp; <var>7</var>);</td></tr>
+<tr><th id="400">400</th><td>	  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="401">401</th><td>	}</td></tr>
+<tr><th id="402">402</th><td>    }</td></tr>
+<tr><th id="403">403</th><td>  <b>else</b></td></tr>
+<tr><th id="404">404</th><td>    {</td></tr>
+<tr><th id="405">405</th><td><u>#<span data-ppcond="405">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="406">406</th><td>      (*<a class="local col2 ref" href="#72outptrp" title='outptrp' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</a>)[<var>0</var>] = <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>3</var>];</td></tr>
+<tr><th id="407">407</th><td>      (*<a class="local col2 ref" href="#72outptrp" title='outptrp' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</a>)[<var>1</var>] = <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>2</var>];</td></tr>
+<tr><th id="408">408</th><td>      (*<a class="local col2 ref" href="#72outptrp" title='outptrp' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</a>)[<var>2</var>] = <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>1</var>];</td></tr>
+<tr><th id="409">409</th><td>      (*<a class="local col2 ref" href="#72outptrp" title='outptrp' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</a>)[<var>3</var>] = <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>0</var>];</td></tr>
+<tr><th id="410">410</th><td><u>#<span data-ppcond="405">elif</span> __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="411">411</th><td>      (*outptrp)[<var>0</var>] = state-&gt;__value.__wchb[<var>0</var>];</td></tr>
+<tr><th id="412">412</th><td>      (*outptrp)[<var>1</var>] = state-&gt;__value.__wchb[<var>1</var>];</td></tr>
+<tr><th id="413">413</th><td>      (*outptrp)[<var>2</var>] = state-&gt;__value.__wchb[<var>2</var>];</td></tr>
+<tr><th id="414">414</th><td>      (*outptrp)[<var>3</var>] = state-&gt;__value.__wchb[<var>3</var>];</td></tr>
+<tr><th id="415">415</th><td><u>#<span data-ppcond="405">endif</span></u></td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td>      *<a class="local col2 ref" href="#72outptrp" title='outptrp' data-ref="72outptrp" data-ref-filename="72outptrp">outptrp</a> += <var>4</var>;</td></tr>
+<tr><th id="418">418</th><td>    }</td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td>  <i>/* Clear the state buffer.  */</i></td></tr>
+<tr><th id="421">421</th><td>  <a class="local col5 ref" href="#75state" title='state' data-ref="75state" data-ref-filename="75state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td>  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</a>;</td></tr>
+<tr><th id="424">424</th><td>}</td></tr>
+<tr><th id="425">425</th><td></td></tr>
+<tr><th id="426">426</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="427">427</th><td></td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td><i>/* Similarly for the little endian form.  */</i></td></tr>
+<tr><th id="430">430</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="431">431</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="432">432</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="433">433</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="434">434</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="435">435</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_ucs4le_loop</u></td></tr>
+<tr><th id="436">436</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_ucs4le_loop /* This is not used.  */</u></td></tr>
+<tr><th id="437">437</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_ucs4le</u></td></tr>
+<tr><th id="438">438</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="442">442</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="443">443</th><td><dfn class="tu decl def fn" id="internal_ucs4le_loop" title='internal_ucs4le_loop' data-type='int internal_ucs4le_loop(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="internal_ucs4le_loop" data-ref-filename="internal_ucs4le_loop">internal_ucs4le_loop</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col7 decl" id="107step" title='step' data-type='struct __gconv_step *' data-ref="107step" data-ref-filename="107step">step</dfn>,</td></tr>
+<tr><th id="444">444</th><td>		      <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col8 decl" id="108step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="108step_data" data-ref-filename="108step_data">step_data</dfn>,</td></tr>
+<tr><th id="445">445</th><td>		      <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col9 decl" id="109inptrp" title='inptrp' data-type='const unsigned char **' data-ref="109inptrp" data-ref-filename="109inptrp">inptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col0 decl" id="110inend" title='inend' data-type='const unsigned char *' data-ref="110inend" data-ref-filename="110inend">inend</dfn>,</td></tr>
+<tr><th id="446">446</th><td>		      <em>unsigned</em> <em>char</em> **<dfn class="local col1 decl" id="111outptrp" title='outptrp' data-type='unsigned char **' data-ref="111outptrp" data-ref-filename="111outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col2 decl" id="112outend" title='outend' data-type='unsigned char *' data-ref="112outend" data-ref-filename="112outend">outend</dfn>,</td></tr>
+<tr><th id="447">447</th><td>		      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col3 decl" id="113irreversible" title='irreversible' data-type='size_t *' data-ref="113irreversible" data-ref-filename="113irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="448">448</th><td>{</td></tr>
+<tr><th id="449">449</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col4 decl" id="114inptr" title='inptr' data-type='const unsigned char *' data-ref="114inptr" data-ref-filename="114inptr">inptr</dfn> = *<a class="local col9 ref" href="#109inptrp" title='inptrp' data-ref="109inptrp" data-ref-filename="109inptrp">inptrp</a>;</td></tr>
+<tr><th id="450">450</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="local col5 decl" id="115outptr" title='outptr' data-type='unsigned char *' data-ref="115outptr" data-ref-filename="115outptr">outptr</dfn> = *<a class="local col1 ref" href="#111outptrp" title='outptrp' data-ref="111outptrp" data-ref-filename="111outptrp">outptrp</a>;</td></tr>
+<tr><th id="451">451</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="116n_convert" title='n_convert' data-type='size_t' data-ref="116n_convert" data-ref-filename="116n_convert">n_convert</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((inend - inptr)&lt;(outend - outptr))?(inend - inptr):(outend - outptr))" data-ref="_M/MIN">MIN</a> (<a class="local col0 ref" href="#110inend" title='inend' data-ref="110inend" data-ref-filename="110inend">inend</a> - <a class="local col4 ref" href="#114inptr" title='inptr' data-ref="114inptr" data-ref-filename="114inptr">inptr</a>, <a class="local col2 ref" href="#112outend" title='outend' data-ref="112outend" data-ref-filename="112outend">outend</a> - <a class="local col5 ref" href="#115outptr" title='outptr' data-ref="115outptr" data-ref-filename="115outptr">outptr</a>) / <var>4</var>;</td></tr>
+<tr><th id="452">452</th><td>  <em>int</em> <dfn class="local col7 decl" id="117result" title='result' data-type='int' data-ref="117result" data-ref-filename="117result">result</dfn>;</td></tr>
+<tr><th id="453">453</th><td></td></tr>
+<tr><th id="454">454</th><td><u>#<span data-ppcond="454">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#32" title="4321" data-ref="_M/__BIG_ENDIAN">__BIG_ENDIAN</a></u></td></tr>
+<tr><th id="455">455</th><td>  <i>/* Sigh, we have to do some real work.  */</i></td></tr>
+<tr><th id="456">456</th><td>  size_t cnt;</td></tr>
+<tr><th id="457">457</th><td>  uint32_t *outptr32 = (uint32_t *) outptr;</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td>  <b>for</b> (cnt = <var>0</var>; cnt &lt; n_convert; ++cnt, inptr += <var>4</var>)</td></tr>
+<tr><th id="460">460</th><td>    *outptr32++ = bswap_32 (*(<em>const</em> uint32_t *) inptr);</td></tr>
+<tr><th id="461">461</th><td>  outptr = (<em>unsigned</em> <em>char</em> *) outptr32;</td></tr>
+<tr><th id="462">462</th><td></td></tr>
+<tr><th id="463">463</th><td>  *inptrp = inptr;</td></tr>
+<tr><th id="464">464</th><td>  *outptrp = outptr;</td></tr>
+<tr><th id="465">465</th><td><u>#<span data-ppcond="454">elif</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="466">466</th><td>  <i>/* Simply copy the data.  */</i></td></tr>
+<tr><th id="467">467</th><td>  *<a class="local col9 ref" href="#109inptrp" title='inptrp' data-ref="109inptrp" data-ref-filename="109inptrp">inptrp</a> = <a class="local col4 ref" href="#114inptr" title='inptr' data-ref="114inptr" data-ref-filename="114inptr">inptr</a> + <a class="local col6 ref" href="#116n_convert" title='n_convert' data-ref="116n_convert" data-ref-filename="116n_convert">n_convert</a> * <var>4</var>;</td></tr>
+<tr><th id="468">468</th><td>  *<a class="local col1 ref" href="#111outptrp" title='outptrp' data-ref="111outptrp" data-ref-filename="111outptrp">outptrp</a> = <a class="ref fn" href="../string/string.h.html#__mempcpy" title='__mempcpy' data-ref="__mempcpy" data-ref-filename="__mempcpy">__mempcpy</a> (<a class="local col5 ref" href="#115outptr" title='outptr' data-ref="115outptr" data-ref-filename="115outptr">outptr</a>, <a class="local col4 ref" href="#114inptr" title='inptr' data-ref="114inptr" data-ref-filename="114inptr">inptr</a>, <a class="local col6 ref" href="#116n_convert" title='n_convert' data-ref="116n_convert" data-ref-filename="116n_convert">n_convert</a> * <var>4</var>);</td></tr>
+<tr><th id="469">469</th><td><u>#<span data-ppcond="454">else</span></u></td></tr>
+<tr><th id="470">470</th><td><u># error "This endianess is not supported."</u></td></tr>
+<tr><th id="471">471</th><td><u>#<span data-ppcond="454">endif</span></u></td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="474">474</th><td>  <b>if</b> (*<a class="local col9 ref" href="#109inptrp" title='inptrp' data-ref="109inptrp" data-ref-filename="109inptrp">inptrp</a> == <a class="local col0 ref" href="#110inend" title='inend' data-ref="110inend" data-ref-filename="110inend">inend</a>)</td></tr>
+<tr><th id="475">475</th><td>    <a class="local col7 ref" href="#117result" title='result' data-ref="117result" data-ref-filename="117result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</a>;</td></tr>
+<tr><th id="476">476</th><td>  <b>else</b> <b>if</b> (*<a class="local col1 ref" href="#111outptrp" title='outptrp' data-ref="111outptrp" data-ref-filename="111outptrp">outptrp</a> + <var>4</var> &gt; <a class="local col2 ref" href="#112outend" title='outend' data-ref="112outend" data-ref-filename="112outend">outend</a>)</td></tr>
+<tr><th id="477">477</th><td>    <a class="local col7 ref" href="#117result" title='result' data-ref="117result" data-ref-filename="117result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</a>;</td></tr>
+<tr><th id="478">478</th><td>  <b>else</b></td></tr>
+<tr><th id="479">479</th><td>    <a class="local col7 ref" href="#117result" title='result' data-ref="117result" data-ref-filename="117result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>  <b>return</b> <a class="local col7 ref" href="#117result" title='result' data-ref="117result" data-ref-filename="117result">result</a>;</td></tr>
+<tr><th id="482">482</th><td>}</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td><u>#<span data-ppcond="484">if</span> !<a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a></u></td></tr>
+<tr><th id="485">485</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="486">486</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="487">487</th><td>internal_ucs4le_loop_unaligned (<b>struct</b> __gconv_step *step,</td></tr>
+<tr><th id="488">488</th><td>				<b>struct</b> __gconv_step_data *step_data,</td></tr>
+<tr><th id="489">489</th><td>				<em>const</em> <em>unsigned</em> <em>char</em> **inptrp,</td></tr>
+<tr><th id="490">490</th><td>				<em>const</em> <em>unsigned</em> <em>char</em> *inend,</td></tr>
+<tr><th id="491">491</th><td>				<em>unsigned</em> <em>char</em> **outptrp, <em>unsigned</em> <em>char</em> *outend,</td></tr>
+<tr><th id="492">492</th><td>				size_t *irreversible)</td></tr>
+<tr><th id="493">493</th><td>{</td></tr>
+<tr><th id="494">494</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *inptr = *inptrp;</td></tr>
+<tr><th id="495">495</th><td>  <em>unsigned</em> <em>char</em> *outptr = *outptrp;</td></tr>
+<tr><th id="496">496</th><td>  size_t n_convert = MIN (inend - inptr, outend - outptr) / <var>4</var>;</td></tr>
+<tr><th id="497">497</th><td>  <em>int</em> result;</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td><u># if __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="500">500</th><td>  <i>/* Sigh, we have to do some real work.  */</i></td></tr>
+<tr><th id="501">501</th><td>  size_t cnt;</td></tr>
+<tr><th id="502">502</th><td></td></tr>
+<tr><th id="503">503</th><td>  <b>for</b> (cnt = <var>0</var>; cnt &lt; n_convert; ++cnt, inptr += <var>4</var>, outptr += <var>4</var>)</td></tr>
+<tr><th id="504">504</th><td>    {</td></tr>
+<tr><th id="505">505</th><td>      outptr[<var>0</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="506">506</th><td>      outptr[<var>1</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="507">507</th><td>      outptr[<var>2</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="508">508</th><td>      outptr[<var>3</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="509">509</th><td>    }</td></tr>
+<tr><th id="510">510</th><td></td></tr>
+<tr><th id="511">511</th><td>  *inptrp = inptr;</td></tr>
+<tr><th id="512">512</th><td>  *outptrp = outptr;</td></tr>
+<tr><th id="513">513</th><td><u># elif __BYTE_ORDER == __LITTLE_ENDIAN</u></td></tr>
+<tr><th id="514">514</th><td>  <i>/* Simply copy the data.  */</i></td></tr>
+<tr><th id="515">515</th><td>  *inptrp = inptr + n_convert * <var>4</var>;</td></tr>
+<tr><th id="516">516</th><td>  *outptrp = __mempcpy (outptr, inptr, n_convert * <var>4</var>);</td></tr>
+<tr><th id="517">517</th><td><u># else</u></td></tr>
+<tr><th id="518">518</th><td><u>#  error "This endianess is not supported."</u></td></tr>
+<tr><th id="519">519</th><td><u># endif</u></td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="522">522</th><td>  <b>if</b> (*inptrp == inend)</td></tr>
+<tr><th id="523">523</th><td>    result = __GCONV_EMPTY_INPUT;</td></tr>
+<tr><th id="524">524</th><td>  <b>else</b> <b>if</b> (*inptrp + <var>4</var> &gt; inend)</td></tr>
+<tr><th id="525">525</th><td>    result = __GCONV_INCOMPLETE_INPUT;</td></tr>
+<tr><th id="526">526</th><td>  <b>else</b></td></tr>
+<tr><th id="527">527</th><td>    {</td></tr>
+<tr><th id="528">528</th><td>      assert (*outptrp + <var>4</var> &gt; outend);</td></tr>
+<tr><th id="529">529</th><td>      result = __GCONV_FULL_OUTPUT;</td></tr>
+<tr><th id="530">530</th><td>    }</td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="533">533</th><td>}</td></tr>
+<tr><th id="534">534</th><td><u>#<span data-ppcond="484">endif</span></u></td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td></td></tr>
+<tr><th id="537">537</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="538">538</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="539">539</th><td><dfn class="tu decl def fn" id="internal_ucs4le_loop_single" title='internal_ucs4le_loop_single' data-type='int internal_ucs4le_loop_single(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="internal_ucs4le_loop_single" data-ref-filename="internal_ucs4le_loop_single">internal_ucs4le_loop_single</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col8 decl" id="118step" title='step' data-type='struct __gconv_step *' data-ref="118step" data-ref-filename="118step">step</dfn>,</td></tr>
+<tr><th id="540">540</th><td>			     <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col9 decl" id="119step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="119step_data" data-ref-filename="119step_data">step_data</dfn>,</td></tr>
+<tr><th id="541">541</th><td>			     <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col0 decl" id="120inptrp" title='inptrp' data-type='const unsigned char **' data-ref="120inptrp" data-ref-filename="120inptrp">inptrp</dfn>,</td></tr>
+<tr><th id="542">542</th><td>			     <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col1 decl" id="121inend" title='inend' data-type='const unsigned char *' data-ref="121inend" data-ref-filename="121inend">inend</dfn>,</td></tr>
+<tr><th id="543">543</th><td>			     <em>unsigned</em> <em>char</em> **<dfn class="local col2 decl" id="122outptrp" title='outptrp' data-type='unsigned char **' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col3 decl" id="123outend" title='outend' data-type='unsigned char *' data-ref="123outend" data-ref-filename="123outend">outend</dfn>,</td></tr>
+<tr><th id="544">544</th><td>			     <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col4 decl" id="124irreversible" title='irreversible' data-type='size_t *' data-ref="124irreversible" data-ref-filename="124irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="545">545</th><td>{</td></tr>
+<tr><th id="546">546</th><td>  <a class="typedef" href="../wcsmbs/wchar.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> *<dfn class="local col5 decl" id="125state" title='state' data-type='mbstate_t *' data-ref="125state" data-ref-filename="125state">state</dfn> = <a class="local col9 ref" href="#119step_data" title='step_data' data-ref="119step_data" data-ref-filename="119step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__statep" title='__gconv_step_data::__statep' data-ref="__gconv_step_data::__statep" data-ref-filename="__gconv_step_data..__statep">__statep</a>;</td></tr>
+<tr><th id="547">547</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="126cnt" title='cnt' data-type='size_t' data-ref="126cnt" data-ref-filename="126cnt">cnt</dfn> = <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp; <var>7</var>;</td></tr>
+<tr><th id="548">548</th><td></td></tr>
+<tr><th id="549">549</th><td>  <b>while</b> (*<a class="local col0 ref" href="#120inptrp" title='inptrp' data-ref="120inptrp" data-ref-filename="120inptrp">inptrp</a> &lt; <a class="local col1 ref" href="#121inend" title='inend' data-ref="121inend" data-ref-filename="121inend">inend</a> &amp;&amp; <a class="local col6 ref" href="#126cnt" title='cnt' data-ref="126cnt" data-ref-filename="126cnt">cnt</a> &lt; <var>4</var>)</td></tr>
+<tr><th id="550">550</th><td>    <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<a class="local col6 ref" href="#126cnt" title='cnt' data-ref="126cnt" data-ref-filename="126cnt">cnt</a>++] = *(*<a class="local col0 ref" href="#120inptrp" title='inptrp' data-ref="120inptrp" data-ref-filename="120inptrp">inptrp</a>)++;</td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((cnt &lt; 4))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col6 ref" href="#126cnt" title='cnt' data-ref="126cnt" data-ref-filename="126cnt">cnt</a> &lt; <var>4</var>))</td></tr>
+<tr><th id="553">553</th><td>    {</td></tr>
+<tr><th id="554">554</th><td>      <i>/* Still not enough bytes.  Store the ones in the input buffer.  */</i></td></tr>
+<tr><th id="555">555</th><td>      <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="556">556</th><td>      <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> |= <a class="local col6 ref" href="#126cnt" title='cnt' data-ref="126cnt" data-ref-filename="126cnt">cnt</a>;</td></tr>
+<tr><th id="557">557</th><td></td></tr>
+<tr><th id="558">558</th><td>      <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="559">559</th><td>    }</td></tr>
+<tr><th id="560">560</th><td></td></tr>
+<tr><th id="561">561</th><td><u>#<span data-ppcond="561">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#32" title="4321" data-ref="_M/__BIG_ENDIAN">__BIG_ENDIAN</a></u></td></tr>
+<tr><th id="562">562</th><td>  (*outptrp)[<var>0</var>] = state-&gt;__value.__wchb[<var>3</var>];</td></tr>
+<tr><th id="563">563</th><td>  (*outptrp)[<var>1</var>] = state-&gt;__value.__wchb[<var>2</var>];</td></tr>
+<tr><th id="564">564</th><td>  (*outptrp)[<var>2</var>] = state-&gt;__value.__wchb[<var>1</var>];</td></tr>
+<tr><th id="565">565</th><td>  (*outptrp)[<var>3</var>] = state-&gt;__value.__wchb[<var>0</var>];</td></tr>
+<tr><th id="566">566</th><td></td></tr>
+<tr><th id="567">567</th><td><u>#<span data-ppcond="561">else</span></u></td></tr>
+<tr><th id="568">568</th><td>  <i>/* XXX unaligned */</i></td></tr>
+<tr><th id="569">569</th><td>  (*<a class="local col2 ref" href="#122outptrp" title='outptrp' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</a>)[<var>0</var>] = <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>0</var>];</td></tr>
+<tr><th id="570">570</th><td>  (*<a class="local col2 ref" href="#122outptrp" title='outptrp' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</a>)[<var>1</var>] = <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>1</var>];</td></tr>
+<tr><th id="571">571</th><td>  (*<a class="local col2 ref" href="#122outptrp" title='outptrp' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</a>)[<var>2</var>] = <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>2</var>];</td></tr>
+<tr><th id="572">572</th><td>  (*<a class="local col2 ref" href="#122outptrp" title='outptrp' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</a>)[<var>3</var>] = <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>3</var>];</td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td><u>#<span data-ppcond="561">endif</span></u></td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td>  *<a class="local col2 ref" href="#122outptrp" title='outptrp' data-ref="122outptrp" data-ref-filename="122outptrp">outptrp</a> += <var>4</var>;</td></tr>
+<tr><th id="577">577</th><td></td></tr>
+<tr><th id="578">578</th><td>  <i>/* Clear the state buffer.  */</i></td></tr>
+<tr><th id="579">579</th><td>  <a class="local col5 ref" href="#125state" title='state' data-ref="125state" data-ref-filename="125state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td>  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</a>;</td></tr>
+<tr><th id="582">582</th><td>}</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="585">585</th><td></td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><i>/* And finally from UCS4-LE to the internal encoding.  */</i></td></tr>
+<tr><th id="588">588</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="589">589</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="590">590</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="591">591</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="592">592</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="593">593</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		ucs4le_internal_loop</u></td></tr>
+<tr><th id="594">594</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			ucs4le_internal_loop /* This is not used.  */</u></td></tr>
+<tr><th id="595">595</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_ucs4le_internal</u></td></tr>
+<tr><th id="596">596</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		0</u></td></tr>
+<tr><th id="597">597</th><td></td></tr>
+<tr><th id="598">598</th><td></td></tr>
+<tr><th id="599">599</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="600">600</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="601">601</th><td><dfn class="tu decl def fn" id="ucs4le_internal_loop" title='ucs4le_internal_loop' data-type='int ucs4le_internal_loop(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="ucs4le_internal_loop" data-ref-filename="ucs4le_internal_loop">ucs4le_internal_loop</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col6 decl" id="156step" title='step' data-type='struct __gconv_step *' data-ref="156step" data-ref-filename="156step">step</dfn>,</td></tr>
+<tr><th id="602">602</th><td>		      <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col7 decl" id="157step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="157step_data" data-ref-filename="157step_data">step_data</dfn>,</td></tr>
+<tr><th id="603">603</th><td>		      <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col8 decl" id="158inptrp" title='inptrp' data-type='const unsigned char **' data-ref="158inptrp" data-ref-filename="158inptrp">inptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col9 decl" id="159inend" title='inend' data-type='const unsigned char *' data-ref="159inend" data-ref-filename="159inend">inend</dfn>,</td></tr>
+<tr><th id="604">604</th><td>		      <em>unsigned</em> <em>char</em> **<dfn class="local col0 decl" id="160outptrp" title='outptrp' data-type='unsigned char **' data-ref="160outptrp" data-ref-filename="160outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col1 decl" id="161outend" title='outend' data-type='unsigned char *' data-ref="161outend" data-ref-filename="161outend">outend</dfn>,</td></tr>
+<tr><th id="605">605</th><td>		      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col2 decl" id="162irreversible" title='irreversible' data-type='size_t *' data-ref="162irreversible" data-ref-filename="162irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="606">606</th><td>{</td></tr>
+<tr><th id="607">607</th><td>  <em>int</em> <dfn class="local col3 decl" id="163flags" title='flags' data-type='int' data-ref="163flags" data-ref-filename="163flags">flags</dfn> = <a class="local col7 ref" href="#157step_data" title='step_data' data-ref="157step_data" data-ref-filename="157step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</a>;</td></tr>
+<tr><th id="608">608</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col4 decl" id="164inptr" title='inptr' data-type='const unsigned char *' data-ref="164inptr" data-ref-filename="164inptr">inptr</dfn> = *<a class="local col8 ref" href="#158inptrp" title='inptrp' data-ref="158inptrp" data-ref-filename="158inptrp">inptrp</a>;</td></tr>
+<tr><th id="609">609</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="local col5 decl" id="165outptr" title='outptr' data-type='unsigned char *' data-ref="165outptr" data-ref-filename="165outptr">outptr</dfn> = *<a class="local col0 ref" href="#160outptrp" title='outptrp' data-ref="160outptrp" data-ref-filename="160outptrp">outptrp</a>;</td></tr>
+<tr><th id="610">610</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="166n_convert" title='n_convert' data-type='size_t' data-ref="166n_convert" data-ref-filename="166n_convert">n_convert</dfn> = <a class="macro" href="../misc/sys/param.h.html#102" title="(((inend - inptr)&lt;(outend - outptr))?(inend - inptr):(outend - outptr))" data-ref="_M/MIN">MIN</a> (<a class="local col9 ref" href="#159inend" title='inend' data-ref="159inend" data-ref-filename="159inend">inend</a> - <a class="local col4 ref" href="#164inptr" title='inptr' data-ref="164inptr" data-ref-filename="164inptr">inptr</a>, <a class="local col1 ref" href="#161outend" title='outend' data-ref="161outend" data-ref-filename="161outend">outend</a> - <a class="local col5 ref" href="#165outptr" title='outptr' data-ref="165outptr" data-ref-filename="165outptr">outptr</a>) / <var>4</var>;</td></tr>
+<tr><th id="611">611</th><td>  <em>int</em> <dfn class="local col7 decl" id="167result" title='result' data-type='int' data-ref="167result" data-ref-filename="167result">result</dfn>;</td></tr>
+<tr><th id="612">612</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="168cnt" title='cnt' data-type='size_t' data-ref="168cnt" data-ref-filename="168cnt">cnt</dfn>;</td></tr>
+<tr><th id="613">613</th><td></td></tr>
+<tr><th id="614">614</th><td>  <b>for</b> (<a class="local col8 ref" href="#168cnt" title='cnt' data-ref="168cnt" data-ref-filename="168cnt">cnt</a> = <var>0</var>; <a class="local col8 ref" href="#168cnt" title='cnt' data-ref="168cnt" data-ref-filename="168cnt">cnt</a> &lt; <a class="local col6 ref" href="#166n_convert" title='n_convert' data-ref="166n_convert" data-ref-filename="166n_convert">n_convert</a>; ++<a class="local col8 ref" href="#168cnt" title='cnt' data-ref="168cnt" data-ref-filename="168cnt">cnt</a>, <a class="local col4 ref" href="#164inptr" title='inptr' data-ref="164inptr" data-ref-filename="164inptr">inptr</a> += <var>4</var>)</td></tr>
+<tr><th id="615">615</th><td>    {</td></tr>
+<tr><th id="616">616</th><td>      <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col9 decl" id="169inval" title='inval' data-type='uint32_t' data-ref="169inval" data-ref-filename="169inval">inval</dfn>;</td></tr>
+<tr><th id="617">617</th><td></td></tr>
+<tr><th id="618">618</th><td><u>#<span data-ppcond="618">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#32" title="4321" data-ref="_M/__BIG_ENDIAN">__BIG_ENDIAN</a></u></td></tr>
+<tr><th id="619">619</th><td>      inval = bswap_32 (*(<em>const</em> uint32_t *) inptr);</td></tr>
+<tr><th id="620">620</th><td><u>#<span data-ppcond="618">else</span></u></td></tr>
+<tr><th id="621">621</th><td>      <a class="local col9 ref" href="#169inval" title='inval' data-ref="169inval" data-ref-filename="169inval">inval</a> = *(<em>const</em> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col4 ref" href="#164inptr" title='inptr' data-ref="164inptr" data-ref-filename="164inptr">inptr</a>;</td></tr>
+<tr><th id="622">622</th><td><u>#<span data-ppcond="618">endif</span></u></td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((inval &gt; 0x7fffffff))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col9 ref" href="#169inval" title='inval' data-ref="169inval" data-ref-filename="169inval">inval</a> &gt; <var>0x7fffffff</var>))</td></tr>
+<tr><th id="625">625</th><td>	{</td></tr>
+<tr><th id="626">626</th><td>	  <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="627">627</th><td><i>	     this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="628">628</th><td><i>	     represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="629">629</th><td><i>	     UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="630">630</th><td>	  <b>if</b> (<a class="local col2 ref" href="#162irreversible" title='irreversible' data-ref="162irreversible" data-ref-filename="162irreversible">irreversible</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="631">631</th><td>	    <i>/* We are transliterating, don't try to correct anything.  */</i></td></tr>
+<tr><th id="632">632</th><td>	    <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="633">633</th><td></td></tr>
+<tr><th id="634">634</th><td>	  <b>if</b> (<a class="local col3 ref" href="#163flags" title='flags' data-ref="163flags" data-ref-filename="163flags">flags</a> &amp; <a class="enum" href="gconv.h.html#__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</a>)</td></tr>
+<tr><th id="635">635</th><td>	    {</td></tr>
+<tr><th id="636">636</th><td>	      <i>/* Just ignore this character.  */</i></td></tr>
+<tr><th id="637">637</th><td>	      ++*<a class="local col2 ref" href="#162irreversible" title='irreversible' data-ref="162irreversible" data-ref-filename="162irreversible">irreversible</a>;</td></tr>
+<tr><th id="638">638</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="639">639</th><td>	    }</td></tr>
+<tr><th id="640">640</th><td></td></tr>
+<tr><th id="641">641</th><td>	  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="642">642</th><td>	}</td></tr>
+<tr><th id="643">643</th><td></td></tr>
+<tr><th id="644">644</th><td>      *((<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> *) <a class="local col5 ref" href="#165outptr" title='outptr' data-ref="165outptr" data-ref-filename="165outptr">outptr</a>) = <a class="local col9 ref" href="#169inval" title='inval' data-ref="169inval" data-ref-filename="169inval">inval</a>;</td></tr>
+<tr><th id="645">645</th><td>      <a class="local col5 ref" href="#165outptr" title='outptr' data-ref="165outptr" data-ref-filename="165outptr">outptr</a> += <b>sizeof</b> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a>);</td></tr>
+<tr><th id="646">646</th><td>    }</td></tr>
+<tr><th id="647">647</th><td></td></tr>
+<tr><th id="648">648</th><td>  *<a class="local col8 ref" href="#158inptrp" title='inptrp' data-ref="158inptrp" data-ref-filename="158inptrp">inptrp</a> = <a class="local col4 ref" href="#164inptr" title='inptr' data-ref="164inptr" data-ref-filename="164inptr">inptr</a>;</td></tr>
+<tr><th id="649">649</th><td>  *<a class="local col0 ref" href="#160outptrp" title='outptrp' data-ref="160outptrp" data-ref-filename="160outptrp">outptrp</a> = <a class="local col5 ref" href="#165outptr" title='outptr' data-ref="165outptr" data-ref-filename="165outptr">outptr</a>;</td></tr>
+<tr><th id="650">650</th><td></td></tr>
+<tr><th id="651">651</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="652">652</th><td>  <b>if</b> (*<a class="local col8 ref" href="#158inptrp" title='inptrp' data-ref="158inptrp" data-ref-filename="158inptrp">inptrp</a> == <a class="local col9 ref" href="#159inend" title='inend' data-ref="159inend" data-ref-filename="159inend">inend</a>)</td></tr>
+<tr><th id="653">653</th><td>    <a class="local col7 ref" href="#167result" title='result' data-ref="167result" data-ref-filename="167result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</a>;</td></tr>
+<tr><th id="654">654</th><td>  <b>else</b> <b>if</b> (*<a class="local col8 ref" href="#158inptrp" title='inptrp' data-ref="158inptrp" data-ref-filename="158inptrp">inptrp</a> + <var>4</var> &gt; <a class="local col9 ref" href="#159inend" title='inend' data-ref="159inend" data-ref-filename="159inend">inend</a>)</td></tr>
+<tr><th id="655">655</th><td>    <a class="local col7 ref" href="#167result" title='result' data-ref="167result" data-ref-filename="167result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="656">656</th><td>  <b>else</b></td></tr>
+<tr><th id="657">657</th><td>    {</td></tr>
+<tr><th id="658">658</th><td>      <a class="macro" href="../assert/assert.h.html#85" title="((*outptrp + 4 &gt; outend) ? (void) (0) : __assert_fail (&quot;*outptrp + 4 &gt; outend&quot;, &quot;/home/fp/glibc/glibc_src/iconv/gconv_simple.c&quot;, 658, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a> (*<a class="local col0 ref" href="#160outptrp" title='outptrp' data-ref="160outptrp" data-ref-filename="160outptrp">outptrp</a> + <var>4</var> &gt; <a class="local col1 ref" href="#161outend" title='outend' data-ref="161outend" data-ref-filename="161outend">outend</a>);</td></tr>
+<tr><th id="659">659</th><td>      <a class="local col7 ref" href="#167result" title='result' data-ref="167result" data-ref-filename="167result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</a>;</td></tr>
+<tr><th id="660">660</th><td>    }</td></tr>
+<tr><th id="661">661</th><td></td></tr>
+<tr><th id="662">662</th><td>  <b>return</b> <a class="local col7 ref" href="#167result" title='result' data-ref="167result" data-ref-filename="167result">result</a>;</td></tr>
+<tr><th id="663">663</th><td>}</td></tr>
+<tr><th id="664">664</th><td></td></tr>
+<tr><th id="665">665</th><td><u>#<span data-ppcond="665">if</span> !<a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a></u></td></tr>
+<tr><th id="666">666</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="667">667</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="668">668</th><td>ucs4le_internal_loop_unaligned (<b>struct</b> __gconv_step *step,</td></tr>
+<tr><th id="669">669</th><td>				<b>struct</b> __gconv_step_data *step_data,</td></tr>
+<tr><th id="670">670</th><td>				<em>const</em> <em>unsigned</em> <em>char</em> **inptrp,</td></tr>
+<tr><th id="671">671</th><td>				<em>const</em> <em>unsigned</em> <em>char</em> *inend,</td></tr>
+<tr><th id="672">672</th><td>				<em>unsigned</em> <em>char</em> **outptrp, <em>unsigned</em> <em>char</em> *outend,</td></tr>
+<tr><th id="673">673</th><td>				size_t *irreversible)</td></tr>
+<tr><th id="674">674</th><td>{</td></tr>
+<tr><th id="675">675</th><td>  <em>int</em> flags = step_data-&gt;__flags;</td></tr>
+<tr><th id="676">676</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *inptr = *inptrp;</td></tr>
+<tr><th id="677">677</th><td>  <em>unsigned</em> <em>char</em> *outptr = *outptrp;</td></tr>
+<tr><th id="678">678</th><td>  size_t n_convert = MIN (inend - inptr, outend - outptr) / <var>4</var>;</td></tr>
+<tr><th id="679">679</th><td>  <em>int</em> result;</td></tr>
+<tr><th id="680">680</th><td>  size_t cnt;</td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td>  <b>for</b> (cnt = <var>0</var>; cnt &lt; n_convert; ++cnt, inptr += <var>4</var>)</td></tr>
+<tr><th id="683">683</th><td>    {</td></tr>
+<tr><th id="684">684</th><td>      <b>if</b> (__glibc_unlikely (inptr[<var>3</var>] &gt; <var>0x80</var>))</td></tr>
+<tr><th id="685">685</th><td>	{</td></tr>
+<tr><th id="686">686</th><td>	  <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="687">687</th><td><i>	     this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="688">688</th><td><i>	     represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="689">689</th><td><i>	     UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="690">690</th><td>	  <b>if</b> (irreversible == NULL)</td></tr>
+<tr><th id="691">691</th><td>	    <i>/* We are transliterating, don't try to correct anything.  */</i></td></tr>
+<tr><th id="692">692</th><td>	    <b>return</b> __GCONV_ILLEGAL_INPUT;</td></tr>
+<tr><th id="693">693</th><td></td></tr>
+<tr><th id="694">694</th><td>	  <b>if</b> (flags &amp; __GCONV_IGNORE_ERRORS)</td></tr>
+<tr><th id="695">695</th><td>	    {</td></tr>
+<tr><th id="696">696</th><td>	      <i>/* Just ignore this character.  */</i></td></tr>
+<tr><th id="697">697</th><td>	      ++*irreversible;</td></tr>
+<tr><th id="698">698</th><td>	      <b>continue</b>;</td></tr>
+<tr><th id="699">699</th><td>	    }</td></tr>
+<tr><th id="700">700</th><td></td></tr>
+<tr><th id="701">701</th><td>	  *inptrp = inptr;</td></tr>
+<tr><th id="702">702</th><td>	  *outptrp = outptr;</td></tr>
+<tr><th id="703">703</th><td>	  <b>return</b> __GCONV_ILLEGAL_INPUT;</td></tr>
+<tr><th id="704">704</th><td>	}</td></tr>
+<tr><th id="705">705</th><td></td></tr>
+<tr><th id="706">706</th><td><u># if __BYTE_ORDER == __BIG_ENDIAN</u></td></tr>
+<tr><th id="707">707</th><td>      outptr[<var>3</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="708">708</th><td>      outptr[<var>2</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="709">709</th><td>      outptr[<var>1</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="710">710</th><td>      outptr[<var>0</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="711">711</th><td><u># else</u></td></tr>
+<tr><th id="712">712</th><td>      outptr[<var>0</var>] = inptr[<var>0</var>];</td></tr>
+<tr><th id="713">713</th><td>      outptr[<var>1</var>] = inptr[<var>1</var>];</td></tr>
+<tr><th id="714">714</th><td>      outptr[<var>2</var>] = inptr[<var>2</var>];</td></tr>
+<tr><th id="715">715</th><td>      outptr[<var>3</var>] = inptr[<var>3</var>];</td></tr>
+<tr><th id="716">716</th><td><u># endif</u></td></tr>
+<tr><th id="717">717</th><td></td></tr>
+<tr><th id="718">718</th><td>      outptr += <var>4</var>;</td></tr>
+<tr><th id="719">719</th><td>    }</td></tr>
+<tr><th id="720">720</th><td></td></tr>
+<tr><th id="721">721</th><td>  *inptrp = inptr;</td></tr>
+<tr><th id="722">722</th><td>  *outptrp = outptr;</td></tr>
+<tr><th id="723">723</th><td></td></tr>
+<tr><th id="724">724</th><td>  <i>/* Determine the status.  */</i></td></tr>
+<tr><th id="725">725</th><td>  <b>if</b> (*inptrp == inend)</td></tr>
+<tr><th id="726">726</th><td>    result = __GCONV_EMPTY_INPUT;</td></tr>
+<tr><th id="727">727</th><td>  <b>else</b> <b>if</b> (*inptrp + <var>4</var> &gt; inend)</td></tr>
+<tr><th id="728">728</th><td>    result = __GCONV_INCOMPLETE_INPUT;</td></tr>
+<tr><th id="729">729</th><td>  <b>else</b></td></tr>
+<tr><th id="730">730</th><td>    {</td></tr>
+<tr><th id="731">731</th><td>      assert (*outptrp + <var>4</var> &gt; outend);</td></tr>
+<tr><th id="732">732</th><td>      result = __GCONV_FULL_OUTPUT;</td></tr>
+<tr><th id="733">733</th><td>    }</td></tr>
+<tr><th id="734">734</th><td></td></tr>
+<tr><th id="735">735</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="736">736</th><td>}</td></tr>
+<tr><th id="737">737</th><td><u>#<span data-ppcond="665">endif</span></u></td></tr>
+<tr><th id="738">738</th><td></td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="741">741</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="742">742</th><td><dfn class="tu decl def fn" id="ucs4le_internal_loop_single" title='ucs4le_internal_loop_single' data-type='int ucs4le_internal_loop_single(struct __gconv_step * step, struct __gconv_step_data * step_data, const unsigned char ** inptrp, const unsigned char * inend, unsigned char ** outptrp, unsigned char * outend, size_t * irreversible)' data-ref="ucs4le_internal_loop_single" data-ref-filename="ucs4le_internal_loop_single">ucs4le_internal_loop_single</dfn> (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col0 decl" id="170step" title='step' data-type='struct __gconv_step *' data-ref="170step" data-ref-filename="170step">step</dfn>,</td></tr>
+<tr><th id="743">743</th><td>			     <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col1 decl" id="171step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="171step_data" data-ref-filename="171step_data">step_data</dfn>,</td></tr>
+<tr><th id="744">744</th><td>			     <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col2 decl" id="172inptrp" title='inptrp' data-type='const unsigned char **' data-ref="172inptrp" data-ref-filename="172inptrp">inptrp</dfn>,</td></tr>
+<tr><th id="745">745</th><td>			     <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col3 decl" id="173inend" title='inend' data-type='const unsigned char *' data-ref="173inend" data-ref-filename="173inend">inend</dfn>,</td></tr>
+<tr><th id="746">746</th><td>			     <em>unsigned</em> <em>char</em> **<dfn class="local col4 decl" id="174outptrp" title='outptrp' data-type='unsigned char **' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</dfn>, <em>unsigned</em> <em>char</em> *<dfn class="local col5 decl" id="175outend" title='outend' data-type='unsigned char *' data-ref="175outend" data-ref-filename="175outend">outend</dfn>,</td></tr>
+<tr><th id="747">747</th><td>			     <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col6 decl" id="176irreversible" title='irreversible' data-type='size_t *' data-ref="176irreversible" data-ref-filename="176irreversible">irreversible</dfn>)</td></tr>
+<tr><th id="748">748</th><td>{</td></tr>
+<tr><th id="749">749</th><td>  <a class="typedef" href="../wcsmbs/wchar.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> *<dfn class="local col7 decl" id="177state" title='state' data-type='mbstate_t *' data-ref="177state" data-ref-filename="177state">state</dfn> = <a class="local col1 ref" href="#171step_data" title='step_data' data-ref="171step_data" data-ref-filename="171step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__statep" title='__gconv_step_data::__statep' data-ref="__gconv_step_data::__statep" data-ref-filename="__gconv_step_data..__statep">__statep</a>;</td></tr>
+<tr><th id="750">750</th><td>  <em>int</em> <dfn class="local col8 decl" id="178flags" title='flags' data-type='int' data-ref="178flags" data-ref-filename="178flags">flags</dfn> = <a class="local col1 ref" href="#171step_data" title='step_data' data-ref="171step_data" data-ref-filename="171step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</a>;</td></tr>
+<tr><th id="751">751</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col9 decl" id="179cnt" title='cnt' data-type='size_t' data-ref="179cnt" data-ref-filename="179cnt">cnt</dfn> = <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp; <var>7</var>;</td></tr>
+<tr><th id="752">752</th><td></td></tr>
+<tr><th id="753">753</th><td>  <b>while</b> (*<a class="local col2 ref" href="#172inptrp" title='inptrp' data-ref="172inptrp" data-ref-filename="172inptrp">inptrp</a> &lt; <a class="local col3 ref" href="#173inend" title='inend' data-ref="173inend" data-ref-filename="173inend">inend</a> &amp;&amp; <a class="local col9 ref" href="#179cnt" title='cnt' data-ref="179cnt" data-ref-filename="179cnt">cnt</a> &lt; <var>4</var>)</td></tr>
+<tr><th id="754">754</th><td>    <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<a class="local col9 ref" href="#179cnt" title='cnt' data-ref="179cnt" data-ref-filename="179cnt">cnt</a>++] = *(*<a class="local col2 ref" href="#172inptrp" title='inptrp' data-ref="172inptrp" data-ref-filename="172inptrp">inptrp</a>)++;</td></tr>
+<tr><th id="755">755</th><td></td></tr>
+<tr><th id="756">756</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="((cnt &lt; 4))" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col9 ref" href="#179cnt" title='cnt' data-ref="179cnt" data-ref-filename="179cnt">cnt</a> &lt; <var>4</var>))</td></tr>
+<tr><th id="757">757</th><td>    {</td></tr>
+<tr><th id="758">758</th><td>      <i>/* Still not enough bytes.  Store the ones in the input buffer.  */</i></td></tr>
+<tr><th id="759">759</th><td>      <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="760">760</th><td>      <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> |= <a class="local col9 ref" href="#179cnt" title='cnt' data-ref="179cnt" data-ref-filename="179cnt">cnt</a>;</td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td>      <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="763">763</th><td>    }</td></tr>
+<tr><th id="764">764</th><td></td></tr>
+<tr><th id="765">765</th><td>  <b>if</b> (<a class="macro" href="../intl/loadinfo.h.html#44" title="(((unsigned char *) state-&gt;__value.__wchb)[3] &gt; 0x80)" data-ref="_M/__builtin_expect">__builtin_expect</a> (((<em>unsigned</em> <em>char</em> *) <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>)[<var>3</var>] &gt; <var>0x80</var>,</td></tr>
+<tr><th id="766">766</th><td>			<var>0</var>))</td></tr>
+<tr><th id="767">767</th><td>    {</td></tr>
+<tr><th id="768">768</th><td>      <i>/* The value is too large.  We don't try transliteration here since</i></td></tr>
+<tr><th id="769">769</th><td><i>	 this is not an error because of the lack of possibilities to</i></td></tr>
+<tr><th id="770">770</th><td><i>	 represent the result.  This is a genuine bug in the input since</i></td></tr>
+<tr><th id="771">771</th><td><i>	 UCS4 does not allow such values.  */</i></td></tr>
+<tr><th id="772">772</th><td>      <b>if</b> (!(<a class="local col8 ref" href="#178flags" title='flags' data-ref="178flags" data-ref-filename="178flags">flags</a> &amp; <a class="enum" href="gconv.h.html#__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</a>))</td></tr>
+<tr><th id="773">773</th><td>	<b>return</b> <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;</td></tr>
+<tr><th id="774">774</th><td>    }</td></tr>
+<tr><th id="775">775</th><td>  <b>else</b></td></tr>
+<tr><th id="776">776</th><td>    {</td></tr>
+<tr><th id="777">777</th><td><u>#<span data-ppcond="777">if</span> <a class="macro" href="../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../string/endian.h.html#32" title="4321" data-ref="_M/__BIG_ENDIAN">__BIG_ENDIAN</a></u></td></tr>
+<tr><th id="778">778</th><td>      (*outptrp)[<var>0</var>] = state-&gt;__value.__wchb[<var>3</var>];</td></tr>
+<tr><th id="779">779</th><td>      (*outptrp)[<var>1</var>] = state-&gt;__value.__wchb[<var>2</var>];</td></tr>
+<tr><th id="780">780</th><td>      (*outptrp)[<var>2</var>] = state-&gt;__value.__wchb[<var>1</var>];</td></tr>
+<tr><th id="781">781</th><td>      (*outptrp)[<var>3</var>] = state-&gt;__value.__wchb[<var>0</var>];</td></tr>
+<tr><th id="782">782</th><td><u>#<span data-ppcond="777">else</span></u></td></tr>
+<tr><th id="783">783</th><td>      (*<a class="local col4 ref" href="#174outptrp" title='outptrp' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</a>)[<var>0</var>] = <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>0</var>];</td></tr>
+<tr><th id="784">784</th><td>      (*<a class="local col4 ref" href="#174outptrp" title='outptrp' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</a>)[<var>1</var>] = <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>1</var>];</td></tr>
+<tr><th id="785">785</th><td>      (*<a class="local col4 ref" href="#174outptrp" title='outptrp' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</a>)[<var>2</var>] = <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>2</var>];</td></tr>
+<tr><th id="786">786</th><td>      (*<a class="local col4 ref" href="#174outptrp" title='outptrp' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</a>)[<var>3</var>] = <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__value" title='(anonymous struct)::__value' data-ref="(anonymous)::__value" data-ref-filename="(anonymous)..__value">__value</a>.<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymousstruct)::(anonymous)::__wchb" title='(anonymous struct)::(anonymous union)::__wchb' data-ref="(anonymousstruct)::(anonymous)::__wchb" data-ref-filename="(anonymousstruct)..(anonymous)..__wchb">__wchb</a>[<var>3</var>];</td></tr>
+<tr><th id="787">787</th><td><u>#<span data-ppcond="777">endif</span></u></td></tr>
+<tr><th id="788">788</th><td></td></tr>
+<tr><th id="789">789</th><td>      *<a class="local col4 ref" href="#174outptrp" title='outptrp' data-ref="174outptrp" data-ref-filename="174outptrp">outptrp</a> += <var>4</var>;</td></tr>
+<tr><th id="790">790</th><td>    }</td></tr>
+<tr><th id="791">791</th><td></td></tr>
+<tr><th id="792">792</th><td>  <i>/* Clear the state buffer.  */</i></td></tr>
+<tr><th id="793">793</th><td>  <a class="local col7 ref" href="#177state" title='state' data-ref="177state" data-ref-filename="177state">state</a>-&gt;<a class="ref field" href="../wcsmbs/wchar.h.html#(anonymous)::__count" title='(anonymous struct)::__count' data-ref="(anonymous)::__count" data-ref-filename="(anonymous)..__count">__count</a> &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="794">794</th><td></td></tr>
+<tr><th id="795">795</th><td>  <b>return</b> <a class="enum" href="gconv.h.html#__GCONV_OK" title='__GCONV_OK' data-ref="__GCONV_OK" data-ref-filename="__GCONV_OK">__GCONV_OK</a>;</td></tr>
+<tr><th id="796">796</th><td>}</td></tr>
+<tr><th id="797">797</th><td></td></tr>
+<tr><th id="798">798</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="799">799</th><td></td></tr>
+<tr><th id="800">800</th><td></td></tr>
+<tr><th id="801">801</th><td><i>/* Convert from ISO 646-IRV to the internal (UCS4-like) format.  */</i></td></tr>
+<tr><th id="802">802</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="803">803</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="804">804</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		1</u></td></tr>
+<tr><th id="805">805</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="806">806</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="807">807</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		ascii_internal_loop</u></td></tr>
+<tr><th id="808">808</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			ascii_internal_loop /* This is not used.  */</u></td></tr>
+<tr><th id="809">809</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_ascii_internal</u></td></tr>
+<tr><th id="810">810</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="811">811</th><td></td></tr>
+<tr><th id="812">812</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="813">813</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="814">814</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="815">815</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="816">816</th><td><u>  {									      \</u></td></tr>
+<tr><th id="817">817</th><td><u>    if (__glibc_unlikely (*inptr &gt; '\x7f'))				      \</u></td></tr>
+<tr><th id="818">818</th><td><u>      {									      \</u></td></tr>
+<tr><th id="819">819</th><td><u>	/* The value is too large.  We don't try transliteration here since   \</u></td></tr>
+<tr><th id="820">820</th><td><u>	   this is not an error because of the lack of possibilities to	      \</u></td></tr>
+<tr><th id="821">821</th><td><u>	   represent the result.  This is a genuine bug in the input since    \</u></td></tr>
+<tr><th id="822">822</th><td><u>	   ASCII does not allow such values.  */			      \</u></td></tr>
+<tr><th id="823">823</th><td><u>	STANDARD_FROM_LOOP_ERR_HANDLER (1);				      \</u></td></tr>
+<tr><th id="824">824</th><td><u>      }									      \</u></td></tr>
+<tr><th id="825">825</th><td><u>    else								      \</u></td></tr>
+<tr><th id="826">826</th><td><u>      {									      \</u></td></tr>
+<tr><th id="827">827</th><td><u>	/* It's an one byte sequence.  */				      \</u></td></tr>
+<tr><th id="828">828</th><td><u>	*((uint32_t *) outptr) = *inptr++;				      \</u></td></tr>
+<tr><th id="829">829</th><td><u>	outptr += sizeof (uint32_t);					      \</u></td></tr>
+<tr><th id="830">830</th><td><u>      }									      \</u></td></tr>
+<tr><th id="831">831</th><td><u>  }</u></td></tr>
+<tr><th id="832">832</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="833">833</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="834">834</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="835">835</th><td></td></tr>
+<tr><th id="836">836</th><td></td></tr>
+<tr><th id="837">837</th><td><i>/* Convert from the internal (UCS4-like) format to ISO 646-IRV.  */</i></td></tr>
+<tr><th id="838">838</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="839">839</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="840">840</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="841">841</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		1</u></td></tr>
+<tr><th id="842">842</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="843">843</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_ascii_loop</u></td></tr>
+<tr><th id="844">844</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_ascii_loop /* This is not used.  */</u></td></tr>
+<tr><th id="845">845</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_ascii</u></td></tr>
+<tr><th id="846">846</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="847">847</th><td></td></tr>
+<tr><th id="848">848</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="849">849</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="850">850</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="851">851</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="852">852</th><td><u>  {									      \</u></td></tr>
+<tr><th id="853">853</th><td><u>    if (__glibc_unlikely (*((const uint32_t *) inptr) &gt; 0x7f))		      \</u></td></tr>
+<tr><th id="854">854</th><td><u>      {									      \</u></td></tr>
+<tr><th id="855">855</th><td><u>	UNICODE_TAG_HANDLER (*((const uint32_t *) inptr), 4);		      \</u></td></tr>
+<tr><th id="856">856</th><td><u>	STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="857">857</th><td><u>      }									      \</u></td></tr>
+<tr><th id="858">858</th><td><u>    else								      \</u></td></tr>
+<tr><th id="859">859</th><td><u>      {									      \</u></td></tr>
+<tr><th id="860">860</th><td><u>	/* It's an one byte sequence.  */				      \</u></td></tr>
+<tr><th id="861">861</th><td><u>	*outptr++ = *((const uint32_t *) inptr);			      \</u></td></tr>
+<tr><th id="862">862</th><td><u>	inptr += sizeof (uint32_t);					      \</u></td></tr>
+<tr><th id="863">863</th><td><u>      }									      \</u></td></tr>
+<tr><th id="864">864</th><td><u>  }</u></td></tr>
+<tr><th id="865">865</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="866">866</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="867">867</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="868">868</th><td></td></tr>
+<tr><th id="869">869</th><td></td></tr>
+<tr><th id="870">870</th><td><i>/* Convert from the internal (UCS4-like) format to UTF-8.  */</i></td></tr>
+<tr><th id="871">871</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="872">872</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="873">873</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="874">874</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		1</u></td></tr>
+<tr><th id="875">875</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_TO" data-ref="_M/MAX_NEEDED_TO">MAX_NEEDED_TO</dfn>		6</u></td></tr>
+<tr><th id="876">876</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="877">877</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_utf8_loop</u></td></tr>
+<tr><th id="878">878</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_utf8_loop /* This is not used.  */</u></td></tr>
+<tr><th id="879">879</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_utf8</u></td></tr>
+<tr><th id="880">880</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="881">881</th><td></td></tr>
+<tr><th id="882">882</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="883">883</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="884">884</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_OUTPUT" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</dfn>	MAX_NEEDED_TO</u></td></tr>
+<tr><th id="885">885</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="886">886</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="887">887</th><td><u>  {									      \</u></td></tr>
+<tr><th id="888">888</th><td><u>    uint32_t wc = *((const uint32_t *) inptr);				      \</u></td></tr>
+<tr><th id="889">889</th><td><u>									      \</u></td></tr>
+<tr><th id="890">890</th><td><u>    if (__glibc_likely (wc &lt; 0x80))					      \</u></td></tr>
+<tr><th id="891">891</th><td><u>      /* It's an one byte sequence.  */					      \</u></td></tr>
+<tr><th id="892">892</th><td><u>      *outptr++ = (unsigned char) wc;					      \</u></td></tr>
+<tr><th id="893">893</th><td><u>    else if (__glibc_likely (wc &lt;= 0x7fffffff))				      \</u></td></tr>
+<tr><th id="894">894</th><td><u>      {									      \</u></td></tr>
+<tr><th id="895">895</th><td><u>	size_t step;							      \</u></td></tr>
+<tr><th id="896">896</th><td><u>	unsigned char *start;						      \</u></td></tr>
+<tr><th id="897">897</th><td><u>									      \</u></td></tr>
+<tr><th id="898">898</th><td><u>	for (step = 2; step &lt; 6; ++step)				      \</u></td></tr>
+<tr><th id="899">899</th><td><u>	  if ((wc &amp; (~(uint32_t)0 &lt;&lt; (5 * step + 1))) == 0)		      \</u></td></tr>
+<tr><th id="900">900</th><td><u>	    break;							      \</u></td></tr>
+<tr><th id="901">901</th><td><u>									      \</u></td></tr>
+<tr><th id="902">902</th><td><u>	if (__glibc_unlikely (outptr + step &gt; outend))			      \</u></td></tr>
+<tr><th id="903">903</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="904">904</th><td><u>	    /* Too long.  */						      \</u></td></tr>
+<tr><th id="905">905</th><td><u>	    result = __GCONV_FULL_OUTPUT;				      \</u></td></tr>
+<tr><th id="906">906</th><td><u>	    break;							      \</u></td></tr>
+<tr><th id="907">907</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="908">908</th><td><u>									      \</u></td></tr>
+<tr><th id="909">909</th><td><u>	start = outptr;							      \</u></td></tr>
+<tr><th id="910">910</th><td><u>	*outptr = (unsigned char) (~0xff &gt;&gt; step);			      \</u></td></tr>
+<tr><th id="911">911</th><td><u>	outptr += step;							      \</u></td></tr>
+<tr><th id="912">912</th><td><u>	do								      \</u></td></tr>
+<tr><th id="913">913</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="914">914</th><td><u>	    start[--step] = 0x80 | (wc &amp; 0x3f);				      \</u></td></tr>
+<tr><th id="915">915</th><td><u>	    wc &gt;&gt;= 6;							      \</u></td></tr>
+<tr><th id="916">916</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="917">917</th><td><u>	while (step &gt; 1);						      \</u></td></tr>
+<tr><th id="918">918</th><td><u>	start[0] |= wc;							      \</u></td></tr>
+<tr><th id="919">919</th><td><u>      }									      \</u></td></tr>
+<tr><th id="920">920</th><td><u>    else								      \</u></td></tr>
+<tr><th id="921">921</th><td><u>      {									      \</u></td></tr>
+<tr><th id="922">922</th><td><u>	STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="923">923</th><td><u>      }									      \</u></td></tr>
+<tr><th id="924">924</th><td><u>									      \</u></td></tr>
+<tr><th id="925">925</th><td><u>    inptr += 4;								      \</u></td></tr>
+<tr><th id="926">926</th><td><u>  }</u></td></tr>
+<tr><th id="927">927</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="928">928</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="929">929</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="930">930</th><td></td></tr>
+<tr><th id="931">931</th><td></td></tr>
+<tr><th id="932">932</th><td><i>/* Convert from UTF-8 to the internal (UCS4-like) format.  */</i></td></tr>
+<tr><th id="933">933</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="934">934</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="935">935</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		1</u></td></tr>
+<tr><th id="936">936</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_FROM" data-ref="_M/MAX_NEEDED_FROM">MAX_NEEDED_FROM</dfn>		6</u></td></tr>
+<tr><th id="937">937</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="938">938</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="939">939</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		utf8_internal_loop</u></td></tr>
+<tr><th id="940">940</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			utf8_internal_loop /* This is not used.  */</u></td></tr>
+<tr><th id="941">941</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_utf8_internal</u></td></tr>
+<tr><th id="942">942</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="943">943</th><td></td></tr>
+<tr><th id="944">944</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="945">945</th><td><u>#define <dfn class="macro" id="_M/MAX_NEEDED_INPUT" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</dfn>	MAX_NEEDED_FROM</u></td></tr>
+<tr><th id="946">946</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="947">947</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="948">948</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="949">949</th><td><u>  {									      \</u></td></tr>
+<tr><th id="950">950</th><td><u>    /* Next input byte.  */						      \</u></td></tr>
+<tr><th id="951">951</th><td><u>    uint32_t ch = *inptr;						      \</u></td></tr>
+<tr><th id="952">952</th><td><u>									      \</u></td></tr>
+<tr><th id="953">953</th><td><u>    if (__glibc_likely (ch &lt; 0x80))					      \</u></td></tr>
+<tr><th id="954">954</th><td><u>      {									      \</u></td></tr>
+<tr><th id="955">955</th><td><u>	/* One byte sequence.  */					      \</u></td></tr>
+<tr><th id="956">956</th><td><u>	++inptr;							      \</u></td></tr>
+<tr><th id="957">957</th><td><u>      }									      \</u></td></tr>
+<tr><th id="958">958</th><td><u>    else								      \</u></td></tr>
+<tr><th id="959">959</th><td><u>      {									      \</u></td></tr>
+<tr><th id="960">960</th><td><u>	uint_fast32_t cnt;						      \</u></td></tr>
+<tr><th id="961">961</th><td><u>	uint_fast32_t i;						      \</u></td></tr>
+<tr><th id="962">962</th><td><u>									      \</u></td></tr>
+<tr><th id="963">963</th><td><u>	if (ch &gt;= 0xc2 &amp;&amp; ch &lt; 0xe0)					      \</u></td></tr>
+<tr><th id="964">964</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="965">965</th><td><u>	    /* We expect two bytes.  The first byte cannot be 0xc0 or 0xc1,   \</u></td></tr>
+<tr><th id="966">966</th><td><u>	       otherwise the wide character could have been represented	      \</u></td></tr>
+<tr><th id="967">967</th><td><u>	       using a single byte.  */					      \</u></td></tr>
+<tr><th id="968">968</th><td><u>	    cnt = 2;							      \</u></td></tr>
+<tr><th id="969">969</th><td><u>	    ch &amp;= 0x1f;							      \</u></td></tr>
+<tr><th id="970">970</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="971">971</th><td><u>	else if (__glibc_likely ((ch &amp; 0xf0) == 0xe0))			      \</u></td></tr>
+<tr><th id="972">972</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="973">973</th><td><u>	    /* We expect three bytes.  */				      \</u></td></tr>
+<tr><th id="974">974</th><td><u>	    cnt = 3;							      \</u></td></tr>
+<tr><th id="975">975</th><td><u>	    ch &amp;= 0x0f;							      \</u></td></tr>
+<tr><th id="976">976</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="977">977</th><td><u>	else if (__glibc_likely ((ch &amp; 0xf8) == 0xf0))			      \</u></td></tr>
+<tr><th id="978">978</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="979">979</th><td><u>	    /* We expect four bytes.  */				      \</u></td></tr>
+<tr><th id="980">980</th><td><u>	    cnt = 4;							      \</u></td></tr>
+<tr><th id="981">981</th><td><u>	    ch &amp;= 0x07;							      \</u></td></tr>
+<tr><th id="982">982</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="983">983</th><td><u>	else if (__glibc_likely ((ch &amp; 0xfc) == 0xf8))			      \</u></td></tr>
+<tr><th id="984">984</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="985">985</th><td><u>	    /* We expect five bytes.  */				      \</u></td></tr>
+<tr><th id="986">986</th><td><u>	    cnt = 5;							      \</u></td></tr>
+<tr><th id="987">987</th><td><u>	    ch &amp;= 0x03;							      \</u></td></tr>
+<tr><th id="988">988</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="989">989</th><td><u>	else if (__glibc_likely ((ch &amp; 0xfe) == 0xfc))			      \</u></td></tr>
+<tr><th id="990">990</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="991">991</th><td><u>	    /* We expect six bytes.  */					      \</u></td></tr>
+<tr><th id="992">992</th><td><u>	    cnt = 6;							      \</u></td></tr>
+<tr><th id="993">993</th><td><u>	    ch &amp;= 0x01;							      \</u></td></tr>
+<tr><th id="994">994</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="995">995</th><td><u>	else								      \</u></td></tr>
+<tr><th id="996">996</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="997">997</th><td><u>	    /* Search the end of this ill-formed UTF-8 character.  This	      \</u></td></tr>
+<tr><th id="998">998</th><td><u>	       is the next byte with (x &amp; 0xc0) != 0x80.  */		      \</u></td></tr>
+<tr><th id="999">999</th><td><u>	    i = 0;							      \</u></td></tr>
+<tr><th id="1000">1000</th><td><u>	    do								      \</u></td></tr>
+<tr><th id="1001">1001</th><td><u>	      ++i;							      \</u></td></tr>
+<tr><th id="1002">1002</th><td><u>	    while (inptr + i &lt; inend					      \</u></td></tr>
+<tr><th id="1003">1003</th><td><u>		   &amp;&amp; (*(inptr + i) &amp; 0xc0) == 0x80			      \</u></td></tr>
+<tr><th id="1004">1004</th><td><u>		   &amp;&amp; i &lt; 5);						      \</u></td></tr>
+<tr><th id="1005">1005</th><td><u>									      \</u></td></tr>
+<tr><th id="1006">1006</th><td><u>	  errout:							      \</u></td></tr>
+<tr><th id="1007">1007</th><td><u>	    STANDARD_FROM_LOOP_ERR_HANDLER (i);				      \</u></td></tr>
+<tr><th id="1008">1008</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1009">1009</th><td><u>									      \</u></td></tr>
+<tr><th id="1010">1010</th><td><u>	if (__glibc_unlikely (inptr + cnt &gt; inend))			      \</u></td></tr>
+<tr><th id="1011">1011</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="1012">1012</th><td><u>	    /* We don't have enough input.  But before we report that check   \</u></td></tr>
+<tr><th id="1013">1013</th><td><u>	       that all the bytes are correct.  */			      \</u></td></tr>
+<tr><th id="1014">1014</th><td><u>	    for (i = 1; inptr + i &lt; inend; ++i)				      \</u></td></tr>
+<tr><th id="1015">1015</th><td><u>	      if ((inptr[i] &amp; 0xc0) != 0x80)				      \</u></td></tr>
+<tr><th id="1016">1016</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="1017">1017</th><td><u>									      \</u></td></tr>
+<tr><th id="1018">1018</th><td><u>	    if (__glibc_likely (inptr + i == inend))			      \</u></td></tr>
+<tr><th id="1019">1019</th><td><u>	      {								      \</u></td></tr>
+<tr><th id="1020">1020</th><td><u>		result = __GCONV_INCOMPLETE_INPUT;			      \</u></td></tr>
+<tr><th id="1021">1021</th><td><u>		break;							      \</u></td></tr>
+<tr><th id="1022">1022</th><td><u>	      }								      \</u></td></tr>
+<tr><th id="1023">1023</th><td><u>									      \</u></td></tr>
+<tr><th id="1024">1024</th><td><u>	    goto errout;						      \</u></td></tr>
+<tr><th id="1025">1025</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1026">1026</th><td><u>									      \</u></td></tr>
+<tr><th id="1027">1027</th><td><u>	/* Read the possible remaining bytes.  */			      \</u></td></tr>
+<tr><th id="1028">1028</th><td><u>	for (i = 1; i &lt; cnt; ++i)					      \</u></td></tr>
+<tr><th id="1029">1029</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="1030">1030</th><td><u>	    uint32_t byte = inptr[i];					      \</u></td></tr>
+<tr><th id="1031">1031</th><td><u>									      \</u></td></tr>
+<tr><th id="1032">1032</th><td><u>	    if ((byte &amp; 0xc0) != 0x80)					      \</u></td></tr>
+<tr><th id="1033">1033</th><td><u>	      /* This is an illegal encoding.  */			      \</u></td></tr>
+<tr><th id="1034">1034</th><td><u>	      break;							      \</u></td></tr>
+<tr><th id="1035">1035</th><td><u>									      \</u></td></tr>
+<tr><th id="1036">1036</th><td><u>	    ch &lt;&lt;= 6;							      \</u></td></tr>
+<tr><th id="1037">1037</th><td><u>	    ch |= byte &amp; 0x3f;						      \</u></td></tr>
+<tr><th id="1038">1038</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1039">1039</th><td><u>									      \</u></td></tr>
+<tr><th id="1040">1040</th><td><u>	/* If i &lt; cnt, some trail byte was not &gt;= 0x80, &lt; 0xc0.		      \</u></td></tr>
+<tr><th id="1041">1041</th><td><u>	   If cnt &gt; 2 and ch &lt; 2^(5*cnt-4), the wide character ch could	      \</u></td></tr>
+<tr><th id="1042">1042</th><td><u>	   have been represented with fewer than cnt bytes.  */		      \</u></td></tr>
+<tr><th id="1043">1043</th><td><u>	if (i &lt; cnt || (cnt &gt; 2 &amp;&amp; (ch &gt;&gt; (5 * cnt - 4)) == 0)		      \</u></td></tr>
+<tr><th id="1044">1044</th><td><u>	    /* Do not accept UTF-16 surrogates.  */			      \</u></td></tr>
+<tr><th id="1045">1045</th><td><u>	    || (ch &gt;= 0xd800 &amp;&amp; ch &lt;= 0xdfff))				      \</u></td></tr>
+<tr><th id="1046">1046</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="1047">1047</th><td><u>	    /* This is an illegal encoding.  */				      \</u></td></tr>
+<tr><th id="1048">1048</th><td><u>	    goto errout;						      \</u></td></tr>
+<tr><th id="1049">1049</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1050">1050</th><td><u>									      \</u></td></tr>
+<tr><th id="1051">1051</th><td><u>	inptr += cnt;							      \</u></td></tr>
+<tr><th id="1052">1052</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1053">1053</th><td><u>									      \</u></td></tr>
+<tr><th id="1054">1054</th><td><u>    /* Now adjust the pointers and store the result.  */		      \</u></td></tr>
+<tr><th id="1055">1055</th><td><u>    *((uint32_t *) outptr) = ch;					      \</u></td></tr>
+<tr><th id="1056">1056</th><td><u>    outptr += sizeof (uint32_t);					      \</u></td></tr>
+<tr><th id="1057">1057</th><td><u>  }</u></td></tr>
+<tr><th id="1058">1058</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="1059">1059</th><td></td></tr>
+<tr><th id="1060">1060</th><td><u>#define <dfn class="macro" id="_M/STORE_REST" data-ref="_M/STORE_REST">STORE_REST</dfn> \</u></td></tr>
+<tr><th id="1061">1061</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1062">1062</th><td><u>    /* We store the remaining bytes while converting them into the UCS4	      \</u></td></tr>
+<tr><th id="1063">1063</th><td><u>       format.  We can assume that the first byte in the buffer is	      \</u></td></tr>
+<tr><th id="1064">1064</th><td><u>       correct and that it requires a larger number of bytes than there	      \</u></td></tr>
+<tr><th id="1065">1065</th><td><u>       are in the input buffer.  */					      \</u></td></tr>
+<tr><th id="1066">1066</th><td><u>    wint_t ch = **inptrp;						      \</u></td></tr>
+<tr><th id="1067">1067</th><td><u>    size_t cnt, r;							      \</u></td></tr>
+<tr><th id="1068">1068</th><td><u>									      \</u></td></tr>
+<tr><th id="1069">1069</th><td><u>    state-&gt;__count = inend - *inptrp;					      \</u></td></tr>
+<tr><th id="1070">1070</th><td><u>									      \</u></td></tr>
+<tr><th id="1071">1071</th><td><u>    assert (ch != 0xc0 &amp;&amp; ch != 0xc1);					      \</u></td></tr>
+<tr><th id="1072">1072</th><td><u>    if (ch &gt;= 0xc2 &amp;&amp; ch &lt; 0xe0)					      \</u></td></tr>
+<tr><th id="1073">1073</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1074">1074</th><td><u>	/* We expect two bytes.  The first byte cannot be 0xc0 or	      \</u></td></tr>
+<tr><th id="1075">1075</th><td><u>	   0xc1, otherwise the wide character could have been		      \</u></td></tr>
+<tr><th id="1076">1076</th><td><u>	   represented using a single byte.  */				      \</u></td></tr>
+<tr><th id="1077">1077</th><td><u>	cnt = 2;							      \</u></td></tr>
+<tr><th id="1078">1078</th><td><u>	ch &amp;= 0x1f;							      \</u></td></tr>
+<tr><th id="1079">1079</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1080">1080</th><td><u>    else if (__glibc_likely ((ch &amp; 0xf0) == 0xe0))			      \</u></td></tr>
+<tr><th id="1081">1081</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1082">1082</th><td><u>	/* We expect three bytes.  */					      \</u></td></tr>
+<tr><th id="1083">1083</th><td><u>	cnt = 3;							      \</u></td></tr>
+<tr><th id="1084">1084</th><td><u>	ch &amp;= 0x0f;							      \</u></td></tr>
+<tr><th id="1085">1085</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1086">1086</th><td><u>    else if (__glibc_likely ((ch &amp; 0xf8) == 0xf0))			      \</u></td></tr>
+<tr><th id="1087">1087</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1088">1088</th><td><u>	/* We expect four bytes.  */					      \</u></td></tr>
+<tr><th id="1089">1089</th><td><u>	cnt = 4;							      \</u></td></tr>
+<tr><th id="1090">1090</th><td><u>	ch &amp;= 0x07;							      \</u></td></tr>
+<tr><th id="1091">1091</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1092">1092</th><td><u>    else if (__glibc_likely ((ch &amp; 0xfc) == 0xf8))			      \</u></td></tr>
+<tr><th id="1093">1093</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1094">1094</th><td><u>	/* We expect five bytes.  */					      \</u></td></tr>
+<tr><th id="1095">1095</th><td><u>	cnt = 5;							      \</u></td></tr>
+<tr><th id="1096">1096</th><td><u>	ch &amp;= 0x03;							      \</u></td></tr>
+<tr><th id="1097">1097</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1098">1098</th><td><u>    else								      \</u></td></tr>
+<tr><th id="1099">1099</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1100">1100</th><td><u>	/* We expect six bytes.  */					      \</u></td></tr>
+<tr><th id="1101">1101</th><td><u>	cnt = 6;							      \</u></td></tr>
+<tr><th id="1102">1102</th><td><u>	ch &amp;= 0x01;							      \</u></td></tr>
+<tr><th id="1103">1103</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1104">1104</th><td><u>									      \</u></td></tr>
+<tr><th id="1105">1105</th><td><u>    /* The first byte is already consumed.  */				      \</u></td></tr>
+<tr><th id="1106">1106</th><td><u>    r = cnt - 1;							      \</u></td></tr>
+<tr><th id="1107">1107</th><td><u>    while (++(*inptrp) &lt; inend)						      \</u></td></tr>
+<tr><th id="1108">1108</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1109">1109</th><td><u>	ch &lt;&lt;= 6;							      \</u></td></tr>
+<tr><th id="1110">1110</th><td><u>	ch |= **inptrp &amp; 0x3f;						      \</u></td></tr>
+<tr><th id="1111">1111</th><td><u>	--r;								      \</u></td></tr>
+<tr><th id="1112">1112</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1113">1113</th><td><u>									      \</u></td></tr>
+<tr><th id="1114">1114</th><td><u>    /* Shift for the so far missing bytes.  */				      \</u></td></tr>
+<tr><th id="1115">1115</th><td><u>    ch &lt;&lt;= r * 6;							      \</u></td></tr>
+<tr><th id="1116">1116</th><td><u>									      \</u></td></tr>
+<tr><th id="1117">1117</th><td><u>    /* Store the number of bytes expected for the entire sequence.  */	      \</u></td></tr>
+<tr><th id="1118">1118</th><td><u>    state-&gt;__count |= cnt &lt;&lt; 8;						      \</u></td></tr>
+<tr><th id="1119">1119</th><td><u>									      \</u></td></tr>
+<tr><th id="1120">1120</th><td><u>    /* Store the value.  */						      \</u></td></tr>
+<tr><th id="1121">1121</th><td><u>    state-&gt;__value.__wch = ch;						      \</u></td></tr>
+<tr><th id="1122">1122</th><td><u>  }</u></td></tr>
+<tr><th id="1123">1123</th><td></td></tr>
+<tr><th id="1124">1124</th><td><u>#define <dfn class="macro" id="_M/UNPACK_BYTES" data-ref="_M/UNPACK_BYTES">UNPACK_BYTES</dfn> \</u></td></tr>
+<tr><th id="1125">1125</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1126">1126</th><td><u>    static const unsigned char inmask[5] = { 0xc0, 0xe0, 0xf0, 0xf8, 0xfc };  \</u></td></tr>
+<tr><th id="1127">1127</th><td><u>    wint_t wch = state-&gt;__value.__wch;					      \</u></td></tr>
+<tr><th id="1128">1128</th><td><u>    size_t ntotal = state-&gt;__count &gt;&gt; 8;				      \</u></td></tr>
+<tr><th id="1129">1129</th><td><u>									      \</u></td></tr>
+<tr><th id="1130">1130</th><td><u>    inlen = state-&gt;__count &amp; 255;					      \</u></td></tr>
+<tr><th id="1131">1131</th><td><u>									      \</u></td></tr>
+<tr><th id="1132">1132</th><td><u>    bytebuf[0] = inmask[ntotal - 2];					      \</u></td></tr>
+<tr><th id="1133">1133</th><td><u>									      \</u></td></tr>
+<tr><th id="1134">1134</th><td><u>    do									      \</u></td></tr>
+<tr><th id="1135">1135</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1136">1136</th><td><u>	if (--ntotal &lt; inlen)						      \</u></td></tr>
+<tr><th id="1137">1137</th><td><u>	  bytebuf[ntotal] = 0x80 | (wch &amp; 0x3f);			      \</u></td></tr>
+<tr><th id="1138">1138</th><td><u>	wch &gt;&gt;= 6;							      \</u></td></tr>
+<tr><th id="1139">1139</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1140">1140</th><td><u>    while (ntotal &gt; 1);							      \</u></td></tr>
+<tr><th id="1141">1141</th><td><u>									      \</u></td></tr>
+<tr><th id="1142">1142</th><td><u>    bytebuf[0] |= wch;							      \</u></td></tr>
+<tr><th id="1143">1143</th><td><u>  }</u></td></tr>
+<tr><th id="1144">1144</th><td></td></tr>
+<tr><th id="1145">1145</th><td><u>#define <dfn class="macro" id="_M/CLEAR_STATE" data-ref="_M/CLEAR_STATE">CLEAR_STATE</dfn> \</u></td></tr>
+<tr><th id="1146">1146</th><td><u>  state-&gt;__count = 0</u></td></tr>
+<tr><th id="1147">1147</th><td></td></tr>
+<tr><th id="1148">1148</th><td></td></tr>
+<tr><th id="1149">1149</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="1150">1150</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="1151">1151</th><td></td></tr>
+<tr><th id="1152">1152</th><td></td></tr>
+<tr><th id="1153">1153</th><td><i>/* Convert from UCS2 to the internal (UCS4-like) format.  */</i></td></tr>
+<tr><th id="1154">1154</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="1155">1155</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="1156">1156</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		2</u></td></tr>
+<tr><th id="1157">1157</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="1158">1158</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1159">1159</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		ucs2_internal_loop</u></td></tr>
+<tr><th id="1160">1160</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			ucs2_internal_loop /* This is not used.  */</u></td></tr>
+<tr><th id="1161">1161</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_ucs2_internal</u></td></tr>
+<tr><th id="1162">1162</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1163">1163</th><td></td></tr>
+<tr><th id="1164">1164</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="1165">1165</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="1166">1166</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="1167">1167</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="1168">1168</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1169">1169</th><td><u>    uint16_t u1 = get16 (inptr);					      \</u></td></tr>
+<tr><th id="1170">1170</th><td><u>									      \</u></td></tr>
+<tr><th id="1171">1171</th><td><u>    if (__glibc_unlikely (u1 &gt;= 0xd800 &amp;&amp; u1 &lt; 0xe000))			      \</u></td></tr>
+<tr><th id="1172">1172</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1173">1173</th><td><u>	/* Surrogate characters in UCS-2 input are not valid.  Reject	      \</u></td></tr>
+<tr><th id="1174">1174</th><td><u>	   them.  (Catching this here is not security relevant.)  */	      \</u></td></tr>
+<tr><th id="1175">1175</th><td><u>	STANDARD_FROM_LOOP_ERR_HANDLER (2);				      \</u></td></tr>
+<tr><th id="1176">1176</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1177">1177</th><td><u>									      \</u></td></tr>
+<tr><th id="1178">1178</th><td><u>    *((uint32_t *) outptr) = u1;					      \</u></td></tr>
+<tr><th id="1179">1179</th><td><u>    outptr += sizeof (uint32_t);					      \</u></td></tr>
+<tr><th id="1180">1180</th><td><u>    inptr += 2;								      \</u></td></tr>
+<tr><th id="1181">1181</th><td><u>  }</u></td></tr>
+<tr><th id="1182">1182</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="1183">1183</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="1184">1184</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="1185">1185</th><td></td></tr>
+<tr><th id="1186">1186</th><td></td></tr>
+<tr><th id="1187">1187</th><td><i>/* Convert from the internal (UCS4-like) format to UCS2.  */</i></td></tr>
+<tr><th id="1188">1188</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="1189">1189</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="1190">1190</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="1191">1191</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		2</u></td></tr>
+<tr><th id="1192">1192</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1193">1193</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_ucs2_loop</u></td></tr>
+<tr><th id="1194">1194</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_ucs2_loop /* This is not used.  */</u></td></tr>
+<tr><th id="1195">1195</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_ucs2</u></td></tr>
+<tr><th id="1196">1196</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1197">1197</th><td></td></tr>
+<tr><th id="1198">1198</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="1199">1199</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="1200">1200</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="1201">1201</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="1202">1202</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1203">1203</th><td><u>    uint32_t val = *((const uint32_t *) inptr);				      \</u></td></tr>
+<tr><th id="1204">1204</th><td><u>									      \</u></td></tr>
+<tr><th id="1205">1205</th><td><u>    if (__glibc_unlikely (val &gt;= 0x10000))				      \</u></td></tr>
+<tr><th id="1206">1206</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1207">1207</th><td><u>	UNICODE_TAG_HANDLER (val, 4);					      \</u></td></tr>
+<tr><th id="1208">1208</th><td><u>	STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="1209">1209</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1210">1210</th><td><u>    else if (__glibc_unlikely (val &gt;= 0xd800 &amp;&amp; val &lt; 0xe000))		      \</u></td></tr>
+<tr><th id="1211">1211</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1212">1212</th><td><u>	/* Surrogate characters in UCS-4 input are not valid.		      \</u></td></tr>
+<tr><th id="1213">1213</th><td><u>	   We must catch this, because the UCS-2 output might be	      \</u></td></tr>
+<tr><th id="1214">1214</th><td><u>	   interpreted as UTF-16 by other programs.  If we let		      \</u></td></tr>
+<tr><th id="1215">1215</th><td><u>	   surrogates pass through, attackers could make a security	      \</u></td></tr>
+<tr><th id="1216">1216</th><td><u>	   hole exploit by synthesizing any desired plane 1-16		      \</u></td></tr>
+<tr><th id="1217">1217</th><td><u>	   character.  */						      \</u></td></tr>
+<tr><th id="1218">1218</th><td><u>	result = __GCONV_ILLEGAL_INPUT;					      \</u></td></tr>
+<tr><th id="1219">1219</th><td><u>	if (! ignore_errors_p ())					      \</u></td></tr>
+<tr><th id="1220">1220</th><td><u>	  break;							      \</u></td></tr>
+<tr><th id="1221">1221</th><td><u>	inptr += 4;							      \</u></td></tr>
+<tr><th id="1222">1222</th><td><u>	++*irreversible;						      \</u></td></tr>
+<tr><th id="1223">1223</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="1224">1224</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1225">1225</th><td><u>    else								      \</u></td></tr>
+<tr><th id="1226">1226</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1227">1227</th><td><u>	put16 (outptr, val);						      \</u></td></tr>
+<tr><th id="1228">1228</th><td><u>	outptr += sizeof (uint16_t);					      \</u></td></tr>
+<tr><th id="1229">1229</th><td><u>	inptr += 4;							      \</u></td></tr>
+<tr><th id="1230">1230</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1231">1231</th><td><u>  }</u></td></tr>
+<tr><th id="1232">1232</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="1233">1233</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="1234">1234</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="1235">1235</th><td></td></tr>
+<tr><th id="1236">1236</th><td></td></tr>
+<tr><th id="1237">1237</th><td><i>/* Convert from UCS2 in other endianness to the internal (UCS4-like) format. */</i></td></tr>
+<tr><th id="1238">1238</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="1239">1239</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="1240">1240</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		2</u></td></tr>
+<tr><th id="1241">1241</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		4</u></td></tr>
+<tr><th id="1242">1242</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1243">1243</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		ucs2reverse_internal_loop</u></td></tr>
+<tr><th id="1244">1244</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			ucs2reverse_internal_loop/* This is not used.*/</u></td></tr>
+<tr><th id="1245">1245</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_ucs2reverse_internal</u></td></tr>
+<tr><th id="1246">1246</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1247">1247</th><td></td></tr>
+<tr><th id="1248">1248</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="1249">1249</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="1250">1250</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="1251">1251</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="1252">1252</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1253">1253</th><td><u>    uint16_t u1 = bswap_16 (get16 (inptr));				      \</u></td></tr>
+<tr><th id="1254">1254</th><td><u>									      \</u></td></tr>
+<tr><th id="1255">1255</th><td><u>    if (__glibc_unlikely (u1 &gt;= 0xd800 &amp;&amp; u1 &lt; 0xe000))			      \</u></td></tr>
+<tr><th id="1256">1256</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1257">1257</th><td><u>	/* Surrogate characters in UCS-2 input are not valid.  Reject	      \</u></td></tr>
+<tr><th id="1258">1258</th><td><u>	   them.  (Catching this here is not security relevant.)  */	      \</u></td></tr>
+<tr><th id="1259">1259</th><td><u>	if (! ignore_errors_p ())					      \</u></td></tr>
+<tr><th id="1260">1260</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="1261">1261</th><td><u>	    result = __GCONV_ILLEGAL_INPUT;				      \</u></td></tr>
+<tr><th id="1262">1262</th><td><u>	    break;							      \</u></td></tr>
+<tr><th id="1263">1263</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1264">1264</th><td><u>	inptr += 2;							      \</u></td></tr>
+<tr><th id="1265">1265</th><td><u>	++*irreversible;						      \</u></td></tr>
+<tr><th id="1266">1266</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="1267">1267</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1268">1268</th><td><u>									      \</u></td></tr>
+<tr><th id="1269">1269</th><td><u>    *((uint32_t *) outptr) = u1;					      \</u></td></tr>
+<tr><th id="1270">1270</th><td><u>    outptr += sizeof (uint32_t);					      \</u></td></tr>
+<tr><th id="1271">1271</th><td><u>    inptr += 2;								      \</u></td></tr>
+<tr><th id="1272">1272</th><td><u>  }</u></td></tr>
+<tr><th id="1273">1273</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="1274">1274</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="1275">1275</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="1276">1276</th><td></td></tr>
+<tr><th id="1277">1277</th><td></td></tr>
+<tr><th id="1278">1278</th><td><i>/* Convert from the internal (UCS4-like) format to UCS2 in other endianness. */</i></td></tr>
+<tr><th id="1279">1279</th><td><u>#define <dfn class="macro" id="_M/DEFINE_INIT" data-ref="_M/DEFINE_INIT">DEFINE_INIT</dfn>		0</u></td></tr>
+<tr><th id="1280">1280</th><td><u>#define <dfn class="macro" id="_M/DEFINE_FINI" data-ref="_M/DEFINE_FINI">DEFINE_FINI</dfn>		0</u></td></tr>
+<tr><th id="1281">1281</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_FROM" data-ref="_M/MIN_NEEDED_FROM">MIN_NEEDED_FROM</dfn>		4</u></td></tr>
+<tr><th id="1282">1282</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_TO" data-ref="_M/MIN_NEEDED_TO">MIN_NEEDED_TO</dfn>		2</u></td></tr>
+<tr><th id="1283">1283</th><td><u>#define <dfn class="macro" id="_M/FROM_DIRECTION" data-ref="_M/FROM_DIRECTION">FROM_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1284">1284</th><td><u>#define <dfn class="macro" id="_M/FROM_LOOP" data-ref="_M/FROM_LOOP">FROM_LOOP</dfn>		internal_ucs2reverse_loop</u></td></tr>
+<tr><th id="1285">1285</th><td><u>#define <dfn class="macro" id="_M/TO_LOOP" data-ref="_M/TO_LOOP">TO_LOOP</dfn>			internal_ucs2reverse_loop/* This is not used.*/</u></td></tr>
+<tr><th id="1286">1286</th><td><u>#define <dfn class="macro" id="_M/FUNCTION_NAME" data-ref="_M/FUNCTION_NAME">FUNCTION_NAME</dfn>		__gconv_transform_internal_ucs2reverse</u></td></tr>
+<tr><th id="1287">1287</th><td><u>#define <dfn class="macro" id="_M/ONE_DIRECTION" data-ref="_M/ONE_DIRECTION">ONE_DIRECTION</dfn>		1</u></td></tr>
+<tr><th id="1288">1288</th><td></td></tr>
+<tr><th id="1289">1289</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_INPUT" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</dfn>	MIN_NEEDED_FROM</u></td></tr>
+<tr><th id="1290">1290</th><td><u>#define <dfn class="macro" id="_M/MIN_NEEDED_OUTPUT" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</dfn>	MIN_NEEDED_TO</u></td></tr>
+<tr><th id="1291">1291</th><td><u>#define <dfn class="macro" id="_M/LOOPFCT" data-ref="_M/LOOPFCT">LOOPFCT</dfn>			FROM_LOOP</u></td></tr>
+<tr><th id="1292">1292</th><td><u>#define <dfn class="macro" id="_M/BODY" data-ref="_M/BODY">BODY</dfn> \</u></td></tr>
+<tr><th id="1293">1293</th><td><u>  {									      \</u></td></tr>
+<tr><th id="1294">1294</th><td><u>    uint32_t val = *((const uint32_t *) inptr);				      \</u></td></tr>
+<tr><th id="1295">1295</th><td><u>    if (__glibc_unlikely (val &gt;= 0x10000))				      \</u></td></tr>
+<tr><th id="1296">1296</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1297">1297</th><td><u>	UNICODE_TAG_HANDLER (val, 4);					      \</u></td></tr>
+<tr><th id="1298">1298</th><td><u>	STANDARD_TO_LOOP_ERR_HANDLER (4);				      \</u></td></tr>
+<tr><th id="1299">1299</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1300">1300</th><td><u>    else if (__glibc_unlikely (val &gt;= 0xd800 &amp;&amp; val &lt; 0xe000))		      \</u></td></tr>
+<tr><th id="1301">1301</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1302">1302</th><td><u>	/* Surrogate characters in UCS-4 input are not valid.		      \</u></td></tr>
+<tr><th id="1303">1303</th><td><u>	   We must catch this, because the UCS-2 output might be	      \</u></td></tr>
+<tr><th id="1304">1304</th><td><u>	   interpreted as UTF-16 by other programs.  If we let		      \</u></td></tr>
+<tr><th id="1305">1305</th><td><u>	   surrogates pass through, attackers could make a security	      \</u></td></tr>
+<tr><th id="1306">1306</th><td><u>	   hole exploit by synthesizing any desired plane 1-16		      \</u></td></tr>
+<tr><th id="1307">1307</th><td><u>	   character.  */						      \</u></td></tr>
+<tr><th id="1308">1308</th><td><u>	if (! ignore_errors_p ())					      \</u></td></tr>
+<tr><th id="1309">1309</th><td><u>	  {								      \</u></td></tr>
+<tr><th id="1310">1310</th><td><u>	    result = __GCONV_ILLEGAL_INPUT;				      \</u></td></tr>
+<tr><th id="1311">1311</th><td><u>	    break;							      \</u></td></tr>
+<tr><th id="1312">1312</th><td><u>	  }								      \</u></td></tr>
+<tr><th id="1313">1313</th><td><u>	inptr += 4;							      \</u></td></tr>
+<tr><th id="1314">1314</th><td><u>	++*irreversible;						      \</u></td></tr>
+<tr><th id="1315">1315</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="1316">1316</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1317">1317</th><td><u>    else								      \</u></td></tr>
+<tr><th id="1318">1318</th><td><u>      {									      \</u></td></tr>
+<tr><th id="1319">1319</th><td><u>	put16 (outptr, bswap_16 (val));					      \</u></td></tr>
+<tr><th id="1320">1320</th><td><u>	outptr += sizeof (uint16_t);					      \</u></td></tr>
+<tr><th id="1321">1321</th><td><u>	inptr += 4;							      \</u></td></tr>
+<tr><th id="1322">1322</th><td><u>      }									      \</u></td></tr>
+<tr><th id="1323">1323</th><td><u>  }</u></td></tr>
+<tr><th id="1324">1324</th><td><u>#define <dfn class="macro" id="_M/LOOP_NEED_FLAGS" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</dfn></u></td></tr>
+<tr><th id="1325">1325</th><td><u>#include <a href="loop.c.html">&lt;iconv/loop.c&gt;</a></u></td></tr>
+<tr><th id="1326">1326</th><td><u>#include <a href="skeleton.c.html">&lt;iconv/skeleton.c&gt;</a></u></td></tr>
+<tr><th id="1327">1327</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

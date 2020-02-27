@@ -1,0 +1,240 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dl-error.c source code [glibc_src_2.23/elf/dl-error.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="catch "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/elf/dl-error.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>elf</a>/<a href='dl-error.c.html'>dl-error.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Error handling for runtime dynamic linker.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/setjmp.h.html">&lt;setjmp.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* This structure communicates state between _dl_catch_error and</i></td></tr>
+<tr><th id="28">28</th><td><i>   _dl_signal_error.  */</i></td></tr>
+<tr><th id="29">29</th><td><b>struct</b> <dfn class="type def" id="catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</dfn></td></tr>
+<tr><th id="30">30</th><td>  {</td></tr>
+<tr><th id="31">31</th><td>    <em>const</em> <em>char</em> **<dfn class="tu decl field" id="catch::objname" title='catch::objname' data-type='const char **' data-ref="catch::objname" data-ref-filename="catch..objname">objname</dfn>;	<i  data-doc="catch::objname">/* Object/File name.  */</i></td></tr>
+<tr><th id="32">32</th><td>    <em>const</em> <em>char</em> **<dfn class="tu decl field" id="catch::errstring" title='catch::errstring' data-type='const char **' data-ref="catch::errstring" data-ref-filename="catch..errstring">errstring</dfn>;	<i  data-doc="catch::errstring">/* Error detail filled in here.  */</i></td></tr>
+<tr><th id="33">33</th><td>    <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> *<dfn class="tu decl field" id="catch::malloced" title='catch::malloced' data-type='_Bool *' data-ref="catch::malloced" data-ref-filename="catch..malloced">malloced</dfn>;		<i>/* Nonzero if the string is malloced</i></td></tr>
+<tr><th id="34">34</th><td><i>				   by the libc malloc.  */</i></td></tr>
+<tr><th id="35">35</th><td>    <em>volatile</em> <em>int</em> *<dfn class="tu decl field" id="catch::errcode" title='catch::errcode' data-type='volatile int *' data-ref="catch::errcode" data-ref-filename="catch..errcode">errcode</dfn>;	<i  data-doc="catch::errcode">/* Return value of _dl_signal_error.  */</i></td></tr>
+<tr><th id="36">36</th><td>    <a class="typedef" href="../setjmp/setjmp.h.html#jmp_buf" title='jmp_buf' data-type='struct __jmp_buf_tag [1]' data-ref="jmp_buf" data-ref-filename="jmp_buf">jmp_buf</a> <dfn class="tu decl field" id="catch::env" title='catch::env' data-type='jmp_buf' data-ref="catch::env" data-ref-filename="catch..env">env</dfn>;		<i  data-doc="catch::env">/* longjmp here on error.  */</i></td></tr>
+<tr><th id="37">37</th><td>  };</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><i>/* Multiple threads at once can use the `_dl_catch_error' function.  The</i></td></tr>
+<tr><th id="40">40</th><td><i>   calls can come from `_dl_map_object_deps', `_dlerror_run', or from</i></td></tr>
+<tr><th id="41">41</th><td><i>   any of the libc functionality which loads dynamic objects (NSS, iconv).</i></td></tr>
+<tr><th id="42">42</th><td><i>   Therefore we have to be prepared to save the state in thread-local</i></td></tr>
+<tr><th id="43">43</th><td><i>   memory.  The _dl_error_catch_tsd function pointer is reset by the thread</i></td></tr>
+<tr><th id="44">44</th><td><i>   library so that it returns the address of a thread-local variable.  */</i></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><i  data-doc="_dl_out_of_memory">/* This message we return as a last resort.  We define the string in a</i></td></tr>
+<tr><th id="48">48</th><td><i  data-doc="_dl_out_of_memory">   variable since we have to avoid freeing it and so have to enable</i></td></tr>
+<tr><th id="49">49</th><td><i  data-doc="_dl_out_of_memory">   a pointer comparison.  See below and in dlfcn/dlerror.c.  */</i></td></tr>
+<tr><th id="50">50</th><td><em>static</em> <em>const</em> <em>char</em> <dfn class="tu decl def" id="_dl_out_of_memory" title='_dl_out_of_memory' data-type='const char [14]' data-ref="_dl_out_of_memory" data-ref-filename="_dl_out_of_memory">_dl_out_of_memory</dfn>[] = <q>"out of memory"</q>;</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><i  data-doc="receiver">/* This points to a function which is called when an continuable error is</i></td></tr>
+<tr><th id="54">54</th><td><i  data-doc="receiver">   received.  Unlike the handling of `catch' this function may return.</i></td></tr>
+<tr><th id="55">55</th><td><i  data-doc="receiver">   The arguments will be the `errstring' and `objname'.</i></td></tr>
+<tr><th id="56">56</th><td><i  data-doc="receiver"></i></td></tr>
+<tr><th id="57">57</th><td><i  data-doc="receiver">   Since this functionality is not used in normal programs (only in ld.so)</i></td></tr>
+<tr><th id="58">58</th><td><i  data-doc="receiver">   we do not care about multi-threaded programs here.  We keep this as a</i></td></tr>
+<tr><th id="59">59</th><td><i  data-doc="receiver">   global variable.  */</i></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <a class="typedef" href="../sysdeps/generic/ldsodefs.h.html#receiver_fct" title='receiver_fct' data-type='void (*)(int, const char *, const char *)' data-ref="receiver_fct" data-ref-filename="receiver_fct">receiver_fct</a> <dfn class="tu decl def" id="receiver" title='receiver' data-type='receiver_fct' data-ref="receiver" data-ref-filename="receiver">receiver</dfn>;</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="62">ifdef</span> <span class="macro" data-ref="_M/_LIBC_REENTRANT">_LIBC_REENTRANT</span></u></td></tr>
+<tr><th id="63">63</th><td><u># define <dfn class="macro" id="_M/CATCH_HOOK" data-ref="_M/CATCH_HOOK">CATCH_HOOK</dfn>	(*(struct <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> **) (*GL(dl_error_catch_tsd)) ())</u></td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="62">else</span></u></td></tr>
+<tr><th id="65">65</th><td><em>static</em> <b>struct</b> catch *catch_hook;</td></tr>
+<tr><th id="66">66</th><td><u># define CATCH_HOOK	catch_hook</u></td></tr>
+<tr><th id="67">67</th><td><u>#<span data-ppcond="62">endif</span></u></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><em>void</em></td></tr>
+<tr><th id="70">70</th><td><a class="macro" href="../include/libc-symbols.h.html#152" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="71">71</th><td><dfn class="decl def fn" id="_dl_signal_error" title='_dl_signal_error' data-ref="_dl_signal_error" data-ref-filename="_dl_signal_error">_dl_signal_error</dfn> (<em>int</em> <dfn class="local col1 decl" id="1errcode" title='errcode' data-type='int' data-ref="1errcode" data-ref-filename="1errcode">errcode</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2objname" title='objname' data-type='const char *' data-ref="2objname" data-ref-filename="2objname">objname</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3occation" title='occation' data-type='const char *' data-ref="3occation" data-ref-filename="3occation">occation</dfn>,</td></tr>
+<tr><th id="72">72</th><td>		  <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4errstring" title='errstring' data-type='const char *' data-ref="4errstring" data-ref-filename="4errstring">errstring</dfn>)</td></tr>
+<tr><th id="73">73</th><td>{</td></tr>
+<tr><th id="74">74</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> *<dfn class="local col5 decl" id="5lcatch" title='lcatch' data-type='struct catch *' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</dfn>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>  <b>if</b> (! <a class="local col4 ref" href="#4errstring" title='errstring' data-ref="4errstring" data-ref-filename="4errstring">errstring</a>)</td></tr>
+<tr><th id="77">77</th><td>    <a class="local col4 ref" href="#4errstring" title='errstring' data-ref="4errstring" data-ref-filename="4errstring">errstring</a> = <a class="macro" href="../include/libintl.h.html#42" title="&quot;DYNAMIC LINKER BUG!!!&quot;" data-ref="_M/N_">N_</a>(<q>"DYNAMIC LINKER BUG!!!"</q>);</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>  <a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a> = <a class="macro" href="#63" title="(*(struct catch **) (*_dl_error_catch_tsd) ())" data-ref="_M/CATCH_HOOK">CATCH_HOOK</a>;</td></tr>
+<tr><th id="80">80</th><td>  <b>if</b> (<a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="81">81</th><td>    <a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a> = <q>""</q>;</td></tr>
+<tr><th id="82">82</th><td>  <b>if</b> (<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="83">83</th><td>    {</td></tr>
+<tr><th id="84">84</th><td>      <i>/* We are inside _dl_catch_error.  Return to it.  We have to</i></td></tr>
+<tr><th id="85">85</th><td><i>	 duplicate the error string since it might be allocated on the</i></td></tr>
+<tr><th id="86">86</th><td><i>	 stack.  The object name is always a string constant.  */</i></td></tr>
+<tr><th id="87">87</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="6len_objname" title='len_objname' data-type='size_t' data-ref="6len_objname" data-ref-filename="6len_objname">len_objname</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a>) + <var>1</var>;</td></tr>
+<tr><th id="88">88</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="7len_errstring" title='len_errstring' data-type='size_t' data-ref="7len_errstring" data-ref-filename="7len_errstring">len_errstring</dfn> = <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col4 ref" href="#4errstring" title='errstring' data-ref="4errstring" data-ref-filename="4errstring">errstring</a>) + <var>1</var>;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>      <em>char</em> *<dfn class="local col8 decl" id="8errstring_copy" title='errstring_copy' data-type='char *' data-ref="8errstring_copy" data-ref-filename="8errstring_copy">errstring_copy</dfn> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<a class="local col6 ref" href="#6len_objname" title='len_objname' data-ref="6len_objname" data-ref-filename="6len_objname">len_objname</a> + <a class="local col7 ref" href="#7len_errstring" title='len_errstring' data-ref="7len_errstring" data-ref-filename="7len_errstring">len_errstring</a>);</td></tr>
+<tr><th id="91">91</th><td>      <b>if</b> (<a class="local col8 ref" href="#8errstring_copy" title='errstring_copy' data-ref="8errstring_copy" data-ref-filename="8errstring_copy">errstring_copy</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="92">92</th><td>	{</td></tr>
+<tr><th id="93">93</th><td>	  <i>/* Make a copy of the object file name and the error string.  */</i></td></tr>
+<tr><th id="94">94</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::objname" title='catch::objname' data-use='r' data-ref="catch::objname" data-ref-filename="catch..objname">objname</a> = <a class="ref fn" href="../string/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a> (<a class="ref fn" href="../string/string.h.html#__mempcpy" title='__mempcpy' data-ref="__mempcpy" data-ref-filename="__mempcpy">__mempcpy</a> (<a class="local col8 ref" href="#8errstring_copy" title='errstring_copy' data-ref="8errstring_copy" data-ref-filename="8errstring_copy">errstring_copy</a>,</td></tr>
+<tr><th id="95">95</th><td>						<a class="local col4 ref" href="#4errstring" title='errstring' data-ref="4errstring" data-ref-filename="4errstring">errstring</a>, <a class="local col7 ref" href="#7len_errstring" title='len_errstring' data-ref="7len_errstring" data-ref-filename="7len_errstring">len_errstring</a>),</td></tr>
+<tr><th id="96">96</th><td>				     <a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a>, <a class="local col6 ref" href="#6len_objname" title='len_objname' data-ref="6len_objname" data-ref-filename="6len_objname">len_objname</a>);</td></tr>
+<tr><th id="97">97</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::errstring" title='catch::errstring' data-use='r' data-ref="catch::errstring" data-ref-filename="catch..errstring">errstring</a> = <a class="local col8 ref" href="#8errstring_copy" title='errstring_copy' data-ref="8errstring_copy" data-ref-filename="8errstring_copy">errstring_copy</a>;</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>	  <i>/* If the main executable is relocated it means the libc's malloc</i></td></tr>
+<tr><th id="100">100</th><td><i>	     is used.  */</i></td></tr>
+<tr><th id="101">101</th><td>          <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col9 decl" id="9malloced" title='malloced' data-type='_Bool' data-ref="9malloced" data-ref-filename="9malloced">malloced</dfn> = <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="102">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="103">103</th><td>	  malloced = (GL(dl_ns)[LM_ID_BASE]._ns_loaded != NULL</td></tr>
+<tr><th id="104">104</th><td>                      &amp;&amp; (GL(dl_ns)[LM_ID_BASE]._ns_loaded-&gt;l_relocated != <var>0</var>));</td></tr>
+<tr><th id="105">105</th><td><u>#<span data-ppcond="102">endif</span></u></td></tr>
+<tr><th id="106">106</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::malloced" title='catch::malloced' data-use='r' data-ref="catch::malloced" data-ref-filename="catch..malloced">malloced</a> = <a class="local col9 ref" href="#9malloced" title='malloced' data-ref="9malloced" data-ref-filename="9malloced">malloced</a>;</td></tr>
+<tr><th id="107">107</th><td>	}</td></tr>
+<tr><th id="108">108</th><td>      <b>else</b></td></tr>
+<tr><th id="109">109</th><td>	{</td></tr>
+<tr><th id="110">110</th><td>	  <i>/* This is better than nothing.  */</i></td></tr>
+<tr><th id="111">111</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::objname" title='catch::objname' data-use='r' data-ref="catch::objname" data-ref-filename="catch..objname">objname</a> = <q>""</q>;</td></tr>
+<tr><th id="112">112</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::errstring" title='catch::errstring' data-use='r' data-ref="catch::errstring" data-ref-filename="catch..errstring">errstring</a> = <a class="tu ref" href="#_dl_out_of_memory" title='_dl_out_of_memory' data-use='r' data-ref="_dl_out_of_memory" data-ref-filename="_dl_out_of_memory">_dl_out_of_memory</a>;</td></tr>
+<tr><th id="113">113</th><td>	  *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::malloced" title='catch::malloced' data-use='r' data-ref="catch::malloced" data-ref-filename="catch..malloced">malloced</a> = <span class="macro" title="0" data-ref="_M/false">false</span>;</td></tr>
+<tr><th id="114">114</th><td>	}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>      *<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::errcode" title='catch::errcode' data-use='r' data-ref="catch::errcode" data-ref-filename="catch..errcode">errcode</a> = <a class="local col1 ref" href="#1errcode" title='errcode' data-ref="1errcode" data-ref-filename="1errcode">errcode</a>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>      <i>/* We do not restore the signal mask because none was saved.  */</i></td></tr>
+<tr><th id="119">119</th><td>      <a class="ref fn" href="../include/setjmp.h.html#__longjmp" title='__longjmp' data-ref="__longjmp" data-ref-filename="__longjmp">__longjmp</a> (<a class="local col5 ref" href="#5lcatch" title='lcatch' data-ref="5lcatch" data-ref-filename="5lcatch">lcatch</a>-&gt;<a class="tu ref field" href="#catch::env" title='catch::env' data-use='m' data-ref="catch::env" data-ref-filename="catch..env">env</a>[<var>0</var>].<a class="ref field" href="../setjmp/setjmp.h.html#__jmp_buf_tag::__jmpbuf" title='__jmp_buf_tag::__jmpbuf' data-ref="__jmp_buf_tag::__jmpbuf" data-ref-filename="__jmp_buf_tag..__jmpbuf">__jmpbuf</a>, <var>1</var>);</td></tr>
+<tr><th id="120">120</th><td>    }</td></tr>
+<tr><th id="121">121</th><td>  <b>else</b></td></tr>
+<tr><th id="122">122</th><td>    {</td></tr>
+<tr><th id="123">123</th><td>      <i>/* Lossage while resolving the program's own symbols is always fatal.  */</i></td></tr>
+<tr><th id="124">124</th><td>      <em>char</em> <dfn class="local col0 decl" id="10buffer" title='buffer' data-type='char [1024]' data-ref="10buffer" data-ref-filename="10buffer">buffer</dfn>[<var>1024</var>];</td></tr>
+<tr><th id="125">125</th><td>      <a class="macro" href="../sysdeps/generic/ldsodefs.h.html#709" title="do { _dl_dprintf (2, &quot;%s: %s: %s%s%s%s%s\n&quot;, (_dl_argv[0] ?: &quot;&lt;program name unknown&gt;&quot;), occation ?: &quot;error while loading shared libraries&quot;, objname, *objname ? &quot;: &quot; : &quot;&quot;, errstring, errcode ? &quot;: &quot; : &quot;&quot;, (errcode ? __strerror_r (errcode, buffer, sizeof buffer) : &quot;&quot;)); _exit (127); } while (1)" data-ref="_M/_dl_fatal_printf">_dl_fatal_printf</a> (<q>"%s: %s: %s%s%s%s%s\n"</q>,</td></tr>
+<tr><th id="126">126</th><td>			RTLD_PROGNAME,</td></tr>
+<tr><th id="127">127</th><td>			<a class="local col3 ref" href="#3occation" title='occation' data-ref="3occation" data-ref-filename="3occation">occation</a> ?: N_(<q>"error while loading shared libraries"</q>),</td></tr>
+<tr><th id="128">128</th><td>			<a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a>, *<a class="local col2 ref" href="#2objname" title='objname' data-ref="2objname" data-ref-filename="2objname">objname</a> ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="129">129</th><td>			<a class="local col4 ref" href="#4errstring" title='errstring' data-ref="4errstring" data-ref-filename="4errstring">errstring</a>, <a class="local col1 ref" href="#1errcode" title='errcode' data-ref="1errcode" data-ref-filename="1errcode">errcode</a> ? <q>": "</q> : <q>""</q>,</td></tr>
+<tr><th id="130">130</th><td>			(<a class="local col1 ref" href="#1errcode" title='errcode' data-ref="1errcode" data-ref-filename="1errcode">errcode</a></td></tr>
+<tr><th id="131">131</th><td>			 ? <a class="ref fn" href="../include/string.h.html#__strerror_r" title='__strerror_r' data-ref="__strerror_r" data-ref-filename="__strerror_r">__strerror_r</a> (<a class="local col1 ref" href="#1errcode" title='errcode' data-ref="1errcode" data-ref-filename="1errcode">errcode</a>, <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>, <b>sizeof</b> <a class="local col0 ref" href="#10buffer" title='buffer' data-ref="10buffer" data-ref-filename="10buffer">buffer</a>)</td></tr>
+<tr><th id="132">132</th><td>			 : <q>""</q>));</td></tr>
+<tr><th id="133">133</th><td>    }</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><em>void</em></td></tr>
+<tr><th id="138">138</th><td><a class="macro" href="../include/libc-symbols.h.html#152" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="139">139</th><td><dfn class="decl def fn" id="_dl_signal_cerror" title='_dl_signal_cerror' data-ref="_dl_signal_cerror" data-ref-filename="_dl_signal_cerror">_dl_signal_cerror</dfn> (<em>int</em> <dfn class="local col1 decl" id="11errcode" title='errcode' data-type='int' data-ref="11errcode" data-ref-filename="11errcode">errcode</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12objname" title='objname' data-type='const char *' data-ref="12objname" data-ref-filename="12objname">objname</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="13occation" title='occation' data-type='const char *' data-ref="13occation" data-ref-filename="13occation">occation</dfn>,</td></tr>
+<tr><th id="140">140</th><td>		   <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="14errstring" title='errstring' data-type='const char *' data-ref="14errstring" data-ref-filename="14errstring">errstring</dfn>)</td></tr>
+<tr><th id="141">141</th><td>{</td></tr>
+<tr><th id="142">142</th><td>  <b>if</b> (<a class="ref fn" href="#142" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#439" title="_dl_debug_mask" data-ref="_M/GLRO">GLRO</a>(dl_debug_mask)</td></tr>
+<tr><th id="143">143</th><td>			&amp; ~(<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#459" title="(1 &lt;&lt; 7)" data-ref="_M/DL_DEBUG_STATISTICS">DL_DEBUG_STATISTICS</a>|<a class="macro" href="../sysdeps/generic/ldsodefs.h.html#464" title="(1 &lt;&lt; 11)" data-ref="_M/DL_DEBUG_PRELINK">DL_DEBUG_PRELINK</a>), <var>0</var>))</td></tr>
+<tr><th id="144">144</th><td>    <a class="ref fn" href="../sysdeps/generic/ldsodefs.h.html#_dl_debug_printf" title='_dl_debug_printf' data-ref="_dl_debug_printf" data-ref-filename="_dl_debug_printf">_dl_debug_printf</a> (<q>"%s: error: %s: %s (%s)\n"</q>, <a class="local col2 ref" href="#12objname" title='objname' data-ref="12objname" data-ref-filename="12objname">objname</a>, <a class="local col3 ref" href="#13occation" title='occation' data-ref="13occation" data-ref-filename="13occation">occation</a>,</td></tr>
+<tr><th id="145">145</th><td>		      <a class="local col4 ref" href="#14errstring" title='errstring' data-ref="14errstring" data-ref-filename="14errstring">errstring</a>, <a class="tu ref" href="#receiver" title='receiver' data-use='r' data-ref="receiver" data-ref-filename="receiver">receiver</a> ? <q>"continued"</q> : <q>"fatal"</q>);</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>  <b>if</b> (<a class="tu ref" href="#receiver" title='receiver' data-use='r' data-ref="receiver" data-ref-filename="receiver">receiver</a>)</td></tr>
+<tr><th id="148">148</th><td>    {</td></tr>
+<tr><th id="149">149</th><td>      <i>/* We are inside _dl_receive_error.  Call the user supplied</i></td></tr>
+<tr><th id="150">150</th><td><i>	 handler and resume the work.  The receiver will still be</i></td></tr>
+<tr><th id="151">151</th><td><i>	 installed.  */</i></td></tr>
+<tr><th id="152">152</th><td>      (*<a class="tu ref" href="#receiver" title='receiver' data-use='r' data-ref="receiver" data-ref-filename="receiver">receiver</a>) (<a class="local col1 ref" href="#11errcode" title='errcode' data-ref="11errcode" data-ref-filename="11errcode">errcode</a>, <a class="local col2 ref" href="#12objname" title='objname' data-ref="12objname" data-ref-filename="12objname">objname</a>, <a class="local col4 ref" href="#14errstring" title='errstring' data-ref="14errstring" data-ref-filename="14errstring">errstring</a>);</td></tr>
+<tr><th id="153">153</th><td>    }</td></tr>
+<tr><th id="154">154</th><td>  <b>else</b></td></tr>
+<tr><th id="155">155</th><td>    <a class="ref fn" href="#_dl_signal_error" title='_dl_signal_error' data-ref="_dl_signal_error" data-ref-filename="_dl_signal_error">_dl_signal_error</a> (<a class="local col1 ref" href="#11errcode" title='errcode' data-ref="11errcode" data-ref-filename="11errcode">errcode</a>, <a class="local col2 ref" href="#12objname" title='objname' data-ref="12objname" data-ref-filename="12objname">objname</a>, <a class="local col3 ref" href="#13occation" title='occation' data-ref="13occation" data-ref-filename="13occation">occation</a>, <a class="local col4 ref" href="#14errstring" title='errstring' data-ref="14errstring" data-ref-filename="14errstring">errstring</a>);</td></tr>
+<tr><th id="156">156</th><td>}</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><em>int</em></td></tr>
+<tr><th id="160">160</th><td><a class="macro" href="../include/libc-symbols.h.html#152" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="161">161</th><td><dfn class="decl def fn" id="_dl_catch_error" title='_dl_catch_error' data-ref="_dl_catch_error" data-ref-filename="_dl_catch_error">_dl_catch_error</dfn> (<em>const</em> <em>char</em> **<dfn class="local col5 decl" id="15objname" title='objname' data-type='const char **' data-ref="15objname" data-ref-filename="15objname">objname</dfn>, <em>const</em> <em>char</em> **<dfn class="local col6 decl" id="16errstring" title='errstring' data-type='const char **' data-ref="16errstring" data-ref-filename="16errstring">errstring</dfn>,</td></tr>
+<tr><th id="162">162</th><td>		 <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> *<dfn class="local col7 decl" id="17mallocedp" title='mallocedp' data-type='_Bool *' data-ref="17mallocedp" data-ref-filename="17mallocedp">mallocedp</dfn>, <em>void</em> (*<dfn class="local col8 decl" id="18operate" title='operate' data-type='void (*)(void *)' data-ref="18operate" data-ref-filename="18operate">operate</dfn>) (<em>void</em> *), <em>void</em> *<dfn class="local col9 decl" id="19args" title='args' data-type='void *' data-ref="19args" data-ref-filename="19args">args</dfn>)</td></tr>
+<tr><th id="163">163</th><td>{</td></tr>
+<tr><th id="164">164</th><td>  <i>/* We need not handle `receiver' since setting a `catch' is handled</i></td></tr>
+<tr><th id="165">165</th><td><i>     before it.  */</i></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>  <i>/* Only this needs to be marked volatile, because it is the only local</i></td></tr>
+<tr><th id="168">168</th><td><i>     variable that gets changed between the setjmp invocation and the</i></td></tr>
+<tr><th id="169">169</th><td><i>     longjmp call.  All others are just set here (before setjmp) and read</i></td></tr>
+<tr><th id="170">170</th><td><i>     in _dl_signal_error (before longjmp).  */</i></td></tr>
+<tr><th id="171">171</th><td>  <em>volatile</em> <em>int</em> <dfn class="local col0 decl" id="20errcode" title='errcode' data-type='volatile int' data-ref="20errcode" data-ref-filename="20errcode">errcode</dfn>;</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> <dfn class="local col1 decl" id="21c" title='c' data-type='struct catch' data-ref="21c" data-ref-filename="21c">c</dfn>;</td></tr>
+<tr><th id="174">174</th><td>  <i>/* Don't use an initializer since we don't need to clear C.env.  */</i></td></tr>
+<tr><th id="175">175</th><td>  <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>.<a class="tu ref field" href="#catch::objname" title='catch::objname' data-use='w' data-ref="catch::objname" data-ref-filename="catch..objname">objname</a> = <a class="local col5 ref" href="#15objname" title='objname' data-ref="15objname" data-ref-filename="15objname">objname</a>;</td></tr>
+<tr><th id="176">176</th><td>  <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>.<a class="tu ref field" href="#catch::errstring" title='catch::errstring' data-use='w' data-ref="catch::errstring" data-ref-filename="catch..errstring">errstring</a> = <a class="local col6 ref" href="#16errstring" title='errstring' data-ref="16errstring" data-ref-filename="16errstring">errstring</a>;</td></tr>
+<tr><th id="177">177</th><td>  <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>.<a class="tu ref field" href="#catch::malloced" title='catch::malloced' data-use='w' data-ref="catch::malloced" data-ref-filename="catch..malloced">malloced</a> = <a class="local col7 ref" href="#17mallocedp" title='mallocedp' data-ref="17mallocedp" data-ref-filename="17mallocedp">mallocedp</a>;</td></tr>
+<tr><th id="178">178</th><td>  <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>.<a class="tu ref field" href="#catch::errcode" title='catch::errcode' data-use='w' data-ref="catch::errcode" data-ref-filename="catch..errcode">errcode</a> = &amp;<a class="local col0 ref" href="#20errcode" title='errcode' data-ref="20errcode" data-ref-filename="20errcode">errcode</a>;</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> **<em>const</em> <dfn class="local col2 decl" id="22catchp" title='catchp' data-type='struct catch **const' data-ref="22catchp" data-ref-filename="22catchp">catchp</dfn> = &amp;<a class="macro" href="#63" title="(*(struct catch **) (*_dl_error_catch_tsd) ())" data-ref="_M/CATCH_HOOK">CATCH_HOOK</a>;</td></tr>
+<tr><th id="181">181</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> *<em>const</em> <dfn class="local col3 decl" id="23old" title='old' data-type='struct catch *const' data-ref="23old" data-ref-filename="23old">old</dfn> = *<a class="local col2 ref" href="#22catchp" title='catchp' data-ref="22catchp" data-ref-filename="22catchp">catchp</a>;</td></tr>
+<tr><th id="182">182</th><td>  *<a class="local col2 ref" href="#22catchp" title='catchp' data-ref="22catchp" data-ref-filename="22catchp">catchp</a> = &amp;<a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>;</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td>  <i>/* Do not save the signal mask.  */</i></td></tr>
+<tr><th id="185">185</th><td>  <b>if</b> (<a class="ref fn" href="#142" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref fn" href="../setjmp/setjmp.h.html#__sigsetjmp" title='__sigsetjmp' data-ref="__sigsetjmp" data-ref-filename="__sigsetjmp">__sigsetjmp</a> (<a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>.<a class="tu ref field" href="#catch::env" title='catch::env' data-use='r' data-ref="catch::env" data-ref-filename="catch..env">env</a>, <var>0</var>), <var>0</var>) == <var>0</var>)</td></tr>
+<tr><th id="186">186</th><td>    {</td></tr>
+<tr><th id="187">187</th><td>      (*<a class="local col8 ref" href="#18operate" title='operate' data-ref="18operate" data-ref-filename="18operate">operate</a>) (<a class="local col9 ref" href="#19args" title='args' data-ref="19args" data-ref-filename="19args">args</a>);</td></tr>
+<tr><th id="188">188</th><td>      *<a class="local col2 ref" href="#22catchp" title='catchp' data-ref="22catchp" data-ref-filename="22catchp">catchp</a> = <a class="local col3 ref" href="#23old" title='old' data-ref="23old" data-ref-filename="23old">old</a>;</td></tr>
+<tr><th id="189">189</th><td>      *<a class="local col5 ref" href="#15objname" title='objname' data-ref="15objname" data-ref-filename="15objname">objname</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="190">190</th><td>      *<a class="local col6 ref" href="#16errstring" title='errstring' data-ref="16errstring" data-ref-filename="16errstring">errstring</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="191">191</th><td>      *<a class="local col7 ref" href="#17mallocedp" title='mallocedp' data-ref="17mallocedp" data-ref-filename="17mallocedp">mallocedp</a> = <span class="macro" title="0" data-ref="_M/false">false</span>;</td></tr>
+<tr><th id="192">192</th><td>      <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="193">193</th><td>    }</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>  <i>/* We get here only if we longjmp'd out of OPERATE.  _dl_signal_error has</i></td></tr>
+<tr><th id="196">196</th><td><i>     already stored values into *OBJNAME, *ERRSTRING, and *MALLOCEDP.  */</i></td></tr>
+<tr><th id="197">197</th><td>  *<a class="local col2 ref" href="#22catchp" title='catchp' data-ref="22catchp" data-ref-filename="22catchp">catchp</a> = <a class="local col3 ref" href="#23old" title='old' data-ref="23old" data-ref-filename="23old">old</a>;</td></tr>
+<tr><th id="198">198</th><td>  <b>return</b> <a class="local col0 ref" href="#20errcode" title='errcode' data-ref="20errcode" data-ref-filename="20errcode">errcode</a>;</td></tr>
+<tr><th id="199">199</th><td>}</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td><em>void</em></td></tr>
+<tr><th id="203">203</th><td><a class="macro" href="../include/libc-symbols.h.html#152" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="204">204</th><td><dfn class="decl def fn" id="_dl_receive_error" title='_dl_receive_error' data-ref="_dl_receive_error" data-ref-filename="_dl_receive_error">_dl_receive_error</dfn> (<a class="typedef" href="../sysdeps/generic/ldsodefs.h.html#receiver_fct" title='receiver_fct' data-type='void (*)(int, const char *, const char *)' data-ref="receiver_fct" data-ref-filename="receiver_fct">receiver_fct</a> <dfn class="local col4 decl" id="24fct" title='fct' data-type='receiver_fct' data-ref="24fct" data-ref-filename="24fct">fct</dfn>, <em>void</em> (*<dfn class="local col5 decl" id="25operate" title='operate' data-type='void (*)(void *)' data-ref="25operate" data-ref-filename="25operate">operate</dfn>) (<em>void</em> *), <em>void</em> *<dfn class="local col6 decl" id="26args" title='args' data-type='void *' data-ref="26args" data-ref-filename="26args">args</dfn>)</td></tr>
+<tr><th id="205">205</th><td>{</td></tr>
+<tr><th id="206">206</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> **<em>const</em> <dfn class="local col7 decl" id="27catchp" title='catchp' data-type='struct catch **const' data-ref="27catchp" data-ref-filename="27catchp">catchp</dfn> = &amp;<a class="macro" href="#63" title="(*(struct catch **) (*_dl_error_catch_tsd) ())" data-ref="_M/CATCH_HOOK">CATCH_HOOK</a>;</td></tr>
+<tr><th id="207">207</th><td>  <b>struct</b> <a class="type" href="#catch" title='catch' data-ref="catch" data-ref-filename="catch">catch</a> *<dfn class="local col8 decl" id="28old_catch" title='old_catch' data-type='struct catch *' data-ref="28old_catch" data-ref-filename="28old_catch">old_catch</dfn>;</td></tr>
+<tr><th id="208">208</th><td>  <a class="typedef" href="../sysdeps/generic/ldsodefs.h.html#receiver_fct" title='receiver_fct' data-type='void (*)(int, const char *, const char *)' data-ref="receiver_fct" data-ref-filename="receiver_fct">receiver_fct</a> <dfn class="local col9 decl" id="29old_receiver" title='old_receiver' data-type='receiver_fct' data-ref="29old_receiver" data-ref-filename="29old_receiver">old_receiver</dfn>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>  <a class="local col8 ref" href="#28old_catch" title='old_catch' data-ref="28old_catch" data-ref-filename="28old_catch">old_catch</a> = *<a class="local col7 ref" href="#27catchp" title='catchp' data-ref="27catchp" data-ref-filename="27catchp">catchp</a>;</td></tr>
+<tr><th id="211">211</th><td>  <a class="local col9 ref" href="#29old_receiver" title='old_receiver' data-ref="29old_receiver" data-ref-filename="29old_receiver">old_receiver</a> = <a class="tu ref" href="#receiver" title='receiver' data-use='r' data-ref="receiver" data-ref-filename="receiver">receiver</a>;</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>  <i>/* Set the new values.  */</i></td></tr>
+<tr><th id="214">214</th><td>  *<a class="local col7 ref" href="#27catchp" title='catchp' data-ref="27catchp" data-ref-filename="27catchp">catchp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="215">215</th><td>  <a class="tu ref" href="#receiver" title='receiver' data-use='w' data-ref="receiver" data-ref-filename="receiver">receiver</a> = <a class="local col4 ref" href="#24fct" title='fct' data-ref="24fct" data-ref-filename="24fct">fct</a>;</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td>  (*<a class="local col5 ref" href="#25operate" title='operate' data-ref="25operate" data-ref-filename="25operate">operate</a>) (<a class="local col6 ref" href="#26args" title='args' data-ref="26args" data-ref-filename="26args">args</a>);</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>  *<a class="local col7 ref" href="#27catchp" title='catchp' data-ref="27catchp" data-ref-filename="27catchp">catchp</a> = <a class="local col8 ref" href="#28old_catch" title='old_catch' data-ref="28old_catch" data-ref-filename="28old_catch">old_catch</a>;</td></tr>
+<tr><th id="220">220</th><td>  <a class="tu ref" href="#receiver" title='receiver' data-use='w' data-ref="receiver" data-ref-filename="receiver">receiver</a> = <a class="local col9 ref" href="#29old_receiver" title='old_receiver' data-ref="29old_receiver" data-ref-filename="29old_receiver">old_receiver</a>;</td></tr>
+<tr><th id="221">221</th><td>}</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

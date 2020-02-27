@@ -1,0 +1,354 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>files-parse.c source code [glibc_src_2.23/nss/nss_files/files-parse.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="parser_data "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/nss/nss_files/files-parse.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.23</a>/<a href='..'>nss</a>/<a href='./'>nss_files</a>/<a href='files-parse.c.html'>files-parse.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Common code for file-based database parsers in nss_files module.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1996-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/* These symbols are defined by the including source file:</i></td></tr>
+<tr><th id="26">26</th><td><i></i></td></tr>
+<tr><th id="27">27</th><td><i>   ENTNAME -- database name of the structure and functions (hostent, pwent).</i></td></tr>
+<tr><th id="28">28</th><td><i>   STRUCTURE -- struct name, define only if not ENTNAME (passwd, group).</i></td></tr>
+<tr><th id="29">29</th><td><i>   DATABASE -- string of the database file's name ("hosts", "passwd").</i></td></tr>
+<tr><th id="30">30</th><td><i></i></td></tr>
+<tr><th id="31">31</th><td><i>   ENTDATA -- if defined, `struct ENTDATA' is used by the parser to store</i></td></tr>
+<tr><th id="32">32</th><td><i>	      things pointed to by the resultant `struct STRUCTURE'.</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>   NEED_H_ERRNO - defined iff an arg `int *herrnop' is used.</i></td></tr>
+<tr><th id="35">35</th><td><i></i></td></tr>
+<tr><th id="36">36</th><td><i>   EXTRA_ARGS -- defined iff extra parameters must be passed to the parser</i></td></tr>
+<tr><th id="37">37</th><td><i>   EXTRA_ARGS_DECL -- declaration for these extra parameters</i></td></tr>
+<tr><th id="38">38</th><td><i>   EXTRA_ARGS_VALUE -- values to be passed for these parameters</i></td></tr>
+<tr><th id="39">39</th><td><i></i></td></tr>
+<tr><th id="40">40</th><td><i>   Also see files-XXX.c.  */</i></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="42">ifndef</span> <span class="macro" data-ref="_M/EXTRA_ARGS">EXTRA_ARGS</span></u></td></tr>
+<tr><th id="43">43</th><td><u># define <dfn class="macro" id="_M/EXTRA_ARGS" data-ref="_M/EXTRA_ARGS">EXTRA_ARGS</dfn></u></td></tr>
+<tr><th id="44">44</th><td><u># define <dfn class="macro" id="_M/EXTRA_ARGS_DECL" data-ref="_M/EXTRA_ARGS_DECL">EXTRA_ARGS_DECL</dfn></u></td></tr>
+<tr><th id="45">45</th><td><u># define <dfn class="macro" id="_M/EXTRA_ARGS_VALUE" data-ref="_M/EXTRA_ARGS_VALUE">EXTRA_ARGS_VALUE</dfn></u></td></tr>
+<tr><th id="46">46</th><td><u>#<span data-ppcond="42">endif</span></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#define <dfn class="macro" id="_M/CONCAT" data-ref="_M/CONCAT">CONCAT</dfn>(a,b) CONCAT1(a,b)</u></td></tr>
+<tr><th id="49">49</th><td><u>#define <dfn class="macro" id="_M/CONCAT1" data-ref="_M/CONCAT1">CONCAT1</dfn>(a,b) a##b</u></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><u>#<span data-ppcond="51">ifndef</span> <a class="macro" href="../../grp/fgetgrent_r.c.html#30" data-ref="_M/STRUCTURE">STRUCTURE</a></u></td></tr>
+<tr><th id="52">52</th><td><u># define STRUCTURE ENTNAME</u></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="51">endif</span></u></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><b>struct</b> <dfn class="type def" id="parser_data" title='parser_data' data-ref="parser_data" data-ref-filename="parser_data">parser_data</dfn></td></tr>
+<tr><th id="57">57</th><td>  {</td></tr>
+<tr><th id="58">58</th><td><u>#<span data-ppcond="58">ifdef</span> <span class="macro" data-ref="_M/ENTDATA">ENTDATA</span></u></td></tr>
+<tr><th id="59">59</th><td>    <b>struct</b> ENTDATA entdata;</td></tr>
+<tr><th id="60">60</th><td><u># define ENTDATA_DECL(data) struct ENTDATA *const entdata = &amp;data-&gt;entdata;</u></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="58">else</span></u></td></tr>
+<tr><th id="62">62</th><td><u># define <dfn class="macro" id="_M/ENTDATA_DECL" data-ref="_M/ENTDATA_DECL">ENTDATA_DECL</dfn>(data)</u></td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="58">endif</span></u></td></tr>
+<tr><th id="64">64</th><td>    <em>char</em> <dfn class="decl field" id="parser_data::linebuffer" title='parser_data::linebuffer' data-ref="parser_data::linebuffer" data-ref-filename="parser_data..linebuffer">linebuffer</dfn>[<var>0</var>];</td></tr>
+<tr><th id="65">65</th><td>  };</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><u>#<span data-ppcond="67">ifdef</span> <span class="macro" data-ref="_M/ENTDATA">ENTDATA</span></u></td></tr>
+<tr><th id="68">68</th><td><i>/* The function can't be exported, because the entdata structure</i></td></tr>
+<tr><th id="69">69</th><td><i>   is defined only in files-foo.c.  */</i></td></tr>
+<tr><th id="70">70</th><td><u># define parser_stclass static</u></td></tr>
+<tr><th id="71">71</th><td><u># define nss_files_parse_hidden_def(name)</u></td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="67">else</span></u></td></tr>
+<tr><th id="73">73</th><td><i>/* Export the line parser function so it can be used in nss_db.  */</i></td></tr>
+<tr><th id="74">74</th><td><u># define <dfn class="macro" id="_M/parser_stclass" data-ref="_M/parser_stclass">parser_stclass</dfn> /* Global */</u></td></tr>
+<tr><th id="75">75</th><td><u># define <dfn class="macro" id="_M/parse_line" data-ref="_M/parse_line">parse_line</dfn> CONCAT(_nss_files_parse_,ENTNAME)</u></td></tr>
+<tr><th id="76">76</th><td><u># <span data-ppcond="76">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="77">77</th><td><i>/* We are defining one of the functions that actually lives in libc</i></td></tr>
+<tr><th id="78">78</th><td><i>   because it is used to implement fget*ent and suchlike.  */</i></td></tr>
+<tr><th id="79">79</th><td><u>#  define <dfn class="macro" id="_M/nss_files_parse_hidden_def" data-ref="_M/nss_files_parse_hidden_def">nss_files_parse_hidden_def</dfn>(name) libc_hidden_def (name)</u></td></tr>
+<tr><th id="80">80</th><td><u># <span data-ppcond="76">else</span></u></td></tr>
+<tr><th id="81">81</th><td><u>#  define nss_files_parse_hidden_def(name) libnss_files_hidden_def (name)</u></td></tr>
+<tr><th id="82">82</th><td><u># <span data-ppcond="76">endif</span></u></td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="67">endif</span></u></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><u>#<span data-ppcond="86">ifdef</span> <span class="macro" data-ref="_M/EXTERN_PARSER">EXTERN_PARSER</span></u></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i>/* The parser is defined in a different module.  */</i></td></tr>
+<tr><th id="89">89</th><td><b>extern</b> <em>int</em> parse_line (<em>char</em> *line, <b>struct</b> STRUCTURE *result,</td></tr>
+<tr><th id="90">90</th><td>		       <b>struct</b> parser_data *data, size_t datalen, <em>int</em> *errnop</td></tr>
+<tr><th id="91">91</th><td>		       EXTRA_ARGS_DECL);</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><u># define LINE_PARSER(EOLSET, BODY) /* Do nothing */</u></td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><u>#<span data-ppcond="86">else</span></u></td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><i>/* Define a line parsing function.  */</i></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><u># define <dfn class="macro" id="_M/LINE_PARSER" data-ref="_M/LINE_PARSER">LINE_PARSER</dfn>(EOLSET, BODY)					      \</u></td></tr>
+<tr><th id="100">100</th><td><u>parser_stclass int							      \</u></td></tr>
+<tr><th id="101">101</th><td><u>parse_line (char *line, struct STRUCTURE *result,			      \</u></td></tr>
+<tr><th id="102">102</th><td><u>	    struct parser_data *data, size_t datalen, int *errnop	      \</u></td></tr>
+<tr><th id="103">103</th><td><u>	    EXTRA_ARGS_DECL)						      \</u></td></tr>
+<tr><th id="104">104</th><td><u>{									      \</u></td></tr>
+<tr><th id="105">105</th><td><u>  ENTDATA_DECL (data)							      \</u></td></tr>
+<tr><th id="106">106</th><td><u>  BUFFER_PREPARE							      \</u></td></tr>
+<tr><th id="107">107</th><td><u>  char *p = strpbrk (line, EOLSET <span class='error' title="array index 2 is past the end of the array (which contains 2 elements)"><span class='error' title="array index 3 is past the end of the array (which contains 2 elements)">"\n"</span></span>);				      \</u></td></tr>
+<tr><th id="108">108</th><td><u>  if (p != NULL)							      \</u></td></tr>
+<tr><th id="109">109</th><td><u>    *p = '\0';								      \</u></td></tr>
+<tr><th id="110">110</th><td><u>  BODY;									      \</u></td></tr>
+<tr><th id="111">111</th><td><u>  TRAILING_LIST_PARSER;							      \</u></td></tr>
+<tr><th id="112">112</th><td><u>  return 1;								      \</u></td></tr>
+<tr><th id="113">113</th><td><u>}									      \</u></td></tr>
+<tr><th id="114">114</th><td><u>nss_files_parse_hidden_def (parse_line)</u></td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td><u># define <dfn class="macro" id="_M/STRING_FIELD" data-ref="_M/STRING_FIELD">STRING_FIELD</dfn>(variable, terminator_p, swallow)			      \</u></td></tr>
+<tr><th id="118">118</th><td><u>  {									      \</u></td></tr>
+<tr><th id="119">119</th><td><u>    variable = line;							      \</u></td></tr>
+<tr><th id="120">120</th><td><u>    while (*line != '\0' &amp;&amp; !terminator_p (*line))			      \</u></td></tr>
+<tr><th id="121">121</th><td><u>      ++line;								      \</u></td></tr>
+<tr><th id="122">122</th><td><u>    if (*line != '\0')							      \</u></td></tr>
+<tr><th id="123">123</th><td><u>      {									      \</u></td></tr>
+<tr><th id="124">124</th><td><u>	*line = '\0';							      \</u></td></tr>
+<tr><th id="125">125</th><td><u>	do								      \</u></td></tr>
+<tr><th id="126">126</th><td><u>	  ++line;							      \</u></td></tr>
+<tr><th id="127">127</th><td><u>	while (swallow &amp;&amp; terminator_p (*line));			      \</u></td></tr>
+<tr><th id="128">128</th><td><u>      }									      \</u></td></tr>
+<tr><th id="129">129</th><td><u>  }</u></td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><u># define <dfn class="macro" id="_M/STRING_LIST" data-ref="_M/STRING_LIST">STRING_LIST</dfn>(variable, terminator_c) \</u></td></tr>
+<tr><th id="132">132</th><td><u>  {									      \</u></td></tr>
+<tr><th id="133">133</th><td><u>    char **list = parse_list (&amp;line, buf_start, buf_end, terminator_c,	      \</u></td></tr>
+<tr><th id="134">134</th><td><u>			      errnop);					      \</u></td></tr>
+<tr><th id="135">135</th><td><u>    if (list)								      \</u></td></tr>
+<tr><th id="136">136</th><td><u>      variable = list;							      \</u></td></tr>
+<tr><th id="137">137</th><td><u>    else								      \</u></td></tr>
+<tr><th id="138">138</th><td><u>      return -1;		/* -1 indicates we ran out of space.  */      \</u></td></tr>
+<tr><th id="139">139</th><td><u>									      \</u></td></tr>
+<tr><th id="140">140</th><td><u>    /* Determine the new end of the buffer.  */				      \</u></td></tr>
+<tr><th id="141">141</th><td><u>    while (*list != NULL)						      \</u></td></tr>
+<tr><th id="142">142</th><td><u>      ++list;								      \</u></td></tr>
+<tr><th id="143">143</th><td><u>    buf_start = (char *) (list + 1);					      \</u></td></tr>
+<tr><th id="144">144</th><td><u>  }</u></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/* Helper function.  */</i></td></tr>
+<tr><th id="147">147</th><td><em>static</em> <b>inline</b> <a class="typedef" href="../../sysdeps/generic/stdint.h.html#uint32_t" title='uint32_t' data-type='unsigned int' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a></td></tr>
+<tr><th id="148">148</th><td><b>__attribute__</b> ((always_inline))</td></tr>
+<tr><th id="149">149</th><td><dfn class="decl def fn" id="strtou32" title='strtou32' data-ref="strtou32" data-ref-filename="strtou32">strtou32</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1nptr" title='nptr' data-type='const char *' data-ref="1nptr" data-ref-filename="1nptr">nptr</dfn>, <em>char</em> **<dfn class="local col2 decl" id="2endptr" title='endptr' data-type='char **' data-ref="2endptr" data-ref-filename="2endptr">endptr</dfn>, <em>int</em> <dfn class="local col3 decl" id="3base" title='base' data-type='int' data-ref="3base" data-ref-filename="3base">base</dfn>)</td></tr>
+<tr><th id="150">150</th><td>{</td></tr>
+<tr><th id="151">151</th><td>  <em>unsigned</em> <em>long</em> <em>int</em> <dfn class="local col4 decl" id="4val" title='val' data-type='unsigned long' data-ref="4val" data-ref-filename="4val">val</dfn> = <a class="ref fn" href="../../stdlib/stdlib.h.html#strtoul" title='strtoul' data-ref="strtoul" data-ref-filename="strtoul">strtoul</a> (<a class="local col1 ref" href="#1nptr" title='nptr' data-ref="1nptr" data-ref-filename="1nptr">nptr</a>, <a class="local col2 ref" href="#2endptr" title='endptr' data-ref="2endptr" data-ref-filename="2endptr">endptr</a>, <a class="local col3 ref" href="#3base" title='base' data-ref="3base" data-ref-filename="3base">base</a>);</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>  <i>/* Match the 32-bit behavior on 64-bit platforms.  */</i></td></tr>
+<tr><th id="154">154</th><td>  <b>if</b> (<b>sizeof</b> (<em>long</em> <em>int</em>) &gt; <var>4</var> &amp;&amp; <a class="local col4 ref" href="#4val" title='val' data-ref="4val" data-ref-filename="4val">val</a> &gt; <var>0xffffffff</var>)</td></tr>
+<tr><th id="155">155</th><td>    <a class="local col4 ref" href="#4val" title='val' data-ref="4val" data-ref-filename="4val">val</a> = <var>0xffffffff</var>;</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>  <b>return</b> <a class="local col4 ref" href="#4val" title='val' data-ref="4val" data-ref-filename="4val">val</a>;</td></tr>
+<tr><th id="158">158</th><td>}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><u># define <dfn class="macro" id="_M/INT_FIELD" data-ref="_M/INT_FIELD">INT_FIELD</dfn>(variable, terminator_p, swallow, base, convert)	      \</u></td></tr>
+<tr><th id="161">161</th><td><u>  {									      \</u></td></tr>
+<tr><th id="162">162</th><td><u>    char *endp;								      \</u></td></tr>
+<tr><th id="163">163</th><td><u>    variable = convert (strtou32 (line, &amp;endp, base));			      \</u></td></tr>
+<tr><th id="164">164</th><td><u>    if (endp == line)							      \</u></td></tr>
+<tr><th id="165">165</th><td><u>      return 0;								      \</u></td></tr>
+<tr><th id="166">166</th><td><u>    else if (terminator_p (*endp))					      \</u></td></tr>
+<tr><th id="167">167</th><td><u>      do								      \</u></td></tr>
+<tr><th id="168">168</th><td><u>	++endp;								      \</u></td></tr>
+<tr><th id="169">169</th><td><u>      while (swallow &amp;&amp; terminator_p (*endp));				      \</u></td></tr>
+<tr><th id="170">170</th><td><u>    else if (*endp != '\0')						      \</u></td></tr>
+<tr><th id="171">171</th><td><u>      return 0;								      \</u></td></tr>
+<tr><th id="172">172</th><td><u>    line = endp;							      \</u></td></tr>
+<tr><th id="173">173</th><td><u>  }</u></td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td><u># define <dfn class="macro" id="_M/INT_FIELD_MAYBE_NULL" data-ref="_M/INT_FIELD_MAYBE_NULL">INT_FIELD_MAYBE_NULL</dfn>(variable, terminator_p, swallow, base, convert, default)	      \</u></td></tr>
+<tr><th id="176">176</th><td><u>  {									      \</u></td></tr>
+<tr><th id="177">177</th><td><u>    char *endp;								      \</u></td></tr>
+<tr><th id="178">178</th><td><u>    if (*line == '\0')							      \</u></td></tr>
+<tr><th id="179">179</th><td><u>      /* We expect some more input, so don't allow the string to end here. */ \</u></td></tr>
+<tr><th id="180">180</th><td><u>      return 0;								      \</u></td></tr>
+<tr><th id="181">181</th><td><u>    variable = convert (strtou32 (line, &amp;endp, base));			      \</u></td></tr>
+<tr><th id="182">182</th><td><u>    if (endp == line)							      \</u></td></tr>
+<tr><th id="183">183</th><td><u>      variable = default;						      \</u></td></tr>
+<tr><th id="184">184</th><td><u>    if (terminator_p (*endp))						      \</u></td></tr>
+<tr><th id="185">185</th><td><u>      do								      \</u></td></tr>
+<tr><th id="186">186</th><td><u>	++endp;								      \</u></td></tr>
+<tr><th id="187">187</th><td><u>      while (swallow &amp;&amp; terminator_p (*endp));				      \</u></td></tr>
+<tr><th id="188">188</th><td><u>    else if (*endp != '\0')						      \</u></td></tr>
+<tr><th id="189">189</th><td><u>      return 0;								      \</u></td></tr>
+<tr><th id="190">190</th><td><u>    line = endp;							      \</u></td></tr>
+<tr><th id="191">191</th><td><u>  }</u></td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><u># define <dfn class="macro" id="_M/ISCOLON" data-ref="_M/ISCOLON">ISCOLON</dfn>(c) ((c) == ':')</u></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td><u># <span data-ppcond="196">ifndef</span> <a class="macro" href="../../grp/fgetgrent_r.c.html#34" data-ref="_M/TRAILING_LIST_MEMBER">TRAILING_LIST_MEMBER</a></u></td></tr>
+<tr><th id="197">197</th><td><u>#  define BUFFER_PREPARE /* Nothing to do.  */</u></td></tr>
+<tr><th id="198">198</th><td><u>#  define TRAILING_LIST_PARSER /* Nothing to do.  */</u></td></tr>
+<tr><th id="199">199</th><td><u># <span data-ppcond="196">else</span></u></td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><u># define <dfn class="macro" id="_M/BUFFER_PREPARE" data-ref="_M/BUFFER_PREPARE">BUFFER_PREPARE</dfn> \</u></td></tr>
+<tr><th id="202">202</th><td><u>  char *buf_start = NULL;						      \</u></td></tr>
+<tr><th id="203">203</th><td><u>  char *buf_end = (char *) data + datalen;				      \</u></td></tr>
+<tr><th id="204">204</th><td><u>  if (line &gt;= data-&gt;linebuffer &amp;&amp; line &lt; buf_end)			      \</u></td></tr>
+<tr><th id="205">205</th><td><u>    /* Find the end of the line buffer, we will use the space in	      \</u></td></tr>
+<tr><th id="206">206</th><td><u>       DATA after it for storing the vector of pointers.  */		      \</u></td></tr>
+<tr><th id="207">207</th><td><u>    buf_start = strchr (line, '\0') + 1;				      \</u></td></tr>
+<tr><th id="208">208</th><td><u>  else									      \</u></td></tr>
+<tr><th id="209">209</th><td><u>    /* LINE does not point within DATA-&gt;linebuffer, so that space is	      \</u></td></tr>
+<tr><th id="210">210</th><td><u>       not being used for scratch space right now.  We can use all of	      \</u></td></tr>
+<tr><th id="211">211</th><td><u>       it for the pointer vector storage.  */				      \</u></td></tr>
+<tr><th id="212">212</th><td><u>    buf_start = data-&gt;linebuffer;</u>					      \</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td><u>#  define <dfn class="macro" id="_M/TRAILING_LIST_PARSER" data-ref="_M/TRAILING_LIST_PARSER">TRAILING_LIST_PARSER</dfn> \</u></td></tr>
+<tr><th id="215">215</th><td><u>{									      \</u></td></tr>
+<tr><th id="216">216</th><td><u>  if (buf_start == NULL)						      \</u></td></tr>
+<tr><th id="217">217</th><td><u>    {									      \</u></td></tr>
+<tr><th id="218">218</th><td><u>      if (line &gt;= data-&gt;linebuffer &amp;&amp; line &lt; buf_end)			      \</u></td></tr>
+<tr><th id="219">219</th><td><u>	/* Find the end of the line buffer, we will use the space in	      \</u></td></tr>
+<tr><th id="220">220</th><td><u>	   DATA after it for storing the vector of pointers.  */	      \</u></td></tr>
+<tr><th id="221">221</th><td><u>	buf_start = strchr (line, '\0') + 1;				      \</u></td></tr>
+<tr><th id="222">222</th><td><u>      else								      \</u></td></tr>
+<tr><th id="223">223</th><td><u>	/* LINE does not point within DATA-&gt;linebuffer, so that space is      \</u></td></tr>
+<tr><th id="224">224</th><td><u>	   not being used for scratch space right now.  We can use all of     \</u></td></tr>
+<tr><th id="225">225</th><td><u>	   it for the pointer vector storage.  */			      \</u></td></tr>
+<tr><th id="226">226</th><td><u>	buf_start = data-&gt;linebuffer;					      \</u></td></tr>
+<tr><th id="227">227</th><td><u>    }									      \</u></td></tr>
+<tr><th id="228">228</th><td><u>									      \</u></td></tr>
+<tr><th id="229">229</th><td><u>  char **list = parse_list (&amp;line, buf_start, buf_end, '\0', errnop);	      \</u></td></tr>
+<tr><th id="230">230</th><td><u>  if (list)								      \</u></td></tr>
+<tr><th id="231">231</th><td><u>    result-&gt;TRAILING_LIST_MEMBER = list;				      \</u></td></tr>
+<tr><th id="232">232</th><td><u>  else									      \</u></td></tr>
+<tr><th id="233">233</th><td><u>    return -1;		/* -1 indicates we ran out of space.  */	      \</u></td></tr>
+<tr><th id="234">234</th><td><u>}</u></td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td><em>static</em> <b>inline</b> <em>char</em> **</td></tr>
+<tr><th id="237">237</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="238">238</th><td><dfn class="decl def fn" id="parse_list" title='parse_list' data-ref="parse_list" data-ref-filename="parse_list">parse_list</dfn> (<em>char</em> **<dfn class="local col5 decl" id="5linep" title='linep' data-type='char **' data-ref="5linep" data-ref-filename="5linep">linep</dfn>, <em>char</em> *<dfn class="local col6 decl" id="6eol" title='eol' data-type='char *' data-ref="6eol" data-ref-filename="6eol">eol</dfn>, <em>char</em> *<dfn class="local col7 decl" id="7buf_end" title='buf_end' data-type='char *' data-ref="7buf_end" data-ref-filename="7buf_end">buf_end</dfn>, <em>int</em> <dfn class="local col8 decl" id="8terminator_c" title='terminator_c' data-type='int' data-ref="8terminator_c" data-ref-filename="8terminator_c">terminator_c</dfn>,</td></tr>
+<tr><th id="239">239</th><td>	    <em>int</em> *<dfn class="local col9 decl" id="9errnop" title='errnop' data-type='int *' data-ref="9errnop" data-ref-filename="9errnop">errnop</dfn>)</td></tr>
+<tr><th id="240">240</th><td>{</td></tr>
+<tr><th id="241">241</th><td>  <em>char</em> *<dfn class="local col0 decl" id="10line" title='line' data-type='char *' data-ref="10line" data-ref-filename="10line">line</dfn> = *<a class="local col5 ref" href="#5linep" title='linep' data-ref="5linep" data-ref-filename="5linep">linep</a>;</td></tr>
+<tr><th id="242">242</th><td>  <em>char</em> **<dfn class="local col1 decl" id="11list" title='list' data-type='char **' data-ref="11list" data-ref-filename="11list">list</dfn>, **<dfn class="local col2 decl" id="12p" title='p' data-type='char **' data-ref="12p" data-ref-filename="12p">p</dfn>;</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>  <i>/* Adjust the pointer so it is aligned for storing pointers.  */</i></td></tr>
+<tr><th id="245">245</th><td>  <a class="local col6 ref" href="#6eol" title='eol' data-ref="6eol" data-ref-filename="6eol">eol</a> += <b>__alignof__</b> (<em>char</em> *) - <var>1</var>;</td></tr>
+<tr><th id="246">246</th><td>  <a class="local col6 ref" href="#6eol" title='eol' data-ref="6eol" data-ref-filename="6eol">eol</a> -= (<a class="local col6 ref" href="#6eol" title='eol' data-ref="6eol" data-ref-filename="6eol">eol</a> - (<em>char</em> *) <var>0</var>) % <b>__alignof__</b> (<em>char</em> *);</td></tr>
+<tr><th id="247">247</th><td>  <i>/* We will start the storage here for the vector of pointers.  */</i></td></tr>
+<tr><th id="248">248</th><td>  <a class="local col1 ref" href="#11list" title='list' data-ref="11list" data-ref-filename="11list">list</a> = (<em>char</em> **) <a class="local col6 ref" href="#6eol" title='eol' data-ref="6eol" data-ref-filename="6eol">eol</a>;</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>  <a class="local col2 ref" href="#12p" title='p' data-ref="12p" data-ref-filename="12p">p</a> = <a class="local col1 ref" href="#11list" title='list' data-ref="11list" data-ref-filename="11list">list</a>;</td></tr>
+<tr><th id="251">251</th><td>  <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="252">252</th><td>    {</td></tr>
+<tr><th id="253">253</th><td>      <b>if</b> ((<em>char</em> *) (<a class="local col2 ref" href="#12p" title='p' data-ref="12p" data-ref-filename="12p">p</a> + <var>2</var>) &gt; <a class="local col7 ref" href="#7buf_end" title='buf_end' data-ref="7buf_end" data-ref-filename="7buf_end">buf_end</a>)</td></tr>
+<tr><th id="254">254</th><td>	{</td></tr>
+<tr><th id="255">255</th><td>	  <i>/* We cannot fit another pointer in the buffer.  */</i></td></tr>
+<tr><th id="256">256</th><td>	  *<a class="local col9 ref" href="#9errnop" title='errnop' data-ref="9errnop" data-ref-filename="9errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#37" title="34" data-ref="_M/ERANGE">ERANGE</a>;</td></tr>
+<tr><th id="257">257</th><td>	  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="258">258</th><td>	}</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="261">261</th><td>	<b>break</b>;</td></tr>
+<tr><th id="262">262</th><td>      <b>if</b> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> == <a class="local col8 ref" href="#8terminator_c" title='terminator_c' data-ref="8terminator_c" data-ref-filename="8terminator_c">terminator_c</a>)</td></tr>
+<tr><th id="263">263</th><td>	{</td></tr>
+<tr><th id="264">264</th><td>	  ++<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="265">265</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="266">266</th><td>	}</td></tr>
+<tr><th id="267">267</th><td></td></tr>
+<tr><th id="268">268</th><td>      <i>/* Skip leading white space.  This might not be portable but useful.  */</i></td></tr>
+<tr><th id="269">269</th><td>      <b>while</b> (<a class="macro" href="../../ctype/ctype.h.html#205" title="((*__ctype_b_loc ())[(int) ((*line))] &amp; (unsigned short int) _ISspace)" data-ref="_M/isspace">isspace</a> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>))</td></tr>
+<tr><th id="270">270</th><td>	++<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>      <em>char</em> *<dfn class="local col3 decl" id="13elt" title='elt' data-type='char *' data-ref="13elt" data-ref-filename="13elt">elt</dfn> = <a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="273">273</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="274">274</th><td>	{</td></tr>
+<tr><th id="275">275</th><td>	  <b>if</b> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> == <kbd>'\0'</kbd> || *<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> == <a class="local col8 ref" href="#8terminator_c" title='terminator_c' data-ref="8terminator_c" data-ref-filename="8terminator_c">terminator_c</a></td></tr>
+<tr><th id="276">276</th><td>	      || <a class="macro" href="../../grp/fgetgrent_r.c.html#35" title="((*line) == &apos;,&apos;)" data-ref="_M/TRAILING_LIST_SEPARATOR_P">TRAILING_LIST_SEPARATOR_P</a> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>))</td></tr>
+<tr><th id="277">277</th><td>	    {</td></tr>
+<tr><th id="278">278</th><td>	      <i>/* End of the next entry.  */</i></td></tr>
+<tr><th id="279">279</th><td>	      <b>if</b> (<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> &gt; <a class="local col3 ref" href="#13elt" title='elt' data-ref="13elt" data-ref-filename="13elt">elt</a>)</td></tr>
+<tr><th id="280">280</th><td>		<i>/* We really found some data.  */</i></td></tr>
+<tr><th id="281">281</th><td>		*<a class="local col2 ref" href="#12p" title='p' data-ref="12p" data-ref-filename="12p">p</a>++ = <a class="local col3 ref" href="#13elt" title='elt' data-ref="13elt" data-ref-filename="13elt">elt</a>;</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>	      <i>/* Terminate string if necessary.  */</i></td></tr>
+<tr><th id="284">284</th><td>	      <b>if</b> (*<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="285">285</th><td>		{</td></tr>
+<tr><th id="286">286</th><td>		  <em>char</em> <dfn class="local col4 decl" id="14endc" title='endc' data-type='char' data-ref="14endc" data-ref-filename="14endc">endc</dfn> = *<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="287">287</th><td>		  *<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="288">288</th><td>		  <b>if</b> (<a class="local col4 ref" href="#14endc" title='endc' data-ref="14endc" data-ref-filename="14endc">endc</a> == <a class="local col8 ref" href="#8terminator_c" title='terminator_c' data-ref="8terminator_c" data-ref-filename="8terminator_c">terminator_c</a>)</td></tr>
+<tr><th id="289">289</th><td>		    <b>goto</b> <a class="lbl" href="#15out" data-ref="15out" data-ref-filename="15out">out</a>;</td></tr>
+<tr><th id="290">290</th><td>		}</td></tr>
+<tr><th id="291">291</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="292">292</th><td>	    }</td></tr>
+<tr><th id="293">293</th><td>	  ++<a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="294">294</th><td>	}</td></tr>
+<tr><th id="295">295</th><td>    }</td></tr>
+<tr><th id="296">296</th><td> <dfn class="lbl" id="15out" data-ref="15out" data-ref-filename="15out">out</dfn>:</td></tr>
+<tr><th id="297">297</th><td>  *<a class="local col2 ref" href="#12p" title='p' data-ref="12p" data-ref-filename="12p">p</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="298">298</th><td>  *<a class="local col5 ref" href="#5linep" title='linep' data-ref="5linep" data-ref-filename="5linep">linep</a> = <a class="local col0 ref" href="#10line" title='line' data-ref="10line" data-ref-filename="10line">line</a>;</td></tr>
+<tr><th id="299">299</th><td></td></tr>
+<tr><th id="300">300</th><td>  <b>return</b> <a class="local col1 ref" href="#11list" title='list' data-ref="11list" data-ref-filename="11list">list</a>;</td></tr>
+<tr><th id="301">301</th><td>}</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><u># <span data-ppcond="196">endif</span>	/* TRAILING_LIST_MEMBER */</u></td></tr>
+<tr><th id="304">304</th><td><u>#<span data-ppcond="86">endif</span>	/* EXTERN_PARSER */</u></td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><u>#define <dfn class="macro" id="_M/LOOKUP_NAME" data-ref="_M/LOOKUP_NAME">LOOKUP_NAME</dfn>(nameelt, aliaselt)					      \</u></td></tr>
+<tr><th id="308">308</th><td><u>{									      \</u></td></tr>
+<tr><th id="309">309</th><td><u>  char **ap;								      \</u></td></tr>
+<tr><th id="310">310</th><td><u>  if (! strcmp (name, result-&gt;nameelt))					      \</u></td></tr>
+<tr><th id="311">311</th><td><u>    break;								      \</u></td></tr>
+<tr><th id="312">312</th><td><u>  for (ap = result-&gt;aliaselt; *ap; ++ap)				      \</u></td></tr>
+<tr><th id="313">313</th><td><u>    if (! strcmp (name, *ap))						      \</u></td></tr>
+<tr><th id="314">314</th><td><u>      break;								      \</u></td></tr>
+<tr><th id="315">315</th><td><u>  if (*ap)								      \</u></td></tr>
+<tr><th id="316">316</th><td><u>    break;								      \</u></td></tr>
+<tr><th id="317">317</th><td><u>}</u></td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td><u>#define <dfn class="macro" id="_M/LOOKUP_NAME_CASE" data-ref="_M/LOOKUP_NAME_CASE">LOOKUP_NAME_CASE</dfn>(nameelt, aliaselt)				      \</u></td></tr>
+<tr><th id="320">320</th><td><u>{									      \</u></td></tr>
+<tr><th id="321">321</th><td><u>  char **ap;								      \</u></td></tr>
+<tr><th id="322">322</th><td><u>  if (! __strcasecmp (name, result-&gt;nameelt))				      \</u></td></tr>
+<tr><th id="323">323</th><td><u>    break;								      \</u></td></tr>
+<tr><th id="324">324</th><td><u>  for (ap = result-&gt;aliaselt; *ap; ++ap)				      \</u></td></tr>
+<tr><th id="325">325</th><td><u>    if (! __strcasecmp (name, *ap))					      \</u></td></tr>
+<tr><th id="326">326</th><td><u>      break;								      \</u></td></tr>
+<tr><th id="327">327</th><td><u>  if (*ap)								      \</u></td></tr>
+<tr><th id="328">328</th><td><u>    break;								      \</u></td></tr>
+<tr><th id="329">329</th><td><u>}</u></td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><i>/* This is defined by db-*.c to include "../nss_db/db-XXX.c" instead.  */</i></td></tr>
+<tr><th id="333">333</th><td><u>#<span data-ppcond="333">ifndef</span> <span class="macro" data-ref="_M/GENERIC">GENERIC</span></u></td></tr>
+<tr><th id="334">334</th><td><u># define <dfn class="macro" id="_M/GENERIC" data-ref="_M/GENERIC">GENERIC</dfn> "files-XXX.c"</u></td></tr>
+<tr><th id="335">335</th><td><u>#<span data-ppcond="333">endif</span></u></td></tr>
+<tr><th id="336">336</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../grp/fgetgrent_r.c.html'>glibc_src_2.23/grp/fgetgrent_r.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

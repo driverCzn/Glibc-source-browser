@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>inet_net_pton.c source code [glibc_src_2.23/resolv/inet_net_pton.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/resolv/inet_net_pton.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>resolv</a>/<a href='inet_net_pton.c.html'>inet_net_pton.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (c) 1996,1999 by Internet Software Consortium.</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Permission to use, copy, modify, and distribute this software for any</i></td></tr>
+<tr><th id="5">5</th><td><i> * purpose with or without fee is hereby granted, provided that the above</i></td></tr>
+<tr><th id="6">6</th><td><i> * copyright notice and this permission notice appear in all copies.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS</i></td></tr>
+<tr><th id="9">9</th><td><i> * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES</i></td></tr>
+<tr><th id="10">10</th><td><i> * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE</i></td></tr>
+<tr><th id="11">11</th><td><i> * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL</i></td></tr>
+<tr><th id="12">12</th><td><i> * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR</i></td></tr>
+<tr><th id="13">13</th><td><i> * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS</i></td></tr>
+<tr><th id="14">14</th><td><i> * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS</i></td></tr>
+<tr><th id="15">15</th><td><i> * SOFTWARE.</i></td></tr>
+<tr><th id="16">16</th><td><i> */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#<span data-ppcond="18">if</span> defined(<span class="macro" data-ref="_M/LIBC_SCCS">LIBC_SCCS</span>) &amp;&amp; !defined(<span class="macro" data-ref="_M/lint">lint</span>)</u></td></tr>
+<tr><th id="19">19</th><td><em>static</em> <em>const</em> <em>char</em> rcsid[] = <q>"$BINDId: inet_net_pton.c,v 1.11 1999/01/08 19:23:44 vixie Exp $"</q>;</td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="18">endif</span></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/sys/socket.h.html">&lt;sys/socket.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/netinet/in.h.html">&lt;netinet/in.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/arpa/inet.h.html">&lt;arpa/inet.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="34">ifdef</span> <span class="macro" data-ref="_M/SPRINTF_CHAR">SPRINTF_CHAR</span></u></td></tr>
+<tr><th id="35">35</th><td><u># define SPRINTF(x) strlen(sprintf/**/x)</u></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="34">else</span></u></td></tr>
+<tr><th id="37">37</th><td><u># define <dfn class="macro" id="_M/SPRINTF" data-ref="_M/SPRINTF">SPRINTF</dfn>(x) ((size_t)sprintf x)</u></td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="34">endif</span></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><em>static</em> <em>int</em>	<a class="tu decl fn" href="#inet_net_pton_ipv4" title='inet_net_pton_ipv4' data-type='int inet_net_pton_ipv4(const char * src, u_char * dst, size_t size)' data-ref="inet_net_pton_ipv4" data-ref-filename="inet_net_pton_ipv4">inet_net_pton_ipv4</a> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1src" title='src' data-type='const char *' data-ref="1src" data-ref-filename="1src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col2 decl" id="2dst" title='dst' data-type='u_char *' data-ref="2dst" data-ref-filename="2dst">dst</dfn>,</td></tr>
+<tr><th id="41">41</th><td>				    <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="3size" title='size' data-type='size_t' data-ref="3size" data-ref-filename="3size">size</dfn>) <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/*</i></td></tr>
+<tr><th id="44">44</th><td><i> * static int</i></td></tr>
+<tr><th id="45">45</th><td><i> * inet_net_pton(af, src, dst, size)</i></td></tr>
+<tr><th id="46">46</th><td><i> *	convert network number from presentation to network format.</i></td></tr>
+<tr><th id="47">47</th><td><i> *	accepts hex octets, hex strings, decimal octets, and /CIDR.</i></td></tr>
+<tr><th id="48">48</th><td><i> *	"size" is in bytes and describes "dst".</i></td></tr>
+<tr><th id="49">49</th><td><i> * return:</i></td></tr>
+<tr><th id="50">50</th><td><i> *	number of bits, either imputed classfully or specified with /CIDR,</i></td></tr>
+<tr><th id="51">51</th><td><i> *	or -1 if some failure occurred (check errno).  ENOENT means it was</i></td></tr>
+<tr><th id="52">52</th><td><i> *	not a valid network specification.</i></td></tr>
+<tr><th id="53">53</th><td><i> * author:</i></td></tr>
+<tr><th id="54">54</th><td><i> *	Paul Vixie (ISC), June 1996</i></td></tr>
+<tr><th id="55">55</th><td><i> */</i></td></tr>
+<tr><th id="56">56</th><td><em>int</em></td></tr>
+<tr><th id="57">57</th><td><dfn class="decl def fn" id="inet_net_pton" title='inet_net_pton' data-ref="inet_net_pton" data-ref-filename="inet_net_pton">inet_net_pton</dfn> (<em>int</em> <dfn class="local col4 decl" id="4af" title='af' data-type='int' data-ref="4af" data-ref-filename="4af">af</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5src" title='src' data-type='const char *' data-ref="5src" data-ref-filename="5src">src</dfn>, <em>void</em> *<dfn class="local col6 decl" id="6dst" title='dst' data-type='void *' data-ref="6dst" data-ref-filename="6dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="7size" title='size' data-type='size_t' data-ref="7size" data-ref-filename="7size">size</dfn>)</td></tr>
+<tr><th id="58">58</th><td>{</td></tr>
+<tr><th id="59">59</th><td>	<b>switch</b> (<a class="local col4 ref" href="#4af" title='af' data-ref="4af" data-ref-filename="4af">af</a>) {</td></tr>
+<tr><th id="60">60</th><td>	<b>case</b> <a class="macro" href="../sysdeps/unix/sysv/linux/bits/socket.h.html#92" title="2" data-ref="_M/AF_INET">AF_INET</a>:</td></tr>
+<tr><th id="61">61</th><td>		<b>return</b> (<a class="tu ref fn" href="#inet_net_pton_ipv4" title='inet_net_pton_ipv4' data-use='c' data-ref="inet_net_pton_ipv4" data-ref-filename="inet_net_pton_ipv4">inet_net_pton_ipv4</a>(<a class="local col5 ref" href="#5src" title='src' data-ref="5src" data-ref-filename="5src">src</a>, <a class="local col6 ref" href="#6dst" title='dst' data-ref="6dst" data-ref-filename="6dst">dst</a>, <a class="local col7 ref" href="#7size" title='size' data-ref="7size" data-ref-filename="7size">size</a>));</td></tr>
+<tr><th id="62">62</th><td>	<b>default</b>:</td></tr>
+<tr><th id="63">63</th><td>		<a class="macro" href="../include/errno.h.html#39" title="(errno = (97))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#79" title="97" data-ref="_M/EAFNOSUPPORT">EAFNOSUPPORT</a>);</td></tr>
+<tr><th id="64">64</th><td>		<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="65">65</th><td>	}</td></tr>
+<tr><th id="66">66</th><td>}</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td><i  data-doc="inet_net_pton_ipv4">/*</i></td></tr>
+<tr><th id="69">69</th><td><i  data-doc="inet_net_pton_ipv4"> * static int</i></td></tr>
+<tr><th id="70">70</th><td><i  data-doc="inet_net_pton_ipv4"> * inet_net_pton_ipv4(src, dst, size)</i></td></tr>
+<tr><th id="71">71</th><td><i  data-doc="inet_net_pton_ipv4"> *	convert IPv4 network number from presentation to network format.</i></td></tr>
+<tr><th id="72">72</th><td><i  data-doc="inet_net_pton_ipv4"> *	accepts hex octets, hex strings, decimal octets, and /CIDR.</i></td></tr>
+<tr><th id="73">73</th><td><i  data-doc="inet_net_pton_ipv4"> *	"size" is in bytes and describes "dst".</i></td></tr>
+<tr><th id="74">74</th><td><i  data-doc="inet_net_pton_ipv4"> * return:</i></td></tr>
+<tr><th id="75">75</th><td><i  data-doc="inet_net_pton_ipv4"> *	number of bits, either imputed classfully or specified with /CIDR,</i></td></tr>
+<tr><th id="76">76</th><td><i  data-doc="inet_net_pton_ipv4"> *	or -1 if some failure occurred (check errno).  ENOENT means it was</i></td></tr>
+<tr><th id="77">77</th><td><i  data-doc="inet_net_pton_ipv4"> *	not an IPv4 network specification.</i></td></tr>
+<tr><th id="78">78</th><td><i  data-doc="inet_net_pton_ipv4"> * note:</i></td></tr>
+<tr><th id="79">79</th><td><i  data-doc="inet_net_pton_ipv4"> *	network byte order assumed.  this means 192.5.5.240/28 has</i></td></tr>
+<tr><th id="80">80</th><td><i  data-doc="inet_net_pton_ipv4"> *	0b11110000 in its fourth octet.</i></td></tr>
+<tr><th id="81">81</th><td><i  data-doc="inet_net_pton_ipv4"> * author:</i></td></tr>
+<tr><th id="82">82</th><td><i  data-doc="inet_net_pton_ipv4"> *	Paul Vixie (ISC), June 1996</i></td></tr>
+<tr><th id="83">83</th><td><i  data-doc="inet_net_pton_ipv4"> */</i></td></tr>
+<tr><th id="84">84</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="85">85</th><td><dfn class="tu decl def fn" id="inet_net_pton_ipv4" title='inet_net_pton_ipv4' data-type='int inet_net_pton_ipv4(const char * src, u_char * dst, size_t size)' data-ref="inet_net_pton_ipv4" data-ref-filename="inet_net_pton_ipv4">inet_net_pton_ipv4</dfn> (<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="8src" title='src' data-type='const char *' data-ref="8src" data-ref-filename="8src">src</dfn>, <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col9 decl" id="9dst" title='dst' data-type='u_char *' data-ref="9dst" data-ref-filename="9dst">dst</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="10size" title='size' data-type='size_t' data-ref="10size" data-ref-filename="10size">size</dfn>)</td></tr>
+<tr><th id="86">86</th><td>{</td></tr>
+<tr><th id="87">87</th><td>	<em>static</em> <em>const</em> <em>char</em> <dfn class="local col1 decl" id="11xdigits" title='xdigits' data-type='const char [17]' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</dfn>[] = <q>"0123456789abcdef"</q>;</td></tr>
+<tr><th id="88">88</th><td>	<em>int</em> <dfn class="local col2 decl" id="12n" title='n' data-type='int' data-ref="12n" data-ref-filename="12n">n</dfn>, <dfn class="local col3 decl" id="13ch" title='ch' data-type='int' data-ref="13ch" data-ref-filename="13ch">ch</dfn>, <dfn class="local col4 decl" id="14tmp" title='tmp' data-type='int' data-ref="14tmp" data-ref-filename="14tmp">tmp</dfn>, <dfn class="local col5 decl" id="15dirty" title='dirty' data-type='int' data-ref="15dirty" data-ref-filename="15dirty">dirty</dfn>, <dfn class="local col6 decl" id="16bits" title='bits' data-type='int' data-ref="16bits" data-ref-filename="16bits">bits</dfn>;</td></tr>
+<tr><th id="89">89</th><td>	<em>const</em> <a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a> *<dfn class="local col7 decl" id="17odst" title='odst' data-type='const u_char *' data-ref="17odst" data-ref-filename="17odst">odst</dfn> = <a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++;</td></tr>
+<tr><th id="92">92</th><td>	<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> == <kbd>'0'</kbd> &amp;&amp; (<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>0</var>] == <kbd>'x'</kbd> || <a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>0</var>] == <kbd>'X'</kbd>)</td></tr>
+<tr><th id="93">93</th><td>	    &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#233" title="(((src[1]) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>(<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>1</var>]) &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#207" title="((*__ctype_b_loc ())[(int) ((src[1]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>1</var>])) {</td></tr>
+<tr><th id="94">94</th><td>		<i>/* Hexadecimal: Eat nybble string. */</i></td></tr>
+<tr><th id="95">95</th><td>		<b>if</b> (<a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a> &lt;= <var>0</var>)</td></tr>
+<tr><th id="96">96</th><td>			<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="97">97</th><td>		<a class="local col5 ref" href="#15dirty" title='dirty' data-ref="15dirty" data-ref-filename="15dirty">dirty</a> = <var>0</var>;</td></tr>
+<tr><th id="98">98</th><td>		<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> = <var>0</var>;	<i>/* To calm down gcc.  */</i></td></tr>
+<tr><th id="99">99</th><td>		<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++;	<i>/* skip x or X. */</i></td></tr>
+<tr><th id="100">100</th><td>		<b>while</b> (<a class="macro" href="../ctype/ctype.h.html#207" title="((*__ctype_b_loc ())[(int) (((ch = *src++)))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>((<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++))) {</td></tr>
+<tr><th id="101">101</th><td>			<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = <a class="macro" href="../ctype/ctype.h.html#236" title="((int) (*__ctype_tolower_loc ())[(int) (ch)])" data-ref="_M/_tolower">_tolower</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>);</td></tr>
+<tr><th id="102">102</th><td>			<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> = (<em>const</em> <em>char</em> *) <a class="ref fn" href="../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a>(<a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>, <a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>) - <a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>;</td></tr>
+<tr><th id="103">103</th><td>			<a class="macro" href="../assert/assert.h.html#85" title="((n &gt;= 0 &amp;&amp; n &lt;= 15) ? (void) (0) : __assert_fail (&quot;n &gt;= 0 &amp;&amp; n &lt;= 15&quot;, &quot;/home/fp/glibc/glibc_src/resolv/inet_net_pton.c&quot;, 103, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a>(<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &gt;= <var>0</var> &amp;&amp; <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &lt;= <var>15</var>);</td></tr>
+<tr><th id="104">104</th><td>			<b>if</b> (<a class="local col5 ref" href="#15dirty" title='dirty' data-ref="15dirty" data-ref-filename="15dirty">dirty</a> == <var>0</var>)</td></tr>
+<tr><th id="105">105</th><td>				<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> = <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a>;</td></tr>
+<tr><th id="106">106</th><td>			<b>else</b></td></tr>
+<tr><th id="107">107</th><td>				<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> = (<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> &lt;&lt; <var>4</var>) | <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a>;</td></tr>
+<tr><th id="108">108</th><td>			<b>if</b> (++<a class="local col5 ref" href="#15dirty" title='dirty' data-ref="15dirty" data-ref-filename="15dirty">dirty</a> == <var>2</var>) {</td></tr>
+<tr><th id="109">109</th><td>				<b>if</b> (<a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>-- &lt;= <var>0</var>)</td></tr>
+<tr><th id="110">110</th><td>					<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="111">111</th><td>				*<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a>++ = (<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a>) <a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a>;</td></tr>
+<tr><th id="112">112</th><td>				<a class="local col5 ref" href="#15dirty" title='dirty' data-ref="15dirty" data-ref-filename="15dirty">dirty</a> = <var>0</var>;</td></tr>
+<tr><th id="113">113</th><td>			}</td></tr>
+<tr><th id="114">114</th><td>		}</td></tr>
+<tr><th id="115">115</th><td>		<b>if</b> (<a class="local col5 ref" href="#15dirty" title='dirty' data-ref="15dirty" data-ref-filename="15dirty">dirty</a>) {  <i>/* Odd trailing nybble? */</i></td></tr>
+<tr><th id="116">116</th><td>			<b>if</b> (<a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>-- &lt;= <var>0</var>)</td></tr>
+<tr><th id="117">117</th><td>				<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="118">118</th><td>			*<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a>++ = (<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a>) (<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> &lt;&lt; <var>4</var>);</td></tr>
+<tr><th id="119">119</th><td>		}</td></tr>
+<tr><th id="120">120</th><td>	} <b>else</b> <b>if</b> (<a class="macro" href="../ctype/ctype.h.html#233" title="(((ch) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>) &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((ch))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>)) {</td></tr>
+<tr><th id="121">121</th><td>		<i>/* Decimal: eat dotted digit string. */</i></td></tr>
+<tr><th id="122">122</th><td>		<b>for</b> (;;) {</td></tr>
+<tr><th id="123">123</th><td>			<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> = <var>0</var>;</td></tr>
+<tr><th id="124">124</th><td>			<b>do</b> {</td></tr>
+<tr><th id="125">125</th><td>				<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> = ((<em>const</em> <em>char</em> *) <a class="ref fn" href="../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a>(<a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>, <a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>)</td></tr>
+<tr><th id="126">126</th><td>				     - <a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>);</td></tr>
+<tr><th id="127">127</th><td>				<a class="macro" href="../assert/assert.h.html#85" title="((n &gt;= 0 &amp;&amp; n &lt;= 9) ? (void) (0) : __assert_fail (&quot;n &gt;= 0 &amp;&amp; n &lt;= 9&quot;, &quot;/home/fp/glibc/glibc_src/resolv/inet_net_pton.c&quot;, 127, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a>(<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &gt;= <var>0</var> &amp;&amp; <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &lt;= <var>9</var>);</td></tr>
+<tr><th id="128">128</th><td>				<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> *= <var>10</var>;</td></tr>
+<tr><th id="129">129</th><td>				<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> += <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a>;</td></tr>
+<tr><th id="130">130</th><td>				<b>if</b> (<a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a> &gt; <var>255</var>)</td></tr>
+<tr><th id="131">131</th><td>					<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="132">132</th><td>			} <b>while</b> (<a class="macro" href="../ctype/ctype.h.html#233" title="((((ch = *src++)) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>((<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++)) &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((ch))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>));</td></tr>
+<tr><th id="133">133</th><td>			<b>if</b> (<a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>-- &lt;= <var>0</var>)</td></tr>
+<tr><th id="134">134</th><td>				<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="135">135</th><td>			*<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a>++ = (<a class="typedef" href="../posix/sys/types.h.html#u_char" title='u_char' data-type='__u_char' data-ref="u_char" data-ref-filename="u_char">u_char</a>) <a class="local col4 ref" href="#14tmp" title='tmp' data-ref="14tmp" data-ref-filename="14tmp">tmp</a>;</td></tr>
+<tr><th id="136">136</th><td>			<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> == <kbd>'\0'</kbd> || <a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> == <kbd>'/'</kbd>)</td></tr>
+<tr><th id="137">137</th><td>				<b>break</b>;</td></tr>
+<tr><th id="138">138</th><td>			<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> != <kbd>'.'</kbd>)</td></tr>
+<tr><th id="139">139</th><td>				<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="140">140</th><td>			<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++;</td></tr>
+<tr><th id="141">141</th><td>			<b>if</b> (!<a class="macro" href="../ctype/ctype.h.html#233" title="(((ch) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>) || !<a class="macro" href="../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((ch))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>))</td></tr>
+<tr><th id="142">142</th><td>				<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="143">143</th><td>		}</td></tr>
+<tr><th id="144">144</th><td>	} <b>else</b></td></tr>
+<tr><th id="145">145</th><td>		<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>	<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = -<var>1</var>;</td></tr>
+<tr><th id="148">148</th><td>	<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> == <kbd>'/'</kbd> &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#233" title="(((src[0]) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>(<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>0</var>]) &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((src[0]))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a>(<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>[<var>0</var>]) &amp;&amp; <a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a> &gt; <a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a>) {</td></tr>
+<tr><th id="149">149</th><td>		<i>/* CIDR width specifier.  Nothing can follow it. */</i></td></tr>
+<tr><th id="150">150</th><td>		<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++;	<i>/* Skip over the /. */</i></td></tr>
+<tr><th id="151">151</th><td>		<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>0</var>;</td></tr>
+<tr><th id="152">152</th><td>		<b>do</b> {</td></tr>
+<tr><th id="153">153</th><td>			<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> = (<em>const</em> <em>char</em> *) <a class="ref fn" href="../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a>(<a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>, <a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>) - <a class="local col1 ref" href="#11xdigits" title='xdigits' data-ref="11xdigits" data-ref-filename="11xdigits">xdigits</a>;</td></tr>
+<tr><th id="154">154</th><td>			<a class="macro" href="../assert/assert.h.html#85" title="((n &gt;= 0 &amp;&amp; n &lt;= 9) ? (void) (0) : __assert_fail (&quot;n &gt;= 0 &amp;&amp; n &lt;= 9&quot;, &quot;/home/fp/glibc/glibc_src/resolv/inet_net_pton.c&quot;, 154, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a>(<a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &gt;= <var>0</var> &amp;&amp; <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a> &lt;= <var>9</var>);</td></tr>
+<tr><th id="155">155</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> *= <var>10</var>;</td></tr>
+<tr><th id="156">156</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> += <a class="local col2 ref" href="#12n" title='n' data-ref="12n" data-ref-filename="12n">n</a>;</td></tr>
+<tr><th id="157">157</th><td>		} <b>while</b> (<a class="macro" href="../ctype/ctype.h.html#233" title="((((ch = *src++)) &amp; ~0x7f) == 0)" data-ref="_M/isascii">isascii</a>((<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> = *<a class="local col8 ref" href="#8src" title='src' data-ref="8src" data-ref-filename="8src">src</a>++)) &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((ch))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a>(<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a>));</td></tr>
+<tr><th id="158">158</th><td>		<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="159">159</th><td>			<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="160">160</th><td>		<b>if</b> (<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> &gt; <var>32</var>)</td></tr>
+<tr><th id="161">161</th><td>			<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="162">162</th><td>	}</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>	<i>/* Firey death and destruction unless we prefetched EOS. */</i></td></tr>
+<tr><th id="165">165</th><td>	<b>if</b> (<a class="local col3 ref" href="#13ch" title='ch' data-ref="13ch" data-ref-filename="13ch">ch</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="166">166</th><td>		<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	<i>/* If nothing was written to the destination, we found no address. */</i></td></tr>
+<tr><th id="169">169</th><td>	<b>if</b> (<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a> == <a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a>)</td></tr>
+<tr><th id="170">170</th><td>		<b>goto</b> <a class="lbl" href="#19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</a>;</td></tr>
+<tr><th id="171">171</th><td>	<i>/* If no CIDR spec was given, infer width from net class. */</i></td></tr>
+<tr><th id="172">172</th><td>	<b>if</b> (<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> == -<var>1</var>) {</td></tr>
+<tr><th id="173">173</th><td>		<b>if</b> (*<a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a> &gt;= <var>240</var>)	<i>/* Class E */</i></td></tr>
+<tr><th id="174">174</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>32</var>;</td></tr>
+<tr><th id="175">175</th><td>		<b>else</b> <b>if</b> (*<a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a> &gt;= <var>224</var>)	<i>/* Class D */</i></td></tr>
+<tr><th id="176">176</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>4</var>;</td></tr>
+<tr><th id="177">177</th><td>		<b>else</b> <b>if</b> (*<a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a> &gt;= <var>192</var>)	<i>/* Class C */</i></td></tr>
+<tr><th id="178">178</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>24</var>;</td></tr>
+<tr><th id="179">179</th><td>		<b>else</b> <b>if</b> (*<a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a> &gt;= <var>128</var>)	<i>/* Class B */</i></td></tr>
+<tr><th id="180">180</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>16</var>;</td></tr>
+<tr><th id="181">181</th><td>		<b>else</b>			<i>/* Class A */</i></td></tr>
+<tr><th id="182">182</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = <var>8</var>;</td></tr>
+<tr><th id="183">183</th><td>		<i>/* If imputed mask is narrower than specified octets, widen. */</i></td></tr>
+<tr><th id="184">184</th><td>		<b>if</b> (<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> &gt;= <var>8</var> &amp;&amp; <a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> &lt; ((<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a> - <a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a>) * <var>8</var>))</td></tr>
+<tr><th id="185">185</th><td>			<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> = (<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a> - <a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a>) * <var>8</var>;</td></tr>
+<tr><th id="186">186</th><td>	}</td></tr>
+<tr><th id="187">187</th><td>	<i>/* Extend network to cover the actual mask. */</i></td></tr>
+<tr><th id="188">188</th><td>	<b>while</b> (<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a> &gt; ((<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a> - <a class="local col7 ref" href="#17odst" title='odst' data-ref="17odst" data-ref-filename="17odst">odst</a>) * <var>8</var>)) {</td></tr>
+<tr><th id="189">189</th><td>		<b>if</b> (<a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>-- &lt;= <var>0</var>)</td></tr>
+<tr><th id="190">190</th><td>			<b>goto</b> <a class="lbl" href="#18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</a>;</td></tr>
+<tr><th id="191">191</th><td>		*<a class="local col9 ref" href="#9dst" title='dst' data-ref="9dst" data-ref-filename="9dst">dst</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="192">192</th><td>	}</td></tr>
+<tr><th id="193">193</th><td>	<b>return</b> (<a class="local col6 ref" href="#16bits" title='bits' data-ref="16bits" data-ref-filename="16bits">bits</a>);</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td> <dfn class="lbl" id="19enoent" data-ref="19enoent" data-ref-filename="19enoent">enoent</dfn>:</td></tr>
+<tr><th id="196">196</th><td>	<a class="macro" href="../include/errno.h.html#39" title="(errno = (2))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#5" title="2" data-ref="_M/ENOENT">ENOENT</a>);</td></tr>
+<tr><th id="197">197</th><td>	<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td> <dfn class="lbl" id="18emsgsize" data-ref="18emsgsize" data-ref-filename="18emsgsize">emsgsize</dfn>:</td></tr>
+<tr><th id="200">200</th><td>	<a class="macro" href="../include/errno.h.html#39" title="(errno = (90))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno.h.html#72" title="90" data-ref="_M/EMSGSIZE">EMSGSIZE</a>);</td></tr>
+<tr><th id="201">201</th><td>	<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="202">202</th><td>}</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

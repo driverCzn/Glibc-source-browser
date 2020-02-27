@@ -1,0 +1,97 @@
+<dec f='glibc_src_2.23/iconvdata/jisx0213.h' l='25' type='const uint16_t [][2]'/>
+<def f='glibc_src_2.23/iconvdata/jisx0213.c' l='127' ll='154' type='const uint16_t [25][2]'/>
+<doc f='glibc_src_2.23/iconvdata/jisx0213.c' l='31'>/* Tables JISX0213 -&gt; UCS-4.  Generated through
+
+   clisp tab.lisp &lt; JISX0213.TXT
+
+   where tab.lisp is:
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   (locally (declare (compile))
+     (flet ((row-convert (row)
+              (cond ((&lt;= #x121 row #x17E) (- row 289)) ; 0..93
+                    ((= #x221 row)        (- row 451)) ; 94
+                    ((&lt;= #x223 row #x225) (- row 452)) ; 95..97
+                    ((= #x228 row)        (- row 454)) ; 98
+                    ((&lt;= #x22C row #x22F) (- row 457)) ; 99..102
+                    ((&lt;= #x26E row #x27E) (- row 519))))) ; 103..119
+       (let ((table (make-array &apos;(120 94) :initial-element 0))
+             (pagemin (make-array #x1100 :initial-element nil))
+             (pagemax (make-array #x1100 :initial-element nil))
+             (pageidx (make-array #x1100 :initial-element nil))
+             (pagestart (make-array 0 :fill-pointer 0 :adjustable t)))
+         (let ((private-use #x0001))
+           (loop
+             (let ((line (read-line nil nil nil)))
+               (unless line (return))
+               (let ((row (parse-integer line :start 2 :end 5 :radix 16))
+                     (col (parse-integer line :start 5 :end 7 :radix 16))
+                     ucs)
+                 (if (= (length line) 21)
+                   (let ((u1 (parse-integer line :start 10 :end 14 :radix 16))
+                         (u2 (parse-integer line :start 17 :end 21 :radix 16)))
+                     (format t &quot;  ~({ 0x~4,&apos;0X, 0x~4,&apos;0X }~),~%&quot; u1 u2)
+                     (setf ucs private-use)
+                     (incf private-use))
+                   (setf ucs (parse-integer line :start 10 :radix 16)))
+                 (setf (aref table (row-convert row) (- col #x21)) ucs)))))
+         (format t &quot;~%&quot;)
+         (dotimes (rowc 120)
+           (dotimes (colc 94)
+             (let* ((value (aref table rowc colc))
+                    (page (ash value -8))
+                    (rest (ldb (byte 8 0) value)))
+               (setf (aref pagemin page)
+                     (if (aref pagemin page)
+                       (min (aref pagemin page) rest)
+                       rest))
+               (setf (aref pagemax page)
+                     (if (aref pagemax page)
+                       (max (aref pagemax page) rest)
+                       rest)))))
+         (let ((index 0))
+           (do ((i 0)) ((&gt;= i #x1100))
+             (if (aref pagemin i)
+               (if (and (aref pagemin (1+ i))
+                        (&gt;= (aref pagemin i) #x80)
+                        (&lt; (aref pagemax (1+ i)) #x80))
+                 ; Combine two pages into a single one.
+                 (progn
+                   (vector-push-extend (+ (ash i 8) #x80) pagestart)
+                   (setf (aref pageidx i) index)
+                   (setf (aref pageidx (1+ i)) index)
+                   (incf index)
+                   (incf i 2))
+                 ; A single page.
+                 (progn
+                   (vector-push-extend (ash i 8) pagestart)
+                   (setf (aref pageidx i) index)
+                   (incf index)
+                   (incf i)))
+               (incf i))))
+         (dotimes (row #x300)
+           (let ((rowc (row-convert row)))
+             (when rowc
+               (format t &quot;  /\* 0x~X21..0x~X7E *\/~%&quot; row row)
+               (let ((count 0))
+                 (dotimes (colc 94)
+                   (when (= (mod count 8) 0) (format t &quot; &quot;))
+                   (let* ((value (aref table rowc colc))
+                          (page (ash value -8))
+                          (index (aref pageidx page)))
+                     (assert (&lt;= 0 (- value (aref pagestart index)) #xFF))
+                     (format t &quot; ~(0x~4,&apos;0X~),&quot;
+                             (logior (ash index 8)
+                                     (- value (aref pagestart index)))))
+                   (incf count)
+                   (when (= (mod count 8) 0) (format t &quot;~%&quot;))))
+               (format t &quot;~%&quot;))))
+         (format t &quot;~%&quot;)
+         (let ((count 0))
+           (dotimes (i (length pagestart))
+             (when (= (mod count 8) 0) (format t &quot; &quot;))
+             (format t &quot; ~7&lt;~(0x~4,&apos;0X~)~&gt;,&quot; (aref pagestart i))
+             (incf count)
+             (when (= (mod count 8) 0) (format t &quot;~%&quot;))))
+         (format t &quot;~%&quot;))))
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+*/</doc>

@@ -1,0 +1,472 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>punycode.c source code [glibc_src_2.23/libidn/punycode.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/libidn/punycode.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>libidn</a>/<a href='punycode.c.html'>punycode.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* punycode.c	Implementation of punycode used to ASCII encode IDN's.</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (C) 2002, 2003  Simon Josefsson</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * This file is part of GNU Libidn.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * GNU Libidn is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i> * modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i> * License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i> * version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * GNU Libidn is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i> * but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i> * Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i> * License along with GNU Libidn; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="18">18</th><td><i> */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/*</i></td></tr>
+<tr><th id="21">21</th><td><i> * This file is derived from RFC 3492bis written by Adam M. Costello.</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * Disclaimer and license: Regarding this entire document or any</i></td></tr>
+<tr><th id="24">24</th><td><i> * portion of it (including the pseudocode and C code), the author</i></td></tr>
+<tr><th id="25">25</th><td><i> * makes no guarantees and is not responsible for any damage resulting</i></td></tr>
+<tr><th id="26">26</th><td><i> * from its use.  The author grants irrevocable permission to anyone</i></td></tr>
+<tr><th id="27">27</th><td><i> * to use, modify, and distribute it in any way that does not diminish</i></td></tr>
+<tr><th id="28">28</th><td><i> * the rights of anyone else to use, modify, and distribute it,</i></td></tr>
+<tr><th id="29">29</th><td><i> * provided that redistributed derivative works do not contain</i></td></tr>
+<tr><th id="30">30</th><td><i> * misleading author or version information.  Derivative works need</i></td></tr>
+<tr><th id="31">31</th><td><i> * not be licensed under similar terms.</i></td></tr>
+<tr><th id="32">32</th><td><i> *</i></td></tr>
+<tr><th id="33">33</th><td><i> * Copyright (C) The Internet Society (2003).  All Rights Reserved.</i></td></tr>
+<tr><th id="34">34</th><td><i> *</i></td></tr>
+<tr><th id="35">35</th><td><i> * This document and translations of it may be copied and furnished to</i></td></tr>
+<tr><th id="36">36</th><td><i> * others, and derivative works that comment on or otherwise explain it</i></td></tr>
+<tr><th id="37">37</th><td><i> * or assist in its implementation may be prepared, copied, published</i></td></tr>
+<tr><th id="38">38</th><td><i> * and distributed, in whole or in part, without restriction of any</i></td></tr>
+<tr><th id="39">39</th><td><i> * kind, provided that the above copyright notice and this paragraph are</i></td></tr>
+<tr><th id="40">40</th><td><i> * included on all such copies and derivative works.  However, this</i></td></tr>
+<tr><th id="41">41</th><td><i> * document itself may not be modified in any way, such as by removing</i></td></tr>
+<tr><th id="42">42</th><td><i> * the copyright notice or references to the Internet Society or other</i></td></tr>
+<tr><th id="43">43</th><td><i> * Internet organizations, except as needed for the purpose of</i></td></tr>
+<tr><th id="44">44</th><td><i> * developing Internet standards in which case the procedures for</i></td></tr>
+<tr><th id="45">45</th><td><i> * copyrights defined in the Internet Standards process must be</i></td></tr>
+<tr><th id="46">46</th><td><i> * followed, or as required to translate it into languages other than</i></td></tr>
+<tr><th id="47">47</th><td><i> * English.</i></td></tr>
+<tr><th id="48">48</th><td><i> *</i></td></tr>
+<tr><th id="49">49</th><td><i> * The limited permissions granted above are perpetual and will not be</i></td></tr>
+<tr><th id="50">50</th><td><i> * revoked by the Internet Society or its successors or assigns.</i></td></tr>
+<tr><th id="51">51</th><td><i> *</i></td></tr>
+<tr><th id="52">52</th><td><i> * This document and the information contained herein is provided on an</i></td></tr>
+<tr><th id="53">53</th><td><i> * "AS IS" basis and THE INTERNET SOCIETY AND THE INTERNET ENGINEERING</i></td></tr>
+<tr><th id="54">54</th><td><i> * TASK FORCE DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING</i></td></tr>
+<tr><th id="55">55</th><td><i> * BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION</i></td></tr>
+<tr><th id="56">56</th><td><i> * HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF</i></td></tr>
+<tr><th id="57">57</th><td><i> * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.</i></td></tr>
+<tr><th id="58">58</th><td><i> */</i></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><u>#include <a href="punycode.h.html">"punycode.h"</a></u></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i>/*** Bootstring parameters for Punycode ***/</i></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><b>enum</b></td></tr>
+<tr><th id="67">67</th><td>{ <dfn class="enum" id="base" title='base' data-ref="base" data-ref-filename="base">base</dfn> = <var>36</var>, <dfn class="enum" id="tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</dfn> = <var>1</var>, <dfn class="enum" id="tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</dfn> = <var>26</var>, <dfn class="enum" id="skew" title='skew' data-ref="skew" data-ref-filename="skew">skew</dfn> = <var>38</var>, <dfn class="enum" id="damp" title='damp' data-ref="damp" data-ref-filename="damp">damp</dfn> = <var>700</var>,</td></tr>
+<tr><th id="68">68</th><td>  <dfn class="enum" id="initial_bias" title='initial_bias' data-ref="initial_bias" data-ref-filename="initial_bias">initial_bias</dfn> = <var>72</var>, <dfn class="enum" id="initial_n" title='initial_n' data-ref="initial_n" data-ref-filename="initial_n">initial_n</dfn> = <var>0x80</var>, <dfn class="enum" id="delimiter" title='delimiter' data-ref="delimiter" data-ref-filename="delimiter">delimiter</dfn> = <var>0x2D</var></td></tr>
+<tr><th id="69">69</th><td>};</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* basic(cp) tests whether cp is a basic code point: */</i></td></tr>
+<tr><th id="72">72</th><td><u>#define <dfn class="macro" id="_M/basic" data-ref="_M/basic">basic</dfn>(cp) ((<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a>)(cp) &lt; 0x80)</u></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* delim(cp) tests whether cp is a delimiter: */</i></td></tr>
+<tr><th id="75">75</th><td><u>#define <dfn class="macro" id="_M/delim" data-ref="_M/delim">delim</dfn>(cp) ((cp) == <a class="enum" href="#delimiter" title='delimiter' data-ref="delimiter" data-ref-filename="delimiter">delimiter</a>)</u></td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><i>/* decode_digit(cp) returns the numeric value of a basic code */</i></td></tr>
+<tr><th id="78">78</th><td><i>/* point (for use in representing integers) in the range 0 to */</i></td></tr>
+<tr><th id="79">79</th><td><i  data-doc="decode_digit">/* base-1, or base if cp does not represent a value.          */</i></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><em>static</em> <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a></td></tr>
+<tr><th id="82">82</th><td><dfn class="tu decl def fn" id="decode_digit" title='decode_digit' data-type='punycode_uint decode_digit(punycode_uint cp)' data-ref="decode_digit" data-ref-filename="decode_digit">decode_digit</dfn> (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col1 decl" id="1cp" title='cp' data-type='punycode_uint' data-ref="1cp" data-ref-filename="1cp">cp</dfn>)</td></tr>
+<tr><th id="83">83</th><td>{</td></tr>
+<tr><th id="84">84</th><td>  <b>return</b> <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>48</var> &lt; <var>10</var> ? <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>22</var> : <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>65</var> &lt; <var>26</var> ? <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>65</var> :</td></tr>
+<tr><th id="85">85</th><td>    <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>97</var> &lt; <var>26</var> ? <a class="local col1 ref" href="#1cp" title='cp' data-ref="1cp" data-ref-filename="1cp">cp</a> - <var>97</var> : <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>;</td></tr>
+<tr><th id="86">86</th><td>}</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i>/* encode_digit(d,flag) returns the basic code point whose value      */</i></td></tr>
+<tr><th id="89">89</th><td><i>/* (when used for representing integers) is d, which needs to be in   */</i></td></tr>
+<tr><th id="90">90</th><td><i>/* the range 0 to base-1.  The lowercase form is used unless flag is  */</i></td></tr>
+<tr><th id="91">91</th><td><i>/* nonzero, in which case the uppercase form is used.  The behavior   */</i></td></tr>
+<tr><th id="92">92</th><td><i  data-doc="encode_digit">/* is undefined if flag is nonzero and digit d has no uppercase form. */</i></td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><em>static</em> <em>char</em></td></tr>
+<tr><th id="95">95</th><td><dfn class="tu decl def fn" id="encode_digit" title='encode_digit' data-type='char encode_digit(punycode_uint d, int flag)' data-ref="encode_digit" data-ref-filename="encode_digit">encode_digit</dfn> (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col2 decl" id="2d" title='d' data-type='punycode_uint' data-ref="2d" data-ref-filename="2d">d</dfn>, <em>int</em> <dfn class="local col3 decl" id="3flag" title='flag' data-type='int' data-ref="3flag" data-ref-filename="3flag">flag</dfn>)</td></tr>
+<tr><th id="96">96</th><td>{</td></tr>
+<tr><th id="97">97</th><td>  <b>return</b> <a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a> + <var>22</var> + <var>75</var> * (<a class="local col2 ref" href="#2d" title='d' data-ref="2d" data-ref-filename="2d">d</a> &lt; <var>26</var>) - ((<a class="local col3 ref" href="#3flag" title='flag' data-ref="3flag" data-ref-filename="3flag">flag</a> != <var>0</var>) &lt;&lt; <var>5</var>);</td></tr>
+<tr><th id="98">98</th><td>  <i>/*  0..25 map to ASCII a..z or A..Z */</i></td></tr>
+<tr><th id="99">99</th><td>  <i>/* 26..35 map to ASCII 0..9         */</i></td></tr>
+<tr><th id="100">100</th><td>}</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><i>/* flagged(bcp) tests whether a basic code point is flagged */</i></td></tr>
+<tr><th id="103">103</th><td><i>/* (uppercase).  The behavior is undefined if bcp is not a  */</i></td></tr>
+<tr><th id="104">104</th><td><i>/* basic code point.                                        */</i></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/flagged" data-ref="_M/flagged">flagged</dfn>(bcp) ((<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a>)(bcp) - 65 &lt; 26)</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>/* encode_basic(bcp,flag) forces a basic code point to lowercase */</i></td></tr>
+<tr><th id="109">109</th><td><i>/* if flag is zero, uppercase if flag is nonzero, and returns    */</i></td></tr>
+<tr><th id="110">110</th><td><i>/* the resulting code point.  The code point is unchanged if it  */</i></td></tr>
+<tr><th id="111">111</th><td><i>/* is caseless.  The behavior is undefined if bcp is not a basic */</i></td></tr>
+<tr><th id="112">112</th><td><i  data-doc="encode_basic">/* code point.                                                   */</i></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><em>static</em> <em>char</em></td></tr>
+<tr><th id="115">115</th><td><dfn class="tu decl def fn" id="encode_basic" title='encode_basic' data-type='char encode_basic(punycode_uint bcp, int flag)' data-ref="encode_basic" data-ref-filename="encode_basic">encode_basic</dfn> (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col4 decl" id="4bcp" title='bcp' data-type='punycode_uint' data-ref="4bcp" data-ref-filename="4bcp">bcp</dfn>, <em>int</em> <dfn class="local col5 decl" id="5flag" title='flag' data-type='int' data-ref="5flag" data-ref-filename="5flag">flag</dfn>)</td></tr>
+<tr><th id="116">116</th><td>{</td></tr>
+<tr><th id="117">117</th><td>  <a class="local col4 ref" href="#4bcp" title='bcp' data-ref="4bcp" data-ref-filename="4bcp">bcp</a> -= (<a class="local col4 ref" href="#4bcp" title='bcp' data-ref="4bcp" data-ref-filename="4bcp">bcp</a> - <var>97</var> &lt; <var>26</var>) &lt;&lt; <var>5</var>;</td></tr>
+<tr><th id="118">118</th><td>  <b>return</b> <a class="local col4 ref" href="#4bcp" title='bcp' data-ref="4bcp" data-ref-filename="4bcp">bcp</a> + ((!<a class="local col5 ref" href="#5flag" title='flag' data-ref="5flag" data-ref-filename="5flag">flag</a> &amp;&amp; (<a class="local col4 ref" href="#4bcp" title='bcp' data-ref="4bcp" data-ref-filename="4bcp">bcp</a> - <var>65</var> &lt; <var>26</var>)) &lt;&lt; <var>5</var>);</td></tr>
+<tr><th id="119">119</th><td>}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><i>/*** Platform-specific constants ***/</i></td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><i  data-doc="maxint">/* maxint is the maximum value of a punycode_uint variable: */</i></td></tr>
+<tr><th id="124">124</th><td><em>static</em> <em>const</em> <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="tu decl def" id="maxint" title='maxint' data-type='const punycode_uint' data-ref="maxint" data-ref-filename="maxint">maxint</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="125">125</th><td><i>/* Because maxint is unsigned, -1 becomes the maximum value. */</i></td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><i  data-doc="adapt">/*** Bias adaptation function ***/</i></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><em>static</em> <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a></td></tr>
+<tr><th id="130">130</th><td><dfn class="tu decl def fn" id="adapt" title='adapt' data-type='punycode_uint adapt(punycode_uint delta, punycode_uint numpoints, int firsttime)' data-ref="adapt" data-ref-filename="adapt">adapt</dfn> (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col6 decl" id="6delta" title='delta' data-type='punycode_uint' data-ref="6delta" data-ref-filename="6delta">delta</dfn>, <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col7 decl" id="7numpoints" title='numpoints' data-type='punycode_uint' data-ref="7numpoints" data-ref-filename="7numpoints">numpoints</dfn>, <em>int</em> <dfn class="local col8 decl" id="8firsttime" title='firsttime' data-type='int' data-ref="8firsttime" data-ref-filename="8firsttime">firsttime</dfn>)</td></tr>
+<tr><th id="131">131</th><td>{</td></tr>
+<tr><th id="132">132</th><td>  <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col9 decl" id="9k" title='k' data-type='punycode_uint' data-ref="9k" data-ref-filename="9k">k</dfn>;</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>  <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> = <a class="local col8 ref" href="#8firsttime" title='firsttime' data-ref="8firsttime" data-ref-filename="8firsttime">firsttime</a> ? <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> / <a class="enum" href="#damp" title='damp' data-ref="damp" data-ref-filename="damp">damp</a> : <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> &gt;&gt; <var>1</var>;</td></tr>
+<tr><th id="135">135</th><td>  <i>/* delta &gt;&gt; 1 is a faster way of doing delta / 2 */</i></td></tr>
+<tr><th id="136">136</th><td>  <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> += <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> / <a class="local col7 ref" href="#7numpoints" title='numpoints' data-ref="7numpoints" data-ref-filename="7numpoints">numpoints</a>;</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td>  <b>for</b> (<a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> = <var>0</var>; <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> &gt; ((<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="enum" href="#tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</a>) * <a class="enum" href="#tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</a>) / <var>2</var>; <a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> += <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>)</td></tr>
+<tr><th id="139">139</th><td>    {</td></tr>
+<tr><th id="140">140</th><td>      <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> /= <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="enum" href="#tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</a>;</td></tr>
+<tr><th id="141">141</th><td>    }</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>  <b>return</b> <a class="local col9 ref" href="#9k" title='k' data-ref="9k" data-ref-filename="9k">k</a> + (<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="enum" href="#tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</a> + <var>1</var>) * <a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> / (<a class="local col6 ref" href="#6delta" title='delta' data-ref="6delta" data-ref-filename="6delta">delta</a> + <a class="enum" href="#skew" title='skew' data-ref="skew" data-ref-filename="skew">skew</a>);</td></tr>
+<tr><th id="144">144</th><td>}</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/*** Main encode function ***/</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * punycode_encode:</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> *<span class="command"> @input</span>_length: The number of code points in the<span class="command"> @input</span> array and</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *   the number of flags in the<span class="command"> @case</span>_flags array.</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> *<span class="command"> @input</span>: An array of code points.  They are presumed to be Unicode</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> *   code points, but that is not strictly REQUIRED.  The array</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *   contains code points, not code units.  UTF-16 uses code units</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> *   D800 through DFFF to refer to code points 10000..10FFFF.  The</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> *   code points D800..DFFF do not occur in any valid Unicode string.</i></td></tr>
+<tr><th id="157">157</th><td><i class="doc"> *   The code points that can occur in Unicode strings (0..D7FF and</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> *   E000..10FFFF) are also called Unicode scalar values.</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> *<span class="command"> @case</span>_flags: A %NULL pointer or an array of boolean values parallel</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> *   to the<span class="command"> @input</span> array.  Nonzero (true, flagged) suggests that the</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> *   corresponding Unicode character be forced to uppercase after</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> *   being decoded (if possible), and zero (false, unflagged) suggests</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> *   that it be forced to lowercase (if possible).  ASCII code points</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *   (0..7F) are encoded literally, except that ASCII letters are</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> *   forced to uppercase or lowercase according to the corresponding</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> *   case flags.  If<span class="command"> @case</span>_flags is a %NULL pointer then ASCII letters</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> *   are left as they are, and other code points are treated as</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> *   unflagged.</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> *<span class="command"> @output</span>_length: The caller passes in the maximum number of ASCII</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> *   code points that it can receive.  On successful return it will</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> *   contain the number of ASCII code points actually output.</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc"> *<span class="command"> @output</span>: An array of ASCII code points.  It is *not*</i></td></tr>
+<tr><th id="173">173</th><td><i class="doc"> *   null-terminated; it will contain zeros if and only if the<span class="command"> @input</span></i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> *   contains zeros.  (Of course the caller can leave room for a</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> *   terminator and add one if needed.)</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> * Converts a sequence of code points (presumed to be Unicode code</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> * points) to Punycode.</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> * Return value: The return value can be any of the punycode_status</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> *   values defined above except %punycode_bad_input.  If not</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> *   %punycode_success, then<span class="command"> @output</span>_size and<span class="command"> @output</span> might contain</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> *   garbage.</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> **/</i></td></tr>
+<tr><th id="185">185</th><td><em>int</em></td></tr>
+<tr><th id="186">186</th><td><dfn class="decl def fn" id="punycode_encode" title='punycode_encode' data-ref="punycode_encode" data-ref-filename="punycode_encode">punycode_encode</dfn> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col0 decl" id="10input_length" title='input_length' data-type='size_t' data-ref="10input_length" data-ref-filename="10input_length">input_length</dfn>,</td></tr>
+<tr><th id="187">187</th><td>		 <em>const</em> <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col1 decl" id="11input" title='input' data-type='const punycode_uint *' data-ref="11input" data-ref-filename="11input">input</dfn>[],</td></tr>
+<tr><th id="188">188</th><td>		 <em>const</em> <em>unsigned</em> <em>char</em> <dfn class="local col2 decl" id="12case_flags" title='case_flags' data-type='const unsigned char *' data-ref="12case_flags" data-ref-filename="12case_flags">case_flags</dfn>[],</td></tr>
+<tr><th id="189">189</th><td>		 <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> * <dfn class="local col3 decl" id="13output_length" title='output_length' data-type='size_t *' data-ref="13output_length" data-ref-filename="13output_length">output_length</dfn>, <em>char</em> <dfn class="local col4 decl" id="14output" title='output' data-type='char *' data-ref="14output" data-ref-filename="14output">output</dfn>[])</td></tr>
+<tr><th id="190">190</th><td>{</td></tr>
+<tr><th id="191">191</th><td>  <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col5 decl" id="15input_len" title='input_len' data-type='punycode_uint' data-ref="15input_len" data-ref-filename="15input_len">input_len</dfn>, <dfn class="local col6 decl" id="16n" title='n' data-type='punycode_uint' data-ref="16n" data-ref-filename="16n">n</dfn>, <dfn class="local col7 decl" id="17delta" title='delta' data-type='punycode_uint' data-ref="17delta" data-ref-filename="17delta">delta</dfn>, <dfn class="local col8 decl" id="18h" title='h' data-type='punycode_uint' data-ref="18h" data-ref-filename="18h">h</dfn>, <dfn class="local col9 decl" id="19b" title='b' data-type='punycode_uint' data-ref="19b" data-ref-filename="19b">b</dfn>, <dfn class="local col0 decl" id="20bias" title='bias' data-type='punycode_uint' data-ref="20bias" data-ref-filename="20bias">bias</dfn>, <dfn class="local col1 decl" id="21j" title='j' data-type='punycode_uint' data-ref="21j" data-ref-filename="21j">j</dfn>, <dfn class="local col2 decl" id="22m" title='m' data-type='punycode_uint' data-ref="22m" data-ref-filename="22m">m</dfn>, <dfn class="local col3 decl" id="23q" title='q' data-type='punycode_uint' data-ref="23q" data-ref-filename="23q">q</dfn>, <dfn class="local col4 decl" id="24k" title='k' data-type='punycode_uint' data-ref="24k" data-ref-filename="24k">k</dfn>, <dfn class="local col5 decl" id="25t" title='t' data-type='punycode_uint' data-ref="25t" data-ref-filename="25t">t</dfn>;</td></tr>
+<tr><th id="192">192</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="26out" title='out' data-type='size_t' data-ref="26out" data-ref-filename="26out">out</dfn>, <dfn class="local col7 decl" id="27max_out" title='max_out' data-type='size_t' data-ref="27max_out" data-ref-filename="27max_out">max_out</dfn>;</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>  <i>/* The Punycode spec assumes that the input length is the same type */</i></td></tr>
+<tr><th id="195">195</th><td>  <i>/* of integer as a code point, so we need to convert the size_t to  */</i></td></tr>
+<tr><th id="196">196</th><td>  <i>/* a punycode_uint, which could overflow.                           */</i></td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>  <b>if</b> (<a class="local col0 ref" href="#10input_length" title='input_length' data-ref="10input_length" data-ref-filename="10input_length">input_length</a> &gt; <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a>)</td></tr>
+<tr><th id="199">199</th><td>    <b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="200">200</th><td>  <a class="local col5 ref" href="#15input_len" title='input_len' data-ref="15input_len" data-ref-filename="15input_len">input_len</a> = (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a>) <a class="local col0 ref" href="#10input_length" title='input_length' data-ref="10input_length" data-ref-filename="10input_length">input_length</a>;</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>  <i>/* Initialize the state: */</i></td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>  <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a> = <a class="enum" href="#initial_n" title='initial_n' data-ref="initial_n" data-ref-filename="initial_n">initial_n</a>;</td></tr>
+<tr><th id="205">205</th><td>  <a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a> = <var>0</var>;</td></tr>
+<tr><th id="206">206</th><td>  <a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a> = <var>0</var>;</td></tr>
+<tr><th id="207">207</th><td>  <a class="local col7 ref" href="#27max_out" title='max_out' data-ref="27max_out" data-ref-filename="27max_out">max_out</a> = *<a class="local col3 ref" href="#13output_length" title='output_length' data-ref="13output_length" data-ref-filename="13output_length">output_length</a>;</td></tr>
+<tr><th id="208">208</th><td>  <a class="local col0 ref" href="#20bias" title='bias' data-ref="20bias" data-ref-filename="20bias">bias</a> = <a class="enum" href="#initial_bias" title='initial_bias' data-ref="initial_bias" data-ref-filename="initial_bias">initial_bias</a>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>  <i>/* Handle the basic code points: */</i></td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>  <b>for</b> (<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> = <var>0</var>; <a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> &lt; <a class="local col5 ref" href="#15input_len" title='input_len' data-ref="15input_len" data-ref-filename="15input_len">input_len</a>; ++<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>)</td></tr>
+<tr><th id="213">213</th><td>    {</td></tr>
+<tr><th id="214">214</th><td>      <b>if</b> (<a class="macro" href="#72" title="((punycode_uint)(input[j]) &lt; 0x80)" data-ref="_M/basic">basic</a> (<a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>]))</td></tr>
+<tr><th id="215">215</th><td>	{</td></tr>
+<tr><th id="216">216</th><td>	  <b>if</b> (<a class="local col7 ref" href="#27max_out" title='max_out' data-ref="27max_out" data-ref-filename="27max_out">max_out</a> - <a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a> &lt; <var>2</var>)</td></tr>
+<tr><th id="217">217</th><td>	    <b>return</b> <a class="enum" href="punycode.h.html#punycode_big_output" title='punycode_big_output' data-ref="punycode_big_output" data-ref-filename="punycode_big_output">punycode_big_output</a>;</td></tr>
+<tr><th id="218">218</th><td>	  <a class="local col4 ref" href="#14output" title='output' data-ref="14output" data-ref-filename="14output">output</a>[<a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>++] = <a class="local col2 ref" href="#12case_flags" title='case_flags' data-ref="12case_flags" data-ref-filename="12case_flags">case_flags</a> ?</td></tr>
+<tr><th id="219">219</th><td>	    <a class="tu ref fn" href="#encode_basic" title='encode_basic' data-use='c' data-ref="encode_basic" data-ref-filename="encode_basic">encode_basic</a> (<a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>], <a class="local col2 ref" href="#12case_flags" title='case_flags' data-ref="12case_flags" data-ref-filename="12case_flags">case_flags</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>]) : (<em>char</em>) <a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>];</td></tr>
+<tr><th id="220">220</th><td>	}</td></tr>
+<tr><th id="221">221</th><td>      <i>/* else if (input[j] &lt; n) return punycode_bad_input; */</i></td></tr>
+<tr><th id="222">222</th><td>      <i>/* (not needed for Punycode with unsigned code points) */</i></td></tr>
+<tr><th id="223">223</th><td>    }</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td>  <a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> = <a class="local col9 ref" href="#19b" title='b' data-ref="19b" data-ref-filename="19b">b</a> = (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a>) <a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>;</td></tr>
+<tr><th id="226">226</th><td>  <i>/* cannot overflow because out &lt;= input_len &lt;= maxint */</i></td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td>  <i>/* h is the number of code points that have been handled, b is the  */</i></td></tr>
+<tr><th id="229">229</th><td>  <i>/* number of basic code points, and out is the number of ASCII code */</i></td></tr>
+<tr><th id="230">230</th><td>  <i>/* points that have been output.                                    */</i></td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>  <b>if</b> (<a class="local col9 ref" href="#19b" title='b' data-ref="19b" data-ref-filename="19b">b</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="233">233</th><td>    <a class="local col4 ref" href="#14output" title='output' data-ref="14output" data-ref-filename="14output">output</a>[<a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>++] = <a class="enum" href="#delimiter" title='delimiter' data-ref="delimiter" data-ref-filename="delimiter">delimiter</a>;</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>  <i>/* Main encoding loop: */</i></td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>  <b>while</b> (<a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> &lt; <a class="local col5 ref" href="#15input_len" title='input_len' data-ref="15input_len" data-ref-filename="15input_len">input_len</a>)</td></tr>
+<tr><th id="238">238</th><td>    {</td></tr>
+<tr><th id="239">239</th><td>      <i>/* All non-basic code points &lt; n have been     */</i></td></tr>
+<tr><th id="240">240</th><td>      <i>/* handled already.  Find the next larger one: */</i></td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td>      <b>for</b> (<a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a> = <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a>, <a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> = <var>0</var>; <a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> &lt; <a class="local col5 ref" href="#15input_len" title='input_len' data-ref="15input_len" data-ref-filename="15input_len">input_len</a>; ++<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>)</td></tr>
+<tr><th id="243">243</th><td>	{</td></tr>
+<tr><th id="244">244</th><td>	  <i>/* if (basic(input[j])) continue; */</i></td></tr>
+<tr><th id="245">245</th><td>	  <i>/* (not needed for Punycode) */</i></td></tr>
+<tr><th id="246">246</th><td>	  <b>if</b> (<a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>] &gt;= <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a> &amp;&amp; <a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>] &lt; <a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a>)</td></tr>
+<tr><th id="247">247</th><td>	    <a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a> = <a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>];</td></tr>
+<tr><th id="248">248</th><td>	}</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>      <i>/* Increase delta enough to advance the decoder's    */</i></td></tr>
+<tr><th id="251">251</th><td>      <i>/* &lt;n,i&gt; state to &lt;m,0&gt;, but guard against overflow: */</i></td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>      <b>if</b> (<a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a> - <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a> &gt; (<a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a> - <a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a>) / (<a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> + <var>1</var>))</td></tr>
+<tr><th id="254">254</th><td>	<b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="255">255</th><td>      <a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a> += (<a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a> - <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a>) * (<a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> + <var>1</var>);</td></tr>
+<tr><th id="256">256</th><td>      <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a> = <a class="local col2 ref" href="#22m" title='m' data-ref="22m" data-ref-filename="22m">m</a>;</td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td>      <b>for</b> (<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> = <var>0</var>; <a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a> &lt; <a class="local col5 ref" href="#15input_len" title='input_len' data-ref="15input_len" data-ref-filename="15input_len">input_len</a>; ++<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>)</td></tr>
+<tr><th id="259">259</th><td>	{</td></tr>
+<tr><th id="260">260</th><td>	  <i>/* Punycode does not need to check whether input[j] is basic: */</i></td></tr>
+<tr><th id="261">261</th><td>	  <b>if</b> (<a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>] &lt; <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a> <i>/* || basic(input[j]) */</i> )</td></tr>
+<tr><th id="262">262</th><td>	    {</td></tr>
+<tr><th id="263">263</th><td>	      <b>if</b> (++<a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a> == <var>0</var>)</td></tr>
+<tr><th id="264">264</th><td>		<b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="265">265</th><td>	    }</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	  <b>if</b> (<a class="local col1 ref" href="#11input" title='input' data-ref="11input" data-ref-filename="11input">input</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>] == <a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a>)</td></tr>
+<tr><th id="268">268</th><td>	    {</td></tr>
+<tr><th id="269">269</th><td>	      <i>/* Represent delta as a generalized variable-length integer: */</i></td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td>	      <b>for</b> (<a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a> = <a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a>, <a class="local col4 ref" href="#24k" title='k' data-ref="24k" data-ref-filename="24k">k</a> = <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>;; <a class="local col4 ref" href="#24k" title='k' data-ref="24k" data-ref-filename="24k">k</a> += <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>)</td></tr>
+<tr><th id="272">272</th><td>		{</td></tr>
+<tr><th id="273">273</th><td>		  <b>if</b> (<a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a> &gt;= <a class="local col7 ref" href="#27max_out" title='max_out' data-ref="27max_out" data-ref-filename="27max_out">max_out</a>)</td></tr>
+<tr><th id="274">274</th><td>		    <b>return</b> <a class="enum" href="punycode.h.html#punycode_big_output" title='punycode_big_output' data-ref="punycode_big_output" data-ref-filename="punycode_big_output">punycode_big_output</a>;</td></tr>
+<tr><th id="275">275</th><td>		  <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a> = <a class="local col4 ref" href="#24k" title='k' data-ref="24k" data-ref-filename="24k">k</a> &lt;= <a class="local col0 ref" href="#20bias" title='bias' data-ref="20bias" data-ref-filename="20bias">bias</a> <i>/* + tmin */</i> ? <a class="enum" href="#tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</a> :	<i>/* +tmin not needed */</i></td></tr>
+<tr><th id="276">276</th><td>		    <a class="local col4 ref" href="#24k" title='k' data-ref="24k" data-ref-filename="24k">k</a> &gt;= <a class="local col0 ref" href="#20bias" title='bias' data-ref="20bias" data-ref-filename="20bias">bias</a> + <a class="enum" href="#tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</a> ? <a class="enum" href="#tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</a> : <a class="local col4 ref" href="#24k" title='k' data-ref="24k" data-ref-filename="24k">k</a> - <a class="local col0 ref" href="#20bias" title='bias' data-ref="20bias" data-ref-filename="20bias">bias</a>;</td></tr>
+<tr><th id="277">277</th><td>		  <b>if</b> (<a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a> &lt; <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a>)</td></tr>
+<tr><th id="278">278</th><td>		    <b>break</b>;</td></tr>
+<tr><th id="279">279</th><td>		  <a class="local col4 ref" href="#14output" title='output' data-ref="14output" data-ref-filename="14output">output</a>[<a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>++] = <a class="tu ref fn" href="#encode_digit" title='encode_digit' data-use='c' data-ref="encode_digit" data-ref-filename="encode_digit">encode_digit</a> (<a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a> + (<a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a> - <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a>) % (<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a>), <var>0</var>);</td></tr>
+<tr><th id="280">280</th><td>		  <a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a> = (<a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a> - <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a>) / (<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="local col5 ref" href="#25t" title='t' data-ref="25t" data-ref-filename="25t">t</a>);</td></tr>
+<tr><th id="281">281</th><td>		}</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>	      <a class="local col4 ref" href="#14output" title='output' data-ref="14output" data-ref-filename="14output">output</a>[<a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>++] = <a class="tu ref fn" href="#encode_digit" title='encode_digit' data-use='c' data-ref="encode_digit" data-ref-filename="encode_digit">encode_digit</a> (<a class="local col3 ref" href="#23q" title='q' data-ref="23q" data-ref-filename="23q">q</a>, <a class="local col2 ref" href="#12case_flags" title='case_flags' data-ref="12case_flags" data-ref-filename="12case_flags">case_flags</a> &amp;&amp; <a class="local col2 ref" href="#12case_flags" title='case_flags' data-ref="12case_flags" data-ref-filename="12case_flags">case_flags</a>[<a class="local col1 ref" href="#21j" title='j' data-ref="21j" data-ref-filename="21j">j</a>]);</td></tr>
+<tr><th id="284">284</th><td>	      <a class="local col0 ref" href="#20bias" title='bias' data-ref="20bias" data-ref-filename="20bias">bias</a> = <a class="tu ref fn" href="#adapt" title='adapt' data-use='c' data-ref="adapt" data-ref-filename="adapt">adapt</a> (<a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a>, <a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> + <var>1</var>, <a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a> == <a class="local col9 ref" href="#19b" title='b' data-ref="19b" data-ref-filename="19b">b</a>);</td></tr>
+<tr><th id="285">285</th><td>	      <a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a> = <var>0</var>;</td></tr>
+<tr><th id="286">286</th><td>	      ++<a class="local col8 ref" href="#18h" title='h' data-ref="18h" data-ref-filename="18h">h</a>;</td></tr>
+<tr><th id="287">287</th><td>	    }</td></tr>
+<tr><th id="288">288</th><td>	}</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>      ++<a class="local col7 ref" href="#17delta" title='delta' data-ref="17delta" data-ref-filename="17delta">delta</a>, ++<a class="local col6 ref" href="#16n" title='n' data-ref="16n" data-ref-filename="16n">n</a>;</td></tr>
+<tr><th id="291">291</th><td>    }</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>  *<a class="local col3 ref" href="#13output_length" title='output_length' data-ref="13output_length" data-ref-filename="13output_length">output_length</a> = <a class="local col6 ref" href="#26out" title='out' data-ref="26out" data-ref-filename="26out">out</a>;</td></tr>
+<tr><th id="294">294</th><td>  <b>return</b> <a class="enum" href="punycode.h.html#punycode_success" title='punycode_success' data-ref="punycode_success" data-ref-filename="punycode_success">punycode_success</a>;</td></tr>
+<tr><th id="295">295</th><td>}</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td><i>/*** Main decode function ***/</i></td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> * punycode_decode:</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> *<span class="command"> @input</span>_length: The number of ASCII code points in the<span class="command"> @input</span> array.</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> *<span class="command"> @input</span>: An array of ASCII code points (0..7F).</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> *<span class="command"> @output</span>_length: The caller passes in the maximum number of code</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> *   points that it can receive into the<span class="command"> @output</span> array (which is also</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> *   the maximum number of flags that it can receive into the</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> *  <span class="command"> @case</span>_flags array, if<span class="command"> @case</span>_flags is not a %NULL pointer).  On</i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"> *   successful return it will contain the number of code points</i></td></tr>
+<tr><th id="308">308</th><td><i class="doc"> *   actually output (which is also the number of flags actually</i></td></tr>
+<tr><th id="309">309</th><td><i class="doc"> *   output, if case_flags is not a null pointer).  The decoder will</i></td></tr>
+<tr><th id="310">310</th><td><i class="doc"> *   never need to output more code points than the number of ASCII</i></td></tr>
+<tr><th id="311">311</th><td><i class="doc"> *   code points in the input, because of the way the encoding is</i></td></tr>
+<tr><th id="312">312</th><td><i class="doc"> *   defined.  The number of code points output cannot exceed the</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> *   maximum possible value of a punycode_uint, even if the supplied</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> *  <span class="command"> @output</span>_length is greater than that.</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> *<span class="command"> @output</span>: An array of code points like the input argument of</i></td></tr>
+<tr><th id="316">316</th><td><i class="doc"> *   punycode_encode() (see above).</i></td></tr>
+<tr><th id="317">317</th><td><i class="doc"> *<span class="command"> @case</span>_flags: A %NULL pointer (if the flags are not needed by the</i></td></tr>
+<tr><th id="318">318</th><td><i class="doc"> *   caller) or an array of boolean values parallel to the<span class="command"> @output</span></i></td></tr>
+<tr><th id="319">319</th><td><i class="doc"> *   array.  Nonzero (true, flagged) suggests that the corresponding</i></td></tr>
+<tr><th id="320">320</th><td><i class="doc"> *   Unicode character be forced to uppercase by the caller (if</i></td></tr>
+<tr><th id="321">321</th><td><i class="doc"> *   possible), and zero (false, unflagged) suggests that it be forced</i></td></tr>
+<tr><th id="322">322</th><td><i class="doc"> *   to lowercase (if possible).  ASCII code points (0..7F) are output</i></td></tr>
+<tr><th id="323">323</th><td><i class="doc"> *   already in the proper case, but their flags will be set</i></td></tr>
+<tr><th id="324">324</th><td><i class="doc"> *   appropriately so that applying the flags would be harmless.</i></td></tr>
+<tr><th id="325">325</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="326">326</th><td><i class="doc"> * Converts Punycode to a sequence of code points (presumed to be</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc"> * Unicode code points).</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="329">329</th><td><i class="doc"> * Return value: The return value can be any of the punycode_status</i></td></tr>
+<tr><th id="330">330</th><td><i class="doc"> *   values defined above.  If not %punycode_success, then</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> *  <span class="command"> @output</span>_length,<span class="command"> @output</span>, and<span class="command"> @case</span>_flags might contain garbage.</i></td></tr>
+<tr><th id="332">332</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="333">333</th><td><i class="doc"> **/</i></td></tr>
+<tr><th id="334">334</th><td><em>int</em></td></tr>
+<tr><th id="335">335</th><td><dfn class="decl def fn" id="punycode_decode" title='punycode_decode' data-ref="punycode_decode" data-ref-filename="punycode_decode">punycode_decode</dfn> (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="28input_length" title='input_length' data-type='size_t' data-ref="28input_length" data-ref-filename="28input_length">input_length</dfn>,</td></tr>
+<tr><th id="336">336</th><td>		 <em>const</em> <em>char</em> <dfn class="local col9 decl" id="29input" title='input' data-type='const char *' data-ref="29input" data-ref-filename="29input">input</dfn>[],</td></tr>
+<tr><th id="337">337</th><td>		 <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> * <dfn class="local col0 decl" id="30output_length" title='output_length' data-type='size_t *' data-ref="30output_length" data-ref-filename="30output_length">output_length</dfn>,</td></tr>
+<tr><th id="338">338</th><td>		 <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col1 decl" id="31output" title='output' data-type='punycode_uint *' data-ref="31output" data-ref-filename="31output">output</dfn>[], <em>unsigned</em> <em>char</em> <dfn class="local col2 decl" id="32case_flags" title='case_flags' data-type='unsigned char *' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</dfn>[])</td></tr>
+<tr><th id="339">339</th><td>{</td></tr>
+<tr><th id="340">340</th><td>  <a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a> <dfn class="local col3 decl" id="33n" title='n' data-type='punycode_uint' data-ref="33n" data-ref-filename="33n">n</dfn>, <dfn class="local col4 decl" id="34out" title='out' data-type='punycode_uint' data-ref="34out" data-ref-filename="34out">out</dfn>, <dfn class="local col5 decl" id="35i" title='i' data-type='punycode_uint' data-ref="35i" data-ref-filename="35i">i</dfn>, <dfn class="local col6 decl" id="36max_out" title='max_out' data-type='punycode_uint' data-ref="36max_out" data-ref-filename="36max_out">max_out</dfn>, <dfn class="local col7 decl" id="37bias" title='bias' data-type='punycode_uint' data-ref="37bias" data-ref-filename="37bias">bias</dfn>, <dfn class="local col8 decl" id="38oldi" title='oldi' data-type='punycode_uint' data-ref="38oldi" data-ref-filename="38oldi">oldi</dfn>, <dfn class="local col9 decl" id="39w" title='w' data-type='punycode_uint' data-ref="39w" data-ref-filename="39w">w</dfn>, <dfn class="local col0 decl" id="40k" title='k' data-type='punycode_uint' data-ref="40k" data-ref-filename="40k">k</dfn>, <dfn class="local col1 decl" id="41digit" title='digit' data-type='punycode_uint' data-ref="41digit" data-ref-filename="41digit">digit</dfn>, <dfn class="local col2 decl" id="42t" title='t' data-type='punycode_uint' data-ref="42t" data-ref-filename="42t">t</dfn>;</td></tr>
+<tr><th id="341">341</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="43b" title='b' data-type='size_t' data-ref="43b" data-ref-filename="43b">b</dfn>, <dfn class="local col4 decl" id="44j" title='j' data-type='size_t' data-ref="44j" data-ref-filename="44j">j</dfn>, <dfn class="local col5 decl" id="45in" title='in' data-type='size_t' data-ref="45in" data-ref-filename="45in">in</dfn>;</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>  <i>/* Initialize the state: */</i></td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td>  <a class="local col3 ref" href="#33n" title='n' data-ref="33n" data-ref-filename="33n">n</a> = <a class="enum" href="#initial_n" title='initial_n' data-ref="initial_n" data-ref-filename="initial_n">initial_n</a>;</td></tr>
+<tr><th id="346">346</th><td>  <a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> = <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> = <var>0</var>;</td></tr>
+<tr><th id="347">347</th><td>  <a class="local col6 ref" href="#36max_out" title='max_out' data-ref="36max_out" data-ref-filename="36max_out">max_out</a> = *<a class="local col0 ref" href="#30output_length" title='output_length' data-ref="30output_length" data-ref-filename="30output_length">output_length</a> &gt; <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a> ? <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a></td></tr>
+<tr><th id="348">348</th><td>    : (<a class="typedef" href="punycode.h.html#punycode_uint" title='punycode_uint' data-type='uint32_t' data-ref="punycode_uint" data-ref-filename="punycode_uint">punycode_uint</a>) * <a class="local col0 ref" href="#30output_length" title='output_length' data-ref="30output_length" data-ref-filename="30output_length">output_length</a>;</td></tr>
+<tr><th id="349">349</th><td>  <a class="local col7 ref" href="#37bias" title='bias' data-ref="37bias" data-ref-filename="37bias">bias</a> = <a class="enum" href="#initial_bias" title='initial_bias' data-ref="initial_bias" data-ref-filename="initial_bias">initial_bias</a>;</td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td>  <i>/* Handle the basic code points:  Let b be the number of input code */</i></td></tr>
+<tr><th id="352">352</th><td>  <i>/* points before the last delimiter, or 0 if there is none, then    */</i></td></tr>
+<tr><th id="353">353</th><td>  <i>/* copy the first b code points to the output.                      */</i></td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td>  <b>for</b> (<a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a> = <a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a> = <var>0</var>; <a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a> &lt; <a class="local col8 ref" href="#28input_length" title='input_length' data-ref="28input_length" data-ref-filename="28input_length">input_length</a>; ++<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>)</td></tr>
+<tr><th id="356">356</th><td>    <b>if</b> (<a class="macro" href="#75" title="((input[j]) == delimiter)" data-ref="_M/delim">delim</a> (<a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>]))</td></tr>
+<tr><th id="357">357</th><td>      <a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a> = <a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>;</td></tr>
+<tr><th id="358">358</th><td>  <b>if</b> (<a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a> &gt; <a class="local col6 ref" href="#36max_out" title='max_out' data-ref="36max_out" data-ref-filename="36max_out">max_out</a>)</td></tr>
+<tr><th id="359">359</th><td>    <b>return</b> <a class="enum" href="punycode.h.html#punycode_big_output" title='punycode_big_output' data-ref="punycode_big_output" data-ref-filename="punycode_big_output">punycode_big_output</a>;</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td>  <b>for</b> (<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a> = <var>0</var>; <a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a> &lt; <a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a>; ++<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>)</td></tr>
+<tr><th id="362">362</th><td>    {</td></tr>
+<tr><th id="363">363</th><td>      <b>if</b> (<a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a>)</td></tr>
+<tr><th id="364">364</th><td>	<a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a>[<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a>] = <a class="macro" href="#106" title="((punycode_uint)(input[j]) - 65 &lt; 26)" data-ref="_M/flagged">flagged</a> (<a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>]);</td></tr>
+<tr><th id="365">365</th><td>      <b>if</b> (!<a class="macro" href="#72" title="((punycode_uint)(input[j]) &lt; 0x80)" data-ref="_M/basic">basic</a> (<a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>]))</td></tr>
+<tr><th id="366">366</th><td>	<b>return</b> <a class="enum" href="punycode.h.html#punycode_bad_input" title='punycode_bad_input' data-ref="punycode_bad_input" data-ref-filename="punycode_bad_input">punycode_bad_input</a>;</td></tr>
+<tr><th id="367">367</th><td>      <a class="local col1 ref" href="#31output" title='output' data-ref="31output" data-ref-filename="31output">output</a>[<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a>++] = <a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col4 ref" href="#44j" title='j' data-ref="44j" data-ref-filename="44j">j</a>];</td></tr>
+<tr><th id="368">368</th><td>    }</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>  <i>/* Main decoding loop:  Start just after the last delimiter if any  */</i></td></tr>
+<tr><th id="371">371</th><td>  <i>/* basic code points were copied; start at the beginning otherwise. */</i></td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>  <b>for</b> (<a class="local col5 ref" href="#45in" title='in' data-ref="45in" data-ref-filename="45in">in</a> = <a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a> &gt; <var>0</var> ? <a class="local col3 ref" href="#43b" title='b' data-ref="43b" data-ref-filename="43b">b</a> + <var>1</var> : <var>0</var>; <a class="local col5 ref" href="#45in" title='in' data-ref="45in" data-ref-filename="45in">in</a> &lt; <a class="local col8 ref" href="#28input_length" title='input_length' data-ref="28input_length" data-ref-filename="28input_length">input_length</a>; ++<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a>)</td></tr>
+<tr><th id="374">374</th><td>    {</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td>      <i>/* in is the index of the next ASCII code point to be consumed, */</i></td></tr>
+<tr><th id="377">377</th><td>      <i>/* and out is the number of code points in the output array.    */</i></td></tr>
+<tr><th id="378">378</th><td></td></tr>
+<tr><th id="379">379</th><td>      <i>/* Decode a generalized variable-length integer into delta,  */</i></td></tr>
+<tr><th id="380">380</th><td>      <i>/* which gets added to i.  The overflow checking is easier   */</i></td></tr>
+<tr><th id="381">381</th><td>      <i>/* if we increase i as we go, then subtract off its starting */</i></td></tr>
+<tr><th id="382">382</th><td>      <i>/* value at the end to obtain delta.                         */</i></td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>      <b>for</b> (<a class="local col8 ref" href="#38oldi" title='oldi' data-ref="38oldi" data-ref-filename="38oldi">oldi</a> = <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>, <a class="local col9 ref" href="#39w" title='w' data-ref="39w" data-ref-filename="39w">w</a> = <var>1</var>, <a class="local col0 ref" href="#40k" title='k' data-ref="40k" data-ref-filename="40k">k</a> = <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>;; <a class="local col0 ref" href="#40k" title='k' data-ref="40k" data-ref-filename="40k">k</a> += <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>)</td></tr>
+<tr><th id="385">385</th><td>	{</td></tr>
+<tr><th id="386">386</th><td>	  <b>if</b> (<a class="local col5 ref" href="#45in" title='in' data-ref="45in" data-ref-filename="45in">in</a> &gt;= <a class="local col8 ref" href="#28input_length" title='input_length' data-ref="28input_length" data-ref-filename="28input_length">input_length</a>)</td></tr>
+<tr><th id="387">387</th><td>	    <b>return</b> <a class="enum" href="punycode.h.html#punycode_bad_input" title='punycode_bad_input' data-ref="punycode_bad_input" data-ref-filename="punycode_bad_input">punycode_bad_input</a>;</td></tr>
+<tr><th id="388">388</th><td>	  <a class="local col1 ref" href="#41digit" title='digit' data-ref="41digit" data-ref-filename="41digit">digit</a> = <a class="tu ref fn" href="#decode_digit" title='decode_digit' data-use='c' data-ref="decode_digit" data-ref-filename="decode_digit">decode_digit</a> (<a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col5 ref" href="#45in" title='in' data-ref="45in" data-ref-filename="45in">in</a>++]);</td></tr>
+<tr><th id="389">389</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41digit" title='digit' data-ref="41digit" data-ref-filename="41digit">digit</a> &gt;= <a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a>)</td></tr>
+<tr><th id="390">390</th><td>	    <b>return</b> <a class="enum" href="punycode.h.html#punycode_bad_input" title='punycode_bad_input' data-ref="punycode_bad_input" data-ref-filename="punycode_bad_input">punycode_bad_input</a>;</td></tr>
+<tr><th id="391">391</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41digit" title='digit' data-ref="41digit" data-ref-filename="41digit">digit</a> &gt; (<a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a> - <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>) / <a class="local col9 ref" href="#39w" title='w' data-ref="39w" data-ref-filename="39w">w</a>)</td></tr>
+<tr><th id="392">392</th><td>	    <b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="393">393</th><td>	  <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> += <a class="local col1 ref" href="#41digit" title='digit' data-ref="41digit" data-ref-filename="41digit">digit</a> * <a class="local col9 ref" href="#39w" title='w' data-ref="39w" data-ref-filename="39w">w</a>;</td></tr>
+<tr><th id="394">394</th><td>	  <a class="local col2 ref" href="#42t" title='t' data-ref="42t" data-ref-filename="42t">t</a> = <a class="local col0 ref" href="#40k" title='k' data-ref="40k" data-ref-filename="40k">k</a> &lt;= <a class="local col7 ref" href="#37bias" title='bias' data-ref="37bias" data-ref-filename="37bias">bias</a> <i>/* + tmin */</i> ? <a class="enum" href="#tmin" title='tmin' data-ref="tmin" data-ref-filename="tmin">tmin</a> :	<i>/* +tmin not needed */</i></td></tr>
+<tr><th id="395">395</th><td>	    <a class="local col0 ref" href="#40k" title='k' data-ref="40k" data-ref-filename="40k">k</a> &gt;= <a class="local col7 ref" href="#37bias" title='bias' data-ref="37bias" data-ref-filename="37bias">bias</a> + <a class="enum" href="#tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</a> ? <a class="enum" href="#tmax" title='tmax' data-ref="tmax" data-ref-filename="tmax">tmax</a> : <a class="local col0 ref" href="#40k" title='k' data-ref="40k" data-ref-filename="40k">k</a> - <a class="local col7 ref" href="#37bias" title='bias' data-ref="37bias" data-ref-filename="37bias">bias</a>;</td></tr>
+<tr><th id="396">396</th><td>	  <b>if</b> (<a class="local col1 ref" href="#41digit" title='digit' data-ref="41digit" data-ref-filename="41digit">digit</a> &lt; <a class="local col2 ref" href="#42t" title='t' data-ref="42t" data-ref-filename="42t">t</a>)</td></tr>
+<tr><th id="397">397</th><td>	    <b>break</b>;</td></tr>
+<tr><th id="398">398</th><td>	  <b>if</b> (<a class="local col9 ref" href="#39w" title='w' data-ref="39w" data-ref-filename="39w">w</a> &gt; <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a> / (<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="local col2 ref" href="#42t" title='t' data-ref="42t" data-ref-filename="42t">t</a>))</td></tr>
+<tr><th id="399">399</th><td>	    <b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="400">400</th><td>	  <a class="local col9 ref" href="#39w" title='w' data-ref="39w" data-ref-filename="39w">w</a> *= (<a class="enum" href="#base" title='base' data-ref="base" data-ref-filename="base">base</a> - <a class="local col2 ref" href="#42t" title='t' data-ref="42t" data-ref-filename="42t">t</a>);</td></tr>
+<tr><th id="401">401</th><td>	}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td>      <a class="local col7 ref" href="#37bias" title='bias' data-ref="37bias" data-ref-filename="37bias">bias</a> = <a class="tu ref fn" href="#adapt" title='adapt' data-use='c' data-ref="adapt" data-ref-filename="adapt">adapt</a> (<a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> - <a class="local col8 ref" href="#38oldi" title='oldi' data-ref="38oldi" data-ref-filename="38oldi">oldi</a>, <a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> + <var>1</var>, <a class="local col8 ref" href="#38oldi" title='oldi' data-ref="38oldi" data-ref-filename="38oldi">oldi</a> == <var>0</var>);</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>      <i>/* i was supposed to wrap around from out+1 to 0,   */</i></td></tr>
+<tr><th id="406">406</th><td>      <i>/* incrementing n each time, so we'll fix that now: */</i></td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td>      <b>if</b> (<a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> / (<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> + <var>1</var>) &gt; <a class="tu ref" href="#maxint" title='maxint' data-use='r' data-ref="maxint" data-ref-filename="maxint">maxint</a> - <a class="local col3 ref" href="#33n" title='n' data-ref="33n" data-ref-filename="33n">n</a>)</td></tr>
+<tr><th id="409">409</th><td>	<b>return</b> <a class="enum" href="punycode.h.html#punycode_overflow" title='punycode_overflow' data-ref="punycode_overflow" data-ref-filename="punycode_overflow">punycode_overflow</a>;</td></tr>
+<tr><th id="410">410</th><td>      <a class="local col3 ref" href="#33n" title='n' data-ref="33n" data-ref-filename="33n">n</a> += <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> / (<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> + <var>1</var>);</td></tr>
+<tr><th id="411">411</th><td>      <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> %= (<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> + <var>1</var>);</td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td>      <i>/* Insert n at position i of the output: */</i></td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>      <i>/* not needed for Punycode: */</i></td></tr>
+<tr><th id="416">416</th><td>      <i>/* if (basic(n)) return punycode_invalid_input; */</i></td></tr>
+<tr><th id="417">417</th><td>      <b>if</b> (<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> &gt;= <a class="local col6 ref" href="#36max_out" title='max_out' data-ref="36max_out" data-ref-filename="36max_out">max_out</a>)</td></tr>
+<tr><th id="418">418</th><td>	<b>return</b> <a class="enum" href="punycode.h.html#punycode_big_output" title='punycode_big_output' data-ref="punycode_big_output" data-ref-filename="punycode_big_output">punycode_big_output</a>;</td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td>      <b>if</b> (<a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a>)</td></tr>
+<tr><th id="421">421</th><td>	{</td></tr>
+<tr><th id="422">422</th><td>	  <a class="ref fn" href="../string/string.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a> (<a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a> + <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> + <var>1</var>, <a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a> + <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>, <a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> - <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>);</td></tr>
+<tr><th id="423">423</th><td>	  <i>/* Case of last ASCII code point determines case flag: */</i></td></tr>
+<tr><th id="424">424</th><td>	  <a class="local col2 ref" href="#32case_flags" title='case_flags' data-ref="32case_flags" data-ref-filename="32case_flags">case_flags</a>[<a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>] = <a class="macro" href="#106" title="((punycode_uint)(input[in - 1]) - 65 &lt; 26)" data-ref="_M/flagged">flagged</a> (<a class="local col9 ref" href="#29input" title='input' data-ref="29input" data-ref-filename="29input">input</a>[<a class="local col5 ref" href="#45in" title='in' data-ref="45in" data-ref-filename="45in">in</a> - <var>1</var>]);</td></tr>
+<tr><th id="425">425</th><td>	}</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>      <a class="ref fn" href="../string/string.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a> (<a class="local col1 ref" href="#31output" title='output' data-ref="31output" data-ref-filename="31output">output</a> + <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a> + <var>1</var>, <a class="local col1 ref" href="#31output" title='output' data-ref="31output" data-ref-filename="31output">output</a> + <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>, (<a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a> - <a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>) * <b>sizeof</b> *<a class="local col1 ref" href="#31output" title='output' data-ref="31output" data-ref-filename="31output">output</a>);</td></tr>
+<tr><th id="428">428</th><td>      <a class="local col1 ref" href="#31output" title='output' data-ref="31output" data-ref-filename="31output">output</a>[<a class="local col5 ref" href="#35i" title='i' data-ref="35i" data-ref-filename="35i">i</a>++] = <a class="local col3 ref" href="#33n" title='n' data-ref="33n" data-ref-filename="33n">n</a>;</td></tr>
+<tr><th id="429">429</th><td>    }</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td>  *<a class="local col0 ref" href="#30output_length" title='output_length' data-ref="30output_length" data-ref-filename="30output_length">output_length</a> = (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col4 ref" href="#34out" title='out' data-ref="34out" data-ref-filename="34out">out</a>;</td></tr>
+<tr><th id="432">432</th><td>  <i>/* cannot overflow because out &lt;= old value of *output_length */</i></td></tr>
+<tr><th id="433">433</th><td>  <b>return</b> <a class="enum" href="punycode.h.html#punycode_success" title='punycode_success' data-ref="punycode_success" data-ref-filename="punycode_success">punycode_success</a>;</td></tr>
+<tr><th id="434">434</th><td>}</td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="437">437</th><td><i class="doc"> * punycode_uint</i></td></tr>
+<tr><th id="438">438</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="439">439</th><td><i class="doc"> * Unicode code point data type, this is always a 32 bit unsigned</i></td></tr>
+<tr><th id="440">440</th><td><i class="doc"> * integer.</i></td></tr>
+<tr><th id="441">441</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="444">444</th><td><i class="doc"> * Punycode_status</i></td></tr>
+<tr><th id="445">445</th><td><i class="doc"> *<span class="command"> @PUNYCODE</span>_SUCCESS: Successful operation.  This value is guaranteed</i></td></tr>
+<tr><th id="446">446</th><td><i class="doc"> *   to always be zero, the remaining ones are only guaranteed to hold</i></td></tr>
+<tr><th id="447">447</th><td><i class="doc"> *   non-zero values, for logical comparison purposes.</i></td></tr>
+<tr><th id="448">448</th><td><i class="doc"> *<span class="command"> @PUNYCODE</span>_BAD_INPUT: Input is invalid.</i></td></tr>
+<tr><th id="449">449</th><td><i class="doc"> *<span class="command"> @PUNYCODE</span>_BIG_OUTPUT: Output would exceed the space provided.</i></td></tr>
+<tr><th id="450">450</th><td><i class="doc"> *<span class="command"> @PUNYCODE</span>_OVERFLOW: Input needs wider integers to process.</i></td></tr>
+<tr><th id="451">451</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="452">452</th><td><i class="doc"> * Enumerated return codes of punycode_encode() and punycode_decode().</i></td></tr>
+<tr><th id="453">453</th><td><i class="doc"> * The value 0 is guaranteed to always correspond to success.</i></td></tr>
+<tr><th id="454">454</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="455">455</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

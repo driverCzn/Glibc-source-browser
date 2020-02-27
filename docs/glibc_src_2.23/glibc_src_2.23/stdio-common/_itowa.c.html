@@ -1,0 +1,368 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>_itowa.c source code [glibc_src_2.23/stdio-common/_itowa.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="base_table_t "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/stdio-common/_itowa.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>stdio-common</a>/<a href='_itowa.c.html'>_itowa.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Internal function for converting integers to ASCII.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1994-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Torbjorn Granlund &lt;tege@matematik.su.se&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i>   and Ulrich Drepper &lt;drepper@gnu.org&gt;.</i></td></tr>
+<tr><th id="6">6</th><td><i></i></td></tr>
+<tr><th id="7">7</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="8">8</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="9">9</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="10">10</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="11">11</th><td><i></i></td></tr>
+<tr><th id="12">12</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="13">13</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="14">14</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="15">15</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="16">16</th><td><i></i></td></tr>
+<tr><th id="17">17</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="18">18</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="19">19</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../sysdeps/generic/gmp-mparam.h.html">&lt;gmp-mparam.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/gmp.h.html">&lt;gmp.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../stdlib/gmp-impl.h.html">&lt;stdlib/gmp-impl.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../stdlib/longlong.h.html">&lt;stdlib/longlong.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="_itowa.h.html">&lt;_itowa.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><i>/* Canonize environment.  For some architectures not all values might</i></td></tr>
+<tr><th id="31">31</th><td><i>   be defined in the GMP header files.  */</i></td></tr>
+<tr><th id="32">32</th><td><u>#<span data-ppcond="32">ifndef</span> <a class="macro" href="../stdlib/longlong.h.html#522" data-ref="_M/UMUL_TIME">UMUL_TIME</a></u></td></tr>
+<tr><th id="33">33</th><td><u># define UMUL_TIME 1</u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="32">endif</span></u></td></tr>
+<tr><th id="35">35</th><td><u>#<span data-ppcond="35">ifndef</span> <a class="macro" href="../stdlib/longlong.h.html#523" data-ref="_M/UDIV_TIME">UDIV_TIME</a></u></td></tr>
+<tr><th id="36">36</th><td><u># define UDIV_TIME 3</u></td></tr>
+<tr><th id="37">37</th><td><u>#<span data-ppcond="35">endif</span></u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><i>/* Control memory layout.  */</i></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="40">ifdef</span> <span class="macro" data-ref="_M/PACK">PACK</span></u></td></tr>
+<tr><th id="41">41</th><td><u># undef PACK</u></td></tr>
+<tr><th id="42">42</th><td><u># define PACK __attribute__ ((packed))</u></td></tr>
+<tr><th id="43">43</th><td><u>#<span data-ppcond="40">else</span></u></td></tr>
+<tr><th id="44">44</th><td><u># define <dfn class="macro" id="_M/PACK" data-ref="_M/PACK">PACK</dfn></u></td></tr>
+<tr><th id="45">45</th><td><u>#<span data-ppcond="40">endif</span></u></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><i>/* Declare local types.  */</i></td></tr>
+<tr><th id="49">49</th><td><b>struct</b> <dfn class="type def" id="base_table_t" title='base_table_t' data-ref="base_table_t" data-ref-filename="base_table_t">base_table_t</dfn></td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td><u>#<span data-ppcond="51">if</span> (<a class="macro" href="../stdlib/longlong.h.html#523" title="40" data-ref="_M/UDIV_TIME">UDIV_TIME</a> &gt; 2 * <a class="macro" href="../stdlib/longlong.h.html#522" title="40" data-ref="_M/UMUL_TIME">UMUL_TIME</a>)</u></td></tr>
+<tr><th id="52">52</th><td>  mp_limb_t base_multiplier;</td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="51">endif</span></u></td></tr>
+<tr><th id="54">54</th><td>  <em>char</em> <dfn class="tu decl field" id="base_table_t::flag" title='base_table_t::flag' data-type='char' data-ref="base_table_t::flag" data-ref-filename="base_table_t..flag">flag</dfn>;</td></tr>
+<tr><th id="55">55</th><td>  <em>char</em> <dfn class="tu decl field" id="base_table_t::post_shift" title='base_table_t::post_shift' data-type='char' data-ref="base_table_t::post_shift" data-ref-filename="base_table_t..post_shift">post_shift</dfn>;</td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="56">if</span> <a class="macro" href="../sysdeps/generic/gmp-mparam.h.html#22" title="64" data-ref="_M/BITS_PER_MP_LIMB">BITS_PER_MP_LIMB</a> == 32</u></td></tr>
+<tr><th id="57">57</th><td>  <b>struct</b></td></tr>
+<tr><th id="58">58</th><td>    {</td></tr>
+<tr><th id="59">59</th><td>      <em>char</em> normalization_steps;</td></tr>
+<tr><th id="60">60</th><td>      <em>char</em> ndigits;</td></tr>
+<tr><th id="61">61</th><td>      mp_limb_t base PACK;</td></tr>
+<tr><th id="62">62</th><td><u>#if UDIV_TIME &gt; 2 * UMUL_TIME</u></td></tr>
+<tr><th id="63">63</th><td>      mp_limb_t base_ninv PACK;</td></tr>
+<tr><th id="64">64</th><td><u>#endif</u></td></tr>
+<tr><th id="65">65</th><td>    } big;</td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="56">endif</span></u></td></tr>
+<tr><th id="67">67</th><td>};</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><i>/* To reduce the memory needed we include some fields of the tables</i></td></tr>
+<tr><th id="70">70</th><td><i>   only conditionally.  */</i></td></tr>
+<tr><th id="71">71</th><td><u>#<span data-ppcond="71">if</span> <a class="macro" href="../stdlib/longlong.h.html#523" title="40" data-ref="_M/UDIV_TIME">UDIV_TIME</a> &gt; 2 * <a class="macro" href="../stdlib/longlong.h.html#522" title="40" data-ref="_M/UMUL_TIME">UMUL_TIME</a></u></td></tr>
+<tr><th id="72">72</th><td><u># define SEL1(X) X,</u></td></tr>
+<tr><th id="73">73</th><td><u># define SEL2(X) ,X</u></td></tr>
+<tr><th id="74">74</th><td><u>#<span data-ppcond="71">else</span></u></td></tr>
+<tr><th id="75">75</th><td><u># define <dfn class="macro" id="_M/SEL1" data-ref="_M/SEL1">SEL1</dfn>(X)</u></td></tr>
+<tr><th id="76">76</th><td><u># define <dfn class="macro" id="_M/SEL2" data-ref="_M/SEL2">SEL2</dfn>(X)</u></td></tr>
+<tr><th id="77">77</th><td><u>#<span data-ppcond="71">endif</span></u></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><i>/* Factor table for the different bases.  */</i></td></tr>
+<tr><th id="80">80</th><td><b>extern</b> <em>const</em> <b>struct</b> <a class="type" href="#base_table_t" title='base_table_t' data-ref="base_table_t" data-ref-filename="base_table_t">base_table_t</a> <dfn class="decl" id="_itoa_base_table" title='_itoa_base_table' data-ref="_itoa_base_table" data-ref-filename="_itoa_base_table">_itoa_base_table</dfn>[] <a class="macro" href="../include/libc-symbols.h.html#308" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* Lower-case digits.  */</i></td></tr>
+<tr><th id="83">83</th><td><b>extern</b> <em>const</em> <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> <a class="decl" href="_itowa.h.html#_itowa_lower_digits" title='_itowa_lower_digits' data-ref="_itowa_lower_digits" data-ref-filename="_itowa_lower_digits" id="_itowa_lower_digits">_itowa_lower_digits</a>[] <a class="macro" href="../include/libc-symbols.h.html#308" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="84">84</th><td><i>/* Upper-case digits.  */</i></td></tr>
+<tr><th id="85">85</th><td><b>extern</b> <em>const</em> <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> <a class="decl" href="_itowa.h.html#_itowa_upper_digits" title='_itowa_upper_digits' data-ref="_itowa_upper_digits" data-ref-filename="_itowa_upper_digits" id="_itowa_upper_digits">_itowa_upper_digits</a>[] <a class="macro" href="../include/libc-symbols.h.html#308" title="__attribute__ ((visibility (&quot;hidden&quot;)))" data-ref="_M/attribute_hidden">attribute_hidden</a>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="88">if</span> <a class="macro" href="../sysdeps/generic/_itoa.h.html#32" title="(9223372036854775807L != 9223372036854775807LL)" data-ref="_M/_ITOA_NEEDED">_ITOA_NEEDED</a></u></td></tr>
+<tr><th id="89">89</th><td>wchar_t *</td></tr>
+<tr><th id="90">90</th><td>_itowa (<em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> value, wchar_t *buflim, <em>unsigned</em> <em>int</em> base,</td></tr>
+<tr><th id="91">91</th><td>	<em>int</em> upper_case)</td></tr>
+<tr><th id="92">92</th><td>{</td></tr>
+<tr><th id="93">93</th><td>  <em>const</em> wchar_t *digits = (upper_case</td></tr>
+<tr><th id="94">94</th><td>			   ? _itowa_upper_digits : _itowa_lower_digits);</td></tr>
+<tr><th id="95">95</th><td>  wchar_t *bp = buflim;</td></tr>
+<tr><th id="96">96</th><td>  <em>const</em> <b>struct</b> base_table_t *brec = &amp;_itoa_base_table[base - <var>2</var>];</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>  <b>switch</b> (base)</td></tr>
+<tr><th id="99">99</th><td>    {</td></tr>
+<tr><th id="100">100</th><td><u># define RUN_2N(BITS) \</u></td></tr>
+<tr><th id="101">101</th><td><u>      do								      \</u></td></tr>
+<tr><th id="102">102</th><td><u>	{								      \</u></td></tr>
+<tr><th id="103">103</th><td><u>	  /* `unsigned long long int' always has 64 bits.  */		      \</u></td></tr>
+<tr><th id="104">104</th><td><u>	  mp_limb_t work_hi = value &gt;&gt; (64 - BITS_PER_MP_LIMB);		      \</u></td></tr>
+<tr><th id="105">105</th><td><u>									      \</u></td></tr>
+<tr><th id="106">106</th><td><u>	  if (BITS_PER_MP_LIMB == 32)					      \</u></td></tr>
+<tr><th id="107">107</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="108">108</th><td><u>	      if (work_hi != 0)						      \</u></td></tr>
+<tr><th id="109">109</th><td><u>		{							      \</u></td></tr>
+<tr><th id="110">110</th><td><u>		  mp_limb_t work_lo;					      \</u></td></tr>
+<tr><th id="111">111</th><td><u>		  int cnt;						      \</u></td></tr>
+<tr><th id="112">112</th><td><u>									      \</u></td></tr>
+<tr><th id="113">113</th><td><u>		  work_lo = value &amp; 0xfffffffful;			      \</u></td></tr>
+<tr><th id="114">114</th><td><u>		  for (cnt = BITS_PER_MP_LIMB / BITS; cnt &gt; 0; --cnt)	      \</u></td></tr>
+<tr><th id="115">115</th><td><u>		    {							      \</u></td></tr>
+<tr><th id="116">116</th><td><u>		      *--bp = digits[work_lo &amp; ((1ul &lt;&lt; BITS) - 1)];	      \</u></td></tr>
+<tr><th id="117">117</th><td><u>		      work_lo &gt;&gt;= BITS;					      \</u></td></tr>
+<tr><th id="118">118</th><td><u>		    }							      \</u></td></tr>
+<tr><th id="119">119</th><td><u>		  if (BITS_PER_MP_LIMB % BITS != 0)			      \</u></td></tr>
+<tr><th id="120">120</th><td><u>		    {							      \</u></td></tr>
+<tr><th id="121">121</th><td><u>		      work_lo						      \</u></td></tr>
+<tr><th id="122">122</th><td><u>			|= ((work_hi					      \</u></td></tr>
+<tr><th id="123">123</th><td><u>			     &amp; ((1 &lt;&lt; (BITS - BITS_PER_MP_LIMB%BITS))	      \</u></td></tr>
+<tr><th id="124">124</th><td><u>				- 1))					      \</u></td></tr>
+<tr><th id="125">125</th><td><u>			    &lt;&lt; BITS_PER_MP_LIMB % BITS);		      \</u></td></tr>
+<tr><th id="126">126</th><td><u>		      work_hi &gt;&gt;= BITS - BITS_PER_MP_LIMB % BITS;	      \</u></td></tr>
+<tr><th id="127">127</th><td><u>		      if (work_hi == 0)					      \</u></td></tr>
+<tr><th id="128">128</th><td><u>			work_hi = work_lo;				      \</u></td></tr>
+<tr><th id="129">129</th><td><u>		      else						      \</u></td></tr>
+<tr><th id="130">130</th><td><u>			*--bp = digits[work_lo];			      \</u></td></tr>
+<tr><th id="131">131</th><td><u>		    }							      \</u></td></tr>
+<tr><th id="132">132</th><td><u>		}							      \</u></td></tr>
+<tr><th id="133">133</th><td><u>	      else							      \</u></td></tr>
+<tr><th id="134">134</th><td><u>		work_hi = value &amp; 0xfffffffful;				      \</u></td></tr>
+<tr><th id="135">135</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="136">136</th><td><u>	  do								      \</u></td></tr>
+<tr><th id="137">137</th><td><u>	    {								      \</u></td></tr>
+<tr><th id="138">138</th><td><u>	      *--bp = digits[work_hi &amp; ((1 &lt;&lt; BITS) - 1)];		      \</u></td></tr>
+<tr><th id="139">139</th><td><u>	      work_hi &gt;&gt;= BITS;						      \</u></td></tr>
+<tr><th id="140">140</th><td><u>	    }								      \</u></td></tr>
+<tr><th id="141">141</th><td><u>	  while (work_hi != 0);						      \</u></td></tr>
+<tr><th id="142">142</th><td><u>	}								      \</u></td></tr>
+<tr><th id="143">143</th><td><u>      while (0)</u></td></tr>
+<tr><th id="144">144</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="145">145</th><td>      RUN_2N (<var>3</var>);</td></tr>
+<tr><th id="146">146</th><td>      <b>break</b>;</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td>    <b>case</b> <var>16</var>:</td></tr>
+<tr><th id="149">149</th><td>      RUN_2N (<var>4</var>);</td></tr>
+<tr><th id="150">150</th><td>      <b>break</b>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>    <b>default</b>:</td></tr>
+<tr><th id="153">153</th><td>      {</td></tr>
+<tr><th id="154">154</th><td><u># if BITS_PER_MP_LIMB == 64</u></td></tr>
+<tr><th id="155">155</th><td>	mp_limb_t base_multiplier = brec-&gt;base_multiplier;</td></tr>
+<tr><th id="156">156</th><td>	<b>if</b> (brec-&gt;flag)</td></tr>
+<tr><th id="157">157</th><td>	  <b>while</b> (value != <var>0</var>)</td></tr>
+<tr><th id="158">158</th><td>	    {</td></tr>
+<tr><th id="159">159</th><td>	      mp_limb_t quo, rem, x;</td></tr>
+<tr><th id="160">160</th><td>	      mp_limb_t dummy <b>__attribute__</b> ((unused));</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>	      umul_ppmm (x, dummy, value, base_multiplier);</td></tr>
+<tr><th id="163">163</th><td>	      quo = (x + ((value - x) &gt;&gt; <var>1</var>)) &gt;&gt; (brec-&gt;post_shift - <var>1</var>);</td></tr>
+<tr><th id="164">164</th><td>	      rem = value - quo * base;</td></tr>
+<tr><th id="165">165</th><td>	      *--bp = digits[rem];</td></tr>
+<tr><th id="166">166</th><td>	      value = quo;</td></tr>
+<tr><th id="167">167</th><td>	    }</td></tr>
+<tr><th id="168">168</th><td>	<b>else</b></td></tr>
+<tr><th id="169">169</th><td>	  <b>while</b> (value != <var>0</var>)</td></tr>
+<tr><th id="170">170</th><td>	    {</td></tr>
+<tr><th id="171">171</th><td>	      mp_limb_t quo, rem, x;</td></tr>
+<tr><th id="172">172</th><td>	      mp_limb_t dummy <b>__attribute__</b> ((unused));</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td>	      umul_ppmm (x, dummy, value, base_multiplier);</td></tr>
+<tr><th id="175">175</th><td>	      quo = x &gt;&gt; brec-&gt;post_shift;</td></tr>
+<tr><th id="176">176</th><td>	      rem = value - quo * base;</td></tr>
+<tr><th id="177">177</th><td>	      *--bp = digits[rem];</td></tr>
+<tr><th id="178">178</th><td>	      value = quo;</td></tr>
+<tr><th id="179">179</th><td>	    }</td></tr>
+<tr><th id="180">180</th><td><u># endif</u></td></tr>
+<tr><th id="181">181</th><td><u># if BITS_PER_MP_LIMB == 32</u></td></tr>
+<tr><th id="182">182</th><td>	mp_limb_t t[<var>3</var>];</td></tr>
+<tr><th id="183">183</th><td>	<em>int</em> n;</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>	<i>/* First convert x0 to 1-3 words in base s-&gt;big.base.</i></td></tr>
+<tr><th id="186">186</th><td><i>	   Optimize for frequent cases of 32 bit numbers.  */</i></td></tr>
+<tr><th id="187">187</th><td>	<b>if</b> ((mp_limb_t) (value &gt;&gt; <var>32</var>) &gt;= <var>1</var>)</td></tr>
+<tr><th id="188">188</th><td>	  {</td></tr>
+<tr><th id="189">189</th><td><u># if UDIV_TIME &gt; 2 * UMUL_TIME || UDIV_NEEDS_NORMALIZATION</u></td></tr>
+<tr><th id="190">190</th><td>	    <em>int</em> big_normalization_steps = brec-&gt;big.normalization_steps;</td></tr>
+<tr><th id="191">191</th><td>	    mp_limb_t big_base_norm</td></tr>
+<tr><th id="192">192</th><td>	      = brec-&gt;big.base &lt;&lt; big_normalization_steps;</td></tr>
+<tr><th id="193">193</th><td><u># endif</u></td></tr>
+<tr><th id="194">194</th><td>	    <b>if</b> ((mp_limb_t) (value &gt;&gt; <var>32</var>) &gt;= brec-&gt;big.base)</td></tr>
+<tr><th id="195">195</th><td>	      {</td></tr>
+<tr><th id="196">196</th><td>		mp_limb_t x1hi, x1lo, r;</td></tr>
+<tr><th id="197">197</th><td>		<i>/* If you want to optimize this, take advantage of</i></td></tr>
+<tr><th id="198">198</th><td><i>		   that the quotient in the first udiv_qrnnd will</i></td></tr>
+<tr><th id="199">199</th><td><i>		   always be very small.  It might be faster just to</i></td></tr>
+<tr><th id="200">200</th><td><i>		   subtract in a tight loop.  */</i></td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td><u># if UDIV_TIME &gt; 2 * UMUL_TIME</u></td></tr>
+<tr><th id="203">203</th><td>		mp_limb_t x, xh, xl;</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>		<b>if</b> (big_normalization_steps == <var>0</var>)</td></tr>
+<tr><th id="206">206</th><td>		  xh = <var>0</var>;</td></tr>
+<tr><th id="207">207</th><td>		<b>else</b></td></tr>
+<tr><th id="208">208</th><td>		  xh = (mp_limb_t) (value &gt;&gt; (<var>64</var> - big_normalization_steps));</td></tr>
+<tr><th id="209">209</th><td>		xl = (mp_limb_t) (value &gt;&gt; (<var>32</var> - big_normalization_steps));</td></tr>
+<tr><th id="210">210</th><td>		udiv_qrnnd_preinv (x1hi, r, xh, xl, big_base_norm,</td></tr>
+<tr><th id="211">211</th><td>				   brec-&gt;big.base_ninv);</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>		xl = ((mp_limb_t) value) &lt;&lt; big_normalization_steps;</td></tr>
+<tr><th id="214">214</th><td>		udiv_qrnnd_preinv (x1lo, x, r, xl, big_base_norm,</td></tr>
+<tr><th id="215">215</th><td>				   brec-&gt;big.base_ninv);</td></tr>
+<tr><th id="216">216</th><td>		t[<var>2</var>] = x &gt;&gt; big_normalization_steps;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>		<b>if</b> (big_normalization_steps == <var>0</var>)</td></tr>
+<tr><th id="219">219</th><td>		  xh = x1hi;</td></tr>
+<tr><th id="220">220</th><td>		<b>else</b></td></tr>
+<tr><th id="221">221</th><td>		  xh = ((x1hi &lt;&lt; big_normalization_steps)</td></tr>
+<tr><th id="222">222</th><td>			| (x1lo &gt;&gt; (<var>32</var> - big_normalization_steps)));</td></tr>
+<tr><th id="223">223</th><td>		xl = x1lo &lt;&lt; big_normalization_steps;</td></tr>
+<tr><th id="224">224</th><td>		udiv_qrnnd_preinv (t[<var>0</var>], x, xh, xl, big_base_norm,</td></tr>
+<tr><th id="225">225</th><td>				   brec-&gt;big.base_ninv);</td></tr>
+<tr><th id="226">226</th><td>		t[<var>1</var>] = x &gt;&gt; big_normalization_steps;</td></tr>
+<tr><th id="227">227</th><td><u># elif UDIV_NEEDS_NORMALIZATION</u></td></tr>
+<tr><th id="228">228</th><td>		mp_limb_t x, xh, xl;</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td>		<b>if</b> (big_normalization_steps == <var>0</var>)</td></tr>
+<tr><th id="231">231</th><td>		  xh = <var>0</var>;</td></tr>
+<tr><th id="232">232</th><td>		<b>else</b></td></tr>
+<tr><th id="233">233</th><td>		  xh = (mp_limb_t) (value &gt;&gt; <var>64</var> - big_normalization_steps);</td></tr>
+<tr><th id="234">234</th><td>		xl = (mp_limb_t) (value &gt;&gt; <var>32</var> - big_normalization_steps);</td></tr>
+<tr><th id="235">235</th><td>		udiv_qrnnd (x1hi, r, xh, xl, big_base_norm);</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>		xl = ((mp_limb_t) value) &lt;&lt; big_normalization_steps;</td></tr>
+<tr><th id="238">238</th><td>		udiv_qrnnd (x1lo, x, r, xl, big_base_norm);</td></tr>
+<tr><th id="239">239</th><td>		t[<var>2</var>] = x &gt;&gt; big_normalization_steps;</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>		<b>if</b> (big_normalization_steps == <var>0</var>)</td></tr>
+<tr><th id="242">242</th><td>		  xh = x1hi;</td></tr>
+<tr><th id="243">243</th><td>		<b>else</b></td></tr>
+<tr><th id="244">244</th><td>		  xh = ((x1hi &lt;&lt; big_normalization_steps)</td></tr>
+<tr><th id="245">245</th><td>			| (x1lo &gt;&gt; <var>32</var> - big_normalization_steps));</td></tr>
+<tr><th id="246">246</th><td>		xl = x1lo &lt;&lt; big_normalization_steps;</td></tr>
+<tr><th id="247">247</th><td>		udiv_qrnnd (t[<var>0</var>], x, xh, xl, big_base_norm);</td></tr>
+<tr><th id="248">248</th><td>		t[<var>1</var>] = x &gt;&gt; big_normalization_steps;</td></tr>
+<tr><th id="249">249</th><td><u># else</u></td></tr>
+<tr><th id="250">250</th><td>		udiv_qrnnd (x1hi, r, <var>0</var>, (mp_limb_t) (value &gt;&gt; <var>32</var>),</td></tr>
+<tr><th id="251">251</th><td>			    brec-&gt;big.base);</td></tr>
+<tr><th id="252">252</th><td>		udiv_qrnnd (x1lo, t[<var>2</var>], r, (mp_limb_t) value, brec-&gt;big.base);</td></tr>
+<tr><th id="253">253</th><td>		udiv_qrnnd (t[<var>0</var>], t[<var>1</var>], x1hi, x1lo, brec-&gt;big.base);</td></tr>
+<tr><th id="254">254</th><td><u># endif</u></td></tr>
+<tr><th id="255">255</th><td>		n = <var>3</var>;</td></tr>
+<tr><th id="256">256</th><td>	      }</td></tr>
+<tr><th id="257">257</th><td>	    <b>else</b></td></tr>
+<tr><th id="258">258</th><td>	      {</td></tr>
+<tr><th id="259">259</th><td><u># if UDIV_TIME &gt; 2 * UMUL_TIME</u></td></tr>
+<tr><th id="260">260</th><td>		mp_limb_t x;</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>		value &lt;&lt;= brec-&gt;big.normalization_steps;</td></tr>
+<tr><th id="263">263</th><td>		udiv_qrnnd_preinv (t[<var>0</var>], x, (mp_limb_t) (value &gt;&gt; <var>32</var>),</td></tr>
+<tr><th id="264">264</th><td>				   (mp_limb_t) value, big_base_norm,</td></tr>
+<tr><th id="265">265</th><td>				   brec-&gt;big.base_ninv);</td></tr>
+<tr><th id="266">266</th><td>		t[<var>1</var>] = x &gt;&gt; brec-&gt;big.normalization_steps;</td></tr>
+<tr><th id="267">267</th><td><u># elif UDIV_NEEDS_NORMALIZATION</u></td></tr>
+<tr><th id="268">268</th><td>		mp_limb_t x;</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td>		value &lt;&lt;= big_normalization_steps;</td></tr>
+<tr><th id="271">271</th><td>		udiv_qrnnd (t[<var>0</var>], x, (mp_limb_t) (value &gt;&gt; <var>32</var>),</td></tr>
+<tr><th id="272">272</th><td>			    (mp_limb_t) value, big_base_norm);</td></tr>
+<tr><th id="273">273</th><td>		t[<var>1</var>] = x &gt;&gt; big_normalization_steps;</td></tr>
+<tr><th id="274">274</th><td><u># else</u></td></tr>
+<tr><th id="275">275</th><td>		udiv_qrnnd (t[<var>0</var>], t[<var>1</var>], (mp_limb_t) (value &gt;&gt; <var>32</var>),</td></tr>
+<tr><th id="276">276</th><td>			    (mp_limb_t) value, brec-&gt;big.base);</td></tr>
+<tr><th id="277">277</th><td><u># endif</u></td></tr>
+<tr><th id="278">278</th><td>		n = <var>2</var>;</td></tr>
+<tr><th id="279">279</th><td>	      }</td></tr>
+<tr><th id="280">280</th><td>	  }</td></tr>
+<tr><th id="281">281</th><td>	<b>else</b></td></tr>
+<tr><th id="282">282</th><td>	  {</td></tr>
+<tr><th id="283">283</th><td>	    t[<var>0</var>] = value;</td></tr>
+<tr><th id="284">284</th><td>	    n = <var>1</var>;</td></tr>
+<tr><th id="285">285</th><td>	  }</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	<i>/* Convert the 1-3 words in t[], word by word, to ASCII.  */</i></td></tr>
+<tr><th id="288">288</th><td>	<b>do</b></td></tr>
+<tr><th id="289">289</th><td>	  {</td></tr>
+<tr><th id="290">290</th><td>	    mp_limb_t ti = t[--n];</td></tr>
+<tr><th id="291">291</th><td>	    <em>int</em> ndig_for_this_limb = <var>0</var>;</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><u># if UDIV_TIME &gt; 2 * UMUL_TIME</u></td></tr>
+<tr><th id="294">294</th><td>	    mp_limb_t base_multiplier = brec-&gt;base_multiplier;</td></tr>
+<tr><th id="295">295</th><td>	    <b>if</b> (brec-&gt;flag)</td></tr>
+<tr><th id="296">296</th><td>	      <b>while</b> (ti != <var>0</var>)</td></tr>
+<tr><th id="297">297</th><td>		{</td></tr>
+<tr><th id="298">298</th><td>		  mp_limb_t quo, rem, x;</td></tr>
+<tr><th id="299">299</th><td>		  mp_limb_t dummy <b>__attribute__</b> ((unused));</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td>		  umul_ppmm (x, dummy, ti, base_multiplier);</td></tr>
+<tr><th id="302">302</th><td>		  quo = (x + ((ti - x) &gt;&gt; <var>1</var>)) &gt;&gt; (brec-&gt;post_shift - <var>1</var>);</td></tr>
+<tr><th id="303">303</th><td>		  rem = ti - quo * base;</td></tr>
+<tr><th id="304">304</th><td>		  *--bp = digits[rem];</td></tr>
+<tr><th id="305">305</th><td>		  ti = quo;</td></tr>
+<tr><th id="306">306</th><td>		  ++ndig_for_this_limb;</td></tr>
+<tr><th id="307">307</th><td>		}</td></tr>
+<tr><th id="308">308</th><td>	    <b>else</b></td></tr>
+<tr><th id="309">309</th><td>	      <b>while</b> (ti != <var>0</var>)</td></tr>
+<tr><th id="310">310</th><td>		{</td></tr>
+<tr><th id="311">311</th><td>		  mp_limb_t quo, rem, x;</td></tr>
+<tr><th id="312">312</th><td>		  mp_limb_t dummy <b>__attribute__</b> ((unused));</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>		  umul_ppmm (x, dummy, ti, base_multiplier);</td></tr>
+<tr><th id="315">315</th><td>		  quo = x &gt;&gt; brec-&gt;post_shift;</td></tr>
+<tr><th id="316">316</th><td>		  rem = ti - quo * base;</td></tr>
+<tr><th id="317">317</th><td>		  *--bp = digits[rem];</td></tr>
+<tr><th id="318">318</th><td>		  ti = quo;</td></tr>
+<tr><th id="319">319</th><td>		  ++ndig_for_this_limb;</td></tr>
+<tr><th id="320">320</th><td>		}</td></tr>
+<tr><th id="321">321</th><td><u># else</u></td></tr>
+<tr><th id="322">322</th><td>	    <b>while</b> (ti != <var>0</var>)</td></tr>
+<tr><th id="323">323</th><td>	      {</td></tr>
+<tr><th id="324">324</th><td>		mp_limb_t quo, rem;</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td>		quo = ti / base;</td></tr>
+<tr><th id="327">327</th><td>		rem = ti % base;</td></tr>
+<tr><th id="328">328</th><td>		*--bp = digits[rem];</td></tr>
+<tr><th id="329">329</th><td>		ti = quo;</td></tr>
+<tr><th id="330">330</th><td>		++ndig_for_this_limb;</td></tr>
+<tr><th id="331">331</th><td>	      }</td></tr>
+<tr><th id="332">332</th><td><u># endif</u></td></tr>
+<tr><th id="333">333</th><td>	    <i>/* If this wasn't the most significant word, pad with zeros.  */</i></td></tr>
+<tr><th id="334">334</th><td>	    <b>if</b> (n != <var>0</var>)</td></tr>
+<tr><th id="335">335</th><td>	      <b>while</b> (ndig_for_this_limb &lt; brec-&gt;big.ndigits)</td></tr>
+<tr><th id="336">336</th><td>		{</td></tr>
+<tr><th id="337">337</th><td>		  *--bp = <kbd>'0'</kbd>;</td></tr>
+<tr><th id="338">338</th><td>		  ++ndig_for_this_limb;</td></tr>
+<tr><th id="339">339</th><td>		}</td></tr>
+<tr><th id="340">340</th><td>	  }</td></tr>
+<tr><th id="341">341</th><td>	<b>while</b> (n != <var>0</var>);</td></tr>
+<tr><th id="342">342</th><td><u># endif</u></td></tr>
+<tr><th id="343">343</th><td>      }</td></tr>
+<tr><th id="344">344</th><td>      <b>break</b>;</td></tr>
+<tr><th id="345">345</th><td>    }</td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td>  <b>return</b> bp;</td></tr>
+<tr><th id="348">348</th><td>}</td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="88">endif</span></u></td></tr>
+<tr><th id="350">350</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

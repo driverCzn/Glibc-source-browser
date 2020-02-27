@@ -1,0 +1,41 @@
+<dec f='glibc_src_2.23/libio/strfile.h' l='68' type='_IO_strfile'/>
+<dec f='glibc_src_2.23/libio/strfile.h' l='79' type='_IO_strfile'/>
+<offset>0</offset>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='42' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='53' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='54' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='60' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='62' u='a' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='63' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='65' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vsnprintf_chk.c' l='66' u='m' c='___vsnprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='42' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='52' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='53' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='53' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='53' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='53' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='53' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='59' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='61' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='62' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='64' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/debug/vswprintf_chk.c' l='70' u='m' c='__vswprintf_chk'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='99' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='110' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='111' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='113' u='a' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='114' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='116' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vsnprintf.c' l='117' u='m' c='_IO_vsnprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='99' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='107' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='108' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='108' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='108' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='108' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='108' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='110' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='111' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='113' u='m' c='_IO_vswprintf'/>
+<use f='glibc_src_2.23/libio/vswprintf.c' l='119' u='m' c='_IO_vswprintf'/>

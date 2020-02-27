@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>freopen.c source code [glibc_src_2.23/libio/freopen.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/libio/freopen.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>libio</a>/<a href='freopen.c.html'>freopen.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1993-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="17">17</th><td><i></i></td></tr>
+<tr><th id="18">18</th><td><i>   As a special exception, if you link the code in this file with</i></td></tr>
+<tr><th id="19">19</th><td><i>   files compiled with a GNU compiler to produce an executable,</i></td></tr>
+<tr><th id="20">20</th><td><i>   that does not cause the resulting executable to be covered by</i></td></tr>
+<tr><th id="21">21</th><td><i>   the GNU Lesser General Public License.  This exception does not</i></td></tr>
+<tr><th id="22">22</th><td><i>   however invalidate any other reasons why the executable file</i></td></tr>
+<tr><th id="23">23</th><td><i>   might be covered by the GNU Lesser General Public License.</i></td></tr>
+<tr><th id="24">24</th><td><i>   This exception applies to code released by its copyright holders</i></td></tr>
+<tr><th id="25">25</th><td><i>   in files containing the exception.  */</i></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="libioP.h.html">"libioP.h"</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="stdio.h.html">"stdio.h"</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/fd_to_filename.h.html">&lt;fd_to_filename.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><a class="typedef" href="stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *</td></tr>
+<tr><th id="39">39</th><td><dfn class="decl def fn" id="freopen" title='freopen' data-ref="freopen" data-ref-filename="freopen">freopen</dfn> (<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4filename" title='filename' data-type='const char *' data-ref="4filename" data-ref-filename="4filename">filename</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5mode" title='mode' data-type='const char *' data-ref="5mode" data-ref-filename="5mode">mode</dfn>, <a class="typedef" href="stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col6 decl" id="6fp" title='fp' data-type='FILE *' data-ref="6fp" data-ref-filename="6fp">fp</dfn>)</td></tr>
+<tr><th id="40">40</th><td>{</td></tr>
+<tr><th id="41">41</th><td>  <a class="typedef" href="stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col7 decl" id="7result" title='result' data-type='FILE *' data-ref="7result" data-ref-filename="7result">result</dfn>;</td></tr>
+<tr><th id="42">42</th><td>  <a class="macro" href="libioP.h.html#858" title="" data-ref="_M/CHECK_FILE">CHECK_FILE</a> (fp, NULL);</td></tr>
+<tr><th id="43">43</th><td>  <b>if</b> (!(<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_flags" title='_IO_FILE::_flags' data-ref="_IO_FILE::_flags" data-ref-filename="_IO_FILE.._flags">_flags</a> &amp; <a class="macro" href="libio.h.html#108" title="0x2000" data-ref="_M/_IO_IS_FILEBUF">_IO_IS_FILEBUF</a>))</td></tr>
+<tr><th id="44">44</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="45">45</th><td>  <a class="macro" href="../sysdeps/nptl/stdio-lock.h.html#90" title="do { _IO_FILE *_IO_acquire_lock_file __attribute__((cleanup (_IO_acquire_lock_fct))) = (fp); if (((_IO_acquire_lock_file)-&gt;_flags &amp; 0x8000) == 0) do { void *__self = ({ struct pthread *__self; asm (&quot;mov %%fs:%c1,%0&quot; : &quot;=r&quot; (__self) : &quot;i&quot; (__builtin_offsetof(struct pthread, header.self))); __self;}); if ((*(_IO_acquire_lock_file)-&gt;_lock).owner != __self) { (void) ({ int ignore1, ignore2, ignore3; if (__builtin_constant_p (0) &amp;&amp; (0) == 0) __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait_private\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=&amp;D&quot; (ignore2), &quot;=m&quot; ((*(_IO_acquire_lock_file)-&gt;_lock).lock), &quot;=a&quot; (ignore3) : &quot;0&quot; (1), &quot;m&quot; ((*(_IO_acquire_lock_file)-&gt;_lock).lock), &quot;3&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); else __asm __volatile (&quot;cmpl $0, __libc_multiple_threads(%%rip)\n\t&quot; &quot;je 0f\n\t&quot; &quot;lock; cmpxchgl %4, %2\n\t&quot; &quot;jnz 1f\n\t&quot; &quot;jmp 24f\n&quot; &quot;0:\tcmpxchgl %4, %2\n\t&quot; &quot;jz 24f\n\t&quot; &quot;1:\tlea %2, %%&quot; &quot;rdi&quot; &quot;\n&quot; &quot;2:\tsub $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset 128\n&quot; &quot;3:\tcallq __lll_lock_wait\n&quot; &quot;4:\tadd $128, %%&quot; &quot;rsp&quot; &quot;\n&quot; &quot;.cfi_adjust_cfa_offset -128\n&quot; &quot;24:&quot; : &quot;=S&quot; (ignore1), &quot;=D&quot; (ignore2), &quot;=m&quot; ((*(_IO_acquire_lock_file)-&gt;_lock).lock), &quot;=a&quot; (ignore3) : &quot;1&quot; (1), &quot;m&quot; ((*(_IO_acquire_lock_file)-&gt;_lock).lock), &quot;3&quot; (0), &quot;0&quot; (0) : &quot;cx&quot;, &quot;r11&quot;, &quot;cc&quot;, &quot;memory&quot;); }); (*(_IO_acquire_lock_file)-&gt;_lock).owner = __self; } ++(*(_IO_acquire_lock_file)-&gt;_lock).cnt; } while (0);" data-ref="_M/_IO_acquire_lock">_IO_acquire_lock</a> (<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>);</td></tr>
+<tr><th id="46">46</th><td>  <em>int</em> <dfn class="local col8 decl" id="8fd" title='fd' data-type='int' data-ref="8fd" data-ref-filename="8fd">fd</dfn> = <a class="macro" href="iolibio.h.html#80" title="((fp)-&gt;_fileno)" data-ref="_M/_IO_fileno">_IO_fileno</a> (<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>);</td></tr>
+<tr><th id="47">47</th><td>  <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="9gfilename" title='gfilename' data-type='const char *' data-ref="9gfilename" data-ref-filename="9gfilename">gfilename</dfn> = (<a class="local col4 ref" href="#4filename" title='filename' data-ref="4filename" data-ref-filename="4filename">filename</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; <a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a> &gt;= <var>0</var></td></tr>
+<tr><th id="48">48</th><td>			   ? <a class="ref fn" href="../sysdeps/unix/sysv/linux/fd_to_filename.h.html#fd_to_filename" title='fd_to_filename' data-ref="fd_to_filename" data-ref-filename="fd_to_filename">fd_to_filename</a> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>) : <a class="local col4 ref" href="#4filename" title='filename' data-ref="4filename" data-ref-filename="4filename">filename</a>);</td></tr>
+<tr><th id="49">49</th><td>  <a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_flags2" title='_IO_FILE::_flags2' data-ref="_IO_FILE::_flags2" data-ref-filename="_IO_FILE.._flags2">_flags2</a> |= <a class="macro" href="libio.h.html#120" title="32" data-ref="_M/_IO_FLAGS2_NOCLOSE">_IO_FLAGS2_NOCLOSE</a>;</td></tr>
+<tr><th id="50">50</th><td><u>#<span data-ppcond="50">if</span> <a class="macro" href="../include/shlib-compat.h.html#74" title="0" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a> (libc, GLIBC_2_0, GLIBC_2_1)</u></td></tr>
+<tr><th id="51">51</th><td>  <b>if</b> (&amp;_IO_stdin_used == NULL)</td></tr>
+<tr><th id="52">52</th><td>    {</td></tr>
+<tr><th id="53">53</th><td>      <i>/* If the shared C library is used by the application binary which</i></td></tr>
+<tr><th id="54">54</th><td><i>	 was linked against the older version of libio, we just use the</i></td></tr>
+<tr><th id="55">55</th><td><i>	 older one even for internal use to avoid trouble since a pointer</i></td></tr>
+<tr><th id="56">56</th><td><i>	 to the old libio may be passed into shared C library and wind</i></td></tr>
+<tr><th id="57">57</th><td><i>	 up here. */</i></td></tr>
+<tr><th id="58">58</th><td>      _IO_old_file_close_it (fp);</td></tr>
+<tr><th id="59">59</th><td>      _IO_JUMPS_FILE_plus (fp) = &amp;_IO_old_file_jumps;</td></tr>
+<tr><th id="60">60</th><td>      result = _IO_old_file_fopen (fp, gfilename, mode);</td></tr>
+<tr><th id="61">61</th><td>    }</td></tr>
+<tr><th id="62">62</th><td>  <b>else</b></td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="50">endif</span></u></td></tr>
+<tr><th id="64">64</th><td>    {</td></tr>
+<tr><th id="65">65</th><td>      <a class="ref fn" href="libioP.h.html#_IO_file_close_it" title='_IO_file_close_it' data-ref="_IO_file_close_it" data-ref-filename="_IO_file_close_it">_IO_file_close_it</a> (<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>);</td></tr>
+<tr><th id="66">66</th><td>      <a class="macro" href="libioP.h.html#119" title="(*(__typeof__ (((struct _IO_FILE_plus){}).vtable) *)(((char *) ((fp))) + __builtin_offsetof(struct _IO_FILE_plus, vtable)))" data-ref="_M/_IO_JUMPS_FILE_plus">_IO_JUMPS_FILE_plus</a> (<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>) = &amp;<a class="ref" href="libioP.h.html#_IO_file_jumps" title='_IO_file_jumps' data-ref="_IO_file_jumps" data-ref-filename="_IO_file_jumps">_IO_file_jumps</a>;</td></tr>
+<tr><th id="67">67</th><td>      <b>if</b> (<a class="macro" href="libioP.h.html#133" title="0" data-ref="_M/_IO_vtable_offset">_IO_vtable_offset</a> (fp) == <var>0</var> &amp;&amp; <a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_wide_data" title='_IO_FILE::_wide_data' data-ref="_IO_FILE::_wide_data" data-ref-filename="_IO_FILE.._wide_data">_wide_data</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="68">68</th><td>	<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_wide_data" title='_IO_FILE::_wide_data' data-ref="_IO_FILE::_wide_data" data-ref-filename="_IO_FILE.._wide_data">_wide_data</a>-&gt;<a class="ref field" href="libio.h.html#_IO_wide_data::_wide_vtable" title='_IO_wide_data::_wide_vtable' data-ref="_IO_wide_data::_wide_vtable" data-ref-filename="_IO_wide_data.._wide_vtable">_wide_vtable</a> = &amp;<a class="ref" href="libioP.h.html#_IO_wfile_jumps" title='_IO_wfile_jumps' data-ref="_IO_wfile_jumps" data-ref-filename="_IO_wfile_jumps">_IO_wfile_jumps</a>;</td></tr>
+<tr><th id="69">69</th><td>      <a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> = <a class="ref fn" href="libioP.h.html#_IO_file_fopen" title='_IO_file_fopen' data-ref="_IO_file_fopen" data-ref-filename="_IO_file_fopen">_IO_file_fopen</a> (<a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>, <a class="local col9 ref" href="#9gfilename" title='gfilename' data-ref="9gfilename" data-ref-filename="9gfilename">gfilename</a>, <a class="local col5 ref" href="#5mode" title='mode' data-ref="5mode" data-ref-filename="5mode">mode</a>, <var>1</var>);</td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="71">71</th><td>	<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> = <a class="ref fn" href="iolibio.h.html#__fopen_maybe_mmap" title='__fopen_maybe_mmap' data-ref="__fopen_maybe_mmap" data-ref-filename="__fopen_maybe_mmap">__fopen_maybe_mmap</a> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>);</td></tr>
+<tr><th id="72">72</th><td>    }</td></tr>
+<tr><th id="73">73</th><td>  <a class="local col6 ref" href="#6fp" title='fp' data-ref="6fp" data-ref-filename="6fp">fp</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_flags2" title='_IO_FILE::_flags2' data-ref="_IO_FILE::_flags2" data-ref-filename="_IO_FILE.._flags2">_flags2</a> &amp;= ~<a class="macro" href="libio.h.html#120" title="32" data-ref="_M/_IO_FLAGS2_NOCLOSE">_IO_FLAGS2_NOCLOSE</a>;</td></tr>
+<tr><th id="74">74</th><td>  <b>if</b> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="75">75</th><td>    {</td></tr>
+<tr><th id="76">76</th><td>      <i>/* unbound stream orientation */</i></td></tr>
+<tr><th id="77">77</th><td>      <a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_mode" title='_IO_FILE::_mode' data-ref="_IO_FILE::_mode" data-ref-filename="_IO_FILE.._mode">_mode</a> = <var>0</var>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>      <b>if</b> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a> != -<var>1</var>)</td></tr>
+<tr><th id="80">80</th><td>	{</td></tr>
+<tr><th id="81">81</th><td><u>#<span data-ppcond="81">ifdef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#144" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a></u></td></tr>
+<tr><th id="82">82</th><td><u># <span data-ppcond="82">ifndef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/kernel-features.h.html#93" data-ref="_M/__ASSUME_DUP3">__ASSUME_DUP3</a></u></td></tr>
+<tr><th id="83">83</th><td>	  <em>int</em> newfd;</td></tr>
+<tr><th id="84">84</th><td>	  <b>if</b> (__have_dup3 &lt; <var>0</var>)</td></tr>
+<tr><th id="85">85</th><td>	    newfd = -<var>1</var>;</td></tr>
+<tr><th id="86">86</th><td>	  <b>else</b></td></tr>
+<tr><th id="87">87</th><td>	    newfd =</td></tr>
+<tr><th id="88">88</th><td><u># <span data-ppcond="82">endif</span></u></td></tr>
+<tr><th id="89">89</th><td>	      <a class="ref fn" href="../include/unistd.h.html#__dup3" title='__dup3' data-ref="__dup3" data-ref-filename="__dup3">__dup3</a> (<a class="macro" href="iolibio.h.html#80" title="((result)-&gt;_fileno)" data-ref="_M/_IO_fileno">_IO_fileno</a> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>), <a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>,</td></tr>
+<tr><th id="90">90</th><td>                      (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>-&gt;<a class="ref field" href="libio.h.html#_IO_FILE::_flags2" title='_IO_FILE::_flags2' data-ref="_IO_FILE::_flags2" data-ref-filename="_IO_FILE.._flags2">_flags2</a> &amp; <a class="macro" href="libio.h.html#121" title="64" data-ref="_M/_IO_FLAGS2_CLOEXEC">_IO_FLAGS2_CLOEXEC</a>) != <var>0</var></td></tr>
+<tr><th id="91">91</th><td>                      ? <a class="macro" href="../sysdeps/unix/sysv/linux/bits/fcntl-linux.h.html#144" title="02000000" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a> : <var>0</var>);</td></tr>
+<tr><th id="92">92</th><td><u>#<span data-ppcond="81">else</span></u></td></tr>
+<tr><th id="93">93</th><td><u># define newfd 1</u></td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="81">endif</span></u></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="96">ifndef</span> <a class="macro" href="../sysdeps/unix/sysv/linux/kernel-features.h.html#93" data-ref="_M/__ASSUME_DUP3">__ASSUME_DUP3</a></u></td></tr>
+<tr><th id="97">97</th><td>	  <b>if</b> (newfd &lt; <var>0</var>)</td></tr>
+<tr><th id="98">98</th><td>	    {</td></tr>
+<tr><th id="99">99</th><td>	      <b>if</b> (errno == ENOSYS)</td></tr>
+<tr><th id="100">100</th><td>		__have_dup3 = -<var>1</var>;</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	      __dup2 (_IO_fileno (result), fd);</td></tr>
+<tr><th id="103">103</th><td>	      <b>if</b> ((result-&gt;_flags2 &amp; _IO_FLAGS2_CLOEXEC) != <var>0</var>)</td></tr>
+<tr><th id="104">104</th><td>		__fcntl (fd, F_SETFD, FD_CLOEXEC);</td></tr>
+<tr><th id="105">105</th><td>	    }</td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="96">endif</span></u></td></tr>
+<tr><th id="107">107</th><td>	  <a class="ref fn" href="../include/unistd.h.html#__close" title='__close' data-ref="__close" data-ref-filename="__close">__close</a> (<a class="macro" href="iolibio.h.html#80" title="((result)-&gt;_fileno)" data-ref="_M/_IO_fileno">_IO_fileno</a> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>));</td></tr>
+<tr><th id="108">108</th><td>	  <a class="macro" href="iolibio.h.html#80" title="((result)-&gt;_fileno)" data-ref="_M/_IO_fileno">_IO_fileno</a> (<a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>) = <a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>;</td></tr>
+<tr><th id="109">109</th><td>	}</td></tr>
+<tr><th id="110">110</th><td>    }</td></tr>
+<tr><th id="111">111</th><td>  <b>else</b> <b>if</b> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a> != -<var>1</var>)</td></tr>
+<tr><th id="112">112</th><td>    <a class="ref fn" href="../include/unistd.h.html#__close" title='__close' data-ref="__close" data-ref-filename="__close">__close</a> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>);</td></tr>
+<tr><th id="113">113</th><td>  <b>if</b> (<a class="local col4 ref" href="#4filename" title='filename' data-ref="4filename" data-ref-filename="4filename">filename</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="114">114</th><td>    <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> ((<em>char</em> *) <a class="local col9 ref" href="#9gfilename" title='gfilename' data-ref="9gfilename" data-ref-filename="9gfilename">gfilename</a>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>  <a class="macro" href="../sysdeps/nptl/stdio-lock.h.html#106" title="; } while (0)" data-ref="_M/_IO_release_lock">_IO_release_lock</a> (fp);</td></tr>
+<tr><th id="117">117</th><td>  <b>return</b> <a class="local col7 ref" href="#7result" title='result' data-ref="7result" data-ref-filename="7result">result</a>;</td></tr>
+<tr><th id="118">118</th><td>}</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

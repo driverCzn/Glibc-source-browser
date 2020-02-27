@@ -1,0 +1,295 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>opendir.c source code [glibc_src_2.23/sysdeps/posix/opendir.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/sysdeps/posix/opendir.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.23</a>/<a href='..'>sysdeps</a>/<a href='./'>posix</a>/<a href='opendir.c.html'>opendir.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1991-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include &lt;stdbool.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/dirent.h.html">&lt;dirent.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../include/sys/param.h.html">&lt;sys/param.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../include/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="dirstream.h.html">&lt;dirstream.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../unix/sysv/linux/not-cancel.h.html">&lt;not-cancel.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../unix/sysv/linux/x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><i>/* The st_blksize value of the directory is used as a hint for the</i></td></tr>
+<tr><th id="38">38</th><td><i>   size of the buffer which receives struct dirent values from the</i></td></tr>
+<tr><th id="39">39</th><td><i>   kernel.  st_blksize is limited to MAX_DIR_BUFFER_SIZE, in case the</i></td></tr>
+<tr><th id="40">40</th><td><i>   file system provides a bogus value.  */</i></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/MAX_DIR_BUFFER_SIZE" data-ref="_M/MAX_DIR_BUFFER_SIZE">MAX_DIR_BUFFER_SIZE</dfn> 1048576U</u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/* opendir() must not accidentally open something other than a directory.</i></td></tr>
+<tr><th id="44">44</th><td><i>   Some OS's have kernel support for that, some don't.  In the worst</i></td></tr>
+<tr><th id="45">45</th><td><i>   case we have to stat() before the open() AND fstat() after.</i></td></tr>
+<tr><th id="46">46</th><td><i></i></td></tr>
+<tr><th id="47">47</th><td><i>   We have to test at runtime for kernel support since libc may have</i></td></tr>
+<tr><th id="48">48</th><td><i>   been compiled with different headers to the kernel it's running on.</i></td></tr>
+<tr><th id="49">49</th><td><i>   This test can't be done reliably in the general case.  We'll use</i></td></tr>
+<tr><th id="50">50</th><td><i>   /dev/null, which if it's not a device lots of stuff will break, as</i></td></tr>
+<tr><th id="51">51</th><td><i>   a guinea pig.  It may be missing in chroot environments, so we</i></td></tr>
+<tr><th id="52">52</th><td><i>   make sure to fail safe. */</i></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="53">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#142" data-ref="_M/O_DIRECTORY">O_DIRECTORY</a></u></td></tr>
+<tr><th id="54">54</th><td><u># <span data-ppcond="54">ifdef</span> <a class="macro" href="../unix/sysv/linux/opendir.c.html#18" data-ref="_M/O_DIRECTORY_WORKS">O_DIRECTORY_WORKS</a></u></td></tr>
+<tr><th id="55">55</th><td><u>#  define <dfn class="macro" id="_M/o_directory_works" data-ref="_M/o_directory_works">o_directory_works</dfn> 1</u></td></tr>
+<tr><th id="56">56</th><td><u>#  define <dfn class="macro" id="_M/tryopen_o_directory" data-ref="_M/tryopen_o_directory">tryopen_o_directory</dfn>() while (1) /* This must not be called.  */</u></td></tr>
+<tr><th id="57">57</th><td><u># <span data-ppcond="54">else</span></u></td></tr>
+<tr><th id="58">58</th><td><em>static</em> <em>int</em> o_directory_works;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="61">61</th><td>tryopen_o_directory (<em>void</em>)</td></tr>
+<tr><th id="62">62</th><td>{</td></tr>
+<tr><th id="63">63</th><td>  <em>int</em> serrno = errno;</td></tr>
+<tr><th id="64">64</th><td>  <em>int</em> x = open_not_cancel_2 (<q>"/dev/null"</q>, O_RDONLY|O_NDELAY|O_DIRECTORY);</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <b>if</b> (x &gt;= <var>0</var>)</td></tr>
+<tr><th id="67">67</th><td>    {</td></tr>
+<tr><th id="68">68</th><td>      close_not_cancel_no_status (x);</td></tr>
+<tr><th id="69">69</th><td>      o_directory_works = -<var>1</var>;</td></tr>
+<tr><th id="70">70</th><td>    }</td></tr>
+<tr><th id="71">71</th><td>  <b>else</b> <b>if</b> (errno != ENOTDIR)</td></tr>
+<tr><th id="72">72</th><td>    o_directory_works = -<var>1</var>;</td></tr>
+<tr><th id="73">73</th><td>  <b>else</b></td></tr>
+<tr><th id="74">74</th><td>    o_directory_works = <var>1</var>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>  __set_errno (serrno);</td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td><u># <span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="79">79</th><td><u># define <dfn class="macro" id="_M/EXTRA_FLAGS" data-ref="_M/EXTRA_FLAGS">EXTRA_FLAGS</dfn> O_DIRECTORY</u></td></tr>
+<tr><th id="80">80</th><td><u>#<span data-ppcond="53">else</span></u></td></tr>
+<tr><th id="81">81</th><td><u># define EXTRA_FLAGS 0</u></td></tr>
+<tr><th id="82">82</th><td><u>#<span data-ppcond="53">endif</span></u></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><em>static</em> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="86">86</th><td><dfn class="decl def fn" id="invalid_name" title='invalid_name' data-ref="invalid_name" data-ref-filename="invalid_name">invalid_name</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1name" title='name' data-type='const char *' data-ref="1name" data-ref-filename="1name">name</dfn>)</td></tr>
+<tr><th id="87">87</th><td>{</td></tr>
+<tr><th id="88">88</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((name[0] == &apos;\0&apos;), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#1name" title='name' data-ref="1name" data-ref-filename="1name">name</a>[<var>0</var>] == <kbd>'\0'</kbd>))</td></tr>
+<tr><th id="89">89</th><td>    {</td></tr>
+<tr><th id="90">90</th><td>      <i>/* POSIX.1-1990 says an empty name gets ENOENT;</i></td></tr>
+<tr><th id="91">91</th><td><i>	 but `open' might like it fine.  */</i></td></tr>
+<tr><th id="92">92</th><td>      <a class="macro" href="../../include/errno.h.html#39" title="(rtld_errno = (2))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../include/asm-generic/errno-base.h.html#5" title="2" data-ref="_M/ENOENT">ENOENT</a>);</td></tr>
+<tr><th id="93">93</th><td>      <b>return</b> <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="94">94</th><td>    }</td></tr>
+<tr><th id="95">95</th><td>  <b>return</b> <span class="macro" title="0" data-ref="_M/false">false</span>;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><em>static</em> <span class="macro" title="_Bool" data-ref="_M/bool">bool</span></td></tr>
+<tr><th id="100">100</th><td><dfn class="decl def fn" id="need_isdir_precheck" title='need_isdir_precheck' data-ref="need_isdir_precheck" data-ref-filename="need_isdir_precheck">need_isdir_precheck</dfn> (<em>void</em>)</td></tr>
+<tr><th id="101">101</th><td>{</td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="102">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#142" data-ref="_M/O_DIRECTORY">O_DIRECTORY</a></u></td></tr>
+<tr><th id="103">103</th><td>  <i>/* Test whether O_DIRECTORY works.  */</i></td></tr>
+<tr><th id="104">104</th><td>  <b>if</b> (<a class="macro" href="#55" title="1" data-ref="_M/o_directory_works">o_directory_works</a> == <var>0</var>)</td></tr>
+<tr><th id="105">105</th><td>    <a class="macro" href="#56" title="while (1)" data-ref="_M/tryopen_o_directory">tryopen_o_directory</a> ();</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>  <i>/* We can skip the expensive `stat' call if O_DIRECTORY works.  */</i></td></tr>
+<tr><th id="108">108</th><td>  <b>return</b> <a class="macro" href="#55" title="1" data-ref="_M/o_directory_works">o_directory_works</a> &lt; <var>0</var>;</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="102">endif</span></u></td></tr>
+<tr><th id="110">110</th><td>  <b>return</b> <span class="macro" title="1" data-ref="_M/true">true</span>;</td></tr>
+<tr><th id="111">111</th><td>}</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="115">115</th><td><dfn class="decl def fn" id="opendir_oflags" title='opendir_oflags' data-ref="opendir_oflags" data-ref-filename="opendir_oflags">opendir_oflags</dfn> (<em>void</em>)</td></tr>
+<tr><th id="116">116</th><td>{</td></tr>
+<tr><th id="117">117</th><td>  <em>int</em> <dfn class="local col2 decl" id="2flags" title='flags' data-type='int' data-ref="2flags" data-ref-filename="2flags">flags</dfn> = <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#43" title="00" data-ref="_M/O_RDONLY">O_RDONLY</a>|<a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#65" title="04000" data-ref="_M/O_NDELAY">O_NDELAY</a>|<a class="macro" href="#79" title="0200000" data-ref="_M/EXTRA_FLAGS">EXTRA_FLAGS</a>|<a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#138" title="0" data-ref="_M/O_LARGEFILE">O_LARGEFILE</a>;</td></tr>
+<tr><th id="118">118</th><td><u>#<span data-ppcond="118">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#144" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a></u></td></tr>
+<tr><th id="119">119</th><td>  <a class="local col2 ref" href="#2flags" title='flags' data-ref="2flags" data-ref-filename="2flags">flags</a> |= <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#144" title="02000000" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a>;</td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="118">endif</span></u></td></tr>
+<tr><th id="121">121</th><td>  <b>return</b> <a class="local col2 ref" href="#2flags" title='flags' data-ref="2flags" data-ref-filename="2flags">flags</a>;</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><em>static</em> <a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *</td></tr>
+<tr><th id="126">126</th><td><dfn class="decl def fn" id="opendir_tail" title='opendir_tail' data-ref="opendir_tail" data-ref-filename="opendir_tail">opendir_tail</dfn> (<em>int</em> <dfn class="local col3 decl" id="3fd" title='fd' data-type='int' data-ref="3fd" data-ref-filename="3fd">fd</dfn>)</td></tr>
+<tr><th id="127">127</th><td>{</td></tr>
+<tr><th id="128">128</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((fd &lt; 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col3 ref" href="#3fd" title='fd' data-ref="3fd" data-ref-filename="3fd">fd</a> &lt; <var>0</var>))</td></tr>
+<tr><th id="129">129</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>  <i>/* Now make sure this really is a directory and nothing changed since the</i></td></tr>
+<tr><th id="132">132</th><td><i>     `stat' call.  The S_ISDIR check is superfluous if O_DIRECTORY works,</i></td></tr>
+<tr><th id="133">133</th><td><i>     but it's cheap and we need the stat call for st_blksize anyway.  */</i></td></tr>
+<tr><th id="134">134</th><td>  <b>struct</b> <a class="type" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> <dfn class="local col4 decl" id="4statbuf" title='statbuf' data-type='struct stat64' data-ref="4statbuf" data-ref-filename="4statbuf">statbuf</dfn>;</td></tr>
+<tr><th id="135">135</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((__fxstat64 (1, fd, &amp;statbuf) &lt; 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="ref fn" href="../../io/sys/stat.h.html#__fxstat64" title='__fxstat64' data-ref="__fxstat64" data-ref-filename="__fxstat64">__fxstat64</a> (<a class="macro" href="../unix/sysv/linux/x86/bits/stat.h.html#44" title="1" data-ref="_M/_STAT_VER">_STAT_VER</a>, <a class="local col3 ref" href="#3fd" title='fd' data-ref="3fd" data-ref-filename="3fd">fd</a>, &amp;<a class="local col4 ref" href="#4statbuf" title='statbuf' data-ref="4statbuf" data-ref-filename="4statbuf">statbuf</a>) &lt; <var>0</var>))</td></tr>
+<tr><th id="136">136</th><td>    <b>goto</b> <a class="lbl" href="#5lose" data-ref="5lose" data-ref-filename="5lose">lose</a>;</td></tr>
+<tr><th id="137">137</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((! ((((statbuf.st_mode)) &amp; 0170000) == (0040000))), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (! <a class="macro" href="../../io/sys/stat.h.html#128" title="((((statbuf.st_mode)) &amp; 0170000) == (0040000))" data-ref="_M/S_ISDIR">S_ISDIR</a> (<a class="local col4 ref" href="#4statbuf" title='statbuf' data-ref="4statbuf" data-ref-filename="4statbuf">statbuf</a>.<a class="ref field" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64::st_mode" title='stat64::st_mode' data-ref="stat64::st_mode" data-ref-filename="stat64..st_mode">st_mode</a>)))</td></tr>
+<tr><th id="138">138</th><td>    {</td></tr>
+<tr><th id="139">139</th><td>      <a class="macro" href="../../include/errno.h.html#39" title="(rtld_errno = (20))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../include/asm-generic/errno-base.h.html#23" title="20" data-ref="_M/ENOTDIR">ENOTDIR</a>);</td></tr>
+<tr><th id="140">140</th><td>    <dfn class="lbl" id="5lose" data-ref="5lose" data-ref-filename="5lose">lose</dfn>:</td></tr>
+<tr><th id="141">141</th><td>      <a class="macro" href="../unix/sysv/linux/not-cancel.h.html#64" title="(void) ({ do { } while (0); ({ unsigned long int resultvar; long int __arg1 = (long int) ((fd)); register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (3) , &quot;r&quot; (_a1) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); })" data-ref="_M/close_not_cancel_no_status">close_not_cancel_no_status</a> (<a class="local col3 ref" href="#3fd" title='fd' data-ref="3fd" data-ref-filename="3fd">fd</a>);</td></tr>
+<tr><th id="142">142</th><td>      <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="143">143</th><td>    }</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>  <b>return</b> <a class="ref fn" href="#__alloc_dir" title='__alloc_dir' data-ref="__alloc_dir" data-ref-filename="__alloc_dir">__alloc_dir</a> (<a class="local col3 ref" href="#3fd" title='fd' data-ref="3fd" data-ref-filename="3fd">fd</a>, <span class="macro" title="1" data-ref="_M/true">true</span>, <var>0</var>, &amp;<a class="local col4 ref" href="#4statbuf" title='statbuf' data-ref="4statbuf" data-ref-filename="4statbuf">statbuf</a>);</td></tr>
+<tr><th id="146">146</th><td>}</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><u>#<span data-ppcond="149">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(16 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="150">150</th><td>DIR *</td></tr>
+<tr><th id="151">151</th><td>internal_function</td></tr>
+<tr><th id="152">152</th><td>__opendirat (<em>int</em> dfd, <em>const</em> <em>char</em> *name)</td></tr>
+<tr><th id="153">153</th><td>{</td></tr>
+<tr><th id="154">154</th><td>  <b>if</b> (__glibc_unlikely (invalid_name (name)))</td></tr>
+<tr><th id="155">155</th><td>    <b>return</b> NULL;</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>  <b>if</b> (need_isdir_precheck ())</td></tr>
+<tr><th id="158">158</th><td>    {</td></tr>
+<tr><th id="159">159</th><td>      <i>/* We first have to check whether the name is for a directory.  We</i></td></tr>
+<tr><th id="160">160</th><td><i>	 cannot do this after the open() call since the open/close operation</i></td></tr>
+<tr><th id="161">161</th><td><i>	 performed on, say, a tape device might have undesirable effects.  */</i></td></tr>
+<tr><th id="162">162</th><td>      <b>struct</b> stat64 statbuf;</td></tr>
+<tr><th id="163">163</th><td>      <b>if</b> (__glibc_unlikely (__fxstatat64 (_STAT_VER, dfd, name,</td></tr>
+<tr><th id="164">164</th><td>					  &amp;statbuf, <var>0</var>) &lt; <var>0</var>))</td></tr>
+<tr><th id="165">165</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="166">166</th><td>      <b>if</b> (__glibc_unlikely (! S_ISDIR (statbuf.st_mode)))</td></tr>
+<tr><th id="167">167</th><td>	{</td></tr>
+<tr><th id="168">168</th><td>	  __set_errno (ENOTDIR);</td></tr>
+<tr><th id="169">169</th><td>	  <b>return</b> NULL;</td></tr>
+<tr><th id="170">170</th><td>	}</td></tr>
+<tr><th id="171">171</th><td>    }</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>  <b>return</b> opendir_tail (openat_not_cancel_3 (dfd, name, opendir_oflags ()));</td></tr>
+<tr><th id="174">174</th><td>}</td></tr>
+<tr><th id="175">175</th><td><u>#<span data-ppcond="149">endif</span></u></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><i>/* Open a directory stream on NAME.  */</i></td></tr>
+<tr><th id="179">179</th><td><a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *</td></tr>
+<tr><th id="180">180</th><td><dfn class="decl def fn" id="__opendir" title='__opendir' data-ref="__opendir" data-ref-filename="__opendir">__opendir</dfn> (<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="6name" title='name' data-type='const char *' data-ref="6name" data-ref-filename="6name">name</dfn>)</td></tr>
+<tr><th id="181">181</th><td>{</td></tr>
+<tr><th id="182">182</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((invalid_name (name)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="ref fn" href="#invalid_name" title='invalid_name' data-ref="invalid_name" data-ref-filename="invalid_name">invalid_name</a> (<a class="local col6 ref" href="#6name" title='name' data-ref="6name" data-ref-filename="6name">name</a>)))</td></tr>
+<tr><th id="183">183</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>  <b>if</b> (<a class="ref fn" href="#need_isdir_precheck" title='need_isdir_precheck' data-ref="need_isdir_precheck" data-ref-filename="need_isdir_precheck">need_isdir_precheck</a> ())</td></tr>
+<tr><th id="186">186</th><td>    {</td></tr>
+<tr><th id="187">187</th><td>      <i>/* We first have to check whether the name is for a directory.  We</i></td></tr>
+<tr><th id="188">188</th><td><i>	 cannot do this after the open() call since the open/close operation</i></td></tr>
+<tr><th id="189">189</th><td><i>	 performed on, say, a tape device might have undesirable effects.  */</i></td></tr>
+<tr><th id="190">190</th><td>      <b>struct</b> <a class="type" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> <dfn class="local col7 decl" id="7statbuf" title='statbuf' data-type='struct stat64' data-ref="7statbuf" data-ref-filename="7statbuf">statbuf</dfn>;</td></tr>
+<tr><th id="191">191</th><td>      <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((__xstat64 (1, name, &amp;statbuf) &lt; 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="ref fn" href="../../io/sys/stat.h.html#__xstat64" title='__xstat64' data-ref="__xstat64" data-ref-filename="__xstat64">__xstat64</a> (<a class="macro" href="../unix/sysv/linux/x86/bits/stat.h.html#44" title="1" data-ref="_M/_STAT_VER">_STAT_VER</a>, <a class="local col6 ref" href="#6name" title='name' data-ref="6name" data-ref-filename="6name">name</a>, &amp;<a class="local col7 ref" href="#7statbuf" title='statbuf' data-ref="7statbuf" data-ref-filename="7statbuf">statbuf</a>) &lt; <var>0</var>))</td></tr>
+<tr><th id="192">192</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="193">193</th><td>      <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((! ((((statbuf.st_mode)) &amp; 0170000) == (0040000))), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (! <a class="macro" href="../../io/sys/stat.h.html#128" title="((((statbuf.st_mode)) &amp; 0170000) == (0040000))" data-ref="_M/S_ISDIR">S_ISDIR</a> (<a class="local col7 ref" href="#7statbuf" title='statbuf' data-ref="7statbuf" data-ref-filename="7statbuf">statbuf</a>.<a class="ref field" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64::st_mode" title='stat64::st_mode' data-ref="stat64::st_mode" data-ref-filename="stat64..st_mode">st_mode</a>)))</td></tr>
+<tr><th id="194">194</th><td>	{</td></tr>
+<tr><th id="195">195</th><td>	  <a class="macro" href="../../include/errno.h.html#39" title="(rtld_errno = (20))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../include/asm-generic/errno-base.h.html#23" title="20" data-ref="_M/ENOTDIR">ENOTDIR</a>);</td></tr>
+<tr><th id="196">196</th><td>	  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="197">197</th><td>	}</td></tr>
+<tr><th id="198">198</th><td>    }</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>  <b>return</b> <a class="ref fn" href="#opendir_tail" title='opendir_tail' data-ref="opendir_tail" data-ref-filename="opendir_tail">opendir_tail</a> (<a class="macro" href="../unix/sysv/linux/not-cancel.h.html#32" title="({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg2 = (long int) (opendir_oflags ()); long int __arg1 = (long int) (name); register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (2) , &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (rtld_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; })" data-ref="_M/open_not_cancel_2">open_not_cancel_2</a> (<a class="local col6 ref" href="#6name" title='name' data-ref="6name" data-ref-filename="6name">name</a>, <a class="ref fn" href="#opendir_oflags" title='opendir_oflags' data-ref="opendir_oflags" data-ref-filename="opendir_oflags">opendir_oflags</a> ()));</td></tr>
+<tr><th id="201">201</th><td>}</td></tr>
+<tr><th id="202">202</th><td><a class="macro" href="../../include/libc-symbols.h.html#109" title="extern __typeof (__opendir) opendir __attribute__ ((weak, alias (&quot;__opendir&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__opendir" title='__opendir' data-ref="__opendir" data-ref-filename="__opendir">__opendir</a>, <dfn class="decl def fn" id="opendir" title='opendir' data-ref="opendir" data-ref-filename="opendir">opendir</dfn>)</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td><u>#<span data-ppcond="205">ifdef</span> <a class="macro" href="../unix/sysv/linux/kernel-features.h.html#85" data-ref="_M/__ASSUME_O_CLOEXEC">__ASSUME_O_CLOEXEC</a></u></td></tr>
+<tr><th id="206">206</th><td><u># define <dfn class="macro" id="_M/check_have_o_cloexec" data-ref="_M/check_have_o_cloexec">check_have_o_cloexec</dfn>(fd) 1</u></td></tr>
+<tr><th id="207">207</th><td><u>#<span data-ppcond="205">else</span></u></td></tr>
+<tr><th id="208">208</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="209">209</th><td>check_have_o_cloexec (<em>int</em> fd)</td></tr>
+<tr><th id="210">210</th><td>{</td></tr>
+<tr><th id="211">211</th><td>  <b>if</b> (__have_o_cloexec == <var>0</var>)</td></tr>
+<tr><th id="212">212</th><td>    __have_o_cloexec = (__fcntl (fd, F_GETFD, <var>0</var>) &amp; FD_CLOEXEC) == <var>0</var> ? -<var>1</var> : <var>1</var>;</td></tr>
+<tr><th id="213">213</th><td>  <b>return</b> __have_o_cloexec &gt; <var>0</var>;</td></tr>
+<tr><th id="214">214</th><td>}</td></tr>
+<tr><th id="215">215</th><td><u>#<span data-ppcond="205">endif</span></u></td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *</td></tr>
+<tr><th id="219">219</th><td><a class="macro" href="../../include/libc-symbols.h.html#152" title="" data-ref="_M/internal_function">internal_function</a></td></tr>
+<tr><th id="220">220</th><td><dfn class="decl def fn" id="__alloc_dir" title='__alloc_dir' data-ref="__alloc_dir" data-ref-filename="__alloc_dir">__alloc_dir</dfn> (<em>int</em> <dfn class="local col8 decl" id="8fd" title='fd' data-type='int' data-ref="8fd" data-ref-filename="8fd">fd</dfn>, <span class="macro" title="_Bool" data-ref="_M/bool">bool</span> <dfn class="local col9 decl" id="9close_fd" title='close_fd' data-type='_Bool' data-ref="9close_fd" data-ref-filename="9close_fd">close_fd</dfn>, <em>int</em> <dfn class="local col0 decl" id="10flags" title='flags' data-type='int' data-ref="10flags" data-ref-filename="10flags">flags</dfn>, <em>const</em> <b>struct</b> <a class="type" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> *<dfn class="local col1 decl" id="11statp" title='statp' data-type='const struct stat64 *' data-ref="11statp" data-ref-filename="11statp">statp</dfn>)</td></tr>
+<tr><th id="221">221</th><td>{</td></tr>
+<tr><th id="222">222</th><td>  <i>/* We always have to set the close-on-exit flag if the user provided</i></td></tr>
+<tr><th id="223">223</th><td><i>     the file descriptor.  Otherwise only if we have no working</i></td></tr>
+<tr><th id="224">224</th><td><i>     O_CLOEXEC support.  */</i></td></tr>
+<tr><th id="225">225</th><td><u>#<span data-ppcond="225">ifdef</span> <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#144" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a></u></td></tr>
+<tr><th id="226">226</th><td>  <b>if</b> ((! <a class="local col9 ref" href="#9close_fd" title='close_fd' data-ref="9close_fd" data-ref-filename="9close_fd">close_fd</a> &amp;&amp; (<a class="local col0 ref" href="#10flags" title='flags' data-ref="10flags" data-ref-filename="10flags">flags</a> &amp; <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#144" title="02000000" data-ref="_M/O_CLOEXEC">O_CLOEXEC</a>) == <var>0</var>)</td></tr>
+<tr><th id="227">227</th><td>      || ! <a class="macro" href="#206" title="1" data-ref="_M/check_have_o_cloexec">check_have_o_cloexec</a> (fd))</td></tr>
+<tr><th id="228">228</th><td><u>#<span data-ppcond="225">endif</span></u></td></tr>
+<tr><th id="229">229</th><td>    {</td></tr>
+<tr><th id="230">230</th><td>      <b>if</b> (<a class="ref fn" href="#88" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="ref fn" href="../../include/fcntl.h.html#__fcntl" title='__fcntl' data-ref="__fcntl" data-ref-filename="__fcntl">__fcntl</a> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>, <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#169" title="2" data-ref="_M/F_SETFD">F_SETFD</a>, <a class="macro" href="../unix/sysv/linux/bits/fcntl-linux.h.html#212" title="1" data-ref="_M/FD_CLOEXEC">FD_CLOEXEC</a>), <var>0</var>) &lt; <var>0</var>)</td></tr>
+<tr><th id="231">231</th><td>	<b>goto</b> <a class="lbl" href="#12lose" data-ref="12lose" data-ref-filename="12lose">lose</a>;</td></tr>
+<tr><th id="232">232</th><td>    }</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>  <em>const</em> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="13default_allocation" title='default_allocation' data-type='const size_t' data-ref="13default_allocation" data-ref-filename="13default_allocation">default_allocation</dfn> = (<var>4</var> * <a class="macro" href="../../libio/stdio.h.html#127" title="8192" data-ref="_M/BUFSIZ">BUFSIZ</a> &lt; <b>sizeof</b> (<b>struct</b> <a class="type" href="../unix/sysv/linux/bits/dirent.h.html#dirent64" title='dirent64' data-ref="dirent64" data-ref-filename="dirent64">dirent64</a>)</td></tr>
+<tr><th id="235">235</th><td>				     ? <b>sizeof</b> (<b>struct</b> <a class="type" href="../unix/sysv/linux/bits/dirent.h.html#dirent64" title='dirent64' data-ref="dirent64" data-ref-filename="dirent64">dirent64</a>) : <var>4</var> * <a class="macro" href="../../libio/stdio.h.html#127" title="8192" data-ref="_M/BUFSIZ">BUFSIZ</a>);</td></tr>
+<tr><th id="236">236</th><td>  <em>const</em> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="14small_allocation" title='small_allocation' data-type='const size_t' data-ref="14small_allocation" data-ref-filename="14small_allocation">small_allocation</dfn> = (<a class="macro" href="../../libio/stdio.h.html#127" title="8192" data-ref="_M/BUFSIZ">BUFSIZ</a> &lt; <b>sizeof</b> (<b>struct</b> <a class="type" href="../unix/sysv/linux/bits/dirent.h.html#dirent64" title='dirent64' data-ref="dirent64" data-ref-filename="dirent64">dirent64</a>)</td></tr>
+<tr><th id="237">237</th><td>				   ? <b>sizeof</b> (<b>struct</b> <a class="type" href="../unix/sysv/linux/bits/dirent.h.html#dirent64" title='dirent64' data-ref="dirent64" data-ref-filename="dirent64">dirent64</a>) : <a class="macro" href="../../libio/stdio.h.html#127" title="8192" data-ref="_M/BUFSIZ">BUFSIZ</a>);</td></tr>
+<tr><th id="238">238</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="15allocation" title='allocation' data-type='size_t' data-ref="15allocation" data-ref-filename="15allocation">allocation</dfn> = <a class="local col3 ref" href="#13default_allocation" title='default_allocation' data-ref="13default_allocation" data-ref-filename="13default_allocation">default_allocation</a>;</td></tr>
+<tr><th id="239">239</th><td><u>#<span data-ppcond="239">ifdef</span> <a class="macro" href="../unix/sysv/linux/x86/bits/stat.h.html#172" data-ref="_M/_STATBUF_ST_BLKSIZE">_STATBUF_ST_BLKSIZE</a></u></td></tr>
+<tr><th id="240">240</th><td>  <i>/* Increase allocation if requested, but not if the value appears to</i></td></tr>
+<tr><th id="241">241</th><td><i>     be bogus.  */</i></td></tr>
+<tr><th id="242">242</th><td>  <b>if</b> (<a class="local col1 ref" href="#11statp" title='statp' data-ref="11statp" data-ref-filename="11statp">statp</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="243">243</th><td>    <a class="local col5 ref" href="#15allocation" title='allocation' data-ref="15allocation" data-ref-filename="15allocation">allocation</a> = <a class="macro" href="../../misc/sys/param.h.html#102" title="(((((((size_t) statp-&gt;st_blksize)&gt;(default_allocation))?((size_t) statp-&gt;st_blksize):(default_allocation)))&lt;(1048576U))?(((((size_t) statp-&gt;st_blksize)&gt;(default_allocation))?((size_t) statp-&gt;st_blksize):(default_allocation))):(1048576U))" data-ref="_M/MIN">MIN</a> (<a class="macro" href="../../misc/sys/param.h.html#103" title="((((size_t) statp-&gt;st_blksize)&gt;(default_allocation))?((size_t) statp-&gt;st_blksize):(default_allocation))" data-ref="_M/MAX">MAX</a> ((<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col1 ref" href="#11statp" title='statp' data-ref="11statp" data-ref-filename="11statp">statp</a>-&gt;<a class="ref field" href="../unix/sysv/linux/x86/bits/stat.h.html#stat64::st_blksize" title='stat64::st_blksize' data-ref="stat64::st_blksize" data-ref-filename="stat64..st_blksize">st_blksize</a>, <a class="local col3 ref" href="#13default_allocation" title='default_allocation' data-ref="13default_allocation" data-ref-filename="13default_allocation">default_allocation</a>),</td></tr>
+<tr><th id="244">244</th><td>		      <a class="macro" href="#41" title="1048576U" data-ref="_M/MAX_DIR_BUFFER_SIZE">MAX_DIR_BUFFER_SIZE</a>);</td></tr>
+<tr><th id="245">245</th><td><u>#<span data-ppcond="239">endif</span></u></td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>  <a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *<dfn class="local col6 decl" id="16dirp" title='dirp' data-type='DIR *' data-ref="16dirp" data-ref-filename="16dirp">dirp</dfn> = (<a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *) <a class="ref fn" href="../../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<b>sizeof</b> (<a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a>) + <a class="local col5 ref" href="#15allocation" title='allocation' data-ref="15allocation" data-ref-filename="15allocation">allocation</a>);</td></tr>
+<tr><th id="248">248</th><td>  <b>if</b> (<a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="249">249</th><td>    {</td></tr>
+<tr><th id="250">250</th><td>      <a class="local col5 ref" href="#15allocation" title='allocation' data-ref="15allocation" data-ref-filename="15allocation">allocation</a> = <a class="local col4 ref" href="#14small_allocation" title='small_allocation' data-ref="14small_allocation" data-ref-filename="14small_allocation">small_allocation</a>;</td></tr>
+<tr><th id="251">251</th><td>      <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a> = (<a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a> *) <a class="ref fn" href="../../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> (<b>sizeof</b> (<a class="typedef" href="../../dirent/dirent.h.html#DIR" title='DIR' data-type='struct __dirstream' data-ref="DIR" data-ref-filename="DIR">DIR</a>) + <a class="local col5 ref" href="#15allocation" title='allocation' data-ref="15allocation" data-ref-filename="15allocation">allocation</a>);</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>      <b>if</b> (<a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="254">254</th><td>      <dfn class="lbl" id="12lose" data-ref="12lose" data-ref-filename="12lose">lose</dfn>:</td></tr>
+<tr><th id="255">255</th><td>	{</td></tr>
+<tr><th id="256">256</th><td>	  <b>if</b> (<a class="local col9 ref" href="#9close_fd" title='close_fd' data-ref="9close_fd" data-ref-filename="9close_fd">close_fd</a>)</td></tr>
+<tr><th id="257">257</th><td>	    {</td></tr>
+<tr><th id="258">258</th><td>	      <em>int</em> <dfn class="local col7 decl" id="17save_errno" title='save_errno' data-type='int' data-ref="17save_errno" data-ref-filename="17save_errno">save_errno</dfn> = <a class="macro" href="../../include/errno.h.html#22" title="rtld_errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="259">259</th><td>	      <a class="macro" href="../unix/sysv/linux/not-cancel.h.html#64" title="(void) ({ do { } while (0); ({ unsigned long int resultvar; long int __arg1 = (long int) ((fd)); register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (3) , &quot;r&quot; (_a1) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); })" data-ref="_M/close_not_cancel_no_status">close_not_cancel_no_status</a> (<a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>);</td></tr>
+<tr><th id="260">260</th><td>	      <a class="macro" href="../../include/errno.h.html#39" title="(rtld_errno = (save_errno))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col7 ref" href="#17save_errno" title='save_errno' data-ref="17save_errno" data-ref-filename="17save_errno">save_errno</a>);</td></tr>
+<tr><th id="261">261</th><td>	    }</td></tr>
+<tr><th id="262">262</th><td>	  <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="263">263</th><td>	}</td></tr>
+<tr><th id="264">264</th><td>    }</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::fd" title='__dirstream::fd' data-ref="__dirstream::fd" data-ref-filename="__dirstream..fd">fd</a> = <a class="local col8 ref" href="#8fd" title='fd' data-ref="8fd" data-ref-filename="8fd">fd</a>;</td></tr>
+<tr><th id="267">267</th><td><u>#<span data-ppcond="267">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(16 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="268">268</th><td>  __libc_lock_init (dirp-&gt;lock);</td></tr>
+<tr><th id="269">269</th><td><u>#<span data-ppcond="267">endif</span></u></td></tr>
+<tr><th id="270">270</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::allocation" title='__dirstream::allocation' data-ref="__dirstream::allocation" data-ref-filename="__dirstream..allocation">allocation</a> = <a class="local col5 ref" href="#15allocation" title='allocation' data-ref="15allocation" data-ref-filename="15allocation">allocation</a>;</td></tr>
+<tr><th id="271">271</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::size" title='__dirstream::size' data-ref="__dirstream::size" data-ref-filename="__dirstream..size">size</a> = <var>0</var>;</td></tr>
+<tr><th id="272">272</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::offset" title='__dirstream::offset' data-ref="__dirstream::offset" data-ref-filename="__dirstream..offset">offset</a> = <var>0</var>;</td></tr>
+<tr><th id="273">273</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::filepos" title='__dirstream::filepos' data-ref="__dirstream::filepos" data-ref-filename="__dirstream..filepos">filepos</a> = <var>0</var>;</td></tr>
+<tr><th id="274">274</th><td>  <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>-&gt;<a class="ref field" href="dirstream.h.html#__dirstream::errcode" title='__dirstream::errcode' data-ref="__dirstream::errcode" data-ref-filename="__dirstream..errcode">errcode</a> = <var>0</var>;</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td>  <b>return</b> <a class="local col6 ref" href="#16dirp" title='dirp' data-ref="16dirp" data-ref-filename="16dirp">dirp</a>;</td></tr>
+<tr><th id="277">277</th><td>}</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../unix/sysv/linux/dl-opendir.c.html'>glibc_src_2.23/sysdeps/unix/sysv/linux/dl-opendir.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

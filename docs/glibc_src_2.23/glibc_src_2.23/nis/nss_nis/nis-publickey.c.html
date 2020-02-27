@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nis-publickey.c source code [glibc_src_2.23/nis/nss_nis/nis-publickey.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/nis/nss_nis/nis-publickey.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.23</a>/<a href='..'>nis</a>/<a href='./'>nss_nis</a>/<a href='nis-publickey.c.html'>nis-publickey.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1996-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Thorsten Kukuk &lt;kukuk@suse.de&gt;, 1996.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/nss.h.html">&lt;nss.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/syslog.h.html">&lt;syslog.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/rpc/rpc.h.html">&lt;rpc/rpc.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/rpcsvc/yp.h.html">&lt;rpcsvc/yp.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../include/rpcsvc/ypclnt.h.html">&lt;rpcsvc/ypclnt.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../include/rpc/key_prot.h.html">&lt;rpc/key_prot.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../include/rpc/des_crypt.h.html">&lt;rpc/des_crypt.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../nss-nis.h.html">"nss-nis.h"</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i>/* If we haven't found the entry, we give a SUCCESS and an empty key back.</i></td></tr>
+<tr><th id="33">33</th><td><i>   Solaris docu says: sizeof (pkey) == HEXKEYBYTES + 1.</i></td></tr>
+<tr><th id="34">34</th><td><i>*/</i></td></tr>
+<tr><th id="35">35</th><td><b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a></td></tr>
+<tr><th id="36">36</th><td><dfn class="decl def fn" id="_nss_nis_getpublickey" title='_nss_nis_getpublickey' data-ref="_nss_nis_getpublickey" data-ref-filename="_nss_nis_getpublickey">_nss_nis_getpublickey</dfn> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="15netname" title='netname' data-type='const char *' data-ref="15netname" data-ref-filename="15netname">netname</dfn>, <em>char</em> *<dfn class="local col6 decl" id="16pkey" title='pkey' data-type='char *' data-ref="16pkey" data-ref-filename="16pkey">pkey</dfn>, <em>int</em> *<dfn class="local col7 decl" id="17errnop" title='errnop' data-type='int *' data-ref="17errnop" data-ref-filename="17errnop">errnop</dfn>)</td></tr>
+<tr><th id="37">37</th><td>{</td></tr>
+<tr><th id="38">38</th><td>  <a class="local col6 ref" href="#16pkey" title='pkey' data-ref="16pkey" data-ref-filename="16pkey">pkey</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td>  <b>if</b> (<a class="local col5 ref" href="#15netname" title='netname' data-ref="15netname" data-ref-filename="15netname">netname</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="41">41</th><td>    {</td></tr>
+<tr><th id="42">42</th><td>      *<a class="local col7 ref" href="#17errnop" title='errnop' data-ref="17errnop" data-ref-filename="17errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#25" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="43">43</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="44">44</th><td>    }</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>  <em>char</em> *<dfn class="local col8 decl" id="18domain" title='domain' data-type='char *' data-ref="18domain" data-ref-filename="18domain">domain</dfn> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;@&apos;) &amp;&amp; !__builtin_constant_p (netname) &amp;&amp; (&apos;@&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (netname, &apos;@&apos;) : __builtin_strchr (netname, &apos;@&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col5 ref" href="#15netname" title='netname' data-ref="15netname" data-ref-filename="15netname">netname</a>, <kbd>'@'</kbd>);</td></tr>
+<tr><th id="47">47</th><td>  <b>if</b> (<a class="local col8 ref" href="#18domain" title='domain' data-ref="18domain" data-ref-filename="18domain">domain</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="48">48</th><td>    {</td></tr>
+<tr><th id="49">49</th><td>      *<a class="local col7 ref" href="#17errnop" title='errnop' data-ref="17errnop" data-ref-filename="17errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#25" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="50">50</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="51">51</th><td>    }</td></tr>
+<tr><th id="52">52</th><td>  ++<a class="local col8 ref" href="#18domain" title='domain' data-ref="18domain" data-ref-filename="18domain">domain</a>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>  <em>char</em> *<dfn class="local col9 decl" id="19result" title='result' data-type='char *' data-ref="19result" data-ref-filename="19result">result</dfn>;</td></tr>
+<tr><th id="55">55</th><td>  <em>int</em> <dfn class="local col0 decl" id="20len" title='len' data-type='int' data-ref="20len" data-ref-filename="20len">len</dfn>;</td></tr>
+<tr><th id="56">56</th><td>  <em>int</em> <dfn class="local col1 decl" id="21yperr" title='yperr' data-type='int' data-ref="21yperr" data-ref-filename="21yperr">yperr</dfn> = <a class="ref fn" href="../rpcsvc/ypclnt.h.html#yp_match" title='yp_match' data-ref="yp_match" data-ref-filename="yp_match">yp_match</a> (<a class="local col8 ref" href="#18domain" title='domain' data-ref="18domain" data-ref-filename="18domain">domain</a>, <q>"publickey.byname"</q>, <a class="local col5 ref" href="#15netname" title='netname' data-ref="15netname" data-ref-filename="15netname">netname</a>, <a class="ref fn" href="../../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col5 ref" href="#15netname" title='netname' data-ref="15netname" data-ref-filename="15netname">netname</a>),</td></tr>
+<tr><th id="57">57</th><td>			&amp;<a class="local col9 ref" href="#19result" title='result' data-ref="19result" data-ref-filename="19result">result</a>, &amp;<a class="local col0 ref" href="#20len" title='len' data-ref="20len" data-ref-filename="20len">len</a>);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((yperr != 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#21yperr" title='yperr' data-ref="21yperr" data-ref-filename="21yperr">yperr</a> != <a class="macro" href="../rpcsvc/ypclnt.h.html#26" title="0" data-ref="_M/YPERR_SUCCESS">YPERR_SUCCESS</a>))</td></tr>
+<tr><th id="60">60</th><td>    {</td></tr>
+<tr><th id="61">61</th><td>      <b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a> <dfn class="local col2 decl" id="22retval" title='retval' data-type='enum nss_status' data-ref="22retval" data-ref-filename="22retval">retval</dfn> = <a class="ref fn" href="../nss-nis.h.html#yperr2nss" title='yperr2nss' data-ref="yperr2nss" data-ref-filename="yperr2nss">yperr2nss</a> (<a class="local col1 ref" href="#21yperr" title='yperr' data-ref="21yperr" data-ref-filename="21yperr">yperr</a>);</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>      <b>if</b> (<a class="local col2 ref" href="#22retval" title='retval' data-ref="22retval" data-ref-filename="22retval">retval</a> == <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_TRYAGAIN" title='NSS_STATUS_TRYAGAIN' data-ref="NSS_STATUS_TRYAGAIN" data-ref-filename="NSS_STATUS_TRYAGAIN">NSS_STATUS_TRYAGAIN</a>)</td></tr>
+<tr><th id="64">64</th><td>	*<a class="local col7 ref" href="#17errnop" title='errnop' data-ref="17errnop" data-ref-filename="17errnop">errnop</a> = <a class="macro" href="../../include/errno.h.html#33" title="errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="65">65</th><td>      <b>return</b> <a class="local col2 ref" href="#22retval" title='retval' data-ref="22retval" data-ref-filename="22retval">retval</a>;</td></tr>
+<tr><th id="66">66</th><td>    }</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>  <b>if</b> (<a class="local col9 ref" href="#19result" title='result' data-ref="19result" data-ref-filename="19result">result</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="69">69</th><td>    {</td></tr>
+<tr><th id="70">70</th><td>      <em>char</em> *<dfn class="local col3 decl" id="23p" title='p' data-type='char *' data-ref="23p" data-ref-filename="23p">p</dfn> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;:&apos;) &amp;&amp; !__builtin_constant_p (result) &amp;&amp; (&apos;:&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (result, &apos;:&apos;) : __builtin_strchr (result, &apos;:&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col9 ref" href="#19result" title='result' data-ref="19result" data-ref-filename="19result">result</a>, <kbd>':'</kbd>);</td></tr>
+<tr><th id="71">71</th><td>      <b>if</b> (<a class="local col3 ref" href="#23p" title='p' data-ref="23p" data-ref-filename="23p">p</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="72">72</th><td>	*<a class="local col3 ref" href="#23p" title='p' data-ref="23p" data-ref-filename="23p">p</a> = <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td>      <a class="macro" href="../../string/bits/string2.h.html#760" title="__builtin_strncpy (pkey, result, 48 + 1)" data-ref="_M/strncpy">strncpy</a> (<a class="local col6 ref" href="#16pkey" title='pkey' data-ref="16pkey" data-ref-filename="16pkey">pkey</a>, <a class="local col9 ref" href="#19result" title='result' data-ref="19result" data-ref-filename="19result">result</a>, <a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a> + <var>1</var>);</td></tr>
+<tr><th id="74">74</th><td>      <a class="local col6 ref" href="#16pkey" title='pkey' data-ref="16pkey" data-ref-filename="16pkey">pkey</a>[<a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="75">75</th><td>      <a class="ref fn" href="../../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col9 ref" href="#19result" title='result' data-ref="19result" data-ref-filename="19result">result</a>);</td></tr>
+<tr><th id="76">76</th><td>    }</td></tr>
+<tr><th id="77">77</th><td>  <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_SUCCESS" title='NSS_STATUS_SUCCESS' data-ref="NSS_STATUS_SUCCESS" data-ref-filename="NSS_STATUS_SUCCESS">NSS_STATUS_SUCCESS</a>;</td></tr>
+<tr><th id="78">78</th><td>}</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a></td></tr>
+<tr><th id="81">81</th><td><dfn class="decl def fn" id="_nss_nis_getsecretkey" title='_nss_nis_getsecretkey' data-ref="_nss_nis_getsecretkey" data-ref-filename="_nss_nis_getsecretkey">_nss_nis_getsecretkey</dfn> (<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="24netname" title='netname' data-type='const char *' data-ref="24netname" data-ref-filename="24netname">netname</dfn>, <em>char</em> *<dfn class="local col5 decl" id="25skey" title='skey' data-type='char *' data-ref="25skey" data-ref-filename="25skey">skey</dfn>, <em>char</em> *<dfn class="local col6 decl" id="26passwd" title='passwd' data-type='char *' data-ref="26passwd" data-ref-filename="26passwd">passwd</dfn>,</td></tr>
+<tr><th id="82">82</th><td>		       <em>int</em> *<dfn class="local col7 decl" id="27errnop" title='errnop' data-type='int *' data-ref="27errnop" data-ref-filename="27errnop">errnop</dfn>)</td></tr>
+<tr><th id="83">83</th><td>{</td></tr>
+<tr><th id="84">84</th><td>  <a class="local col5 ref" href="#25skey" title='skey' data-ref="25skey" data-ref-filename="25skey">skey</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <b>if</b> (<a class="local col4 ref" href="#24netname" title='netname' data-ref="24netname" data-ref-filename="24netname">netname</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> || <a class="local col6 ref" href="#26passwd" title='passwd' data-ref="26passwd" data-ref-filename="26passwd">passwd</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="87">87</th><td>    {</td></tr>
+<tr><th id="88">88</th><td>      *<a class="local col7 ref" href="#27errnop" title='errnop' data-ref="27errnop" data-ref-filename="27errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#25" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="89">89</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="90">90</th><td>    }</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>  <em>char</em> *<dfn class="local col8 decl" id="28domain" title='domain' data-type='char *' data-ref="28domain" data-ref-filename="28domain">domain</dfn> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;@&apos;) &amp;&amp; !__builtin_constant_p (netname) &amp;&amp; (&apos;@&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (netname, &apos;@&apos;) : __builtin_strchr (netname, &apos;@&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col4 ref" href="#24netname" title='netname' data-ref="24netname" data-ref-filename="24netname">netname</a>, <kbd>'@'</kbd>);</td></tr>
+<tr><th id="93">93</th><td>  <b>if</b> (<a class="local col8 ref" href="#28domain" title='domain' data-ref="28domain" data-ref-filename="28domain">domain</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="94">94</th><td>    {</td></tr>
+<tr><th id="95">95</th><td>      *<a class="local col7 ref" href="#27errnop" title='errnop' data-ref="27errnop" data-ref-filename="27errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#25" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="96">96</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="97">97</th><td>    }</td></tr>
+<tr><th id="98">98</th><td>  ++<a class="local col8 ref" href="#28domain" title='domain' data-ref="28domain" data-ref-filename="28domain">domain</a>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>  <em>char</em> *<dfn class="local col9 decl" id="29result" title='result' data-type='char *' data-ref="29result" data-ref-filename="29result">result</dfn>;</td></tr>
+<tr><th id="101">101</th><td>  <em>int</em> <dfn class="local col0 decl" id="30len" title='len' data-type='int' data-ref="30len" data-ref-filename="30len">len</dfn>;</td></tr>
+<tr><th id="102">102</th><td>  <em>int</em> <dfn class="local col1 decl" id="31yperr" title='yperr' data-type='int' data-ref="31yperr" data-ref-filename="31yperr">yperr</dfn> = <a class="ref fn" href="../rpcsvc/ypclnt.h.html#yp_match" title='yp_match' data-ref="yp_match" data-ref-filename="yp_match">yp_match</a> (<a class="local col8 ref" href="#28domain" title='domain' data-ref="28domain" data-ref-filename="28domain">domain</a>, <q>"publickey.byname"</q>, <a class="local col4 ref" href="#24netname" title='netname' data-ref="24netname" data-ref-filename="24netname">netname</a>, <a class="ref fn" href="../../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col4 ref" href="#24netname" title='netname' data-ref="24netname" data-ref-filename="24netname">netname</a>),</td></tr>
+<tr><th id="103">103</th><td>			&amp;<a class="local col9 ref" href="#29result" title='result' data-ref="29result" data-ref-filename="29result">result</a>, &amp;<a class="local col0 ref" href="#30len" title='len' data-ref="30len" data-ref-filename="30len">len</a>);</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#385" title="__builtin_expect ((yperr != 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#31yperr" title='yperr' data-ref="31yperr" data-ref-filename="31yperr">yperr</a> != <a class="macro" href="../rpcsvc/ypclnt.h.html#26" title="0" data-ref="_M/YPERR_SUCCESS">YPERR_SUCCESS</a>))</td></tr>
+<tr><th id="106">106</th><td>    {</td></tr>
+<tr><th id="107">107</th><td>      <b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a> <dfn class="local col2 decl" id="32retval" title='retval' data-type='enum nss_status' data-ref="32retval" data-ref-filename="32retval">retval</dfn> = <a class="ref fn" href="../nss-nis.h.html#yperr2nss" title='yperr2nss' data-ref="yperr2nss" data-ref-filename="yperr2nss">yperr2nss</a> (<a class="local col1 ref" href="#31yperr" title='yperr' data-ref="31yperr" data-ref-filename="31yperr">yperr</a>);</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>      <b>if</b> (<a class="local col2 ref" href="#32retval" title='retval' data-ref="32retval" data-ref-filename="32retval">retval</a> == <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_TRYAGAIN" title='NSS_STATUS_TRYAGAIN' data-ref="NSS_STATUS_TRYAGAIN" data-ref-filename="NSS_STATUS_TRYAGAIN">NSS_STATUS_TRYAGAIN</a>)</td></tr>
+<tr><th id="110">110</th><td>	*<a class="local col7 ref" href="#27errnop" title='errnop' data-ref="27errnop" data-ref-filename="27errnop">errnop</a> = <a class="macro" href="../../include/errno.h.html#33" title="errno" data-ref="_M/errno">errno</a>;</td></tr>
+<tr><th id="111">111</th><td>      <b>return</b> <a class="local col2 ref" href="#32retval" title='retval' data-ref="32retval" data-ref-filename="32retval">retval</a>;</td></tr>
+<tr><th id="112">112</th><td>    }</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <b>if</b> (<a class="local col9 ref" href="#29result" title='result' data-ref="29result" data-ref-filename="29result">result</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="115">115</th><td>    {</td></tr>
+<tr><th id="116">116</th><td>      <em>char</em> *<dfn class="local col3 decl" id="33p" title='p' data-type='char *' data-ref="33p" data-ref-filename="33p">p</dfn> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;:&apos;) &amp;&amp; !__builtin_constant_p (result) &amp;&amp; (&apos;:&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (result, &apos;:&apos;) : __builtin_strchr (result, &apos;:&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col9 ref" href="#29result" title='result' data-ref="29result" data-ref-filename="29result">result</a>, <kbd>':'</kbd>);</td></tr>
+<tr><th id="117">117</th><td>      <b>if</b> (<a class="local col3 ref" href="#33p" title='p' data-ref="33p" data-ref-filename="33p">p</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="118">118</th><td>	{</td></tr>
+<tr><th id="119">119</th><td>	  <em>char</em> <dfn class="local col4 decl" id="34buf" title='buf' data-type='char [98]' data-ref="34buf" data-ref-filename="34buf">buf</dfn>[<var>2</var> * (<a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a> + <var>1</var>)];</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	  ++<a class="local col3 ref" href="#33p" title='p' data-ref="33p" data-ref-filename="33p">p</a>;</td></tr>
+<tr><th id="122">122</th><td>	  <a class="macro" href="../../string/bits/string2.h.html#760" title="__builtin_strncpy (buf, p, 2 * (48 + 1))" data-ref="_M/strncpy">strncpy</a> (<a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>, <a class="local col3 ref" href="#33p" title='p' data-ref="33p" data-ref-filename="33p">p</a>, <var>2</var> * (<a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a> + <var>1</var>));</td></tr>
+<tr><th id="123">123</th><td>	  <a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>[<var>2</var> * <a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a> + <var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="124">124</th><td>	  <b>if</b> (<a class="ref fn" href="../../include/rpc/des_crypt.h.html#xdecrypt" title='xdecrypt' data-ref="xdecrypt" data-ref-filename="xdecrypt">xdecrypt</a> (<a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>, <a class="local col6 ref" href="#26passwd" title='passwd' data-ref="26passwd" data-ref-filename="26passwd">passwd</a>)</td></tr>
+<tr><th id="125">125</th><td>	      &amp;&amp; <a class="ref fn" href="../../string/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a> (<a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>, &amp;(<a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>[<a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a>]), <a class="macro" href="../../sunrpc/rpc/key_prot.h.html#51" title="16" data-ref="_M/KEYCHECKSUMSIZE">KEYCHECKSUMSIZE</a>) == <var>0</var>)</td></tr>
+<tr><th id="126">126</th><td>	    {</td></tr>
+<tr><th id="127">127</th><td>	      <a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>[<a class="macro" href="../../sunrpc/rpc/key_prot.h.html#48" title="48" data-ref="_M/HEXKEYBYTES">HEXKEYBYTES</a>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="128">128</th><td>	      <a class="ref fn" href="../../string/string.h.html#strcpy" title='strcpy' data-ref="strcpy" data-ref-filename="strcpy">strcpy</a> (<a class="local col5 ref" href="#25skey" title='skey' data-ref="25skey" data-ref-filename="25skey">skey</a>, <a class="local col4 ref" href="#34buf" title='buf' data-ref="34buf" data-ref-filename="34buf">buf</a>);</td></tr>
+<tr><th id="129">129</th><td>	    }</td></tr>
+<tr><th id="130">130</th><td>	}</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>      <a class="ref fn" href="../../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col9 ref" href="#29result" title='result' data-ref="29result" data-ref-filename="29result">result</a>);</td></tr>
+<tr><th id="133">133</th><td>    }</td></tr>
+<tr><th id="134">134</th><td>  <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_SUCCESS" title='NSS_STATUS_SUCCESS' data-ref="NSS_STATUS_SUCCESS" data-ref-filename="NSS_STATUS_SUCCESS">NSS_STATUS_SUCCESS</a>;</td></tr>
+<tr><th id="135">135</th><td>}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i  data-doc="parse_netid_str">/* Parse uid and group information from the passed string.</i></td></tr>
+<tr><th id="138">138</th><td><i  data-doc="parse_netid_str">   The format of the string passed is uid:gid,grp,grp, ...  */</i></td></tr>
+<tr><th id="139">139</th><td><em>static</em> <b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a></td></tr>
+<tr><th id="140">140</th><td><dfn class="tu decl def fn" id="parse_netid_str" title='parse_netid_str' data-type='enum nss_status parse_netid_str(const char * s, uid_t * uidp, gid_t * gidp, int * gidlenp, gid_t * gidlist)' data-ref="parse_netid_str" data-ref-filename="parse_netid_str">parse_netid_str</dfn> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="35s" title='s' data-type='const char *' data-ref="35s" data-ref-filename="35s">s</dfn>, <a class="typedef" href="../../posix/sys/types.h.html#uid_t" title='uid_t' data-type='__uid_t' data-ref="uid_t" data-ref-filename="uid_t">uid_t</a> *<dfn class="local col6 decl" id="36uidp" title='uidp' data-type='uid_t *' data-ref="36uidp" data-ref-filename="36uidp">uidp</dfn>, <a class="typedef" href="../../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col7 decl" id="37gidp" title='gidp' data-type='gid_t *' data-ref="37gidp" data-ref-filename="37gidp">gidp</dfn>, <em>int</em> *<dfn class="local col8 decl" id="38gidlenp" title='gidlenp' data-type='int *' data-ref="38gidlenp" data-ref-filename="38gidlenp">gidlenp</dfn>,</td></tr>
+<tr><th id="141">141</th><td>		 <a class="typedef" href="../../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col9 decl" id="39gidlist" title='gidlist' data-type='gid_t *' data-ref="39gidlist" data-ref-filename="39gidlist">gidlist</dfn>)</td></tr>
+<tr><th id="142">142</th><td>{</td></tr>
+<tr><th id="143">143</th><td>  <em>char</em> *<dfn class="local col0 decl" id="40p" title='p' data-type='char *' data-ref="40p" data-ref-filename="40p">p</dfn>, *<dfn class="local col1 decl" id="41ep" title='ep' data-type='char *' data-ref="41ep" data-ref-filename="41ep">ep</dfn>;</td></tr>
+<tr><th id="144">144</th><td>  <em>int</em> <dfn class="local col2 decl" id="42gidlen" title='gidlen' data-type='int' data-ref="42gidlen" data-ref-filename="42gidlen">gidlen</dfn>;</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>  <b>if</b> (!<a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a> || !<a class="macro" href="../../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((*s))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a> (*<a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a>))</td></tr>
+<tr><th id="147">147</th><td>    {</td></tr>
+<tr><th id="148">148</th><td>      <a class="ref fn" href="../../misc/sys/syslog.h.html#syslog" title='syslog' data-ref="syslog" data-ref-filename="syslog">syslog</a> (<a class="macro" href="../../misc/sys/syslog.h.html#54" title="3" data-ref="_M/LOG_ERR">LOG_ERR</a>, <q>"netname2user: expecting uid '%s'"</q>, <a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a>);</td></tr>
+<tr><th id="149">149</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;	<i>/* XXX need a better error */</i></td></tr>
+<tr><th id="150">150</th><td>    }</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>  <i>/* Fetch the uid */</i></td></tr>
+<tr><th id="153">153</th><td>  *<a class="local col6 ref" href="#36uidp" title='uidp' data-ref="36uidp" data-ref-filename="36uidp">uidp</a> = <a class="ref fn" href="../../stdlib/stdlib.h.html#strtoul" title='strtoul' data-ref="strtoul" data-ref-filename="strtoul">strtoul</a> (<a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <var>10</var>);</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>  <b>if</b> (*<a class="local col6 ref" href="#36uidp" title='uidp' data-ref="36uidp" data-ref-filename="36uidp">uidp</a> == <var>0</var>)</td></tr>
+<tr><th id="156">156</th><td>    {</td></tr>
+<tr><th id="157">157</th><td>      <a class="ref fn" href="../../misc/sys/syslog.h.html#syslog" title='syslog' data-ref="syslog" data-ref-filename="syslog">syslog</a> (<a class="macro" href="../../misc/sys/syslog.h.html#54" title="3" data-ref="_M/LOG_ERR">LOG_ERR</a>, <q>"netname2user: should not have uid 0"</q>);</td></tr>
+<tr><th id="158">158</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;</td></tr>
+<tr><th id="159">159</th><td>    }</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>  <i>/* Now get the group list */</i></td></tr>
+<tr><th id="162">162</th><td>  <a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;:&apos;) &amp;&amp; !__builtin_constant_p (s) &amp;&amp; (&apos;:&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (s, &apos;:&apos;) : __builtin_strchr (s, &apos;:&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a>, <kbd>':'</kbd>);</td></tr>
+<tr><th id="163">163</th><td>  <b>if</b> (!<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>)</td></tr>
+<tr><th id="164">164</th><td>    {</td></tr>
+<tr><th id="165">165</th><td>      <a class="ref fn" href="../../misc/sys/syslog.h.html#syslog" title='syslog' data-ref="syslog" data-ref-filename="syslog">syslog</a> (<a class="macro" href="../../misc/sys/syslog.h.html#54" title="3" data-ref="_M/LOG_ERR">LOG_ERR</a>, <q>"netname2user: missing group id list in '%s'"</q>, <a class="local col5 ref" href="#35s" title='s' data-ref="35s" data-ref-filename="35s">s</a>);</td></tr>
+<tr><th id="166">166</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;</td></tr>
+<tr><th id="167">167</th><td>    }</td></tr>
+<tr><th id="168">168</th><td>  ++<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>;				<i>/* skip ':' */</i></td></tr>
+<tr><th id="169">169</th><td>  <b>if</b> (!<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a> || (!<a class="macro" href="../../ctype/ctype.h.html#200" title="((*__ctype_b_loc ())[(int) ((*p))] &amp; (unsigned short int) _ISdigit)" data-ref="_M/isdigit">isdigit</a> (*<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>)))</td></tr>
+<tr><th id="170">170</th><td>    {</td></tr>
+<tr><th id="171">171</th><td>      <a class="ref fn" href="../../misc/sys/syslog.h.html#syslog" title='syslog' data-ref="syslog" data-ref-filename="syslog">syslog</a> (<a class="macro" href="../../misc/sys/syslog.h.html#54" title="3" data-ref="_M/LOG_ERR">LOG_ERR</a>, <q>"netname2user: missing group id list in '%s'."</q>, <a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>);</td></tr>
+<tr><th id="172">172</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;</td></tr>
+<tr><th id="173">173</th><td>    }</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>  *<a class="local col7 ref" href="#37gidp" title='gidp' data-ref="37gidp" data-ref-filename="37gidp">gidp</a> = <a class="ref fn" href="../../stdlib/stdlib.h.html#strtoul" title='strtoul' data-ref="strtoul" data-ref-filename="strtoul">strtoul</a> (<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>, &amp;<a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a>, <var>10</var>);</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>  <a class="local col2 ref" href="#42gidlen" title='gidlen' data-ref="42gidlen" data-ref-filename="42gidlen">gidlen</a> = <var>0</var>;</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>  <i>/* After strtoul() ep should point to the first invalid character.</i></td></tr>
+<tr><th id="180">180</th><td><i>     This is the marker "," we search for the next value.  */</i></td></tr>
+<tr><th id="181">181</th><td>  <b>while</b> (<a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; *<a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a> == <kbd>','</kbd>)</td></tr>
+<tr><th id="182">182</th><td>    {</td></tr>
+<tr><th id="183">183</th><td>      <a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a>++;</td></tr>
+<tr><th id="184">184</th><td>      <a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a> = <a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a>;</td></tr>
+<tr><th id="185">185</th><td>      <a class="local col9 ref" href="#39gidlist" title='gidlist' data-ref="39gidlist" data-ref-filename="39gidlist">gidlist</a>[<a class="local col2 ref" href="#42gidlen" title='gidlen' data-ref="42gidlen" data-ref-filename="42gidlen">gidlen</a>++] = <a class="ref fn" href="../../stdlib/stdlib.h.html#strtoul" title='strtoul' data-ref="strtoul" data-ref-filename="strtoul">strtoul</a> (<a class="local col0 ref" href="#40p" title='p' data-ref="40p" data-ref-filename="40p">p</a>, &amp;<a class="local col1 ref" href="#41ep" title='ep' data-ref="41ep" data-ref-filename="41ep">ep</a>, <var>10</var>);</td></tr>
+<tr><th id="186">186</th><td>    }</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td>  *<a class="local col8 ref" href="#38gidlenp" title='gidlenp' data-ref="38gidlenp" data-ref-filename="38gidlenp">gidlenp</a> = <a class="local col2 ref" href="#42gidlen" title='gidlen' data-ref="42gidlen" data-ref-filename="42gidlen">gidlen</a>;</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>  <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_SUCCESS" title='NSS_STATUS_SUCCESS' data-ref="NSS_STATUS_SUCCESS" data-ref-filename="NSS_STATUS_SUCCESS">NSS_STATUS_SUCCESS</a>;</td></tr>
+<tr><th id="191">191</th><td>}</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a></td></tr>
+<tr><th id="195">195</th><td><dfn class="decl def fn" id="_nss_nis_netname2user" title='_nss_nis_netname2user' data-ref="_nss_nis_netname2user" data-ref-filename="_nss_nis_netname2user">_nss_nis_netname2user</dfn> (<em>char</em> <dfn class="local col3 decl" id="43netname" title='netname' data-type='char *' data-ref="43netname" data-ref-filename="43netname">netname</dfn>[<a class="macro" href="../../sunrpc/rpc/auth.h.html#47" title="255" data-ref="_M/MAXNETNAMELEN">MAXNETNAMELEN</a> + <var>1</var>], <a class="typedef" href="../../posix/sys/types.h.html#uid_t" title='uid_t' data-type='__uid_t' data-ref="uid_t" data-ref-filename="uid_t">uid_t</a> *<dfn class="local col4 decl" id="44uidp" title='uidp' data-type='uid_t *' data-ref="44uidp" data-ref-filename="44uidp">uidp</dfn>,</td></tr>
+<tr><th id="196">196</th><td>		       <a class="typedef" href="../../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col5 decl" id="45gidp" title='gidp' data-type='gid_t *' data-ref="45gidp" data-ref-filename="45gidp">gidp</dfn>, <em>int</em> *<dfn class="local col6 decl" id="46gidlenp" title='gidlenp' data-type='int *' data-ref="46gidlenp" data-ref-filename="46gidlenp">gidlenp</dfn>, <a class="typedef" href="../../posix/sys/types.h.html#gid_t" title='gid_t' data-type='__gid_t' data-ref="gid_t" data-ref-filename="gid_t">gid_t</a> *<dfn class="local col7 decl" id="47gidlist" title='gidlist' data-type='gid_t *' data-ref="47gidlist" data-ref-filename="47gidlist">gidlist</dfn>, <em>int</em> *<dfn class="local col8 decl" id="48errnop" title='errnop' data-type='int *' data-ref="48errnop" data-ref-filename="48errnop">errnop</dfn>)</td></tr>
+<tr><th id="197">197</th><td>{</td></tr>
+<tr><th id="198">198</th><td>  <em>char</em> *<dfn class="local col9 decl" id="49domain" title='domain' data-type='char *' data-ref="49domain" data-ref-filename="49domain">domain</dfn> = <a class="macro" href="../../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;@&apos;) &amp;&amp; !__builtin_constant_p (netname) &amp;&amp; (&apos;@&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (netname, &apos;@&apos;) : __builtin_strchr (netname, &apos;@&apos;)))" data-ref="_M/strchr">strchr</a> (<a class="local col3 ref" href="#43netname" title='netname' data-ref="43netname" data-ref-filename="43netname">netname</a>, <kbd>'@'</kbd>);</td></tr>
+<tr><th id="199">199</th><td>  <b>if</b> (<a class="local col9 ref" href="#49domain" title='domain' data-ref="49domain" data-ref-filename="49domain">domain</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="200">200</th><td>    {</td></tr>
+<tr><th id="201">201</th><td>      *<a class="local col8 ref" href="#48errnop" title='errnop' data-ref="48errnop" data-ref-filename="48errnop">errnop</a> = <a class="macro" href="../../../include/asm-generic/errno-base.h.html#25" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="202">202</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="203">203</th><td>    }</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>  <i>/* Point past the '@' character */</i></td></tr>
+<tr><th id="206">206</th><td>  ++<a class="local col9 ref" href="#49domain" title='domain' data-ref="49domain" data-ref-filename="49domain">domain</a>;</td></tr>
+<tr><th id="207">207</th><td>  <em>char</em> *<dfn class="local col0 decl" id="50lookup" title='lookup' data-type='char *' data-ref="50lookup" data-ref-filename="50lookup">lookup</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="208">208</th><td>  <em>int</em> <dfn class="local col1 decl" id="51len" title='len' data-type='int' data-ref="51len" data-ref-filename="51len">len</dfn>;</td></tr>
+<tr><th id="209">209</th><td>  <em>int</em> <dfn class="local col2 decl" id="52yperr" title='yperr' data-type='int' data-ref="52yperr" data-ref-filename="52yperr">yperr</dfn> = <a class="ref fn" href="../rpcsvc/ypclnt.h.html#yp_match" title='yp_match' data-ref="yp_match" data-ref-filename="yp_match">yp_match</a> (<a class="local col9 ref" href="#49domain" title='domain' data-ref="49domain" data-ref-filename="49domain">domain</a>, <q>"netid.byname"</q>, <a class="local col3 ref" href="#43netname" title='netname' data-ref="43netname" data-ref-filename="43netname">netname</a>, <a class="ref fn" href="../../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col3 ref" href="#43netname" title='netname' data-ref="43netname" data-ref-filename="43netname">netname</a>),</td></tr>
+<tr><th id="210">210</th><td>			&amp;<a class="local col0 ref" href="#50lookup" title='lookup' data-ref="50lookup" data-ref-filename="50lookup">lookup</a>, &amp;<a class="local col1 ref" href="#51len" title='len' data-ref="51len" data-ref-filename="51len">len</a>);</td></tr>
+<tr><th id="211">211</th><td>  <b>switch</b> (<a class="local col2 ref" href="#52yperr" title='yperr' data-ref="52yperr" data-ref-filename="52yperr">yperr</a>)</td></tr>
+<tr><th id="212">212</th><td>    {</td></tr>
+<tr><th id="213">213</th><td>    <b>case</b> <a class="macro" href="../rpcsvc/ypclnt.h.html#26" title="0" data-ref="_M/YPERR_SUCCESS">YPERR_SUCCESS</a>:</td></tr>
+<tr><th id="214">214</th><td>      <b>break</b>;			<i>/* the successful case */</i></td></tr>
+<tr><th id="215">215</th><td>    <b>case</b> <a class="macro" href="../rpcsvc/ypclnt.h.html#29" title="3" data-ref="_M/YPERR_DOMAIN">YPERR_DOMAIN</a>:</td></tr>
+<tr><th id="216">216</th><td>    <b>case</b> <a class="macro" href="../rpcsvc/ypclnt.h.html#31" title="5" data-ref="_M/YPERR_KEY">YPERR_KEY</a>:</td></tr>
+<tr><th id="217">217</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;</td></tr>
+<tr><th id="218">218</th><td>    <b>case</b> <a class="macro" href="../rpcsvc/ypclnt.h.html#30" title="4" data-ref="_M/YPERR_MAP">YPERR_MAP</a>:</td></tr>
+<tr><th id="219">219</th><td>    <b>default</b>:</td></tr>
+<tr><th id="220">220</th><td>      <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_UNAVAIL" title='NSS_STATUS_UNAVAIL' data-ref="NSS_STATUS_UNAVAIL" data-ref-filename="NSS_STATUS_UNAVAIL">NSS_STATUS_UNAVAIL</a>;</td></tr>
+<tr><th id="221">221</th><td>    }</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>  <b>if</b> (<a class="local col0 ref" href="#50lookup" title='lookup' data-ref="50lookup" data-ref-filename="50lookup">lookup</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="224">224</th><td>    <b>return</b> <a class="enum" href="../../nss/nss.h.html#NSS_STATUS_NOTFOUND" title='NSS_STATUS_NOTFOUND' data-ref="NSS_STATUS_NOTFOUND" data-ref-filename="NSS_STATUS_NOTFOUND">NSS_STATUS_NOTFOUND</a>;</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>  <a class="local col0 ref" href="#50lookup" title='lookup' data-ref="50lookup" data-ref-filename="50lookup">lookup</a>[<a class="local col1 ref" href="#51len" title='len' data-ref="51len" data-ref-filename="51len">len</a>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>  <b>enum</b> <a class="type" href="../../nss/nss.h.html#nss_status" title='nss_status' data-ref="nss_status" data-ref-filename="nss_status">nss_status</a> <dfn class="local col3 decl" id="53err" title='err' data-type='enum nss_status' data-ref="53err" data-ref-filename="53err">err</dfn> = <a class="tu ref fn" href="#parse_netid_str" title='parse_netid_str' data-use='c' data-ref="parse_netid_str" data-ref-filename="parse_netid_str">parse_netid_str</a> (<a class="local col0 ref" href="#50lookup" title='lookup' data-ref="50lookup" data-ref-filename="50lookup">lookup</a>, <a class="local col4 ref" href="#44uidp" title='uidp' data-ref="44uidp" data-ref-filename="44uidp">uidp</a>, <a class="local col5 ref" href="#45gidp" title='gidp' data-ref="45gidp" data-ref-filename="45gidp">gidp</a>, <a class="local col6 ref" href="#46gidlenp" title='gidlenp' data-ref="46gidlenp" data-ref-filename="46gidlenp">gidlenp</a>, <a class="local col7 ref" href="#47gidlist" title='gidlist' data-ref="47gidlist" data-ref-filename="47gidlist">gidlist</a>);</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>  <a class="ref fn" href="../../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col0 ref" href="#50lookup" title='lookup' data-ref="50lookup" data-ref-filename="50lookup">lookup</a>);</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td>  <b>return</b> <a class="local col3 ref" href="#53err" title='err' data-ref="53err" data-ref-filename="53err">err</a>;</td></tr>
+<tr><th id="234">234</th><td>}</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

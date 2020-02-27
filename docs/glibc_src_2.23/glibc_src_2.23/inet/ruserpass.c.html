@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ruserpass.c source code [glibc_src_2.23/inet/ruserpass.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="toktab "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/inet/ruserpass.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>inet</a>/<a href='ruserpass.c.html'>ruserpass.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (c) 1985, 1993, 1994</i></td></tr>
+<tr><th id="3">3</th><td><i> *	The Regents of the University of California.  All rights reserved.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Redistribution and use in source and binary forms, with or without</i></td></tr>
+<tr><th id="6">6</th><td><i> * modification, are permitted provided that the following conditions</i></td></tr>
+<tr><th id="7">7</th><td><i> * are met:</i></td></tr>
+<tr><th id="8">8</th><td><i> * 1. Redistributions of source code must retain the above copyright</i></td></tr>
+<tr><th id="9">9</th><td><i> *    notice, this list of conditions and the following disclaimer.</i></td></tr>
+<tr><th id="10">10</th><td><i> * 2. Redistributions in binary form must reproduce the above copyright</i></td></tr>
+<tr><th id="11">11</th><td><i> *    notice, this list of conditions and the following disclaimer in the</i></td></tr>
+<tr><th id="12">12</th><td><i> *    documentation and/or other materials provided with the distribution.</i></td></tr>
+<tr><th id="13">13</th><td><i> * 4. Neither the name of the University nor the names of its contributors</i></td></tr>
+<tr><th id="14">14</th><td><i> *    may be used to endorse or promote products derived from this software</i></td></tr>
+<tr><th id="15">15</th><td><i> *    without specific prior written permission.</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND</i></td></tr>
+<tr><th id="18">18</th><td><i> * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE</i></td></tr>
+<tr><th id="19">19</th><td><i> * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE</i></td></tr>
+<tr><th id="20">20</th><td><i> * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE</i></td></tr>
+<tr><th id="21">21</th><td><i> * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</i></td></tr>
+<tr><th id="22">22</th><td><i> * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS</i></td></tr>
+<tr><th id="23">23</th><td><i> * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)</i></td></tr>
+<tr><th id="24">24</th><td><i> * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT</i></td></tr>
+<tr><th id="25">25</th><td><i> * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY</i></td></tr>
+<tr><th id="26">26</th><td><i> * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF</i></td></tr>
+<tr><th id="27">27</th><td><i> * SUCH DAMAGE.</i></td></tr>
+<tr><th id="28">28</th><td><i> */</i></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="30">if</span> defined(<span class="macro" data-ref="_M/LIBC_SCCS">LIBC_SCCS</span>) &amp;&amp; !defined(<span class="macro" data-ref="_M/lint">lint</span>)</u></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <em>char</em> sccsid[] = <q>"@(#)ruserpass.c	8.3 (Berkeley) 4/2/94"</q>;</td></tr>
+<tr><th id="32">32</th><td><u>#<span data-ppcond="30">endif</span> /* not lint */</u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../include/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../include/err.h.html">&lt;err.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../include/netdb.h.html">&lt;netdb.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="../include/stdio_ext.h.html">&lt;stdio_ext.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="44">44</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="45">45</th><td><u>#include <a href="../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../include/libintl.h.html">&lt;libintl.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><i  data-doc="token">/* #include "ftp_var.h" */</i></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><em>static</em>	<em>int</em> <a class="tu decl fn" href="#token" title='token' data-type='int token()' data-ref="token" data-ref-filename="token">token</a> (<em>void</em>);</td></tr>
+<tr><th id="51">51</th><td><em>static</em>	<a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="tu decl def" id="cfile" title='cfile' data-type='FILE *' data-ref="cfile" data-ref-filename="cfile">cfile</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><u>#define	<dfn class="macro" id="_M/DEFAULT" data-ref="_M/DEFAULT">DEFAULT</dfn>	1</u></td></tr>
+<tr><th id="54">54</th><td><u>#define	<dfn class="macro" id="_M/LOGIN" data-ref="_M/LOGIN">LOGIN</dfn>	2</u></td></tr>
+<tr><th id="55">55</th><td><u>#define	<dfn class="macro" id="_M/PASSWD" data-ref="_M/PASSWD">PASSWD</dfn>	3</u></td></tr>
+<tr><th id="56">56</th><td><u>#define	<dfn class="macro" id="_M/ACCOUNT" data-ref="_M/ACCOUNT">ACCOUNT</dfn> 4</u></td></tr>
+<tr><th id="57">57</th><td><u>#define <dfn class="macro" id="_M/MACDEF" data-ref="_M/MACDEF">MACDEF</dfn>  5</u></td></tr>
+<tr><th id="58">58</th><td><u>#define	<dfn class="macro" id="_M/ID" data-ref="_M/ID">ID</dfn>	10</u></td></tr>
+<tr><th id="59">59</th><td><u>#define	<dfn class="macro" id="_M/MACHINE" data-ref="_M/MACHINE">MACHINE</dfn>	11</u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><em>static</em> <em>char</em> <dfn class="tu decl def" id="tokval" title='tokval' data-type='char [100]' data-ref="tokval" data-ref-filename="tokval">tokval</dfn>[<var>100</var>];</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><em>static</em> <em>const</em> <em>char</em> <dfn class="tu decl def" id="tokstr" title='tokstr' data-type='const char [53]' data-ref="tokstr" data-ref-filename="tokstr">tokstr</dfn>[] =</td></tr>
+<tr><th id="64">64</th><td>{</td></tr>
+<tr><th id="65">65</th><td><u>#define <dfn class="macro" id="_M/TOK_DEFAULT_IDX" data-ref="_M/TOK_DEFAULT_IDX">TOK_DEFAULT_IDX</dfn>	0</u></td></tr>
+<tr><th id="66">66</th><td>  <q>"default\0"</q></td></tr>
+<tr><th id="67">67</th><td><u>#define <dfn class="macro" id="_M/TOK_LOGIN_IDX" data-ref="_M/TOK_LOGIN_IDX">TOK_LOGIN_IDX</dfn>	(TOK_DEFAULT_IDX + sizeof "default")</u></td></tr>
+<tr><th id="68">68</th><td>  <q>"login\0"</q></td></tr>
+<tr><th id="69">69</th><td><u>#define <dfn class="macro" id="_M/TOK_PASSWORD_IDX" data-ref="_M/TOK_PASSWORD_IDX">TOK_PASSWORD_IDX</dfn> (TOK_LOGIN_IDX + sizeof "login")</u></td></tr>
+<tr><th id="70">70</th><td>  <q>"password\0"</q></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/TOK_PASSWD_IDX" data-ref="_M/TOK_PASSWD_IDX">TOK_PASSWD_IDX</dfn>	(TOK_PASSWORD_IDX + sizeof "password")</u></td></tr>
+<tr><th id="72">72</th><td>  <q>"passwd\0"</q></td></tr>
+<tr><th id="73">73</th><td><u>#define <dfn class="macro" id="_M/TOK_ACCOUNT_IDX" data-ref="_M/TOK_ACCOUNT_IDX">TOK_ACCOUNT_IDX</dfn>	(TOK_PASSWD_IDX + sizeof "passwd")</u></td></tr>
+<tr><th id="74">74</th><td>  <q>"account\0"</q></td></tr>
+<tr><th id="75">75</th><td><u>#define <dfn class="macro" id="_M/TOK_MACHINE_IDX" data-ref="_M/TOK_MACHINE_IDX">TOK_MACHINE_IDX</dfn>	(TOK_ACCOUNT_IDX + sizeof "account")</u></td></tr>
+<tr><th id="76">76</th><td>  <q>"machine\0"</q></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/TOK_MACDEF_IDX" data-ref="_M/TOK_MACDEF_IDX">TOK_MACDEF_IDX</dfn>	(TOK_MACHINE_IDX + sizeof "machine")</u></td></tr>
+<tr><th id="78">78</th><td>  <q>"macdef"</q></td></tr>
+<tr><th id="79">79</th><td>};</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><em>static</em> <em>const</em> <b>struct</b> <dfn class="type def" id="toktab" title='toktab' data-ref="toktab" data-ref-filename="toktab"><a class="type" href="#toktab" title='toktab' data-ref="toktab" data-ref-filename="toktab">toktab</a></dfn> {</td></tr>
+<tr><th id="82">82</th><td>	<em>int</em> <dfn class="tu decl field" id="toktab::tokstr_off" title='toktab::tokstr_off' data-type='int' data-ref="toktab::tokstr_off" data-ref-filename="toktab..tokstr_off">tokstr_off</dfn>;</td></tr>
+<tr><th id="83">83</th><td>	<em>int</em> <dfn class="tu decl field" id="toktab::tval" title='toktab::tval' data-type='int' data-ref="toktab::tval" data-ref-filename="toktab..tval">tval</dfn>;</td></tr>
+<tr><th id="84">84</th><td>} <dfn class="tu decl def" id="toktab" title='toktab' data-type='const struct toktab [7]' data-ref="toktab" data-ref-filename="toktab">toktab</dfn>[]= {</td></tr>
+<tr><th id="85">85</th><td>	{ <a class="macro" href="#65" title="0" data-ref="_M/TOK_DEFAULT_IDX">TOK_DEFAULT_IDX</a>,	<a class="macro" href="#53" title="1" data-ref="_M/DEFAULT">DEFAULT</a> },</td></tr>
+<tr><th id="86">86</th><td>	{ <a class="macro" href="#67" title="(0 + sizeof &quot;default&quot;)" data-ref="_M/TOK_LOGIN_IDX">TOK_LOGIN_IDX</a>,	<a class="macro" href="#54" title="2" data-ref="_M/LOGIN">LOGIN</a> },</td></tr>
+<tr><th id="87">87</th><td>	{ <a class="macro" href="#69" title="((0 + sizeof &quot;default&quot;) + sizeof &quot;login&quot;)" data-ref="_M/TOK_PASSWORD_IDX">TOK_PASSWORD_IDX</a>,	<a class="macro" href="#55" title="3" data-ref="_M/PASSWD">PASSWD</a> },</td></tr>
+<tr><th id="88">88</th><td>	{ <a class="macro" href="#71" title="(((0 + sizeof &quot;default&quot;) + sizeof &quot;login&quot;) + sizeof &quot;password&quot;)" data-ref="_M/TOK_PASSWD_IDX">TOK_PASSWD_IDX</a>,	<a class="macro" href="#55" title="3" data-ref="_M/PASSWD">PASSWD</a> },</td></tr>
+<tr><th id="89">89</th><td>	{ <a class="macro" href="#73" title="((((0 + sizeof &quot;default&quot;) + sizeof &quot;login&quot;) + sizeof &quot;password&quot;) + sizeof &quot;passwd&quot;)" data-ref="_M/TOK_ACCOUNT_IDX">TOK_ACCOUNT_IDX</a>,	<a class="macro" href="#56" title="4" data-ref="_M/ACCOUNT">ACCOUNT</a> },</td></tr>
+<tr><th id="90">90</th><td>	{ <a class="macro" href="#75" title="(((((0 + sizeof &quot;default&quot;) + sizeof &quot;login&quot;) + sizeof &quot;password&quot;) + sizeof &quot;passwd&quot;) + sizeof &quot;account&quot;)" data-ref="_M/TOK_MACHINE_IDX">TOK_MACHINE_IDX</a>,	<a class="macro" href="#59" title="11" data-ref="_M/MACHINE">MACHINE</a> },</td></tr>
+<tr><th id="91">91</th><td>	{ <a class="macro" href="#77" title="((((((0 + sizeof &quot;default&quot;) + sizeof &quot;login&quot;) + sizeof &quot;password&quot;) + sizeof &quot;passwd&quot;) + sizeof &quot;account&quot;) + sizeof &quot;machine&quot;)" data-ref="_M/TOK_MACDEF_IDX">TOK_MACDEF_IDX</a>,	<a class="macro" href="#57" title="5" data-ref="_M/MACDEF">MACDEF</a> }</td></tr>
+<tr><th id="92">92</th><td>};</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><em>int</em></td></tr>
+<tr><th id="97">97</th><td><dfn class="decl def fn" id="ruserpass" title='ruserpass' data-ref="ruserpass" data-ref-filename="ruserpass">ruserpass</dfn> (<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12host" title='host' data-type='const char *' data-ref="12host" data-ref-filename="12host">host</dfn>, <em>const</em> <em>char</em> **<dfn class="local col3 decl" id="13aname" title='aname' data-type='const char **' data-ref="13aname" data-ref-filename="13aname">aname</dfn>, <em>const</em> <em>char</em> **<dfn class="local col4 decl" id="14apass" title='apass' data-type='const char **' data-ref="14apass" data-ref-filename="14apass">apass</dfn>)</td></tr>
+<tr><th id="98">98</th><td>{</td></tr>
+<tr><th id="99">99</th><td>	<em>char</em> *<dfn class="local col5 decl" id="15hdir" title='hdir' data-type='char *' data-ref="15hdir" data-ref-filename="15hdir">hdir</dfn>, *<dfn class="local col6 decl" id="16buf" title='buf' data-type='char *' data-ref="16buf" data-ref-filename="16buf">buf</dfn>, *<dfn class="local col7 decl" id="17tmp" title='tmp' data-type='char *' data-ref="17tmp" data-ref-filename="17tmp">tmp</dfn>;</td></tr>
+<tr><th id="100">100</th><td>	<em>char</em> <dfn class="local col8 decl" id="18myname" title='myname' data-type='char [1024]' data-ref="18myname" data-ref-filename="18myname">myname</dfn>[<var>1024</var>], *<dfn class="local col9 decl" id="19mydomain" title='mydomain' data-type='char *' data-ref="19mydomain" data-ref-filename="19mydomain">mydomain</dfn>;</td></tr>
+<tr><th id="101">101</th><td>	<em>int</em> <dfn class="local col0 decl" id="20t" title='t' data-type='int' data-ref="20t" data-ref-filename="20t">t</dfn>, <dfn class="local col1 decl" id="21usedefault" title='usedefault' data-type='int' data-ref="21usedefault" data-ref-filename="21usedefault">usedefault</dfn> = <var>0</var>;</td></tr>
+<tr><th id="102">102</th><td>	<b>struct</b> <a class="type" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64" title='stat64' data-ref="stat64" data-ref-filename="stat64">stat64</a> <dfn class="local col2 decl" id="22stb" title='stb' data-type='struct stat64' data-ref="22stb" data-ref-filename="22stb">stb</dfn>;</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td>	<a class="local col5 ref" href="#15hdir" title='hdir' data-ref="15hdir" data-ref-filename="15hdir">hdir</a> = <a class="ref fn" href="../include/stdlib.h.html#__libc_secure_getenv" title='__libc_secure_getenv' data-ref="__libc_secure_getenv" data-ref-filename="__libc_secure_getenv">__libc_secure_getenv</a>(<q>"HOME"</q>);</td></tr>
+<tr><th id="105">105</th><td>	<b>if</b> (<a class="local col5 ref" href="#15hdir" title='hdir' data-ref="15hdir" data-ref-filename="15hdir">hdir</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="106">106</th><td>		<i>/* If we can't get HOME, fail instead of trying ".",</i></td></tr>
+<tr><th id="107">107</th><td><i>		   which is no improvement. This really should call</i></td></tr>
+<tr><th id="108">108</th><td><i>		   getpwuid(getuid()).  */</i></td></tr>
+<tr><th id="109">109</th><td>		<i>/*hdir = ".";*/</i></td></tr>
+<tr><th id="110">110</th><td>		<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="111">111</th><td>	}</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	<a class="local col6 ref" href="#16buf" title='buf' data-ref="16buf" data-ref-filename="16buf">buf</a> = <a class="macro" href="../stdlib/alloca.h.html#35" title="__builtin_alloca (strlen (hdir) + 8)" data-ref="_M/alloca">alloca</a> (<a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a> (<a class="local col5 ref" href="#15hdir" title='hdir' data-ref="15hdir" data-ref-filename="15hdir">hdir</a>) + <var>8</var>);</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>	<a class="macro" href="../string/bits/string2.h.html#576" title="__builtin_stpcpy (__builtin_stpcpy (buf, hdir), &quot;/.netrc&quot;)" data-ref="_M/__stpcpy">__stpcpy</a> (<a class="macro" href="../string/bits/string2.h.html#576" title="__builtin_stpcpy (buf, hdir)" data-ref="_M/__stpcpy">__stpcpy</a> (<a class="local col6 ref" href="#16buf" title='buf' data-ref="16buf" data-ref-filename="16buf">buf</a>, <a class="local col5 ref" href="#15hdir" title='hdir' data-ref="15hdir" data-ref-filename="15hdir">hdir</a>), <q>"/.netrc"</q>);</td></tr>
+<tr><th id="116">116</th><td>	<a class="tu ref" href="#cfile" title='cfile' data-use='w' data-ref="cfile" data-ref-filename="cfile">cfile</a> = <a class="macro" href="../include/stdio.h.html#123" title="_IO_new_fopen (buf, &quot;rce&quot;)" data-ref="_M/fopen">fopen</a>(<a class="local col6 ref" href="#16buf" title='buf' data-ref="16buf" data-ref-filename="16buf">buf</a>, <q>"rce"</q>);</td></tr>
+<tr><th id="117">117</th><td>	<b>if</b> (<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>) {</td></tr>
+<tr><th id="118">118</th><td>		<b>if</b> (<a class="macro" href="../include/errno.h.html#31" title="__libc_errno" data-ref="_M/errno">errno</a> != <a class="macro" href="../../include/asm-generic/errno-base.h.html#5" title="2" data-ref="_M/ENOENT">ENOENT</a>)</td></tr>
+<tr><th id="119">119</th><td>			<a class="ref fn" href="../misc/err.h.html#warn" title='warn' data-ref="warn" data-ref-filename="warn">warn</a>(<q>"%s"</q>, <a class="local col6 ref" href="#16buf" title='buf' data-ref="16buf" data-ref-filename="16buf">buf</a>);</td></tr>
+<tr><th id="120">120</th><td>		<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="121">121</th><td>	}</td></tr>
+<tr><th id="122">122</th><td>	<i>/* No threads use this stream.  */</i></td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../include/stdio_ext.h.html#7" title="({ int __result = ((cfile-&gt;_flags &amp; 0x8000) ? FSETLOCKING_BYCALLER : FSETLOCKING_INTERNAL); if (FSETLOCKING_BYCALLER != FSETLOCKING_QUERY) { cfile-&gt;_flags &amp;= ~0x8000; if (FSETLOCKING_BYCALLER == FSETLOCKING_BYCALLER) cfile-&gt;_flags |= 0x8000; } __result; })" data-ref="_M/__fsetlocking">__fsetlocking</a> (<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>, <a class="macro" href="../stdio-common/stdio_ext.h.html#38" title="FSETLOCKING_BYCALLER" data-ref="_M/FSETLOCKING_BYCALLER">FSETLOCKING_BYCALLER</a>);</td></tr>
+<tr><th id="124">124</th><td>	<b>if</b> (<a class="ref fn" href="../include/unistd.h.html#__gethostname" title='__gethostname' data-ref="__gethostname" data-ref-filename="__gethostname">__gethostname</a>(<a class="local col8 ref" href="#18myname" title='myname' data-ref="18myname" data-ref-filename="18myname">myname</a>, <b>sizeof</b>(<a class="local col8 ref" href="#18myname" title='myname' data-ref="18myname" data-ref-filename="18myname">myname</a>)) &lt; <var>0</var>)</td></tr>
+<tr><th id="125">125</th><td>		<a class="local col8 ref" href="#18myname" title='myname' data-ref="18myname" data-ref-filename="18myname">myname</a>[<var>0</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="126">126</th><td>	<a class="local col9 ref" href="#19mydomain" title='mydomain' data-ref="19mydomain" data-ref-filename="19mydomain">mydomain</a> = <a class="ref fn" href="../include/string.h.html#__strchrnul" title='__strchrnul' data-ref="__strchrnul" data-ref-filename="__strchrnul">__strchrnul</a>(<a class="local col8 ref" href="#18myname" title='myname' data-ref="18myname" data-ref-filename="18myname">myname</a>, <kbd>'.'</kbd>);</td></tr>
+<tr><th id="127">127</th><td><dfn class="lbl" id="23next" data-ref="23next" data-ref-filename="23next">next</dfn>:</td></tr>
+<tr><th id="128">128</th><td>	<b>while</b> ((<a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a> = <a class="tu ref fn" href="#token" title='token' data-use='c' data-ref="token" data-ref-filename="token">token</a>())) <b>switch</b>(<a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a>) {</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>	<b>case</b> <a class="macro" href="#53" title="1" data-ref="_M/DEFAULT">DEFAULT</a>:</td></tr>
+<tr><th id="131">131</th><td>		<a class="local col1 ref" href="#21usedefault" title='usedefault' data-ref="21usedefault" data-ref-filename="21usedefault">usedefault</a> = <var>1</var>;</td></tr>
+<tr><th id="132">132</th><td>		<i>/* FALL THROUGH */</i></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	<b>case</b> <a class="macro" href="#59" title="11" data-ref="_M/MACHINE">MACHINE</a>:</td></tr>
+<tr><th id="135">135</th><td>		<b>if</b> (!<a class="local col1 ref" href="#21usedefault" title='usedefault' data-ref="21usedefault" data-ref-filename="21usedefault">usedefault</a>) {</td></tr>
+<tr><th id="136">136</th><td>			<b>if</b> (<a class="tu ref fn" href="#token" title='token' data-use='c' data-ref="token" data-ref-filename="token">token</a>() != <a class="macro" href="#58" title="10" data-ref="_M/ID">ID</a>)</td></tr>
+<tr><th id="137">137</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="138">138</th><td>			<i>/*</i></td></tr>
+<tr><th id="139">139</th><td><i>			 * Allow match either for user's input host name</i></td></tr>
+<tr><th id="140">140</th><td><i>			 * or official hostname.  Also allow match of</i></td></tr>
+<tr><th id="141">141</th><td><i>			 * incompletely-specified host in local domain.</i></td></tr>
+<tr><th id="142">142</th><td><i>			 */</i></td></tr>
+<tr><th id="143">143</th><td>			<b>if</b> (<a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a>(<a class="local col2 ref" href="#12host" title='host' data-ref="12host" data-ref-filename="12host">host</a>, <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>) == <var>0</var>)</td></tr>
+<tr><th id="144">144</th><td>				<b>goto</b> <a class="lbl" href="#24match" data-ref="24match" data-ref-filename="24match">match</a>;</td></tr>
+<tr><th id="145">145</th><td><i>/*			if (__strcasecmp(hostname, tokval) == 0)</i></td></tr>
+<tr><th id="146">146</th><td><i>				goto match;</i></td></tr>
+<tr><th id="147">147</th><td><i>			if ((tmp = strchr(hostname, '.')) != NULL &amp;&amp;</i></td></tr>
+<tr><th id="148">148</th><td><i>			    __strcasecmp(tmp, mydomain) == 0 &amp;&amp;</i></td></tr>
+<tr><th id="149">149</th><td><i>			    __strncasecmp(hostname, tokval, tmp-hostname) == 0 &amp;&amp;</i></td></tr>
+<tr><th id="150">150</th><td><i>			    tokval[tmp - hostname] == '\0')</i></td></tr>
+<tr><th id="151">151</th><td><i>				goto match; */</i></td></tr>
+<tr><th id="152">152</th><td>			<b>if</b> ((<a class="local col7 ref" href="#17tmp" title='tmp' data-ref="17tmp" data-ref-filename="17tmp">tmp</a> = <a class="macro" href="../string/bits/string2.h.html#395" title="(__extension__ (__builtin_constant_p (&apos;.&apos;) &amp;&amp; !__builtin_constant_p (host) &amp;&amp; (&apos;.&apos;) == &apos;\0&apos; ? (char *) __rawmemchr (host, &apos;.&apos;) : __builtin_strchr (host, &apos;.&apos;)))" data-ref="_M/strchr">strchr</a>(<a class="local col2 ref" href="#12host" title='host' data-ref="12host" data-ref-filename="12host">host</a>, <kbd>'.'</kbd>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp;</td></tr>
+<tr><th id="153">153</th><td>			    <a class="ref fn" href="../include/string.h.html#__strcasecmp" title='__strcasecmp' data-ref="__strcasecmp" data-ref-filename="__strcasecmp">__strcasecmp</a>(<a class="local col7 ref" href="#17tmp" title='tmp' data-ref="17tmp" data-ref-filename="17tmp">tmp</a>, <a class="local col9 ref" href="#19mydomain" title='mydomain' data-ref="19mydomain" data-ref-filename="19mydomain">mydomain</a>) == <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="154">154</th><td>			    <a class="ref fn" href="../include/string.h.html#__strncasecmp" title='__strncasecmp' data-ref="__strncasecmp" data-ref-filename="__strncasecmp">__strncasecmp</a>(<a class="local col2 ref" href="#12host" title='host' data-ref="12host" data-ref-filename="12host">host</a>, <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>, <a class="local col7 ref" href="#17tmp" title='tmp' data-ref="17tmp" data-ref-filename="17tmp">tmp</a> - <a class="local col2 ref" href="#12host" title='host' data-ref="12host" data-ref-filename="12host">host</a>) == <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="155">155</th><td>			    <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>[<a class="local col7 ref" href="#17tmp" title='tmp' data-ref="17tmp" data-ref-filename="17tmp">tmp</a> - <a class="local col2 ref" href="#12host" title='host' data-ref="12host" data-ref-filename="12host">host</a>] == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="156">156</th><td>				<b>goto</b> <a class="lbl" href="#24match" data-ref="24match" data-ref-filename="24match">match</a>;</td></tr>
+<tr><th id="157">157</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="158">158</th><td>		}</td></tr>
+<tr><th id="159">159</th><td>	<dfn class="lbl" id="24match" data-ref="24match" data-ref-filename="24match">match</dfn>:</td></tr>
+<tr><th id="160">160</th><td>		<b>while</b> ((<a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a> = <a class="tu ref fn" href="#token" title='token' data-use='c' data-ref="token" data-ref-filename="token">token</a>()) &amp;&amp; <a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a> != <a class="macro" href="#59" title="11" data-ref="_M/MACHINE">MACHINE</a> &amp;&amp; <a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a> != <a class="macro" href="#53" title="1" data-ref="_M/DEFAULT">DEFAULT</a>) <b>switch</b>(<a class="local col0 ref" href="#20t" title='t' data-ref="20t" data-ref-filename="20t">t</a>) {</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>		<b>case</b> <a class="macro" href="#54" title="2" data-ref="_M/LOGIN">LOGIN</a>:</td></tr>
+<tr><th id="163">163</th><td>			<b>if</b> (<a class="tu ref fn" href="#token" title='token' data-use='c' data-ref="token" data-ref-filename="token">token</a>()) {</td></tr>
+<tr><th id="164">164</th><td>				<b>if</b> (*<a class="local col3 ref" href="#13aname" title='aname' data-ref="13aname" data-ref-filename="13aname">aname</a> == <var>0</var>) {</td></tr>
+<tr><th id="165">165</th><td>				  <em>char</em> *<dfn class="local col5 decl" id="25newp" title='newp' data-type='char *' data-ref="25newp" data-ref-filename="25newp">newp</dfn>;</td></tr>
+<tr><th id="166">166</th><td>				  <a class="local col5 ref" href="#25newp" title='newp' data-ref="25newp" data-ref-filename="25newp">newp</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a>((<em>unsigned</em>) <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a>(<a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>) + <var>1</var>);</td></tr>
+<tr><th id="167">167</th><td>				  <b>if</b> (<a class="local col5 ref" href="#25newp" title='newp' data-ref="25newp" data-ref-filename="25newp">newp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="168">168</th><td>				    {</td></tr>
+<tr><th id="169">169</th><td>				      <a class="ref fn" href="../misc/err.h.html#warnx" title='warnx' data-ref="warnx" data-ref-filename="warnx">warnx</a>(<a class="macro" href="../include/libintl.h.html#46" title="__dcgettext (_libc_intl_domainname, &quot;out of memory&quot;, 5)" data-ref="_M/_">_</a>(<q>"out of memory"</q>));</td></tr>
+<tr><th id="170">170</th><td>				      <b>goto</b> <a class="lbl" href="#26bad" data-ref="26bad" data-ref-filename="26bad">bad</a>;</td></tr>
+<tr><th id="171">171</th><td>				    }</td></tr>
+<tr><th id="172">172</th><td>				  *<a class="local col3 ref" href="#13aname" title='aname' data-ref="13aname" data-ref-filename="13aname">aname</a> = <a class="ref fn" href="../string/string.h.html#strcpy" title='strcpy' data-ref="strcpy" data-ref-filename="strcpy">strcpy</a>(<a class="local col5 ref" href="#25newp" title='newp' data-ref="25newp" data-ref-filename="25newp">newp</a>, <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>);</td></tr>
+<tr><th id="173">173</th><td>				} <b>else</b> {</td></tr>
+<tr><th id="174">174</th><td>					<b>if</b> (<a class="macro" href="../string/bits/string2.h.html#799" title="__extension__ ({ size_t __s1_len, __s2_len; (__builtin_constant_p (*aname) &amp;&amp; __builtin_constant_p (tokval) &amp;&amp; (__s1_len = strlen (*aname), __s2_len = strlen (tokval), (!((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) || __s1_len &gt;= 4) &amp;&amp; (!((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) || __s2_len &gt;= 4)) ? __builtin_strcmp (*aname, tokval) : (__builtin_constant_p (*aname) &amp;&amp; ((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) &amp;&amp; (__s1_len = strlen (*aname), __s1_len &lt; 4) ? (__builtin_constant_p (tokval) &amp;&amp; ((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) ? __builtin_strcmp (*aname, tokval) : (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (tokval); int __result = (((const unsigned char *) (const char *) (*aname))[0] - __s2[0]); if (__s1_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (*aname))[1] - __s2[1]); if (__s1_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (*aname))[2] - __s2[2]); if (__s1_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (*aname))[3] - __s2[3]); } } __result; }))) : (__builtin_constant_p (tokval) &amp;&amp; ((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) &amp;&amp; (__s2_len = strlen (tokval), __s2_len &lt; 4) ? (__builtin_constant_p (*aname) &amp;&amp; ((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) ? __builtin_strcmp (*aname, tokval) : (- (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (*aname); int __result = (((const unsigned char *) (const char *) (tokval))[0] - __s2[0]); if (__s2_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (tokval))[1] - __s2[1]); if (__s2_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (tokval))[2] - __s2[2]); if (__s2_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (tokval))[3] - __s2[3]); } } __result; })))) : __builtin_strcmp (*aname, tokval)))); })" data-ref="_M/strcmp">strcmp</a>(*<a class="local col3 ref" href="#13aname" title='aname' data-ref="13aname" data-ref-filename="13aname">aname</a>, <a class="tu ref" href="#tokval" title='tokval' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a>))</td></tr>
+<tr><th id="175">175</th><td>						<b>goto</b> <a class="lbl" href="#23next" data-ref="23next" data-ref-filename="23next">next</a>;</td></tr>
+<tr><th id="176">176</th><td>				}</td></tr>
+<tr><th id="177">177</th><td>			}</td></tr>
+<tr><th id="178">178</th><td>			<b>break</b>;</td></tr>
+<tr><th id="179">179</th><td>		<b>case</b> <a class="macro" href="#55" title="3" data-ref="_M/PASSWD">PASSWD</a>:</td></tr>
+<tr><th id="180">180</th><td>			<b>if</b> (<a class="macro" href="../string/bits/string2.h.html#799" title="__extension__ ({ size_t __s1_len, __s2_len; (__builtin_constant_p (*aname) &amp;&amp; __builtin_constant_p (&quot;anonymous&quot;) &amp;&amp; (__s1_len = strlen (*aname), __s2_len = strlen (&quot;anonymous&quot;), (!((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) || __s1_len &gt;= 4) &amp;&amp; (!((size_t)(const void *)((&quot;anonymous&quot;) + 1) - (size_t)(const void *)(&quot;anonymous&quot;) == 1) || __s2_len &gt;= 4)) ? __builtin_strcmp (*aname, &quot;anonymous&quot;) : (__builtin_constant_p (*aname) &amp;&amp; ((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) &amp;&amp; (__s1_len = strlen (*aname), __s1_len &lt; 4) ? (__builtin_constant_p (&quot;anonymous&quot;) &amp;&amp; ((size_t)(const void *)((&quot;anonymous&quot;) + 1) - (size_t)(const void *)(&quot;anonymous&quot;) == 1) ? __builtin_strcmp (*aname, &quot;anonymous&quot;) : (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (&quot;anonymous&quot;); int __result = (((const unsigned char *) (const char *) (*aname))[0] - __s2[0]); if (__s1_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (*aname))[1] - __s2[1]); if (__s1_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (*aname))[2] - __s2[2]); if (__s1_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (*aname))[3] - __s2[3]); } } __result; }))) : (__builtin_constant_p (&quot;anonymous&quot;) &amp;&amp; ((size_t)(const void *)((&quot;anonymous&quot;) + 1) - (size_t)(const void *)(&quot;anonymous&quot;) == 1) &amp;&amp; (__s2_len = strlen (&quot;anonymous&quot;), __s2_len &lt; 4) ? (__builtin_constant_p (*aname) &amp;&amp; ((size_t)(const void *)((*aname) + 1) - (size_t)(const void *)(*aname) == 1) ? __builtin_strcmp (*aname, &quot;anonymous&quot;) : (- (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (*aname); int __result = (((const unsigned char *) (const char *) (&quot;anonymous&quot;))[0] - __s2[0]); if (__s2_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (&quot;anonymous&quot;))[1] - __s2[1]); if (__s2_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (&quot;anonymous&quot;))[2] - __s2[2]); if (__s2_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (&quot;anonymous&quot;))[3] - __s2[3]); } } __result; })))) : __builtin_strcmp (*aname, &quot;anonymous&quot;)))); })" data-ref="_M/strcmp">strcmp</a>(*<a class="local col3 ref" href="#13aname" title='aname' data-ref="13aname" data-ref-filename="13aname">aname</a>, <q>"anonymous"</q>) &amp;&amp;</td></tr>
+<tr><th id="181">181</th><td>			    <a class="macro" href="../include/sys/stat.h.html#53" title="__fxstat64 (1, fileno(cfile), &amp;stb)" data-ref="_M/fstat64">fstat64</a>(<a class="ref fn" href="../libio/stdio.h.html#fileno" title='fileno' data-ref="fileno" data-ref-filename="fileno">fileno</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>), &amp;<a class="local col2 ref" href="#22stb" title='stb' data-ref="22stb" data-ref-filename="22stb">stb</a>) &gt;= <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="182">182</th><td>			    (<a class="local col2 ref" href="#22stb" title='stb' data-ref="22stb" data-ref-filename="22stb">stb</a>.<a class="ref field" href="../sysdeps/unix/sysv/linux/x86/bits/stat.h.html#stat64::st_mode" title='stat64::st_mode' data-ref="stat64::st_mode" data-ref-filename="stat64..st_mode">st_mode</a> &amp; <var>077</var>) != <var>0</var>) {</td></tr>
+<tr><th id="183">183</th><td>	<a class="ref fn" href="../misc/err.h.html#warnx" title='warnx' data-ref="warnx" data-ref-filename="warnx">warnx</a>(<a class="macro" href="../include/libintl.h.html#46" title="__dcgettext (_libc_intl_domainname, &quot;Error: .netrc file is readable by others.&quot;, 5)" data-ref="_M/_">_</a>(<q>"Error: .netrc file is readable by others."</q>));</td></tr>
+<tr><th id="184">184</th><td>	<a class="ref fn" href="../misc/err.h.html#warnx" title='warnx' data-ref="warnx" data-ref-filename="warnx">warnx</a>(<a class="macro" href="../include/libintl.h.html#46" title="__dcgettext (_libc_intl_domainname, &quot;Remove password or make file unreadable by others.&quot;, 5)" data-ref="_M/_">_</a>(<q>"Remove password or make file unreadable by others."</q>));</td></tr>
+<tr><th id="185">185</th><td>				<b>goto</b> <a class="lbl" href="#26bad" data-ref="26bad" data-ref-filename="26bad">bad</a>;</td></tr>
+<tr><th id="186">186</th><td>			}</td></tr>
+<tr><th id="187">187</th><td>			<b>if</b> (<a class="tu ref fn" href="#token" title='token' data-use='c' data-ref="token" data-ref-filename="token">token</a>() &amp;&amp; *<a class="local col4 ref" href="#14apass" title='apass' data-ref="14apass" data-ref-filename="14apass">apass</a> == <var>0</var>) {</td></tr>
+<tr><th id="188">188</th><td>				<em>char</em> *<dfn class="local col7 decl" id="27newp" title='newp' data-type='char *' data-ref="27newp" data-ref-filename="27newp">newp</dfn>;</td></tr>
+<tr><th id="189">189</th><td>				<a class="local col7 ref" href="#27newp" title='newp' data-ref="27newp" data-ref-filename="27newp">newp</a> = <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a>((<em>unsigned</em>) <a class="ref fn" href="../string/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a>(<a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>) + <var>1</var>);</td></tr>
+<tr><th id="190">190</th><td>				<b>if</b> (<a class="local col7 ref" href="#27newp" title='newp' data-ref="27newp" data-ref-filename="27newp">newp</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="191">191</th><td>				  {</td></tr>
+<tr><th id="192">192</th><td>				    <a class="ref fn" href="../misc/err.h.html#warnx" title='warnx' data-ref="warnx" data-ref-filename="warnx">warnx</a>(<a class="macro" href="../include/libintl.h.html#46" title="__dcgettext (_libc_intl_domainname, &quot;out of memory&quot;, 5)" data-ref="_M/_">_</a>(<q>"out of memory"</q>));</td></tr>
+<tr><th id="193">193</th><td>				    <b>goto</b> <a class="lbl" href="#26bad" data-ref="26bad" data-ref-filename="26bad">bad</a>;</td></tr>
+<tr><th id="194">194</th><td>				  }</td></tr>
+<tr><th id="195">195</th><td>				*<a class="local col4 ref" href="#14apass" title='apass' data-ref="14apass" data-ref-filename="14apass">apass</a> = <a class="ref fn" href="../string/string.h.html#strcpy" title='strcpy' data-ref="strcpy" data-ref-filename="strcpy">strcpy</a>(<a class="local col7 ref" href="#27newp" title='newp' data-ref="27newp" data-ref-filename="27newp">newp</a>, <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>);</td></tr>
+<tr><th id="196">196</th><td>			}</td></tr>
+<tr><th id="197">197</th><td>			<b>break</b>;</td></tr>
+<tr><th id="198">198</th><td>		<b>case</b> <a class="macro" href="#56" title="4" data-ref="_M/ACCOUNT">ACCOUNT</a>:</td></tr>
+<tr><th id="199">199</th><td><u>#<span data-ppcond="199">if</span> 0</u></td></tr>
+<tr><th id="200">200</th><td>			<b>if</b> (fstat64(fileno(cfile), &amp;stb) &gt;= <var>0</var></td></tr>
+<tr><th id="201">201</th><td>			    &amp;&amp; (stb.st_mode &amp; <var>077</var>) != <var>0</var>) {</td></tr>
+<tr><th id="202">202</th><td>	warnx(<q>"Error: .netrc file is readable by others."</q>);</td></tr>
+<tr><th id="203">203</th><td>	warnx(<q>"Remove account or make file unreadable by others."</q>);</td></tr>
+<tr><th id="204">204</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="205">205</th><td>			}</td></tr>
+<tr><th id="206">206</th><td>			<b>if</b> (token() &amp;&amp; *aacct == <var>0</var>) {</td></tr>
+<tr><th id="207">207</th><td>				*aacct = malloc((<em>unsigned</em>) strlen(tokval) + <var>1</var>);</td></tr>
+<tr><th id="208">208</th><td>				(<em>void</em>) strcpy(*aacct, tokval);</td></tr>
+<tr><th id="209">209</th><td>			}</td></tr>
+<tr><th id="210">210</th><td><u>#<span data-ppcond="199">endif</span></u></td></tr>
+<tr><th id="211">211</th><td>			<b>break</b>;</td></tr>
+<tr><th id="212">212</th><td>		<b>case</b> <a class="macro" href="#57" title="5" data-ref="_M/MACDEF">MACDEF</a>:</td></tr>
+<tr><th id="213">213</th><td><u>#<span data-ppcond="213">if</span> 0</u></td></tr>
+<tr><th id="214">214</th><td>			<b>if</b> (proxy) {</td></tr>
+<tr><th id="215">215</th><td>				(<em>void</em>) fclose(cfile);</td></tr>
+<tr><th id="216">216</th><td>				<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="217">217</th><td>			}</td></tr>
+<tr><th id="218">218</th><td>			<b>while</b> ((c=getc_unlocked(cfile)) != EOF &amp;&amp; c == <kbd>' '</kbd></td></tr>
+<tr><th id="219">219</th><td>			       || c == <kbd>'\t'</kbd>);</td></tr>
+<tr><th id="220">220</th><td>			<b>if</b> (c == EOF || c == <kbd>'\n'</kbd>) {</td></tr>
+<tr><th id="221">221</th><td>				printf(<q>"Missing macdef name argument.\n"</q>);</td></tr>
+<tr><th id="222">222</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="223">223</th><td>			}</td></tr>
+<tr><th id="224">224</th><td>			<b>if</b> (macnum == <var>16</var>) {</td></tr>
+<tr><th id="225">225</th><td>				printf(<q>"Limit of 16 macros have already been defined\n"</q>);</td></tr>
+<tr><th id="226">226</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="227">227</th><td>			}</td></tr>
+<tr><th id="228">228</th><td>			tmp = macros[macnum].mac_name;</td></tr>
+<tr><th id="229">229</th><td>			*tmp++ = c;</td></tr>
+<tr><th id="230">230</th><td>			<b>for</b> (i=<var>0</var>; i &lt; <var>8</var> &amp;&amp; (c=getc_unlocked(cfile)) != EOF &amp;&amp;</td></tr>
+<tr><th id="231">231</th><td>			    !isspace(c); ++i) {</td></tr>
+<tr><th id="232">232</th><td>				*tmp++ = c;</td></tr>
+<tr><th id="233">233</th><td>			}</td></tr>
+<tr><th id="234">234</th><td>			<b>if</b> (c == EOF) {</td></tr>
+<tr><th id="235">235</th><td>				printf(<q>"Macro definition missing null line terminator.\n"</q>);</td></tr>
+<tr><th id="236">236</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="237">237</th><td>			}</td></tr>
+<tr><th id="238">238</th><td>			*tmp = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="239">239</th><td>			<b>if</b> (c != <kbd>'\n'</kbd>) {</td></tr>
+<tr><th id="240">240</th><td>				<b>while</b> ((c=getc_unlocked(cfile)) != EOF</td></tr>
+<tr><th id="241">241</th><td>				       &amp;&amp; c != <kbd>'\n'</kbd>);</td></tr>
+<tr><th id="242">242</th><td>			}</td></tr>
+<tr><th id="243">243</th><td>			<b>if</b> (c == EOF) {</td></tr>
+<tr><th id="244">244</th><td>				printf(<q>"Macro definition missing null line terminator.\n"</q>);</td></tr>
+<tr><th id="245">245</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="246">246</th><td>			}</td></tr>
+<tr><th id="247">247</th><td>			<b>if</b> (macnum == <var>0</var>) {</td></tr>
+<tr><th id="248">248</th><td>				macros[macnum].mac_start = macbuf;</td></tr>
+<tr><th id="249">249</th><td>			}</td></tr>
+<tr><th id="250">250</th><td>			<b>else</b> {</td></tr>
+<tr><th id="251">251</th><td>				macros[macnum].mac_start = macros[macnum-<var>1</var>].mac_end + <var>1</var>;</td></tr>
+<tr><th id="252">252</th><td>			}</td></tr>
+<tr><th id="253">253</th><td>			tmp = macros[macnum].mac_start;</td></tr>
+<tr><th id="254">254</th><td>			<b>while</b> (tmp != macbuf + <var>4096</var>) {</td></tr>
+<tr><th id="255">255</th><td>				<b>if</b> ((c=getc_unlocked(cfile)) == EOF) {</td></tr>
+<tr><th id="256">256</th><td>				printf(<q>"Macro definition missing null line terminator.\n"</q>);</td></tr>
+<tr><th id="257">257</th><td>					<b>goto</b> bad;</td></tr>
+<tr><th id="258">258</th><td>				}</td></tr>
+<tr><th id="259">259</th><td>				*tmp = c;</td></tr>
+<tr><th id="260">260</th><td>				<b>if</b> (*tmp == <kbd>'\n'</kbd>) {</td></tr>
+<tr><th id="261">261</th><td>					<b>if</b> (*(tmp-<var>1</var>) == <kbd>'\0'</kbd>) {</td></tr>
+<tr><th id="262">262</th><td>					   macros[macnum++].mac_end = tmp - <var>1</var>;</td></tr>
+<tr><th id="263">263</th><td>					   <b>break</b>;</td></tr>
+<tr><th id="264">264</th><td>					}</td></tr>
+<tr><th id="265">265</th><td>					*tmp = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="266">266</th><td>				}</td></tr>
+<tr><th id="267">267</th><td>				tmp++;</td></tr>
+<tr><th id="268">268</th><td>			}</td></tr>
+<tr><th id="269">269</th><td>			<b>if</b> (tmp == macbuf + <var>4096</var>) {</td></tr>
+<tr><th id="270">270</th><td>				printf(<q>"4K macro buffer exceeded\n"</q>);</td></tr>
+<tr><th id="271">271</th><td>				<b>goto</b> bad;</td></tr>
+<tr><th id="272">272</th><td>			}</td></tr>
+<tr><th id="273">273</th><td><u>#<span data-ppcond="213">endif</span></u></td></tr>
+<tr><th id="274">274</th><td>			<b>break</b>;</td></tr>
+<tr><th id="275">275</th><td>		<b>default</b>:</td></tr>
+<tr><th id="276">276</th><td>			<a class="ref fn" href="../misc/err.h.html#warnx" title='warnx' data-ref="warnx" data-ref-filename="warnx">warnx</a>(<a class="macro" href="../include/libintl.h.html#46" title="__dcgettext (_libc_intl_domainname, &quot;Unknown .netrc keyword %s&quot;, 5)" data-ref="_M/_">_</a>(<q>"Unknown .netrc keyword %s"</q>), <a class="tu ref" href="#tokval" title='tokval' data-ref="tokval" data-ref-filename="tokval">tokval</a>);</td></tr>
+<tr><th id="277">277</th><td>			<b>break</b>;</td></tr>
+<tr><th id="278">278</th><td>		}</td></tr>
+<tr><th id="279">279</th><td>		<b>goto</b> <a class="lbl" href="#28done" data-ref="28done" data-ref-filename="28done">done</a>;</td></tr>
+<tr><th id="280">280</th><td>	}</td></tr>
+<tr><th id="281">281</th><td><dfn class="lbl" id="28done" data-ref="28done" data-ref-filename="28done">done</dfn>:</td></tr>
+<tr><th id="282">282</th><td>	(<em>void</em>) <a class="macro" href="../include/stdio.h.html#127" title="_IO_new_fclose (cfile)" data-ref="_M/fclose">fclose</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>);</td></tr>
+<tr><th id="283">283</th><td>	<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="284">284</th><td><dfn class="lbl" id="26bad" data-ref="26bad" data-ref-filename="26bad">bad</dfn>:</td></tr>
+<tr><th id="285">285</th><td>	(<em>void</em>) <a class="macro" href="../include/stdio.h.html#127" title="_IO_new_fclose (cfile)" data-ref="_M/fclose">fclose</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>);</td></tr>
+<tr><th id="286">286</th><td>	<b>return</b> (-<var>1</var>);</td></tr>
+<tr><th id="287">287</th><td>}</td></tr>
+<tr><th id="288">288</th><td><a class="macro" href="../include/libc-symbols.h.html#463" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (ruserpass)</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="291">291</th><td><dfn class="tu decl def fn" id="token" title='token' data-type='int token()' data-ref="token" data-ref-filename="token">token</dfn> (<em>void</em>)</td></tr>
+<tr><th id="292">292</th><td>{</td></tr>
+<tr><th id="293">293</th><td>	<em>char</em> *<dfn class="local col9 decl" id="29cp" title='cp' data-type='char *' data-ref="29cp" data-ref-filename="29cp">cp</dfn>;</td></tr>
+<tr><th id="294">294</th><td>	<em>int</em> <dfn class="local col0 decl" id="30c" title='c' data-type='int' data-ref="30c" data-ref-filename="30c">c</dfn>;</td></tr>
+<tr><th id="295">295</th><td>	<em>int</em> <dfn class="local col1 decl" id="31i" title='i' data-type='int' data-ref="31i" data-ref-filename="31i">i</dfn>;</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td>	<b>if</b> (<a class="ref fn" href="../libio/stdio.h.html#feof_unlocked" title='feof_unlocked' data-ref="feof_unlocked" data-ref-filename="feof_unlocked">feof_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>) || <a class="ref fn" href="../libio/stdio.h.html#ferror_unlocked" title='ferror_unlocked' data-ref="ferror_unlocked" data-ref-filename="ferror_unlocked">ferror_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>))</td></tr>
+<tr><th id="298">298</th><td>		<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="299">299</th><td>	<b>while</b> ((<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> = <a class="ref fn" href="../libio/stdio.h.html#getc_unlocked" title='getc_unlocked' data-ref="getc_unlocked" data-ref-filename="getc_unlocked">getc_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>)) != <a class="macro" href="../libio/libio.h.html#62" title="(-1)" data-ref="_M/EOF">EOF</a> &amp;&amp;</td></tr>
+<tr><th id="300">300</th><td>	    (<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>'\n'</kbd> || <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>'\t'</kbd> || <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>' '</kbd> || <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>','</kbd>))</td></tr>
+<tr><th id="301">301</th><td>		<b>continue</b>;</td></tr>
+<tr><th id="302">302</th><td>	<b>if</b> (<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <a class="macro" href="../libio/libio.h.html#62" title="(-1)" data-ref="_M/EOF">EOF</a>)</td></tr>
+<tr><th id="303">303</th><td>		<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="304">304</th><td>	<a class="local col9 ref" href="#29cp" title='cp' data-ref="29cp" data-ref-filename="29cp">cp</a> = <a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>;</td></tr>
+<tr><th id="305">305</th><td>	<b>if</b> (<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>'"'</kbd>) {</td></tr>
+<tr><th id="306">306</th><td>		<b>while</b> ((<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> = <a class="ref fn" href="../libio/stdio.h.html#getc_unlocked" title='getc_unlocked' data-ref="getc_unlocked" data-ref-filename="getc_unlocked">getc_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>)) != <a class="macro" href="../libio/libio.h.html#62" title="(-1)" data-ref="_M/EOF">EOF</a> &amp;&amp; <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> != <kbd>'"'</kbd>) {</td></tr>
+<tr><th id="307">307</th><td>			<b>if</b> (<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>'\\'</kbd>)</td></tr>
+<tr><th id="308">308</th><td>				<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> = <a class="ref fn" href="../libio/stdio.h.html#getc_unlocked" title='getc_unlocked' data-ref="getc_unlocked" data-ref-filename="getc_unlocked">getc_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>);</td></tr>
+<tr><th id="309">309</th><td>			*<a class="local col9 ref" href="#29cp" title='cp' data-ref="29cp" data-ref-filename="29cp">cp</a>++ = <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a>;</td></tr>
+<tr><th id="310">310</th><td>		}</td></tr>
+<tr><th id="311">311</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="312">312</th><td>		*<a class="local col9 ref" href="#29cp" title='cp' data-ref="29cp" data-ref-filename="29cp">cp</a>++ = <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a>;</td></tr>
+<tr><th id="313">313</th><td>		<b>while</b> ((<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> = <a class="ref fn" href="../libio/stdio.h.html#getc_unlocked" title='getc_unlocked' data-ref="getc_unlocked" data-ref-filename="getc_unlocked">getc_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>)) != <a class="macro" href="../libio/libio.h.html#62" title="(-1)" data-ref="_M/EOF">EOF</a></td></tr>
+<tr><th id="314">314</th><td>		    &amp;&amp; <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> != <kbd>'\n'</kbd> &amp;&amp; <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> != <kbd>'\t'</kbd> &amp;&amp; <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> != <kbd>' '</kbd> &amp;&amp; <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> != <kbd>','</kbd>) {</td></tr>
+<tr><th id="315">315</th><td>			<b>if</b> (<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> == <kbd>'\\'</kbd>)</td></tr>
+<tr><th id="316">316</th><td>				<a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a> = <a class="ref fn" href="../libio/stdio.h.html#getc_unlocked" title='getc_unlocked' data-ref="getc_unlocked" data-ref-filename="getc_unlocked">getc_unlocked</a>(<a class="tu ref" href="#cfile" title='cfile' data-use='r' data-ref="cfile" data-ref-filename="cfile">cfile</a>);</td></tr>
+<tr><th id="317">317</th><td>			*<a class="local col9 ref" href="#29cp" title='cp' data-ref="29cp" data-ref-filename="29cp">cp</a>++ = <a class="local col0 ref" href="#30c" title='c' data-ref="30c" data-ref-filename="30c">c</a>;</td></tr>
+<tr><th id="318">318</th><td>		}</td></tr>
+<tr><th id="319">319</th><td>	}</td></tr>
+<tr><th id="320">320</th><td>	*<a class="local col9 ref" href="#29cp" title='cp' data-ref="29cp" data-ref-filename="29cp">cp</a> = <var>0</var>;</td></tr>
+<tr><th id="321">321</th><td>	<b>if</b> (<a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a>[<var>0</var>] == <var>0</var>)</td></tr>
+<tr><th id="322">322</th><td>		<b>return</b> (<var>0</var>);</td></tr>
+<tr><th id="323">323</th><td>	<b>for</b> (<a class="local col1 ref" href="#31i" title='i' data-ref="31i" data-ref-filename="31i">i</a> = <var>0</var>; <a class="local col1 ref" href="#31i" title='i' data-ref="31i" data-ref-filename="31i">i</a> &lt; (<em>int</em>) (<b>sizeof</b> (<a class="tu ref" href="#toktab" title='toktab' data-use='r' data-ref="toktab" data-ref-filename="toktab">toktab</a>) / <b>sizeof</b> (<a class="tu ref" href="#toktab" title='toktab' data-use='r' data-ref="toktab" data-ref-filename="toktab">toktab</a>[<var>0</var>])); ++<a class="local col1 ref" href="#31i" title='i' data-ref="31i" data-ref-filename="31i">i</a>)</td></tr>
+<tr><th id="324">324</th><td>		<b>if</b> (!<a class="macro" href="../string/bits/string2.h.html#799" title="__extension__ ({ size_t __s1_len, __s2_len; (__builtin_constant_p (&amp;tokstr[toktab[i].tokstr_off]) &amp;&amp; __builtin_constant_p (tokval) &amp;&amp; (__s1_len = strlen (&amp;tokstr[toktab[i].tokstr_off]), __s2_len = strlen (tokval), (!((size_t)(const void *)((&amp;tokstr[toktab[i].tokstr_off]) + 1) - (size_t)(const void *)(&amp;tokstr[toktab[i].tokstr_off]) == 1) || __s1_len &gt;= 4) &amp;&amp; (!((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) || __s2_len &gt;= 4)) ? __builtin_strcmp (&amp;tokstr[toktab[i].tokstr_off], tokval) : (__builtin_constant_p (&amp;tokstr[toktab[i].tokstr_off]) &amp;&amp; ((size_t)(const void *)((&amp;tokstr[toktab[i].tokstr_off]) + 1) - (size_t)(const void *)(&amp;tokstr[toktab[i].tokstr_off]) == 1) &amp;&amp; (__s1_len = strlen (&amp;tokstr[toktab[i].tokstr_off]), __s1_len &lt; 4) ? (__builtin_constant_p (tokval) &amp;&amp; ((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) ? __builtin_strcmp (&amp;tokstr[toktab[i].tokstr_off], tokval) : (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (tokval); int __result = (((const unsigned char *) (const char *) (&amp;tokstr[toktab[i].tokstr_off]))[0] - __s2[0]); if (__s1_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (&amp;tokstr[toktab[i].tokstr_off]))[1] - __s2[1]); if (__s1_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (&amp;tokstr[toktab[i].tokstr_off]))[2] - __s2[2]); if (__s1_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (&amp;tokstr[toktab[i].tokstr_off]))[3] - __s2[3]); } } __result; }))) : (__builtin_constant_p (tokval) &amp;&amp; ((size_t)(const void *)((tokval) + 1) - (size_t)(const void *)(tokval) == 1) &amp;&amp; (__s2_len = strlen (tokval), __s2_len &lt; 4) ? (__builtin_constant_p (&amp;tokstr[toktab[i].tokstr_off]) &amp;&amp; ((size_t)(const void *)((&amp;tokstr[toktab[i].tokstr_off]) + 1) - (size_t)(const void *)(&amp;tokstr[toktab[i].tokstr_off]) == 1) ? __builtin_strcmp (&amp;tokstr[toktab[i].tokstr_off], tokval) : (- (__extension__ ({ const unsigned char *__s2 = (const unsigned char *) (const char *) (&amp;tokstr[toktab[i].tokstr_off]); int __result = (((const unsigned char *) (const char *) (tokval))[0] - __s2[0]); if (__s2_len &gt; 0 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (tokval))[1] - __s2[1]); if (__s2_len &gt; 1 &amp;&amp; __result == 0) { __result = (((const unsigned char *) (const char *) (tokval))[2] - __s2[2]); if (__s2_len &gt; 2 &amp;&amp; __result == 0) __result = (((const unsigned char *) (const char *) (tokval))[3] - __s2[3]); } } __result; })))) : __builtin_strcmp (&amp;tokstr[toktab[i].tokstr_off], tokval)))); })" data-ref="_M/strcmp">strcmp</a>(&amp;<a class="tu ref" href="#tokstr" title='tokstr' data-use='a' data-ref="tokstr" data-ref-filename="tokstr">tokstr</a>[<a class="tu ref" href="#toktab" title='toktab' data-use='m' data-ref="toktab" data-ref-filename="toktab">toktab</a>[<a class="local col1 ref" href="#31i" title='i' data-ref="31i" data-ref-filename="31i">i</a>].<a class="tu ref field" href="#toktab::tokstr_off" title='toktab::tokstr_off' data-use='r' data-ref="toktab::tokstr_off" data-ref-filename="toktab..tokstr_off">tokstr_off</a>], <a class="tu ref" href="#tokval" title='tokval' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval"><a class="tu ref" href="#tokval" title='tokval' data-use='r' data-ref="tokval" data-ref-filename="tokval">tokval</a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a></a>))</td></tr>
+<tr><th id="325">325</th><td>			<b>return</b> <a class="tu ref" href="#toktab" title='toktab' data-use='m' data-ref="toktab" data-ref-filename="toktab">toktab</a>[<a class="local col1 ref" href="#31i" title='i' data-ref="31i" data-ref-filename="31i">i</a>].<a class="tu ref field" href="#toktab::tval" title='toktab::tval' data-use='r' data-ref="toktab::tval" data-ref-filename="toktab..tval">tval</a>;</td></tr>
+<tr><th id="326">326</th><td>	<b>return</b> (<a class="macro" href="#58" title="10" data-ref="_M/ID">ID</a>);</td></tr>
+<tr><th id="327">327</th><td>}</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

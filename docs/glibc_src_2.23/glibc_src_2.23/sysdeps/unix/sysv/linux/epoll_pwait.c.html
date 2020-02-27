@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>epoll_pwait.c source code [glibc_src_2.23/sysdeps/unix/sysv/linux/epoll_pwait.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/sysdeps/unix/sysv/linux/epoll_pwait.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>glibc_src_2.23</a>/<a href='../../..'>sysdeps</a>/<a href='../..'>unix</a>/<a href='..'>sysv</a>/<a href='./'>linux</a>/<a href='epoll_pwait.c.html'>epoll_pwait.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2007-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../include/signal.h.html">&lt;signal.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../include/sys/epoll.h.html">&lt;sys/epoll.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="x86_64/sysdep-cancel.h.html">&lt;sysdep-cancel.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="sys/syscall.h.html">&lt;sys/syscall.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#<span data-ppcond="26">ifdef</span> <a class="macro" href="../../../../../include/x86_64-linux-gnu/asm/unistd_64.h.html#285" data-ref="_M/__NR_epoll_pwait">__NR_epoll_pwait</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* Wait for events on an epoll instance "epfd". Returns the number of</i></td></tr>
+<tr><th id="29">29</th><td><i>   triggered events returned in "events" buffer. Or -1 in case of</i></td></tr>
+<tr><th id="30">30</th><td><i>   error with the "errno" variable set to the specific error code. The</i></td></tr>
+<tr><th id="31">31</th><td><i>   "events" parameter is a buffer that will contain triggered</i></td></tr>
+<tr><th id="32">32</th><td><i>   events. The "maxevents" is the maximum number of events to be</i></td></tr>
+<tr><th id="33">33</th><td><i>   returned ( usually size of "events" ). The "timeout" parameter</i></td></tr>
+<tr><th id="34">34</th><td><i>   specifies the maximum wait time in milliseconds (-1 == infinite).</i></td></tr>
+<tr><th id="35">35</th><td><i>   The thread's signal mask is temporarily and atomically replaced with</i></td></tr>
+<tr><th id="36">36</th><td><i>   the one provided as parameter.  */</i></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><em>int</em> <dfn class="decl def fn" id="epoll_pwait" title='epoll_pwait' data-ref="epoll_pwait" data-ref-filename="epoll_pwait">epoll_pwait</dfn> (<em>int</em> <dfn class="local col1 decl" id="1epfd" title='epfd' data-type='int' data-ref="1epfd" data-ref-filename="1epfd">epfd</dfn>, <b>struct</b> <a class="type" href="sys/epoll.h.html#epoll_event" title='epoll_event' data-ref="epoll_event" data-ref-filename="epoll_event">epoll_event</a> *<dfn class="local col2 decl" id="2events" title='events' data-type='struct epoll_event *' data-ref="2events" data-ref-filename="2events">events</dfn>,</td></tr>
+<tr><th id="39">39</th><td>		 <em>int</em> <dfn class="local col3 decl" id="3maxevents" title='maxevents' data-type='int' data-ref="3maxevents" data-ref-filename="3maxevents">maxevents</dfn>, <em>int</em> <dfn class="local col4 decl" id="4timeout" title='timeout' data-type='int' data-ref="4timeout" data-ref-filename="4timeout">timeout</dfn>,</td></tr>
+<tr><th id="40">40</th><td>		 <em>const</em> <a class="typedef" href="../../../../misc/sys/select.h.html#sigset_t" title='sigset_t' data-type='__sigset_t' data-ref="sigset_t" data-ref-filename="sigset_t">sigset_t</a> *<dfn class="local col5 decl" id="5set" title='set' data-type='const sigset_t *' data-ref="5set" data-ref-filename="5set">set</dfn>)</td></tr>
+<tr><th id="41">41</th><td>{</td></tr>
+<tr><th id="42">42</th><td>  <b>return</b> <a class="macro" href="../../sysdep.h.html#54" title="({ long int sc_ret; if (__builtin_expect (__libc_multiple_threads == 0, 1)) sc_ret = ({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg6 = (long int) (65 / 8); long int __arg5 = (long int) (set); long int __arg4 = (long int) (timeout); long int __arg3 = (long int) (maxevents); long int __arg2 = (long int) (events); long int __arg1 = (long int) (epfd); register long int _a6 asm (&quot;r9&quot;) = __arg6; register long int _a5 asm (&quot;r8&quot;) = __arg5; register long int _a4 asm (&quot;r10&quot;) = __arg4; register long int _a3 asm (&quot;rdx&quot;) = __arg3; register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (281) , &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3), &quot;r&quot; (_a4), &quot;r&quot; (_a5), &quot;r&quot; (_a6) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); else { int sc_cancel_oldtype = __libc_enable_asynccancel (); sc_ret = ({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg6 = (long int) (65 / 8); long int __arg5 = (long int) (set); long int __arg4 = (long int) (timeout); long int __arg3 = (long int) (maxevents); long int __arg2 = (long int) (events); long int __arg1 = (long int) (epfd); register long int _a6 asm (&quot;r9&quot;) = __arg6; register long int _a5 asm (&quot;r8&quot;) = __arg5; register long int _a4 asm (&quot;r10&quot;) = __arg4; register long int _a3 asm (&quot;rdx&quot;) = __arg3; register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (281) , &quot;r&quot; (_a1), &quot;r&quot; (_a2), &quot;r&quot; (_a3), &quot;r&quot; (_a4), &quot;r&quot; (_a5), &quot;r&quot; (_a6) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); __libc_disable_asynccancel (sc_cancel_oldtype); } sc_ret; })" data-ref="_M/SYSCALL_CANCEL">SYSCALL_CANCEL</a> (epoll_pwait, <a class="local col1 ref" href="#1epfd" title='epfd' data-ref="1epfd" data-ref-filename="1epfd">epfd</a>, <a class="local col2 ref" href="#2events" title='events' data-ref="2events" data-ref-filename="2events">events</a>, <a class="local col3 ref" href="#3maxevents" title='maxevents' data-ref="3maxevents" data-ref-filename="3maxevents">maxevents</a>,</td></tr>
+<tr><th id="43">43</th><td>			 <a class="local col4 ref" href="#4timeout" title='timeout' data-ref="4timeout" data-ref-filename="4timeout">timeout</a>, <a class="local col5 ref" href="#5set" title='set' data-ref="5set" data-ref-filename="5set">set</a>, <a class="macro" href="bits/signum.h.html#68" title="65" data-ref="_M/_NSIG">_NSIG</a> / <var>8</var>);</td></tr>
+<tr><th id="44">44</th><td>}</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><u>#<span data-ppcond="26">else</span></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><em>int</em> epoll_pwait (<em>int</em> epfd, <b>struct</b> epoll_event *events,</td></tr>
+<tr><th id="49">49</th><td>		 <em>int</em> maxevents, <em>int</em> timeout,</td></tr>
+<tr><th id="50">50</th><td>		 <em>const</em> sigset_t *set)</td></tr>
+<tr><th id="51">51</th><td>{</td></tr>
+<tr><th id="52">52</th><td>  __set_errno (ENOSYS);</td></tr>
+<tr><th id="53">53</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="54">54</th><td>}</td></tr>
+<tr><th id="55">55</th><td>stub_warning (epoll_pwait)</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="26">endif</span></u></td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td><a class="macro" href="../../../../include/libc-symbols.h.html#463" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (epoll_pwait)</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

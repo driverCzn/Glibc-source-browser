@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>memmem.c source code [glibc_src_2.23/string/memmem.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/string/memmem.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.23</a>/<a href='./'>string</a>/<a href='memmem.c.html'>memmem.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1991-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><i>/* This particular implementation was written by Eric Blake, 2008.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="21">21</th><td><u># include &lt;config.h&gt;</u></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><i>/* Specification of memmem.  */</i></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="28">28</th><td><u># define __builtin_expect(expr, val)   (expr)</u></td></tr>
+<tr><th id="29">29</th><td><u># define __memmem	memmem</u></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/RETURN_TYPE" data-ref="_M/RETURN_TYPE">RETURN_TYPE</dfn> void *</u></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/AVAILABLE" data-ref="_M/AVAILABLE">AVAILABLE</dfn>(h, h_l, j, n_l) ((j) &lt;= (h_l) - (n_l))</u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="str-two-way.h.html">"str-two-way.h"</a></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><u>#undef <span class="macro" data-ref="_M/memmem">memmem</span></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/* Return the first occurrence of NEEDLE in HAYSTACK.  Return HAYSTACK</i></td></tr>
+<tr><th id="39">39</th><td><i>   if NEEDLE_LEN is 0, otherwise NULL if NEEDLE is not found in</i></td></tr>
+<tr><th id="40">40</th><td><i>   HAYSTACK.  */</i></td></tr>
+<tr><th id="41">41</th><td><em>void</em> *</td></tr>
+<tr><th id="42">42</th><td><dfn class="decl def fn" id="__memmem" title='__memmem' data-ref="__memmem" data-ref-filename="__memmem">__memmem</dfn> (<em>const</em> <em>void</em> *<dfn class="local col3 decl" id="43haystack_start" title='haystack_start' data-type='const void *' data-ref="43haystack_start" data-ref-filename="43haystack_start">haystack_start</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="44haystack_len" title='haystack_len' data-type='size_t' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</dfn>,</td></tr>
+<tr><th id="43">43</th><td>	  <em>const</em> <em>void</em> *<dfn class="local col5 decl" id="45needle_start" title='needle_start' data-type='const void *' data-ref="45needle_start" data-ref-filename="45needle_start">needle_start</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col6 decl" id="46needle_len" title='needle_len' data-type='size_t' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</dfn>)</td></tr>
+<tr><th id="44">44</th><td>{</td></tr>
+<tr><th id="45">45</th><td>  <i>/* Abstract memory is considered to be an array of 'unsigned char' values,</i></td></tr>
+<tr><th id="46">46</th><td><i>     not an array of 'char' values.  See ISO C 99 section 6.2.6.1.  */</i></td></tr>
+<tr><th id="47">47</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col7 decl" id="47haystack" title='haystack' data-type='const unsigned char *' data-ref="47haystack" data-ref-filename="47haystack">haystack</dfn> = (<em>const</em> <em>unsigned</em> <em>char</em> *) <a class="local col3 ref" href="#43haystack_start" title='haystack_start' data-ref="43haystack_start" data-ref-filename="43haystack_start">haystack_start</a>;</td></tr>
+<tr><th id="48">48</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col8 decl" id="48needle" title='needle' data-type='const unsigned char *' data-ref="48needle" data-ref-filename="48needle">needle</dfn> = (<em>const</em> <em>unsigned</em> <em>char</em> *) <a class="local col5 ref" href="#45needle_start" title='needle_start' data-ref="45needle_start" data-ref-filename="45needle_start">needle_start</a>;</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>  <b>if</b> (<a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a> == <var>0</var>)</td></tr>
+<tr><th id="51">51</th><td>    <i>/* The first occurrence of the empty string is deemed to occur at</i></td></tr>
+<tr><th id="52">52</th><td><i>       the beginning of the string.  */</i></td></tr>
+<tr><th id="53">53</th><td>    <b>return</b> (<em>void</em> *) <a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a>;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>  <i>/* Sanity check, otherwise the loop might search through the whole</i></td></tr>
+<tr><th id="56">56</th><td><i>     memory.  */</i></td></tr>
+<tr><th id="57">57</th><td>  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#385" title="__builtin_expect ((haystack_len &lt; needle_len), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a> &lt; <a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a>))</td></tr>
+<tr><th id="58">58</th><td>    <b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* Use optimizations in memchr when possible, to reduce the search</i></td></tr>
+<tr><th id="61">61</th><td><i>     size of haystack using a linear algorithm with a smaller</i></td></tr>
+<tr><th id="62">62</th><td><i>     coefficient.  However, avoid memchr for long needles, since we</i></td></tr>
+<tr><th id="63">63</th><td><i>     can often achieve sublinear performance.  */</i></td></tr>
+<tr><th id="64">64</th><td>  <b>if</b> (<a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a> &lt; <a class="macro" href="str-two-way.h.html#70" title="32U" data-ref="_M/LONG_NEEDLE_THRESHOLD">LONG_NEEDLE_THRESHOLD</a>)</td></tr>
+<tr><th id="65">65</th><td>    {</td></tr>
+<tr><th id="66">66</th><td>      <a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a> = <a class="ref fn" href="string.h.html#memchr" title='memchr' data-ref="memchr" data-ref-filename="memchr">memchr</a> (<a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a>, *<a class="local col8 ref" href="#48needle" title='needle' data-ref="48needle" data-ref-filename="48needle">needle</a>, <a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a>);</td></tr>
+<tr><th id="67">67</th><td>      <b>if</b> (!<a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a> || <a class="ref fn" href="#57" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a> == <var>1</var>, <var>0</var>))</td></tr>
+<tr><th id="68">68</th><td>	<b>return</b> (<em>void</em> *) <a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a>;</td></tr>
+<tr><th id="69">69</th><td>      <a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a> -= <a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a> - (<em>const</em> <em>unsigned</em> <em>char</em> *) <a class="local col3 ref" href="#43haystack_start" title='haystack_start' data-ref="43haystack_start" data-ref-filename="43haystack_start">haystack_start</a>;</td></tr>
+<tr><th id="70">70</th><td>      <b>if</b> (<a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a> &lt; <a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a>)</td></tr>
+<tr><th id="71">71</th><td>	<b>return</b> <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="72">72</th><td>      <b>return</b> <a class="ref fn" href="str-two-way.h.html#two_way_short_needle" title='two_way_short_needle' data-ref="two_way_short_needle" data-ref-filename="two_way_short_needle">two_way_short_needle</a> (<a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a>, <a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a>, <a class="local col8 ref" href="#48needle" title='needle' data-ref="48needle" data-ref-filename="48needle">needle</a>, <a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a>);</td></tr>
+<tr><th id="73">73</th><td>    }</td></tr>
+<tr><th id="74">74</th><td>  <b>else</b></td></tr>
+<tr><th id="75">75</th><td>    <b>return</b> <a class="ref fn" href="str-two-way.h.html#two_way_long_needle" title='two_way_long_needle' data-ref="two_way_long_needle" data-ref-filename="two_way_long_needle">two_way_long_needle</a> (<a class="local col7 ref" href="#47haystack" title='haystack' data-ref="47haystack" data-ref-filename="47haystack">haystack</a>, <a class="local col4 ref" href="#44haystack_len" title='haystack_len' data-ref="44haystack_len" data-ref-filename="44haystack_len">haystack_len</a>, <a class="local col8 ref" href="#48needle" title='needle' data-ref="48needle" data-ref-filename="48needle">needle</a>, <a class="local col6 ref" href="#46needle_len" title='needle_len' data-ref="46needle_len" data-ref-filename="46needle_len">needle_len</a>);</td></tr>
+<tr><th id="76">76</th><td>}</td></tr>
+<tr><th id="77">77</th><td><a class="macro" href="../include/libc-symbols.h.html#463" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (__memmem)</td></tr>
+<tr><th id="78">78</th><td><a class="macro" href="../include/libc-symbols.h.html#109" title="extern __typeof (__memmem) memmem __attribute__ ((weak, alias (&quot;__memmem&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__memmem" title='__memmem' data-ref="__memmem" data-ref-filename="__memmem">__memmem</a>, <dfn class="decl def fn" id="memmem" title='memmem' data-ref="memmem" data-ref-filename="memmem">memmem</dfn>)</td></tr>
+<tr><th id="79">79</th><td><a class="macro" href="../include/libc-symbols.h.html#464" title="" data-ref="_M/libc_hidden_weak">libc_hidden_weak</a> (memmem)</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><u>#undef <a class="macro" href="str-two-way.h.html#70" data-ref="_M/LONG_NEEDLE_THRESHOLD">LONG_NEEDLE_THRESHOLD</a></u></td></tr>
+<tr><th id="82">82</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,1347 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>string2.h source code [glibc_src_2.23/string/bits/string2.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.23/string/bits/string2.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.23</a>/<a href='..'>string</a>/<a href='./'>bits</a>/<a href='string2.h.html'>string2.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Machine-independant string function optimizations.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1997-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1997.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <a class="macro" href="../string.h.html#23" data-ref="_M/_STRING_H">_STRING_H</a></u></td></tr>
+<tr><th id="21">21</th><td><u># error "Never use &lt;bits/string2.h&gt; directly; include &lt;string.h&gt; instead."</u></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifndef</span> <span class="macro" data-ref="_M/__NO_STRING_INLINES">__NO_STRING_INLINES</span></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/* Unlike the definitions in the header &lt;bits/string.h&gt; the</i></td></tr>
+<tr><th id="27">27</th><td><i>   definitions contained here are not optimized down to assembler</i></td></tr>
+<tr><th id="28">28</th><td><i>   level.  Those optimizations are not always a good idea since this</i></td></tr>
+<tr><th id="29">29</th><td><i>   means the code size increases a lot.  Instead the definitions here</i></td></tr>
+<tr><th id="30">30</th><td><i>   optimize some functions in a way which do not dramatically</i></td></tr>
+<tr><th id="31">31</th><td><i>   increase the code size and which do not use assembler.  The main</i></td></tr>
+<tr><th id="32">32</th><td><i>   trick is to use GCC's `__builtin_constant_p' function.</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>   Every function XXX which has a defined version in</i></td></tr>
+<tr><th id="35">35</th><td><i>   &lt;bits/string.h&gt; must be accompanied by a symbol _HAVE_STRING_ARCH_XXX</i></td></tr>
+<tr><th id="36">36</th><td><i>   to make sure we don't get redefinitions.</i></td></tr>
+<tr><th id="37">37</th><td><i></i></td></tr>
+<tr><th id="38">38</th><td><i>   We must use here macros instead of inline functions since the</i></td></tr>
+<tr><th id="39">39</th><td><i>   trick won't work with the latter.  */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="41">ifndef</span> <span class="macro" data-ref="_M/__STRING_INLINE">__STRING_INLINE</span></u></td></tr>
+<tr><th id="42">42</th><td><u># <span data-ppcond="42">ifdef</span> <span class="macro" data-ref="_M/__cplusplus">__cplusplus</span></u></td></tr>
+<tr><th id="43">43</th><td><u>#  define __STRING_INLINE inline</u></td></tr>
+<tr><th id="44">44</th><td><u># <span data-ppcond="42">else</span></u></td></tr>
+<tr><th id="45">45</th><td><u>#  define <dfn class="macro" id="_M/__STRING_INLINE" data-ref="_M/__STRING_INLINE">__STRING_INLINE</dfn> __extern_inline</u></td></tr>
+<tr><th id="46">46</th><td><u># <span data-ppcond="42">endif</span></u></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="41">endif</span></u></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="49">if</span> <a class="macro" href="../../sysdeps/x86/bits/string.h.html#24" title="1" data-ref="_M/_STRING_INLINE_unaligned">_STRING_INLINE_unaligned</a></u></td></tr>
+<tr><th id="50">50</th><td><i>/* If we can do unaligned memory accesses we must know the endianess.  */</i></td></tr>
+<tr><th id="51">51</th><td><u># include <a href="../../include/endian.h.html">&lt;endian.h&gt;</a></u></td></tr>
+<tr><th id="52">52</th><td><u># include <a href="../../bits/types.h.html">&lt;bits/types.h&gt;</a></u></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><u># <span data-ppcond="54">if</span> <a class="macro" href="../../sysdeps/x86/bits/endian.h.html#7" title="1234" data-ref="_M/__BYTE_ORDER">__BYTE_ORDER</a> == <a class="macro" href="../endian.h.html#31" title="1234" data-ref="_M/__LITTLE_ENDIAN">__LITTLE_ENDIAN</a></u></td></tr>
+<tr><th id="55">55</th><td><u>#  define <dfn class="macro" id="_M/__STRING2_SMALL_GET16" data-ref="_M/__STRING2_SMALL_GET16">__STRING2_SMALL_GET16</dfn>(src, idx) \</u></td></tr>
+<tr><th id="56">56</th><td><u>     (((const unsigned char *) (const char *) (src))[idx + 1] &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="57">57</th><td><u>      | ((const unsigned char *) (const char *) (src))[idx])</u></td></tr>
+<tr><th id="58">58</th><td><u>#  define <dfn class="macro" id="_M/__STRING2_SMALL_GET32" data-ref="_M/__STRING2_SMALL_GET32">__STRING2_SMALL_GET32</dfn>(src, idx) \</u></td></tr>
+<tr><th id="59">59</th><td><u>     (((((const unsigned char *) (const char *) (src))[idx + 3] &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="60">60</th><td><u>	| ((const unsigned char *) (const char *) (src))[idx + 2]) &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="61">61</th><td><u>       | ((const unsigned char *) (const char *) (src))[idx + 1]) &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="62">62</th><td><u>      | ((const unsigned char *) (const char *) (src))[idx])</u></td></tr>
+<tr><th id="63">63</th><td><u># <span data-ppcond="54">else</span></u></td></tr>
+<tr><th id="64">64</th><td><u>#  define __STRING2_SMALL_GET16(src, idx) \</u></td></tr>
+<tr><th id="65">65</th><td><u>     (((const unsigned char *) (const char *) (src))[idx] &lt;&lt; 8		      \</u></td></tr>
+<tr><th id="66">66</th><td><u>      | ((const unsigned char *) (const char *) (src))[idx + 1])</u></td></tr>
+<tr><th id="67">67</th><td><u>#  define __STRING2_SMALL_GET32(src, idx) \</u></td></tr>
+<tr><th id="68">68</th><td><u>     (((((const unsigned char *) (const char *) (src))[idx] &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="69">69</th><td><u>	| ((const unsigned char *) (const char *) (src))[idx + 1]) &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="70">70</th><td><u>       | ((const unsigned char *) (const char *) (src))[idx + 2]) &lt;&lt; 8	      \</u></td></tr>
+<tr><th id="71">71</th><td><u>      | ((const unsigned char *) (const char *) (src))[idx + 3])</u></td></tr>
+<tr><th id="72">72</th><td><u># <span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="49">else</span></u></td></tr>
+<tr><th id="74">74</th><td><i>/* These are a few types we need for the optimizations if we cannot</i></td></tr>
+<tr><th id="75">75</th><td><i>   use unaligned memory accesses.  */</i></td></tr>
+<tr><th id="76">76</th><td><u># define __STRING2_COPY_TYPE(N) \</u></td></tr>
+<tr><th id="77">77</th><td><u>  typedef struct { unsigned char __arr[N]; }				      \</u></td></tr>
+<tr><th id="78">78</th><td><u>    __attribute__ ((__packed__)) __STRING2_COPY_ARR##N</u></td></tr>
+<tr><th id="79">79</th><td>__STRING2_COPY_TYPE (<var>2</var>);</td></tr>
+<tr><th id="80">80</th><td>__STRING2_COPY_TYPE (<var>3</var>);</td></tr>
+<tr><th id="81">81</th><td>__STRING2_COPY_TYPE (<var>4</var>);</td></tr>
+<tr><th id="82">82</th><td>__STRING2_COPY_TYPE (<var>5</var>);</td></tr>
+<tr><th id="83">83</th><td>__STRING2_COPY_TYPE (<var>6</var>);</td></tr>
+<tr><th id="84">84</th><td>__STRING2_COPY_TYPE (<var>7</var>);</td></tr>
+<tr><th id="85">85</th><td>__STRING2_COPY_TYPE (<var>8</var>);</td></tr>
+<tr><th id="86">86</th><td><u># undef __STRING2_COPY_TYPE</u></td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="49">endif</span></u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/* Dereferencing a pointer arg to run sizeof on it fails for the void</i></td></tr>
+<tr><th id="90">90</th><td><i>   pointer case, so we use this instead.</i></td></tr>
+<tr><th id="91">91</th><td><i>   Note that __x is evaluated twice. */</i></td></tr>
+<tr><th id="92">92</th><td><u>#define <dfn class="macro" id="_M/__string2_1bptr_p" data-ref="_M/__string2_1bptr_p">__string2_1bptr_p</dfn>(__x) \</u></td></tr>
+<tr><th id="93">93</th><td><u>  ((size_t)(const void *)((__x) + 1) - (size_t)(const void *)(__x) == 1)</u></td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><i>/* Set N bytes of S to C.  */</i></td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="96">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_memset">_HAVE_STRING_ARCH_memset</span></u></td></tr>
+<tr><th id="97">97</th><td><u># <span data-ppcond="97">if</span> !<a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (0))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 0)</u></td></tr>
+<tr><th id="98">98</th><td><u>#  if _STRING_INLINE_unaligned</u></td></tr>
+<tr><th id="99">99</th><td><u>#   define memset(s, c, n) \</u></td></tr>
+<tr><th id="100">100</th><td><u>  (__extension__ (__builtin_constant_p (n) &amp;&amp; (n) &lt;= 16			      \</u></td></tr>
+<tr><th id="101">101</th><td><u>		  ? ((n) == 1						      \</u></td></tr>
+<tr><th id="102">102</th><td><u>		     ? __memset_1 (s, c)				      \</u></td></tr>
+<tr><th id="103">103</th><td><u>		     : __memset_gc (s, c, n))				      \</u></td></tr>
+<tr><th id="104">104</th><td><u>		  : (__builtin_constant_p (c) &amp;&amp; (c) == '\0'		      \</u></td></tr>
+<tr><th id="105">105</th><td><u>		     ? ({ void *__s = (s); __bzero (__s, n); __s; })	      \</u></td></tr>
+<tr><th id="106">106</th><td><u>		     : memset (s, c, n))))</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><u>#   define __memset_1(s, c) ({ void *__s = (s);				      \</u></td></tr>
+<tr><th id="109">109</th><td><u>			    *((__uint8_t *) __s) = (__uint8_t) c; __s; })</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><u>#   define __memset_gc(s, c, n) \</u></td></tr>
+<tr><th id="112">112</th><td><u>  ({ void *__s = (s);							      \</u></td></tr>
+<tr><th id="113">113</th><td><u>     union {								      \</u></td></tr>
+<tr><th id="114">114</th><td><u>       unsigned int __ui;						      \</u></td></tr>
+<tr><th id="115">115</th><td><u>       unsigned short int __usi;					      \</u></td></tr>
+<tr><th id="116">116</th><td><u>       unsigned char __uc;						      \</u></td></tr>
+<tr><th id="117">117</th><td><u>     } *__u = __s;							      \</u></td></tr>
+<tr><th id="118">118</th><td><u>     __uint8_t __c = (__uint8_t) (c);					      \</u></td></tr>
+<tr><th id="119">119</th><td><u>									      \</u></td></tr>
+<tr><th id="120">120</th><td><u>     /* This `switch' statement will be removed at compile-time.  */	      \</u></td></tr>
+<tr><th id="121">121</th><td><u>     switch ((unsigned int) (n))					      \</u></td></tr>
+<tr><th id="122">122</th><td><u>       {								      \</u></td></tr>
+<tr><th id="123">123</th><td><u>       case 15:								      \</u></td></tr>
+<tr><th id="124">124</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="125">125</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="126">126</th><td><u>       case 11:								      \</u></td></tr>
+<tr><th id="127">127</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="128">128</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="129">129</th><td><u>       case 7:								      \</u></td></tr>
+<tr><th id="130">130</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="131">131</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="132">132</th><td><u>       case 3:								      \</u></td></tr>
+<tr><th id="133">133</th><td><u>	 __u-&gt;__usi = (unsigned short int) __c * 0x0101;		      \</u></td></tr>
+<tr><th id="134">134</th><td><u>	 __u = __extension__ ((void *) __u + 2);			      \</u></td></tr>
+<tr><th id="135">135</th><td><u>	 __u-&gt;__uc = (unsigned char) __c;				      \</u></td></tr>
+<tr><th id="136">136</th><td><u>	 break;								      \</u></td></tr>
+<tr><th id="137">137</th><td><u>									      \</u></td></tr>
+<tr><th id="138">138</th><td><u>       case 14:								      \</u></td></tr>
+<tr><th id="139">139</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="140">140</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="141">141</th><td><u>       case 10:								      \</u></td></tr>
+<tr><th id="142">142</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="143">143</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="144">144</th><td><u>       case 6:								      \</u></td></tr>
+<tr><th id="145">145</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="146">146</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="147">147</th><td><u>       case 2:								      \</u></td></tr>
+<tr><th id="148">148</th><td><u>	 __u-&gt;__usi = (unsigned short int) __c * 0x0101;		      \</u></td></tr>
+<tr><th id="149">149</th><td><u>	 break;								      \</u></td></tr>
+<tr><th id="150">150</th><td><u>									      \</u></td></tr>
+<tr><th id="151">151</th><td><u>       case 13:								      \</u></td></tr>
+<tr><th id="152">152</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="153">153</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="154">154</th><td><u>       case 9:								      \</u></td></tr>
+<tr><th id="155">155</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="156">156</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="157">157</th><td><u>       case 5:								      \</u></td></tr>
+<tr><th id="158">158</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="159">159</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="160">160</th><td><u>       case 1:								      \</u></td></tr>
+<tr><th id="161">161</th><td><u>	 __u-&gt;__uc = (unsigned char) __c;				      \</u></td></tr>
+<tr><th id="162">162</th><td><u>	 break;								      \</u></td></tr>
+<tr><th id="163">163</th><td><u>									      \</u></td></tr>
+<tr><th id="164">164</th><td><u>       case 16:								      \</u></td></tr>
+<tr><th id="165">165</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="166">166</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="167">167</th><td><u>       case 12:								      \</u></td></tr>
+<tr><th id="168">168</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="169">169</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="170">170</th><td><u>       case 8:								      \</u></td></tr>
+<tr><th id="171">171</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="172">172</th><td><u>	 __u = __extension__ ((void *) __u + 4);			      \</u></td></tr>
+<tr><th id="173">173</th><td><u>       case 4:								      \</u></td></tr>
+<tr><th id="174">174</th><td><u>	 __u-&gt;__ui = __c * 0x01010101;					      \</u></td></tr>
+<tr><th id="175">175</th><td><u>       case 0:								      \</u></td></tr>
+<tr><th id="176">176</th><td><u>	 break;								      \</u></td></tr>
+<tr><th id="177">177</th><td><u>       }								      \</u></td></tr>
+<tr><th id="178">178</th><td><u>									      \</u></td></tr>
+<tr><th id="179">179</th><td><u>     __s; })</u></td></tr>
+<tr><th id="180">180</th><td><u>#  else</u></td></tr>
+<tr><th id="181">181</th><td><u>#   define memset(s, c, n) \</u></td></tr>
+<tr><th id="182">182</th><td><u>  (__extension__ (__builtin_constant_p (c) &amp;&amp; (c) == '\0'		      \</u></td></tr>
+<tr><th id="183">183</th><td><u>		  ? ({ void *__s = (s); __bzero (__s, n); __s; })	      \</u></td></tr>
+<tr><th id="184">184</th><td><u>		  : memset (s, c, n)))</u></td></tr>
+<tr><th id="185">185</th><td><u>#  endif</u></td></tr>
+<tr><th id="186">186</th><td><u># <span data-ppcond="97">endif</span></u></td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><i>/* GCC &lt; 3.0 optimizes memset(s, 0, n) but not bzero(s, n).</i></td></tr>
+<tr><th id="189">189</th><td><i>   The optimization is broken before EGCS 1.1.</i></td></tr>
+<tr><th id="190">190</th><td><i>   GCC 3.0+ has __builtin_bzero as well, but at least till GCC 3.4</i></td></tr>
+<tr><th id="191">191</th><td><i>   if it decides to call the library function, it calls memset</i></td></tr>
+<tr><th id="192">192</th><td><i>   and not bzero.  */</i></td></tr>
+<tr><th id="193">193</th><td><u># <span data-ppcond="193">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((2) &lt;&lt; 16) + (91))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (2, 91)</u></td></tr>
+<tr><th id="194">194</th><td><u>#  define <dfn class="macro" id="_M/__bzero" data-ref="_M/__bzero">__bzero</dfn>(s, n) __builtin_memset (s, '\0', n)</u></td></tr>
+<tr><th id="195">195</th><td><u># <span data-ppcond="193">endif</span></u></td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td><u>#<span data-ppcond="96">endif</span></u></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td><i>/* Copy N bytes from SRC to DEST, returning pointer to byte following the</i></td></tr>
+<tr><th id="201">201</th><td><i>   last copied.  */</i></td></tr>
+<tr><th id="202">202</th><td><u>#<span data-ppcond="202">ifdef</span> <a class="macro" href="../../include/features.h.html#322" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="203">203</th><td><u># <span data-ppcond="203">if</span> !defined <a class="macro" href="../../sysdeps/x86/bits/string.h.html#27" data-ref="_M/_HAVE_STRING_ARCH_mempcpy">_HAVE_STRING_ARCH_mempcpy</a> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="204">204</th><td><u>#  ifndef _HAVE_STRING_ARCH_mempcpy</u></td></tr>
+<tr><th id="205">205</th><td><u>#   if __GNUC_PREREQ (3, 4)</u></td></tr>
+<tr><th id="206">206</th><td><u>#    define __mempcpy(dest, src, n) __builtin_mempcpy (dest, src, n)</u></td></tr>
+<tr><th id="207">207</th><td><u>#   elif __GNUC_PREREQ (3, 0)</u></td></tr>
+<tr><th id="208">208</th><td><u>#    define __mempcpy(dest, src, n) \</u></td></tr>
+<tr><th id="209">209</th><td><u>  (__extension__ (__builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)      \</u></td></tr>
+<tr><th id="210">210</th><td><u>		  &amp;&amp; __string2_1bptr_p (src) &amp;&amp; n &lt;= 8			      \</u></td></tr>
+<tr><th id="211">211</th><td><u>		  ? __builtin_memcpy (dest, src, n) + (n)		      \</u></td></tr>
+<tr><th id="212">212</th><td><u>		  : __mempcpy (dest, src, n)))</u></td></tr>
+<tr><th id="213">213</th><td><u>#   else</u></td></tr>
+<tr><th id="214">214</th><td><u>#    define __mempcpy(dest, src, n) \</u></td></tr>
+<tr><th id="215">215</th><td><u>  (__extension__ (__builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)      \</u></td></tr>
+<tr><th id="216">216</th><td><u>		  &amp;&amp; __string2_1bptr_p (src) &amp;&amp; n &lt;= 8			      \</u></td></tr>
+<tr><th id="217">217</th><td><u>		  ? __mempcpy_small (dest, __mempcpy_args (src), n)	      \</u></td></tr>
+<tr><th id="218">218</th><td><u>		  : __mempcpy (dest, src, n)))</u></td></tr>
+<tr><th id="219">219</th><td><u>#   endif</u></td></tr>
+<tr><th id="220">220</th><td><i>/* In glibc we use this function frequently but for namespace reasons</i></td></tr>
+<tr><th id="221">221</th><td><i>   we have to use the name `__mempcpy'.  */</i></td></tr>
+<tr><th id="222">222</th><td><u>#   define mempcpy(dest, src, n) __mempcpy (dest, src, n)</u></td></tr>
+<tr><th id="223">223</th><td><u>#  endif</u></td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><u>#  if !__GNUC_PREREQ (3, 0) || defined _FORCE_INLINES</u></td></tr>
+<tr><th id="226">226</th><td><u>#   if _STRING_INLINE_unaligned</u></td></tr>
+<tr><th id="227">227</th><td><u>#    ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="228">228</th><td><u>#     define __mempcpy_args(src) \</u></td></tr>
+<tr><th id="229">229</th><td><u>     ((const char *) (src))[0], ((const char *) (src))[2],		      \</u></td></tr>
+<tr><th id="230">230</th><td><u>     ((const char *) (src))[4], ((const char *) (src))[6],		      \</u></td></tr>
+<tr><th id="231">231</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 0),			      \</u></td></tr>
+<tr><th id="232">232</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 4),			      \</u></td></tr>
+<tr><th id="233">233</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 0),			      \</u></td></tr>
+<tr><th id="234">234</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 4)</u></td></tr>
+<tr><th id="235">235</th><td><u>#    endif</u></td></tr>
+<tr><th id="236">236</th><td>__STRING_INLINE <em>void</em> *__mempcpy_small (<em>void</em> *, <em>char</em>, <em>char</em>, <em>char</em>, <em>char</em>,</td></tr>
+<tr><th id="237">237</th><td>				       __uint16_t, __uint16_t, __uint32_t,</td></tr>
+<tr><th id="238">238</th><td>				       __uint32_t, size_t);</td></tr>
+<tr><th id="239">239</th><td>__STRING_INLINE <em>void</em> *</td></tr>
+<tr><th id="240">240</th><td>__mempcpy_small (<em>void</em> *__dest1,</td></tr>
+<tr><th id="241">241</th><td>		 <em>char</em> __src0_1, <em>char</em> __src2_1, <em>char</em> __src4_1, <em>char</em> __src6_1,</td></tr>
+<tr><th id="242">242</th><td>		 __uint16_t __src0_2, __uint16_t __src4_2,</td></tr>
+<tr><th id="243">243</th><td>		 __uint32_t __src0_4, __uint32_t __src4_4,</td></tr>
+<tr><th id="244">244</th><td>		 size_t __srclen)</td></tr>
+<tr><th id="245">245</th><td>{</td></tr>
+<tr><th id="246">246</th><td>  <b>union</b> {</td></tr>
+<tr><th id="247">247</th><td>    __uint32_t __ui;</td></tr>
+<tr><th id="248">248</th><td>    __uint16_t __usi;</td></tr>
+<tr><th id="249">249</th><td>    <em>unsigned</em> <em>char</em> __uc;</td></tr>
+<tr><th id="250">250</th><td>    <em>unsigned</em> <em>char</em> __c;</td></tr>
+<tr><th id="251">251</th><td>  } *__u = __dest1;</td></tr>
+<tr><th id="252">252</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="253">253</th><td>    {</td></tr>
+<tr><th id="254">254</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="255">255</th><td>      __u-&gt;__c = __src0_1;</td></tr>
+<tr><th id="256">256</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="257">257</th><td>      <b>break</b>;</td></tr>
+<tr><th id="258">258</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="259">259</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="260">260</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="261">261</th><td>      <b>break</b>;</td></tr>
+<tr><th id="262">262</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="263">263</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="264">264</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="265">265</th><td>      __u-&gt;__c = __src2_1;</td></tr>
+<tr><th id="266">266</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="267">267</th><td>      <b>break</b>;</td></tr>
+<tr><th id="268">268</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="269">269</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="270">270</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="271">271</th><td>      <b>break</b>;</td></tr>
+<tr><th id="272">272</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="273">273</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="274">274</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="275">275</th><td>      __u-&gt;__c = __src4_1;</td></tr>
+<tr><th id="276">276</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="277">277</th><td>      <b>break</b>;</td></tr>
+<tr><th id="278">278</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="279">279</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="280">280</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="281">281</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="282">282</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="283">283</th><td>      <b>break</b>;</td></tr>
+<tr><th id="284">284</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="285">285</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="286">286</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="287">287</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="288">288</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="289">289</th><td>      __u-&gt;__c = __src6_1;</td></tr>
+<tr><th id="290">290</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="291">291</th><td>      <b>break</b>;</td></tr>
+<tr><th id="292">292</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="293">293</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="294">294</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="295">295</th><td>      __u-&gt;__ui = __src4_4;</td></tr>
+<tr><th id="296">296</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="297">297</th><td>      <b>break</b>;</td></tr>
+<tr><th id="298">298</th><td>    }</td></tr>
+<tr><th id="299">299</th><td>  <b>return</b> (<em>void</em> *) __u;</td></tr>
+<tr><th id="300">300</th><td>}</td></tr>
+<tr><th id="301">301</th><td><u>#   else</u></td></tr>
+<tr><th id="302">302</th><td><u>#    ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="303">303</th><td><u>#     define __mempcpy_args(src) \</u></td></tr>
+<tr><th id="304">304</th><td><u>     ((const char *) (src))[0],						      \</u></td></tr>
+<tr><th id="305">305</th><td><u>     __extension__ ((__STRING2_COPY_ARR2)				      \</u></td></tr>
+<tr><th id="306">306</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1] } }),	      \</u></td></tr>
+<tr><th id="307">307</th><td><u>     __extension__ ((__STRING2_COPY_ARR3)				      \</u></td></tr>
+<tr><th id="308">308</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="309">309</th><td><u>	  ((const char *) (src))[2] } }),				      \</u></td></tr>
+<tr><th id="310">310</th><td><u>     __extension__ ((__STRING2_COPY_ARR4)				      \</u></td></tr>
+<tr><th id="311">311</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="312">312</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3] } }),	      \</u></td></tr>
+<tr><th id="313">313</th><td><u>     __extension__ ((__STRING2_COPY_ARR5)				      \</u></td></tr>
+<tr><th id="314">314</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="315">315</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="316">316</th><td><u>	  ((const char *) (src))[4] } }),				      \</u></td></tr>
+<tr><th id="317">317</th><td><u>     __extension__ ((__STRING2_COPY_ARR6)				      \</u></td></tr>
+<tr><th id="318">318</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="319">319</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="320">320</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5] } }),	      \</u></td></tr>
+<tr><th id="321">321</th><td><u>     __extension__ ((__STRING2_COPY_ARR7)				      \</u></td></tr>
+<tr><th id="322">322</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="323">323</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="324">324</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="325">325</th><td><u>	  ((const char *) (src))[6] } }),				      \</u></td></tr>
+<tr><th id="326">326</th><td><u>     __extension__ ((__STRING2_COPY_ARR8)				      \</u></td></tr>
+<tr><th id="327">327</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="328">328</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="329">329</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="330">330</th><td><u>	  ((const char *) (src))[6], ((const char *) (src))[7] } })</u></td></tr>
+<tr><th id="331">331</th><td><u>#    endif</u></td></tr>
+<tr><th id="332">332</th><td>__STRING_INLINE <em>void</em> *__mempcpy_small (<em>void</em> *, <em>char</em>, __STRING2_COPY_ARR2,</td></tr>
+<tr><th id="333">333</th><td>				       __STRING2_COPY_ARR3,</td></tr>
+<tr><th id="334">334</th><td>				       __STRING2_COPY_ARR4,</td></tr>
+<tr><th id="335">335</th><td>				       __STRING2_COPY_ARR5,</td></tr>
+<tr><th id="336">336</th><td>				       __STRING2_COPY_ARR6,</td></tr>
+<tr><th id="337">337</th><td>				       __STRING2_COPY_ARR7,</td></tr>
+<tr><th id="338">338</th><td>				       __STRING2_COPY_ARR8, size_t);</td></tr>
+<tr><th id="339">339</th><td>__STRING_INLINE <em>void</em> *</td></tr>
+<tr><th id="340">340</th><td>__mempcpy_small (<em>void</em> *__dest, <em>char</em> __src1,</td></tr>
+<tr><th id="341">341</th><td>		 __STRING2_COPY_ARR2 __src2, __STRING2_COPY_ARR3 __src3,</td></tr>
+<tr><th id="342">342</th><td>		 __STRING2_COPY_ARR4 __src4, __STRING2_COPY_ARR5 __src5,</td></tr>
+<tr><th id="343">343</th><td>		 __STRING2_COPY_ARR6 __src6, __STRING2_COPY_ARR7 __src7,</td></tr>
+<tr><th id="344">344</th><td>		 __STRING2_COPY_ARR8 __src8, size_t __srclen)</td></tr>
+<tr><th id="345">345</th><td>{</td></tr>
+<tr><th id="346">346</th><td>  <b>union</b> {</td></tr>
+<tr><th id="347">347</th><td>    <em>char</em> __c;</td></tr>
+<tr><th id="348">348</th><td>    __STRING2_COPY_ARR2 __sca2;</td></tr>
+<tr><th id="349">349</th><td>    __STRING2_COPY_ARR3 __sca3;</td></tr>
+<tr><th id="350">350</th><td>    __STRING2_COPY_ARR4 __sca4;</td></tr>
+<tr><th id="351">351</th><td>    __STRING2_COPY_ARR5 __sca5;</td></tr>
+<tr><th id="352">352</th><td>    __STRING2_COPY_ARR6 __sca6;</td></tr>
+<tr><th id="353">353</th><td>    __STRING2_COPY_ARR7 __sca7;</td></tr>
+<tr><th id="354">354</th><td>    __STRING2_COPY_ARR8 __sca8;</td></tr>
+<tr><th id="355">355</th><td>  } *__u = __dest;</td></tr>
+<tr><th id="356">356</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="357">357</th><td>    {</td></tr>
+<tr><th id="358">358</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="359">359</th><td>      __u-&gt;__c = __src1;</td></tr>
+<tr><th id="360">360</th><td>      <b>break</b>;</td></tr>
+<tr><th id="361">361</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="362">362</th><td>      <b>__extension__</b> __u-&gt;__sca2 = __src2;</td></tr>
+<tr><th id="363">363</th><td>      <b>break</b>;</td></tr>
+<tr><th id="364">364</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="365">365</th><td>      <b>__extension__</b> __u-&gt;__sca3 = __src3;</td></tr>
+<tr><th id="366">366</th><td>      <b>break</b>;</td></tr>
+<tr><th id="367">367</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="368">368</th><td>      <b>__extension__</b> __u-&gt;__sca4 = __src4;</td></tr>
+<tr><th id="369">369</th><td>      <b>break</b>;</td></tr>
+<tr><th id="370">370</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="371">371</th><td>      <b>__extension__</b> __u-&gt;__sca5 = __src5;</td></tr>
+<tr><th id="372">372</th><td>      <b>break</b>;</td></tr>
+<tr><th id="373">373</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="374">374</th><td>      <b>__extension__</b> __u-&gt;__sca6 = __src6;</td></tr>
+<tr><th id="375">375</th><td>      <b>break</b>;</td></tr>
+<tr><th id="376">376</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="377">377</th><td>      <b>__extension__</b> __u-&gt;__sca7 = __src7;</td></tr>
+<tr><th id="378">378</th><td>      <b>break</b>;</td></tr>
+<tr><th id="379">379</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="380">380</th><td>      <b>__extension__</b> __u-&gt;__sca8 = __src8;</td></tr>
+<tr><th id="381">381</th><td>      <b>break</b>;</td></tr>
+<tr><th id="382">382</th><td>    }</td></tr>
+<tr><th id="383">383</th><td>  <b>return</b> <b>__extension__</b> ((<em>void</em> *) __u + __srclen);</td></tr>
+<tr><th id="384">384</th><td>}</td></tr>
+<tr><th id="385">385</th><td><u>#   endif</u></td></tr>
+<tr><th id="386">386</th><td><u>#  endif</u></td></tr>
+<tr><th id="387">387</th><td><u># <span data-ppcond="203">endif</span></u></td></tr>
+<tr><th id="388">388</th><td><u>#<span data-ppcond="202">endif</span></u></td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td></td></tr>
+<tr><th id="391">391</th><td><i>/* Return pointer to C in S.  */</i></td></tr>
+<tr><th id="392">392</th><td><u>#<span data-ppcond="392">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strchr">_HAVE_STRING_ARCH_strchr</span></u></td></tr>
+<tr><th id="393">393</th><td><b>extern</b> <em>void</em> *<a class="decl fn" href="../../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr" id="__rawmemchr">__rawmemchr</a> (<em>const</em> <em>void</em> *<dfn class="local col1 decl" id="1261__s" title='__s' data-type='const void *' data-ref="1261__s" data-ref-filename="1261__s">__s</dfn>, <em>int</em> <dfn class="local col2 decl" id="1262__c" title='__c' data-type='int' data-ref="1262__c" data-ref-filename="1262__c">__c</dfn>);</td></tr>
+<tr><th id="394">394</th><td><u># <span data-ppcond="394">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="395">395</th><td><u>#  define <dfn class="macro" id="_M/strchr" data-ref="_M/strchr">strchr</dfn>(s, c) \</u></td></tr>
+<tr><th id="396">396</th><td><u>  (__extension__ (<a class="ref fn" href="#1202" title='__builtin_constant_p' data-ref="__builtin_constant_p" data-ref-filename="__builtin_constant_p">__builtin_constant_p</a> (c) &amp;&amp; !<a class="ref fn" href="#1202" title='__builtin_constant_p' data-ref="__builtin_constant_p" data-ref-filename="__builtin_constant_p">__builtin_constant_p</a> (s)	      \</u></td></tr>
+<tr><th id="397">397</th><td><u>		  &amp;&amp; (c) == '\0'					      \</u></td></tr>
+<tr><th id="398">398</th><td><u>		  ? (char *) <a class="ref fn" href="../../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a> (s, c)				      \</u></td></tr>
+<tr><th id="399">399</th><td><u>		  : <a class="ref fn" href="#1202" title='__builtin_strchr' data-ref="__builtin_strchr" data-ref-filename="__builtin_strchr">__builtin_strchr</a> (s, c)))</u></td></tr>
+<tr><th id="400">400</th><td><u># <span data-ppcond="394">else</span></u></td></tr>
+<tr><th id="401">401</th><td><u>#  define strchr(s, c) \</u></td></tr>
+<tr><th id="402">402</th><td><u>  (__extension__ (__builtin_constant_p (c) &amp;&amp; (c) == '\0'		      \</u></td></tr>
+<tr><th id="403">403</th><td><u>		  ? (char *) __rawmemchr (s, c)				      \</u></td></tr>
+<tr><th id="404">404</th><td><u>		  : strchr (s, c)))</u></td></tr>
+<tr><th id="405">405</th><td><u># <span data-ppcond="394">endif</span></u></td></tr>
+<tr><th id="406">406</th><td><u>#<span data-ppcond="392">endif</span></u></td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td><i>/* Copy SRC to DEST.  */</i></td></tr>
+<tr><th id="410">410</th><td><u>#<span data-ppcond="410">if</span> (!defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcpy">_HAVE_STRING_ARCH_strcpy</span> &amp;&amp; !<a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (0))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 0)) \</u></td></tr>
+<tr><th id="411">411</th><td><u>    || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="412">412</th><td><u># if !defined _HAVE_STRING_ARCH_strcpy &amp;&amp; !__GNUC_PREREQ (3, 0)</u></td></tr>
+<tr><th id="413">413</th><td><u>#  define strcpy(dest, src) \</u></td></tr>
+<tr><th id="414">414</th><td><u>  (__extension__ (__builtin_constant_p (src)				      \</u></td></tr>
+<tr><th id="415">415</th><td><u>		  ? (__string2_1bptr_p (src) &amp;&amp; strlen (src) + 1 &lt;= 8	      \</u></td></tr>
+<tr><th id="416">416</th><td><u>		     ? __strcpy_small (dest, __strcpy_args (src),	      \</u></td></tr>
+<tr><th id="417">417</th><td><u>				       strlen (src) + 1)		      \</u></td></tr>
+<tr><th id="418">418</th><td><u>		     : (char *) memcpy (dest, src, strlen (src) + 1))	      \</u></td></tr>
+<tr><th id="419">419</th><td><u>		  : strcpy (dest, src)))</u></td></tr>
+<tr><th id="420">420</th><td><u># endif</u></td></tr>
+<tr><th id="421">421</th><td></td></tr>
+<tr><th id="422">422</th><td><u># if _STRING_INLINE_unaligned</u></td></tr>
+<tr><th id="423">423</th><td><u>#  ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="424">424</th><td><u>#   define __strcpy_args(src) \</u></td></tr>
+<tr><th id="425">425</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 0),			      \</u></td></tr>
+<tr><th id="426">426</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 4),			      \</u></td></tr>
+<tr><th id="427">427</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 0),			      \</u></td></tr>
+<tr><th id="428">428</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 4)</u></td></tr>
+<tr><th id="429">429</th><td><u>#  endif</u></td></tr>
+<tr><th id="430">430</th><td>__STRING_INLINE <em>char</em> *__strcpy_small (<em>char</em> *, __uint16_t, __uint16_t,</td></tr>
+<tr><th id="431">431</th><td>				      __uint32_t, __uint32_t, size_t);</td></tr>
+<tr><th id="432">432</th><td>__STRING_INLINE <em>char</em> *</td></tr>
+<tr><th id="433">433</th><td>__strcpy_small (<em>char</em> *__dest,</td></tr>
+<tr><th id="434">434</th><td>		__uint16_t __src0_2, __uint16_t __src4_2,</td></tr>
+<tr><th id="435">435</th><td>		__uint32_t __src0_4, __uint32_t __src4_4,</td></tr>
+<tr><th id="436">436</th><td>		size_t __srclen)</td></tr>
+<tr><th id="437">437</th><td>{</td></tr>
+<tr><th id="438">438</th><td>  <b>union</b> {</td></tr>
+<tr><th id="439">439</th><td>    __uint32_t __ui;</td></tr>
+<tr><th id="440">440</th><td>    __uint16_t __usi;</td></tr>
+<tr><th id="441">441</th><td>    <em>unsigned</em> <em>char</em> __uc;</td></tr>
+<tr><th id="442">442</th><td>  } *__u = (<em>void</em> *) __dest;</td></tr>
+<tr><th id="443">443</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="444">444</th><td>    {</td></tr>
+<tr><th id="445">445</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="446">446</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="447">447</th><td>      <b>break</b>;</td></tr>
+<tr><th id="448">448</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="449">449</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="450">450</th><td>      <b>break</b>;</td></tr>
+<tr><th id="451">451</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="452">452</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="453">453</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="454">454</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="455">455</th><td>      <b>break</b>;</td></tr>
+<tr><th id="456">456</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="457">457</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="458">458</th><td>      <b>break</b>;</td></tr>
+<tr><th id="459">459</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="460">460</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="461">461</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="462">462</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="463">463</th><td>      <b>break</b>;</td></tr>
+<tr><th id="464">464</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="465">465</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="466">466</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="467">467</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="468">468</th><td>      <b>break</b>;</td></tr>
+<tr><th id="469">469</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="470">470</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="471">471</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="472">472</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="473">473</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="474">474</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="475">475</th><td>      <b>break</b>;</td></tr>
+<tr><th id="476">476</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="477">477</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="478">478</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="479">479</th><td>      __u-&gt;__ui = __src4_4;</td></tr>
+<tr><th id="480">480</th><td>      <b>break</b>;</td></tr>
+<tr><th id="481">481</th><td>    }</td></tr>
+<tr><th id="482">482</th><td>  <b>return</b> __dest;</td></tr>
+<tr><th id="483">483</th><td>}</td></tr>
+<tr><th id="484">484</th><td><u># else</u></td></tr>
+<tr><th id="485">485</th><td><u>#  ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="486">486</th><td><u>#   define __strcpy_args(src) \</u></td></tr>
+<tr><th id="487">487</th><td><u>     __extension__ ((__STRING2_COPY_ARR2)				      \</u></td></tr>
+<tr><th id="488">488</th><td><u>      { { ((const char *) (src))[0], '\0' } }),				      \</u></td></tr>
+<tr><th id="489">489</th><td><u>     __extension__ ((__STRING2_COPY_ARR3)				      \</u></td></tr>
+<tr><th id="490">490</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="491">491</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="492">492</th><td><u>     __extension__ ((__STRING2_COPY_ARR4)				      \</u></td></tr>
+<tr><th id="493">493</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="494">494</th><td><u>	  ((const char *) (src))[2], '\0' } }),				      \</u></td></tr>
+<tr><th id="495">495</th><td><u>     __extension__ ((__STRING2_COPY_ARR5)				      \</u></td></tr>
+<tr><th id="496">496</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="497">497</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="498">498</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="499">499</th><td><u>     __extension__ ((__STRING2_COPY_ARR6)				      \</u></td></tr>
+<tr><th id="500">500</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="501">501</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="502">502</th><td><u>	  ((const char *) (src))[4], '\0' } }),				      \</u></td></tr>
+<tr><th id="503">503</th><td><u>     __extension__ ((__STRING2_COPY_ARR7)				      \</u></td></tr>
+<tr><th id="504">504</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="505">505</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="506">506</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="507">507</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="508">508</th><td><u>     __extension__ ((__STRING2_COPY_ARR8)				      \</u></td></tr>
+<tr><th id="509">509</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="510">510</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="511">511</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="512">512</th><td><u>	  ((const char *) (src))[6], '\0' } })</u></td></tr>
+<tr><th id="513">513</th><td><u>#  endif</u></td></tr>
+<tr><th id="514">514</th><td>__STRING_INLINE <em>char</em> *__strcpy_small (<em>char</em> *, __STRING2_COPY_ARR2,</td></tr>
+<tr><th id="515">515</th><td>				      __STRING2_COPY_ARR3,</td></tr>
+<tr><th id="516">516</th><td>				      __STRING2_COPY_ARR4,</td></tr>
+<tr><th id="517">517</th><td>				      __STRING2_COPY_ARR5,</td></tr>
+<tr><th id="518">518</th><td>				      __STRING2_COPY_ARR6,</td></tr>
+<tr><th id="519">519</th><td>				      __STRING2_COPY_ARR7,</td></tr>
+<tr><th id="520">520</th><td>				      __STRING2_COPY_ARR8, size_t);</td></tr>
+<tr><th id="521">521</th><td>__STRING_INLINE <em>char</em> *</td></tr>
+<tr><th id="522">522</th><td>__strcpy_small (<em>char</em> *__dest,</td></tr>
+<tr><th id="523">523</th><td>		__STRING2_COPY_ARR2 __src2, __STRING2_COPY_ARR3 __src3,</td></tr>
+<tr><th id="524">524</th><td>		__STRING2_COPY_ARR4 __src4, __STRING2_COPY_ARR5 __src5,</td></tr>
+<tr><th id="525">525</th><td>		__STRING2_COPY_ARR6 __src6, __STRING2_COPY_ARR7 __src7,</td></tr>
+<tr><th id="526">526</th><td>		__STRING2_COPY_ARR8 __src8, size_t __srclen)</td></tr>
+<tr><th id="527">527</th><td>{</td></tr>
+<tr><th id="528">528</th><td>  <b>union</b> {</td></tr>
+<tr><th id="529">529</th><td>    <em>char</em> __c;</td></tr>
+<tr><th id="530">530</th><td>    __STRING2_COPY_ARR2 __sca2;</td></tr>
+<tr><th id="531">531</th><td>    __STRING2_COPY_ARR3 __sca3;</td></tr>
+<tr><th id="532">532</th><td>    __STRING2_COPY_ARR4 __sca4;</td></tr>
+<tr><th id="533">533</th><td>    __STRING2_COPY_ARR5 __sca5;</td></tr>
+<tr><th id="534">534</th><td>    __STRING2_COPY_ARR6 __sca6;</td></tr>
+<tr><th id="535">535</th><td>    __STRING2_COPY_ARR7 __sca7;</td></tr>
+<tr><th id="536">536</th><td>    __STRING2_COPY_ARR8 __sca8;</td></tr>
+<tr><th id="537">537</th><td>  } *__u = (<em>void</em> *) __dest;</td></tr>
+<tr><th id="538">538</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="539">539</th><td>    {</td></tr>
+<tr><th id="540">540</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="541">541</th><td>      __u-&gt;__c = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="542">542</th><td>      <b>break</b>;</td></tr>
+<tr><th id="543">543</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="544">544</th><td>      <b>__extension__</b> __u-&gt;__sca2 = __src2;</td></tr>
+<tr><th id="545">545</th><td>      <b>break</b>;</td></tr>
+<tr><th id="546">546</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="547">547</th><td>      <b>__extension__</b> __u-&gt;__sca3 = __src3;</td></tr>
+<tr><th id="548">548</th><td>      <b>break</b>;</td></tr>
+<tr><th id="549">549</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="550">550</th><td>      <b>__extension__</b> __u-&gt;__sca4 = __src4;</td></tr>
+<tr><th id="551">551</th><td>      <b>break</b>;</td></tr>
+<tr><th id="552">552</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="553">553</th><td>      <b>__extension__</b> __u-&gt;__sca5 = __src5;</td></tr>
+<tr><th id="554">554</th><td>      <b>break</b>;</td></tr>
+<tr><th id="555">555</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="556">556</th><td>      <b>__extension__</b> __u-&gt;__sca6 = __src6;</td></tr>
+<tr><th id="557">557</th><td>      <b>break</b>;</td></tr>
+<tr><th id="558">558</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="559">559</th><td>      <b>__extension__</b> __u-&gt;__sca7 = __src7;</td></tr>
+<tr><th id="560">560</th><td>      <b>break</b>;</td></tr>
+<tr><th id="561">561</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="562">562</th><td>      <b>__extension__</b> __u-&gt;__sca8 = __src8;</td></tr>
+<tr><th id="563">563</th><td>      <b>break</b>;</td></tr>
+<tr><th id="564">564</th><td>  }</td></tr>
+<tr><th id="565">565</th><td>  <b>return</b> __dest;</td></tr>
+<tr><th id="566">566</th><td>}</td></tr>
+<tr><th id="567">567</th><td><u># endif</u></td></tr>
+<tr><th id="568">568</th><td><u>#<span data-ppcond="410">endif</span></u></td></tr>
+<tr><th id="569">569</th><td></td></tr>
+<tr><th id="570">570</th><td></td></tr>
+<tr><th id="571">571</th><td><i>/* Copy SRC to DEST, returning pointer to final NUL byte.  */</i></td></tr>
+<tr><th id="572">572</th><td><u>#<span data-ppcond="572">ifdef</span> <a class="macro" href="../../include/features.h.html#322" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="573">573</th><td><u># <span data-ppcond="573">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_stpcpy">_HAVE_STRING_ARCH_stpcpy</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="574">574</th><td><u>#  <span data-ppcond="574">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_stpcpy">_HAVE_STRING_ARCH_stpcpy</span></u></td></tr>
+<tr><th id="575">575</th><td><u>#   <span data-ppcond="575">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (4))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 4)</u></td></tr>
+<tr><th id="576">576</th><td><u>#    define <dfn class="macro" id="_M/__stpcpy" data-ref="_M/__stpcpy">__stpcpy</dfn>(dest, src) __builtin_stpcpy (dest, src)</u></td></tr>
+<tr><th id="577">577</th><td><u>#   <span data-ppcond="575">elif</span> __GNUC_PREREQ (3, 0)</u></td></tr>
+<tr><th id="578">578</th><td><u>#    define __stpcpy(dest, src) \</u></td></tr>
+<tr><th id="579">579</th><td><u>  (__extension__ (__builtin_constant_p (src)				      \</u></td></tr>
+<tr><th id="580">580</th><td><u>		  ? (__string2_1bptr_p (src) &amp;&amp; strlen (src) + 1 &lt;= 8	      \</u></td></tr>
+<tr><th id="581">581</th><td><u>		     ? __builtin_strcpy (dest, src) + strlen (src)	      \</u></td></tr>
+<tr><th id="582">582</th><td><u>		     : ((char *) (__mempcpy) (dest, src, strlen (src) + 1)    \</u></td></tr>
+<tr><th id="583">583</th><td><u>			- 1))						      \</u></td></tr>
+<tr><th id="584">584</th><td><u>		  : __stpcpy (dest, src)))</u></td></tr>
+<tr><th id="585">585</th><td><u>#   else</u></td></tr>
+<tr><th id="586">586</th><td><u>#    define __stpcpy(dest, src) \</u></td></tr>
+<tr><th id="587">587</th><td><u>  (__extension__ (__builtin_constant_p (src)				      \</u></td></tr>
+<tr><th id="588">588</th><td><u>		  ? (__string2_1bptr_p (src) &amp;&amp; strlen (src) + 1 &lt;= 8	      \</u></td></tr>
+<tr><th id="589">589</th><td><u>		     ? __stpcpy_small (dest, __stpcpy_args (src),	      \</u></td></tr>
+<tr><th id="590">590</th><td><u>				       strlen (src) + 1)		      \</u></td></tr>
+<tr><th id="591">591</th><td><u>		     : ((char *) (__mempcpy) (dest, src, strlen (src) + 1)    \</u></td></tr>
+<tr><th id="592">592</th><td><u>			- 1))						      \</u></td></tr>
+<tr><th id="593">593</th><td><u>		  : __stpcpy (dest, src)))</u></td></tr>
+<tr><th id="594">594</th><td><u>#   <span data-ppcond="575">endif</span></u></td></tr>
+<tr><th id="595">595</th><td><i>/* In glibc we use this function frequently but for namespace reasons</i></td></tr>
+<tr><th id="596">596</th><td><i>   we have to use the name `__stpcpy'.  */</i></td></tr>
+<tr><th id="597">597</th><td><u>#   define <dfn class="macro" id="_M/stpcpy" data-ref="_M/stpcpy">stpcpy</dfn>(dest, src) __stpcpy (dest, src)</u></td></tr>
+<tr><th id="598">598</th><td><u>#  <span data-ppcond="574">endif</span></u></td></tr>
+<tr><th id="599">599</th><td></td></tr>
+<tr><th id="600">600</th><td><u>#  <span data-ppcond="600">if</span> !<a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (0))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 0) || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="601">601</th><td><u>#   if _STRING_INLINE_unaligned</u></td></tr>
+<tr><th id="602">602</th><td><u>#    ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="603">603</th><td><u>#     define __stpcpy_args(src) \</u></td></tr>
+<tr><th id="604">604</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 0),			      \</u></td></tr>
+<tr><th id="605">605</th><td><u>     __extension__ __STRING2_SMALL_GET16 (src, 4),			      \</u></td></tr>
+<tr><th id="606">606</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 0),			      \</u></td></tr>
+<tr><th id="607">607</th><td><u>     __extension__ __STRING2_SMALL_GET32 (src, 4)</u></td></tr>
+<tr><th id="608">608</th><td><u>#    endif</u></td></tr>
+<tr><th id="609">609</th><td>__STRING_INLINE <em>char</em> *__stpcpy_small (<em>char</em> *, __uint16_t, __uint16_t,</td></tr>
+<tr><th id="610">610</th><td>				      __uint32_t, __uint32_t, size_t);</td></tr>
+<tr><th id="611">611</th><td>__STRING_INLINE <em>char</em> *</td></tr>
+<tr><th id="612">612</th><td>__stpcpy_small (<em>char</em> *__dest,</td></tr>
+<tr><th id="613">613</th><td>		__uint16_t __src0_2, __uint16_t __src4_2,</td></tr>
+<tr><th id="614">614</th><td>		__uint32_t __src0_4, __uint32_t __src4_4,</td></tr>
+<tr><th id="615">615</th><td>		size_t __srclen)</td></tr>
+<tr><th id="616">616</th><td>{</td></tr>
+<tr><th id="617">617</th><td>  <b>union</b> {</td></tr>
+<tr><th id="618">618</th><td>    <em>unsigned</em> <em>int</em> __ui;</td></tr>
+<tr><th id="619">619</th><td>    <em>unsigned</em> <em>short</em> <em>int</em> __usi;</td></tr>
+<tr><th id="620">620</th><td>    <em>unsigned</em> <em>char</em> __uc;</td></tr>
+<tr><th id="621">621</th><td>    <em>char</em> __c;</td></tr>
+<tr><th id="622">622</th><td>  } *__u = (<em>void</em> *) __dest;</td></tr>
+<tr><th id="623">623</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="624">624</th><td>    {</td></tr>
+<tr><th id="625">625</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="626">626</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="627">627</th><td>      <b>break</b>;</td></tr>
+<tr><th id="628">628</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="629">629</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="630">630</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="631">631</th><td>      <b>break</b>;</td></tr>
+<tr><th id="632">632</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="633">633</th><td>      __u-&gt;__usi = __src0_2;</td></tr>
+<tr><th id="634">634</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="635">635</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="636">636</th><td>      <b>break</b>;</td></tr>
+<tr><th id="637">637</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="638">638</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="639">639</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>3</var>);</td></tr>
+<tr><th id="640">640</th><td>      <b>break</b>;</td></tr>
+<tr><th id="641">641</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="642">642</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="643">643</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="644">644</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="645">645</th><td>      <b>break</b>;</td></tr>
+<tr><th id="646">646</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="647">647</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="648">648</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="649">649</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="650">650</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>1</var>);</td></tr>
+<tr><th id="651">651</th><td>      <b>break</b>;</td></tr>
+<tr><th id="652">652</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="653">653</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="654">654</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="655">655</th><td>      __u-&gt;__usi = __src4_2;</td></tr>
+<tr><th id="656">656</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>2</var>);</td></tr>
+<tr><th id="657">657</th><td>      __u-&gt;__uc = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="658">658</th><td>      <b>break</b>;</td></tr>
+<tr><th id="659">659</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="660">660</th><td>      __u-&gt;__ui = __src0_4;</td></tr>
+<tr><th id="661">661</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>4</var>);</td></tr>
+<tr><th id="662">662</th><td>      __u-&gt;__ui = __src4_4;</td></tr>
+<tr><th id="663">663</th><td>      __u = <b>__extension__</b> ((<em>void</em> *) __u + <var>3</var>);</td></tr>
+<tr><th id="664">664</th><td>      <b>break</b>;</td></tr>
+<tr><th id="665">665</th><td>    }</td></tr>
+<tr><th id="666">666</th><td>  <b>return</b> &amp;__u-&gt;__c;</td></tr>
+<tr><th id="667">667</th><td>}</td></tr>
+<tr><th id="668">668</th><td><u>#   else</u></td></tr>
+<tr><th id="669">669</th><td><u>#    ifndef _FORCE_INLINES</u></td></tr>
+<tr><th id="670">670</th><td><u>#     define __stpcpy_args(src) \</u></td></tr>
+<tr><th id="671">671</th><td><u>     __extension__ ((__STRING2_COPY_ARR2)				      \</u></td></tr>
+<tr><th id="672">672</th><td><u>      { { ((const char *) (src))[0], '\0' } }),				      \</u></td></tr>
+<tr><th id="673">673</th><td><u>     __extension__ ((__STRING2_COPY_ARR3)				      \</u></td></tr>
+<tr><th id="674">674</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="675">675</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="676">676</th><td><u>     __extension__ ((__STRING2_COPY_ARR4)				      \</u></td></tr>
+<tr><th id="677">677</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="678">678</th><td><u>	  ((const char *) (src))[2], '\0' } }),				      \</u></td></tr>
+<tr><th id="679">679</th><td><u>     __extension__ ((__STRING2_COPY_ARR5)				      \</u></td></tr>
+<tr><th id="680">680</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="681">681</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="682">682</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="683">683</th><td><u>     __extension__ ((__STRING2_COPY_ARR6)				      \</u></td></tr>
+<tr><th id="684">684</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="685">685</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="686">686</th><td><u>	  ((const char *) (src))[4], '\0' } }),				      \</u></td></tr>
+<tr><th id="687">687</th><td><u>     __extension__ ((__STRING2_COPY_ARR7)				      \</u></td></tr>
+<tr><th id="688">688</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="689">689</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="690">690</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="691">691</th><td><u>	  '\0' } }),							      \</u></td></tr>
+<tr><th id="692">692</th><td><u>     __extension__ ((__STRING2_COPY_ARR8)				      \</u></td></tr>
+<tr><th id="693">693</th><td><u>      { { ((const char *) (src))[0], ((const char *) (src))[1],		      \</u></td></tr>
+<tr><th id="694">694</th><td><u>	  ((const char *) (src))[2], ((const char *) (src))[3],		      \</u></td></tr>
+<tr><th id="695">695</th><td><u>	  ((const char *) (src))[4], ((const char *) (src))[5],		      \</u></td></tr>
+<tr><th id="696">696</th><td><u>	  ((const char *) (src))[6], '\0' } })</u></td></tr>
+<tr><th id="697">697</th><td><u>#    endif</u></td></tr>
+<tr><th id="698">698</th><td>__STRING_INLINE <em>char</em> *__stpcpy_small (<em>char</em> *, __STRING2_COPY_ARR2,</td></tr>
+<tr><th id="699">699</th><td>				      __STRING2_COPY_ARR3,</td></tr>
+<tr><th id="700">700</th><td>				      __STRING2_COPY_ARR4,</td></tr>
+<tr><th id="701">701</th><td>				      __STRING2_COPY_ARR5,</td></tr>
+<tr><th id="702">702</th><td>				      __STRING2_COPY_ARR6,</td></tr>
+<tr><th id="703">703</th><td>				      __STRING2_COPY_ARR7,</td></tr>
+<tr><th id="704">704</th><td>				      __STRING2_COPY_ARR8, size_t);</td></tr>
+<tr><th id="705">705</th><td>__STRING_INLINE <em>char</em> *</td></tr>
+<tr><th id="706">706</th><td>__stpcpy_small (<em>char</em> *__dest,</td></tr>
+<tr><th id="707">707</th><td>		__STRING2_COPY_ARR2 __src2, __STRING2_COPY_ARR3 __src3,</td></tr>
+<tr><th id="708">708</th><td>		__STRING2_COPY_ARR4 __src4, __STRING2_COPY_ARR5 __src5,</td></tr>
+<tr><th id="709">709</th><td>		__STRING2_COPY_ARR6 __src6, __STRING2_COPY_ARR7 __src7,</td></tr>
+<tr><th id="710">710</th><td>		__STRING2_COPY_ARR8 __src8, size_t __srclen)</td></tr>
+<tr><th id="711">711</th><td>{</td></tr>
+<tr><th id="712">712</th><td>  <b>union</b> {</td></tr>
+<tr><th id="713">713</th><td>    <em>char</em> __c;</td></tr>
+<tr><th id="714">714</th><td>    __STRING2_COPY_ARR2 __sca2;</td></tr>
+<tr><th id="715">715</th><td>    __STRING2_COPY_ARR3 __sca3;</td></tr>
+<tr><th id="716">716</th><td>    __STRING2_COPY_ARR4 __sca4;</td></tr>
+<tr><th id="717">717</th><td>    __STRING2_COPY_ARR5 __sca5;</td></tr>
+<tr><th id="718">718</th><td>    __STRING2_COPY_ARR6 __sca6;</td></tr>
+<tr><th id="719">719</th><td>    __STRING2_COPY_ARR7 __sca7;</td></tr>
+<tr><th id="720">720</th><td>    __STRING2_COPY_ARR8 __sca8;</td></tr>
+<tr><th id="721">721</th><td>  } *__u = (<em>void</em> *) __dest;</td></tr>
+<tr><th id="722">722</th><td>  <b>switch</b> ((<em>unsigned</em> <em>int</em>) __srclen)</td></tr>
+<tr><th id="723">723</th><td>    {</td></tr>
+<tr><th id="724">724</th><td>    <b>case</b> <var>1</var>:</td></tr>
+<tr><th id="725">725</th><td>      __u-&gt;__c = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="726">726</th><td>      <b>break</b>;</td></tr>
+<tr><th id="727">727</th><td>    <b>case</b> <var>2</var>:</td></tr>
+<tr><th id="728">728</th><td>      <b>__extension__</b> __u-&gt;__sca2 = __src2;</td></tr>
+<tr><th id="729">729</th><td>      <b>break</b>;</td></tr>
+<tr><th id="730">730</th><td>    <b>case</b> <var>3</var>:</td></tr>
+<tr><th id="731">731</th><td>      <b>__extension__</b> __u-&gt;__sca3 = __src3;</td></tr>
+<tr><th id="732">732</th><td>      <b>break</b>;</td></tr>
+<tr><th id="733">733</th><td>    <b>case</b> <var>4</var>:</td></tr>
+<tr><th id="734">734</th><td>      <b>__extension__</b> __u-&gt;__sca4 = __src4;</td></tr>
+<tr><th id="735">735</th><td>      <b>break</b>;</td></tr>
+<tr><th id="736">736</th><td>    <b>case</b> <var>5</var>:</td></tr>
+<tr><th id="737">737</th><td>      <b>__extension__</b> __u-&gt;__sca5 = __src5;</td></tr>
+<tr><th id="738">738</th><td>      <b>break</b>;</td></tr>
+<tr><th id="739">739</th><td>    <b>case</b> <var>6</var>:</td></tr>
+<tr><th id="740">740</th><td>      <b>__extension__</b> __u-&gt;__sca6 = __src6;</td></tr>
+<tr><th id="741">741</th><td>      <b>break</b>;</td></tr>
+<tr><th id="742">742</th><td>    <b>case</b> <var>7</var>:</td></tr>
+<tr><th id="743">743</th><td>      <b>__extension__</b> __u-&gt;__sca7 = __src7;</td></tr>
+<tr><th id="744">744</th><td>      <b>break</b>;</td></tr>
+<tr><th id="745">745</th><td>    <b>case</b> <var>8</var>:</td></tr>
+<tr><th id="746">746</th><td>      <b>__extension__</b> __u-&gt;__sca8 = __src8;</td></tr>
+<tr><th id="747">747</th><td>      <b>break</b>;</td></tr>
+<tr><th id="748">748</th><td>  }</td></tr>
+<tr><th id="749">749</th><td>  <b>return</b> __dest + __srclen - <var>1</var>;</td></tr>
+<tr><th id="750">750</th><td>}</td></tr>
+<tr><th id="751">751</th><td><u>#   endif</u></td></tr>
+<tr><th id="752">752</th><td><u>#  <span data-ppcond="600">endif</span></u></td></tr>
+<tr><th id="753">753</th><td><u># <span data-ppcond="573">endif</span></u></td></tr>
+<tr><th id="754">754</th><td><u>#<span data-ppcond="572">endif</span></u></td></tr>
+<tr><th id="755">755</th><td></td></tr>
+<tr><th id="756">756</th><td></td></tr>
+<tr><th id="757">757</th><td><i>/* Copy no more than N characters of SRC to DEST.  */</i></td></tr>
+<tr><th id="758">758</th><td><u>#<span data-ppcond="758">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncpy">_HAVE_STRING_ARCH_strncpy</span></u></td></tr>
+<tr><th id="759">759</th><td><u># <span data-ppcond="759">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="760">760</th><td><u>#  define <dfn class="macro" id="_M/strncpy" data-ref="_M/strncpy">strncpy</dfn>(dest, src, n) __builtin_strncpy (dest, src, n)</u></td></tr>
+<tr><th id="761">761</th><td><u># <span data-ppcond="759">else</span></u></td></tr>
+<tr><th id="762">762</th><td><u>#  define strncpy(dest, src, n) \</u></td></tr>
+<tr><th id="763">763</th><td><u>  (__extension__ (__builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)      \</u></td></tr>
+<tr><th id="764">764</th><td><u>		  ? (strlen (src) + 1 &gt;= ((size_t) (n))			      \</u></td></tr>
+<tr><th id="765">765</th><td><u>		     ? (char *) memcpy (dest, src, n)			      \</u></td></tr>
+<tr><th id="766">766</th><td><u>		     : strncpy (dest, src, n))				      \</u></td></tr>
+<tr><th id="767">767</th><td><u>		  : strncpy (dest, src, n)))</u></td></tr>
+<tr><th id="768">768</th><td><u># <span data-ppcond="759">endif</span></u></td></tr>
+<tr><th id="769">769</th><td><u>#<span data-ppcond="758">endif</span></u></td></tr>
+<tr><th id="770">770</th><td></td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td><i>/* Append no more than N characters from SRC onto DEST.  */</i></td></tr>
+<tr><th id="773">773</th><td><u>#<span data-ppcond="773">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncat">_HAVE_STRING_ARCH_strncat</span></u></td></tr>
+<tr><th id="774">774</th><td><u># <span data-ppcond="774">ifdef</span> <span class="macro" data-ref="_M/_USE_STRING_ARCH_strchr">_USE_STRING_ARCH_strchr</span></u></td></tr>
+<tr><th id="775">775</th><td><u>#  define strncat(dest, src, n) \</u></td></tr>
+<tr><th id="776">776</th><td><u>  (__extension__ ({ char *__dest = (dest);				      \</u></td></tr>
+<tr><th id="777">777</th><td><u>		    __builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)    \</u></td></tr>
+<tr><th id="778">778</th><td><u>		    ? (strlen (src) &lt; ((size_t) (n))			      \</u></td></tr>
+<tr><th id="779">779</th><td><u>		       ? strcat (__dest, src)				      \</u></td></tr>
+<tr><th id="780">780</th><td><u>		       : (*((char *) __mempcpy (strchr (__dest, '\0'),	      \</u></td></tr>
+<tr><th id="781">781</th><td><u>						src, n)) = '\0', __dest))     \</u></td></tr>
+<tr><th id="782">782</th><td><u>		    : strncat (dest, src, n); }))</u></td></tr>
+<tr><th id="783">783</th><td><u># <span data-ppcond="774">elif</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="784">784</th><td><u>#  define <dfn class="macro" id="_M/strncat" data-ref="_M/strncat">strncat</dfn>(dest, src, n) __builtin_strncat (dest, src, n)</u></td></tr>
+<tr><th id="785">785</th><td><u># <span data-ppcond="774">else</span></u></td></tr>
+<tr><th id="786">786</th><td><u>#  define strncat(dest, src, n) \</u></td></tr>
+<tr><th id="787">787</th><td><u>  (__extension__ (__builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)      \</u></td></tr>
+<tr><th id="788">788</th><td><u>		  ? (strlen (src) &lt; ((size_t) (n))			      \</u></td></tr>
+<tr><th id="789">789</th><td><u>		     ? strcat (dest, src)				      \</u></td></tr>
+<tr><th id="790">790</th><td><u>		     : strncat (dest, src, n))				      \</u></td></tr>
+<tr><th id="791">791</th><td><u>		  : strncat (dest, src, n)))</u></td></tr>
+<tr><th id="792">792</th><td><u># <span data-ppcond="774">endif</span></u></td></tr>
+<tr><th id="793">793</th><td><u>#<span data-ppcond="773">endif</span></u></td></tr>
+<tr><th id="794">794</th><td></td></tr>
+<tr><th id="795">795</th><td></td></tr>
+<tr><th id="796">796</th><td><i>/* Compare characters of S1 and S2.  */</i></td></tr>
+<tr><th id="797">797</th><td><u>#<span data-ppcond="797">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcmp">_HAVE_STRING_ARCH_strcmp</span></u></td></tr>
+<tr><th id="798">798</th><td><u># <span data-ppcond="798">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="799">799</th><td><u>#  define <dfn class="macro" id="_M/strcmp" data-ref="_M/strcmp">strcmp</dfn>(s1, s2) \</u></td></tr>
+<tr><th id="800">800</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="801">801</th><td><u>  ({ size_t __s1_len, __s2_len;						      \</u></td></tr>
+<tr><th id="802">802</th><td><u>     (__builtin_constant_p (s1) &amp;&amp; __builtin_constant_p (s2)		      \</u></td></tr>
+<tr><th id="803">803</th><td><u>      &amp;&amp; (__s1_len = strlen (s1), __s2_len = strlen (s2),		      \</u></td></tr>
+<tr><th id="804">804</th><td><u>	  (!__string2_1bptr_p (s1) || __s1_len &gt;= 4)			      \</u></td></tr>
+<tr><th id="805">805</th><td><u>	  &amp;&amp; (!__string2_1bptr_p (s2) || __s2_len &gt;= 4))		      \</u></td></tr>
+<tr><th id="806">806</th><td><u>      ? __builtin_strcmp (s1, s2)					      \</u></td></tr>
+<tr><th id="807">807</th><td><u>      : (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)		      \</u></td></tr>
+<tr><th id="808">808</th><td><u>	 &amp;&amp; (__s1_len = strlen (s1), __s1_len &lt; 4)			      \</u></td></tr>
+<tr><th id="809">809</th><td><u>	 ? (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="810">810</th><td><u>	    ? __builtin_strcmp (s1, s2)					      \</u></td></tr>
+<tr><th id="811">811</th><td><u>	    : __strcmp_cg (s1, s2, __s1_len))				      \</u></td></tr>
+<tr><th id="812">812</th><td><u>	 : (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="813">813</th><td><u>	    &amp;&amp; (__s2_len = strlen (s2), __s2_len &lt; 4)			      \</u></td></tr>
+<tr><th id="814">814</th><td><u>	    ? (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)	      \</u></td></tr>
+<tr><th id="815">815</th><td><u>	       ? __builtin_strcmp (s1, s2)				      \</u></td></tr>
+<tr><th id="816">816</th><td><u>	       : __strcmp_gc (s1, s2, __s2_len))			      \</u></td></tr>
+<tr><th id="817">817</th><td><u>	    : __builtin_strcmp (s1, s2)))); })</u></td></tr>
+<tr><th id="818">818</th><td><u># <span data-ppcond="798">else</span></u></td></tr>
+<tr><th id="819">819</th><td><u>#  define strcmp(s1, s2) \</u></td></tr>
+<tr><th id="820">820</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="821">821</th><td><u>  ({ size_t __s1_len, __s2_len;						      \</u></td></tr>
+<tr><th id="822">822</th><td><u>     (__builtin_constant_p (s1) &amp;&amp; __builtin_constant_p (s2)		      \</u></td></tr>
+<tr><th id="823">823</th><td><u>      &amp;&amp; (__s1_len = strlen (s1), __s2_len = strlen (s2),		      \</u></td></tr>
+<tr><th id="824">824</th><td><u>	  (!__string2_1bptr_p (s1) || __s1_len &gt;= 4)			      \</u></td></tr>
+<tr><th id="825">825</th><td><u>	  &amp;&amp; (!__string2_1bptr_p (s2) || __s2_len &gt;= 4))		      \</u></td></tr>
+<tr><th id="826">826</th><td><u>      ? memcmp ((const char *) (s1), (const char *) (s2),		      \</u></td></tr>
+<tr><th id="827">827</th><td><u>		(__s1_len &lt; __s2_len ? __s1_len : __s2_len) + 1)	      \</u></td></tr>
+<tr><th id="828">828</th><td><u>      : (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)		      \</u></td></tr>
+<tr><th id="829">829</th><td><u>	 &amp;&amp; (__s1_len = strlen (s1), __s1_len &lt; 4)			      \</u></td></tr>
+<tr><th id="830">830</th><td><u>	 ? (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="831">831</th><td><u>	    ? __strcmp_cc (s1, s2, __s1_len)				      \</u></td></tr>
+<tr><th id="832">832</th><td><u>	    : __strcmp_cg (s1, s2, __s1_len))				      \</u></td></tr>
+<tr><th id="833">833</th><td><u>	 : (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="834">834</th><td><u>	    &amp;&amp; (__s2_len = strlen (s2), __s2_len &lt; 4)			      \</u></td></tr>
+<tr><th id="835">835</th><td><u>	    ? (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)	      \</u></td></tr>
+<tr><th id="836">836</th><td><u>	       ? __strcmp_cc (s1, s2, __s2_len)				      \</u></td></tr>
+<tr><th id="837">837</th><td><u>	       : __strcmp_gc (s1, s2, __s2_len))			      \</u></td></tr>
+<tr><th id="838">838</th><td><u>	    : strcmp (s1, s2)))); })</u></td></tr>
+<tr><th id="839">839</th><td><u># <span data-ppcond="798">endif</span></u></td></tr>
+<tr><th id="840">840</th><td></td></tr>
+<tr><th id="841">841</th><td><u># define <dfn class="macro" id="_M/__strcmp_cc" data-ref="_M/__strcmp_cc">__strcmp_cc</dfn>(s1, s2, l) \</u></td></tr>
+<tr><th id="842">842</th><td><u>  (__extension__ ({ int __result =					      \</u></td></tr>
+<tr><th id="843">843</th><td><u>		      (((const unsigned char *) (const char *) (s1))[0]	      \</u></td></tr>
+<tr><th id="844">844</th><td><u>		       - ((const unsigned char *) (const char *)(s2))[0]);    \</u></td></tr>
+<tr><th id="845">845</th><td><u>		    if (l &gt; 0 &amp;&amp; __result == 0)				      \</u></td></tr>
+<tr><th id="846">846</th><td><u>		      {							      \</u></td></tr>
+<tr><th id="847">847</th><td><u>			__result = (((const unsigned char *)		      \</u></td></tr>
+<tr><th id="848">848</th><td><u>				     (const char *) (s1))[1]		      \</u></td></tr>
+<tr><th id="849">849</th><td><u>				    - ((const unsigned char *)		      \</u></td></tr>
+<tr><th id="850">850</th><td><u>				       (const char *) (s2))[1]);	      \</u></td></tr>
+<tr><th id="851">851</th><td><u>			if (l &gt; 1 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="852">852</th><td><u>			  {						      \</u></td></tr>
+<tr><th id="853">853</th><td><u>			    __result =					      \</u></td></tr>
+<tr><th id="854">854</th><td><u>			      (((const unsigned char *)			      \</u></td></tr>
+<tr><th id="855">855</th><td><u>				(const char *) (s1))[2]			      \</u></td></tr>
+<tr><th id="856">856</th><td><u>			       - ((const unsigned char *)		      \</u></td></tr>
+<tr><th id="857">857</th><td><u>				  (const char *) (s2))[2]);		      \</u></td></tr>
+<tr><th id="858">858</th><td><u>			    if (l &gt; 2 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="859">859</th><td><u>			      __result =				      \</u></td></tr>
+<tr><th id="860">860</th><td><u>				(((const unsigned char *)		      \</u></td></tr>
+<tr><th id="861">861</th><td><u>				  (const char *) (s1))[3]		      \</u></td></tr>
+<tr><th id="862">862</th><td><u>				 - ((const unsigned char *)		      \</u></td></tr>
+<tr><th id="863">863</th><td><u>				    (const char *) (s2))[3]);		      \</u></td></tr>
+<tr><th id="864">864</th><td><u>			  }						      \</u></td></tr>
+<tr><th id="865">865</th><td><u>		      }							      \</u></td></tr>
+<tr><th id="866">866</th><td><u>		    __result; }))</u></td></tr>
+<tr><th id="867">867</th><td></td></tr>
+<tr><th id="868">868</th><td><u># define <dfn class="macro" id="_M/__strcmp_cg" data-ref="_M/__strcmp_cg">__strcmp_cg</dfn>(s1, s2, l1) \</u></td></tr>
+<tr><th id="869">869</th><td><u>  (__extension__ ({ const unsigned char *__s2 =				      \</u></td></tr>
+<tr><th id="870">870</th><td><u>		      (const unsigned char *) (const char *) (s2);	      \</u></td></tr>
+<tr><th id="871">871</th><td><u>		    int __result =					      \</u></td></tr>
+<tr><th id="872">872</th><td><u>		      (((const unsigned char *) (const char *) (s1))[0]	      \</u></td></tr>
+<tr><th id="873">873</th><td><u>		       - __s2[0]);					      \</u></td></tr>
+<tr><th id="874">874</th><td><u>		    if (l1 &gt; 0 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="875">875</th><td><u>		      {							      \</u></td></tr>
+<tr><th id="876">876</th><td><u>			__result = (((const unsigned char *)		      \</u></td></tr>
+<tr><th id="877">877</th><td><u>				     (const char *) (s1))[1] - __s2[1]);      \</u></td></tr>
+<tr><th id="878">878</th><td><u>			if (l1 &gt; 1 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="879">879</th><td><u>			  {						      \</u></td></tr>
+<tr><th id="880">880</th><td><u>			    __result = (((const unsigned char *)	      \</u></td></tr>
+<tr><th id="881">881</th><td><u>					 (const char *) (s1))[2] - __s2[2]);  \</u></td></tr>
+<tr><th id="882">882</th><td><u>			    if (l1 &gt; 2 &amp;&amp; __result == 0)		      \</u></td></tr>
+<tr><th id="883">883</th><td><u>			      __result = (((const unsigned char *)	      \</u></td></tr>
+<tr><th id="884">884</th><td><u>					  (const char *)  (s1))[3]	      \</u></td></tr>
+<tr><th id="885">885</th><td><u>					  - __s2[3]);			      \</u></td></tr>
+<tr><th id="886">886</th><td><u>			  }						      \</u></td></tr>
+<tr><th id="887">887</th><td><u>		      }							      \</u></td></tr>
+<tr><th id="888">888</th><td><u>		    __result; }))</u></td></tr>
+<tr><th id="889">889</th><td></td></tr>
+<tr><th id="890">890</th><td><u># define <dfn class="macro" id="_M/__strcmp_gc" data-ref="_M/__strcmp_gc">__strcmp_gc</dfn>(s1, s2, l2) (- __strcmp_cg (s2, s1, l2))</u></td></tr>
+<tr><th id="891">891</th><td><u>#<span data-ppcond="797">endif</span></u></td></tr>
+<tr><th id="892">892</th><td></td></tr>
+<tr><th id="893">893</th><td></td></tr>
+<tr><th id="894">894</th><td><i>/* Compare N characters of S1 and S2.  */</i></td></tr>
+<tr><th id="895">895</th><td><u>#<span data-ppcond="895">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncmp">_HAVE_STRING_ARCH_strncmp</span></u></td></tr>
+<tr><th id="896">896</th><td><u># define <dfn class="macro" id="_M/strncmp" data-ref="_M/strncmp">strncmp</dfn>(s1, s2, n)						      \</u></td></tr>
+<tr><th id="897">897</th><td><u>  (__extension__ (__builtin_constant_p (n)				      \</u></td></tr>
+<tr><th id="898">898</th><td><u>		  &amp;&amp; ((__builtin_constant_p (s1)			      \</u></td></tr>
+<tr><th id="899">899</th><td><u>		       &amp;&amp; strlen (s1) &lt; ((size_t) (n)))			      \</u></td></tr>
+<tr><th id="900">900</th><td><u>		      || (__builtin_constant_p (s2)			      \</u></td></tr>
+<tr><th id="901">901</th><td><u>			  &amp;&amp; strlen (s2) &lt; ((size_t) (n))))		      \</u></td></tr>
+<tr><th id="902">902</th><td><u>		  ? strcmp (s1, s2) : strncmp (s1, s2, n)))</u></td></tr>
+<tr><th id="903">903</th><td><u>#<span data-ppcond="895">endif</span></u></td></tr>
+<tr><th id="904">904</th><td></td></tr>
+<tr><th id="905">905</th><td></td></tr>
+<tr><th id="906">906</th><td><i>/* Return the length of the initial segment of S which</i></td></tr>
+<tr><th id="907">907</th><td><i>   consists entirely of characters not in REJECT.  */</i></td></tr>
+<tr><th id="908">908</th><td><u>#<span data-ppcond="908">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcspn">_HAVE_STRING_ARCH_strcspn</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="909">909</th><td><u># <span data-ppcond="909">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcspn">_HAVE_STRING_ARCH_strcspn</span></u></td></tr>
+<tr><th id="910">910</th><td><u>#  <span data-ppcond="910">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="911">911</th><td><u>#   define <dfn class="macro" id="_M/strcspn" data-ref="_M/strcspn">strcspn</dfn>(s, reject) \</u></td></tr>
+<tr><th id="912">912</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="913">913</th><td><u>  ({ char __r0, __r1, __r2;						      \</u></td></tr>
+<tr><th id="914">914</th><td><u>     (__builtin_constant_p (reject) &amp;&amp; __string2_1bptr_p (reject)	      \</u></td></tr>
+<tr><th id="915">915</th><td><u>      ? ((__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s))		      \</u></td></tr>
+<tr><th id="916">916</th><td><u>	 ? __builtin_strcspn (s, reject)				      \</u></td></tr>
+<tr><th id="917">917</th><td><u>	 : ((__r0 = ((const char *) (reject))[0], __r0 == '\0')		      \</u></td></tr>
+<tr><th id="918">918</th><td><u>	    ? strlen (s)						      \</u></td></tr>
+<tr><th id="919">919</th><td><u>	    : ((__r1 = ((const char *) (reject))[1], __r1 == '\0')	      \</u></td></tr>
+<tr><th id="920">920</th><td><u>	       ? __strcspn_c1 (s, __r0)					      \</u></td></tr>
+<tr><th id="921">921</th><td><u>	       : ((__r2 = ((const char *) (reject))[2], __r2 == '\0')	      \</u></td></tr>
+<tr><th id="922">922</th><td><u>		  ? __strcspn_c2 (s, __r0, __r1)			      \</u></td></tr>
+<tr><th id="923">923</th><td><u>		  : (((const char *) (reject))[3] == '\0'		      \</u></td></tr>
+<tr><th id="924">924</th><td><u>		     ? __strcspn_c3 (s, __r0, __r1, __r2)		      \</u></td></tr>
+<tr><th id="925">925</th><td><u>		     : __builtin_strcspn (s, reject))))))		      \</u></td></tr>
+<tr><th id="926">926</th><td><u>      : __builtin_strcspn (s, reject)); })</u></td></tr>
+<tr><th id="927">927</th><td><u>#  <span data-ppcond="910">else</span></u></td></tr>
+<tr><th id="928">928</th><td><u>#   define strcspn(s, reject) \</u></td></tr>
+<tr><th id="929">929</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="930">930</th><td><u>  ({ char __r0, __r1, __r2;						      \</u></td></tr>
+<tr><th id="931">931</th><td><u>     (__builtin_constant_p (reject) &amp;&amp; __string2_1bptr_p (reject)	      \</u></td></tr>
+<tr><th id="932">932</th><td><u>      ? ((__r0 = ((const char *) (reject))[0], __r0 == '\0')		      \</u></td></tr>
+<tr><th id="933">933</th><td><u>	 ? strlen (s)							      \</u></td></tr>
+<tr><th id="934">934</th><td><u>	 : ((__r1 = ((const char *) (reject))[1], __r1 == '\0')		      \</u></td></tr>
+<tr><th id="935">935</th><td><u>	    ? __strcspn_c1 (s, __r0)					      \</u></td></tr>
+<tr><th id="936">936</th><td><u>	    : ((__r2 = ((const char *) (reject))[2], __r2 == '\0')	      \</u></td></tr>
+<tr><th id="937">937</th><td><u>	       ? __strcspn_c2 (s, __r0, __r1)				      \</u></td></tr>
+<tr><th id="938">938</th><td><u>	       : (((const char *) (reject))[3] == '\0'			      \</u></td></tr>
+<tr><th id="939">939</th><td><u>		  ? __strcspn_c3 (s, __r0, __r1, __r2)			      \</u></td></tr>
+<tr><th id="940">940</th><td><u>		  : strcspn (s, reject)))))				      \</u></td></tr>
+<tr><th id="941">941</th><td><u>      : strcspn (s, reject)); })</u></td></tr>
+<tr><th id="942">942</th><td><u>#  <span data-ppcond="910">endif</span></u></td></tr>
+<tr><th id="943">943</th><td><u># <span data-ppcond="909">endif</span></u></td></tr>
+<tr><th id="944">944</th><td></td></tr>
+<tr><th id="945">945</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strcspn_c1" title='__strcspn_c1' data-ref="__strcspn_c1" data-ref-filename="__strcspn_c1">__strcspn_c1</a> (<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="1263__s" title='__s' data-type='const char *' data-ref="1263__s" data-ref-filename="1263__s">__s</dfn>, <em>int</em> <dfn class="local col4 decl" id="1264__reject" title='__reject' data-type='int' data-ref="1264__reject" data-ref-filename="1264__reject">__reject</dfn>);</td></tr>
+<tr><th id="946">946</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="947">947</th><td><dfn class="decl def fn" id="__strcspn_c1" title='__strcspn_c1' data-ref="__strcspn_c1" data-ref-filename="__strcspn_c1">__strcspn_c1</dfn> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="1265__s" title='__s' data-type='const char *' data-ref="1265__s" data-ref-filename="1265__s">__s</dfn>, <em>int</em> <dfn class="local col6 decl" id="1266__reject" title='__reject' data-type='int' data-ref="1266__reject" data-ref-filename="1266__reject">__reject</dfn>)</td></tr>
+<tr><th id="948">948</th><td>{</td></tr>
+<tr><th id="949">949</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="1267__result" title='__result' data-type='size_t' data-ref="1267__result" data-ref-filename="1267__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="950">950</th><td>  <b>while</b> (<a class="local col5 ref" href="#1265__s" title='__s' data-ref="1265__s" data-ref-filename="1265__s">__s</a>[<a class="local col7 ref" href="#1267__result" title='__result' data-ref="1267__result" data-ref-filename="1267__result">__result</a>] != <kbd>'\0'</kbd> &amp;&amp; <a class="local col5 ref" href="#1265__s" title='__s' data-ref="1265__s" data-ref-filename="1265__s">__s</a>[<a class="local col7 ref" href="#1267__result" title='__result' data-ref="1267__result" data-ref-filename="1267__result">__result</a>] != <a class="local col6 ref" href="#1266__reject" title='__reject' data-ref="1266__reject" data-ref-filename="1266__reject">__reject</a>)</td></tr>
+<tr><th id="951">951</th><td>    ++<a class="local col7 ref" href="#1267__result" title='__result' data-ref="1267__result" data-ref-filename="1267__result">__result</a>;</td></tr>
+<tr><th id="952">952</th><td>  <b>return</b> <a class="local col7 ref" href="#1267__result" title='__result' data-ref="1267__result" data-ref-filename="1267__result">__result</a>;</td></tr>
+<tr><th id="953">953</th><td>}</td></tr>
+<tr><th id="954">954</th><td></td></tr>
+<tr><th id="955">955</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strcspn_c2" title='__strcspn_c2' data-ref="__strcspn_c2" data-ref-filename="__strcspn_c2">__strcspn_c2</a> (<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="1268__s" title='__s' data-type='const char *' data-ref="1268__s" data-ref-filename="1268__s">__s</dfn>, <em>int</em> <dfn class="local col9 decl" id="1269__reject1" title='__reject1' data-type='int' data-ref="1269__reject1" data-ref-filename="1269__reject1">__reject1</dfn>,</td></tr>
+<tr><th id="956">956</th><td>				     <em>int</em> <dfn class="local col0 decl" id="1270__reject2" title='__reject2' data-type='int' data-ref="1270__reject2" data-ref-filename="1270__reject2">__reject2</dfn>);</td></tr>
+<tr><th id="957">957</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="958">958</th><td><dfn class="decl def fn" id="__strcspn_c2" title='__strcspn_c2' data-ref="__strcspn_c2" data-ref-filename="__strcspn_c2">__strcspn_c2</dfn> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1271__s" title='__s' data-type='const char *' data-ref="1271__s" data-ref-filename="1271__s">__s</dfn>, <em>int</em> <dfn class="local col2 decl" id="1272__reject1" title='__reject1' data-type='int' data-ref="1272__reject1" data-ref-filename="1272__reject1">__reject1</dfn>, <em>int</em> <dfn class="local col3 decl" id="1273__reject2" title='__reject2' data-type='int' data-ref="1273__reject2" data-ref-filename="1273__reject2">__reject2</dfn>)</td></tr>
+<tr><th id="959">959</th><td>{</td></tr>
+<tr><th id="960">960</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="1274__result" title='__result' data-type='size_t' data-ref="1274__result" data-ref-filename="1274__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="961">961</th><td>  <b>while</b> (<a class="local col1 ref" href="#1271__s" title='__s' data-ref="1271__s" data-ref-filename="1271__s">__s</a>[<a class="local col4 ref" href="#1274__result" title='__result' data-ref="1274__result" data-ref-filename="1274__result">__result</a>] != <kbd>'\0'</kbd> &amp;&amp; <a class="local col1 ref" href="#1271__s" title='__s' data-ref="1271__s" data-ref-filename="1271__s">__s</a>[<a class="local col4 ref" href="#1274__result" title='__result' data-ref="1274__result" data-ref-filename="1274__result">__result</a>] != <a class="local col2 ref" href="#1272__reject1" title='__reject1' data-ref="1272__reject1" data-ref-filename="1272__reject1">__reject1</a></td></tr>
+<tr><th id="962">962</th><td>	 &amp;&amp; <a class="local col1 ref" href="#1271__s" title='__s' data-ref="1271__s" data-ref-filename="1271__s">__s</a>[<a class="local col4 ref" href="#1274__result" title='__result' data-ref="1274__result" data-ref-filename="1274__result">__result</a>] != <a class="local col3 ref" href="#1273__reject2" title='__reject2' data-ref="1273__reject2" data-ref-filename="1273__reject2">__reject2</a>)</td></tr>
+<tr><th id="963">963</th><td>    ++<a class="local col4 ref" href="#1274__result" title='__result' data-ref="1274__result" data-ref-filename="1274__result">__result</a>;</td></tr>
+<tr><th id="964">964</th><td>  <b>return</b> <a class="local col4 ref" href="#1274__result" title='__result' data-ref="1274__result" data-ref-filename="1274__result">__result</a>;</td></tr>
+<tr><th id="965">965</th><td>}</td></tr>
+<tr><th id="966">966</th><td></td></tr>
+<tr><th id="967">967</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strcspn_c3" title='__strcspn_c3' data-ref="__strcspn_c3" data-ref-filename="__strcspn_c3">__strcspn_c3</a> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="1275__s" title='__s' data-type='const char *' data-ref="1275__s" data-ref-filename="1275__s">__s</dfn>, <em>int</em> <dfn class="local col6 decl" id="1276__reject1" title='__reject1' data-type='int' data-ref="1276__reject1" data-ref-filename="1276__reject1">__reject1</dfn>,</td></tr>
+<tr><th id="968">968</th><td>				     <em>int</em> <dfn class="local col7 decl" id="1277__reject2" title='__reject2' data-type='int' data-ref="1277__reject2" data-ref-filename="1277__reject2">__reject2</dfn>, <em>int</em> <dfn class="local col8 decl" id="1278__reject3" title='__reject3' data-type='int' data-ref="1278__reject3" data-ref-filename="1278__reject3">__reject3</dfn>);</td></tr>
+<tr><th id="969">969</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="970">970</th><td><dfn class="decl def fn" id="__strcspn_c3" title='__strcspn_c3' data-ref="__strcspn_c3" data-ref-filename="__strcspn_c3">__strcspn_c3</dfn> (<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="1279__s" title='__s' data-type='const char *' data-ref="1279__s" data-ref-filename="1279__s">__s</dfn>, <em>int</em> <dfn class="local col0 decl" id="1280__reject1" title='__reject1' data-type='int' data-ref="1280__reject1" data-ref-filename="1280__reject1">__reject1</dfn>, <em>int</em> <dfn class="local col1 decl" id="1281__reject2" title='__reject2' data-type='int' data-ref="1281__reject2" data-ref-filename="1281__reject2">__reject2</dfn>,</td></tr>
+<tr><th id="971">971</th><td>	      <em>int</em> <dfn class="local col2 decl" id="1282__reject3" title='__reject3' data-type='int' data-ref="1282__reject3" data-ref-filename="1282__reject3">__reject3</dfn>)</td></tr>
+<tr><th id="972">972</th><td>{</td></tr>
+<tr><th id="973">973</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="1283__result" title='__result' data-type='size_t' data-ref="1283__result" data-ref-filename="1283__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="974">974</th><td>  <b>while</b> (<a class="local col9 ref" href="#1279__s" title='__s' data-ref="1279__s" data-ref-filename="1279__s">__s</a>[<a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>] != <kbd>'\0'</kbd> &amp;&amp; <a class="local col9 ref" href="#1279__s" title='__s' data-ref="1279__s" data-ref-filename="1279__s">__s</a>[<a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>] != <a class="local col0 ref" href="#1280__reject1" title='__reject1' data-ref="1280__reject1" data-ref-filename="1280__reject1">__reject1</a></td></tr>
+<tr><th id="975">975</th><td>	 &amp;&amp; <a class="local col9 ref" href="#1279__s" title='__s' data-ref="1279__s" data-ref-filename="1279__s">__s</a>[<a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>] != <a class="local col1 ref" href="#1281__reject2" title='__reject2' data-ref="1281__reject2" data-ref-filename="1281__reject2">__reject2</a> &amp;&amp; <a class="local col9 ref" href="#1279__s" title='__s' data-ref="1279__s" data-ref-filename="1279__s">__s</a>[<a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>] != <a class="local col2 ref" href="#1282__reject3" title='__reject3' data-ref="1282__reject3" data-ref-filename="1282__reject3">__reject3</a>)</td></tr>
+<tr><th id="976">976</th><td>    ++<a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>;</td></tr>
+<tr><th id="977">977</th><td>  <b>return</b> <a class="local col3 ref" href="#1283__result" title='__result' data-ref="1283__result" data-ref-filename="1283__result">__result</a>;</td></tr>
+<tr><th id="978">978</th><td>}</td></tr>
+<tr><th id="979">979</th><td><u>#<span data-ppcond="908">endif</span></u></td></tr>
+<tr><th id="980">980</th><td></td></tr>
+<tr><th id="981">981</th><td></td></tr>
+<tr><th id="982">982</th><td><i>/* Return the length of the initial segment of S which</i></td></tr>
+<tr><th id="983">983</th><td><i>   consists entirely of characters in ACCEPT.  */</i></td></tr>
+<tr><th id="984">984</th><td><u>#<span data-ppcond="984">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strspn">_HAVE_STRING_ARCH_strspn</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="985">985</th><td><u># <span data-ppcond="985">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strspn">_HAVE_STRING_ARCH_strspn</span></u></td></tr>
+<tr><th id="986">986</th><td><u>#  <span data-ppcond="986">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="987">987</th><td><u>#   define <dfn class="macro" id="_M/strspn" data-ref="_M/strspn">strspn</dfn>(s, accept) \</u></td></tr>
+<tr><th id="988">988</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="989">989</th><td><u>  ({ char __a0, __a1, __a2;						      \</u></td></tr>
+<tr><th id="990">990</th><td><u>     (__builtin_constant_p (accept) &amp;&amp; __string2_1bptr_p (accept)	      \</u></td></tr>
+<tr><th id="991">991</th><td><u>      ? ((__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s))		      \</u></td></tr>
+<tr><th id="992">992</th><td><u>	 ? __builtin_strspn (s, accept)					      \</u></td></tr>
+<tr><th id="993">993</th><td><u>	 : ((__a0 = ((const char *) (accept))[0], __a0 == '\0')		      \</u></td></tr>
+<tr><th id="994">994</th><td><u>	    ? ((void) (s), (size_t) 0)					      \</u></td></tr>
+<tr><th id="995">995</th><td><u>	    : ((__a1 = ((const char *) (accept))[1], __a1 == '\0')	      \</u></td></tr>
+<tr><th id="996">996</th><td><u>	       ? __strspn_c1 (s, __a0)					      \</u></td></tr>
+<tr><th id="997">997</th><td><u>	       : ((__a2 = ((const char *) (accept))[2], __a2 == '\0')	      \</u></td></tr>
+<tr><th id="998">998</th><td><u>		  ? __strspn_c2 (s, __a0, __a1)				      \</u></td></tr>
+<tr><th id="999">999</th><td><u>		  : (((const char *) (accept))[3] == '\0'		      \</u></td></tr>
+<tr><th id="1000">1000</th><td><u>		     ? __strspn_c3 (s, __a0, __a1, __a2)		      \</u></td></tr>
+<tr><th id="1001">1001</th><td><u>		     : __builtin_strspn (s, accept))))))		      \</u></td></tr>
+<tr><th id="1002">1002</th><td><u>      : __builtin_strspn (s, accept)); })</u></td></tr>
+<tr><th id="1003">1003</th><td><u>#  <span data-ppcond="986">else</span></u></td></tr>
+<tr><th id="1004">1004</th><td><u>#   define strspn(s, accept) \</u></td></tr>
+<tr><th id="1005">1005</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="1006">1006</th><td><u>  ({ char __a0, __a1, __a2;						      \</u></td></tr>
+<tr><th id="1007">1007</th><td><u>     (__builtin_constant_p (accept) &amp;&amp; __string2_1bptr_p (accept)	      \</u></td></tr>
+<tr><th id="1008">1008</th><td><u>      ? ((__a0 = ((const char *) (accept))[0], __a0 == '\0')		      \</u></td></tr>
+<tr><th id="1009">1009</th><td><u>	 ? ((void) (s), (size_t) 0)					      \</u></td></tr>
+<tr><th id="1010">1010</th><td><u>	 : ((__a1 = ((const char *) (accept))[1], __a1 == '\0')		      \</u></td></tr>
+<tr><th id="1011">1011</th><td><u>	    ? __strspn_c1 (s, __a0)					      \</u></td></tr>
+<tr><th id="1012">1012</th><td><u>	    : ((__a2 = ((const char *) (accept))[2], __a2 == '\0')	      \</u></td></tr>
+<tr><th id="1013">1013</th><td><u>	       ? __strspn_c2 (s, __a0, __a1)				      \</u></td></tr>
+<tr><th id="1014">1014</th><td><u>	       : (((const char *) (accept))[3] == '\0'			      \</u></td></tr>
+<tr><th id="1015">1015</th><td><u>		  ? __strspn_c3 (s, __a0, __a1, __a2)			      \</u></td></tr>
+<tr><th id="1016">1016</th><td><u>		  : strspn (s, accept)))))				      \</u></td></tr>
+<tr><th id="1017">1017</th><td><u>      : strspn (s, accept)); })</u></td></tr>
+<tr><th id="1018">1018</th><td><u>#  <span data-ppcond="986">endif</span></u></td></tr>
+<tr><th id="1019">1019</th><td><u># <span data-ppcond="985">endif</span></u></td></tr>
+<tr><th id="1020">1020</th><td></td></tr>
+<tr><th id="1021">1021</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strspn_c1" title='__strspn_c1' data-ref="__strspn_c1" data-ref-filename="__strspn_c1">__strspn_c1</a> (<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="1284__s" title='__s' data-type='const char *' data-ref="1284__s" data-ref-filename="1284__s">__s</dfn>, <em>int</em> <dfn class="local col5 decl" id="1285__accept" title='__accept' data-type='int' data-ref="1285__accept" data-ref-filename="1285__accept">__accept</dfn>);</td></tr>
+<tr><th id="1022">1022</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="1023">1023</th><td><dfn class="decl def fn" id="__strspn_c1" title='__strspn_c1' data-ref="__strspn_c1" data-ref-filename="__strspn_c1">__strspn_c1</dfn> (<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="1286__s" title='__s' data-type='const char *' data-ref="1286__s" data-ref-filename="1286__s">__s</dfn>, <em>int</em> <dfn class="local col7 decl" id="1287__accept" title='__accept' data-type='int' data-ref="1287__accept" data-ref-filename="1287__accept">__accept</dfn>)</td></tr>
+<tr><th id="1024">1024</th><td>{</td></tr>
+<tr><th id="1025">1025</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col8 decl" id="1288__result" title='__result' data-type='size_t' data-ref="1288__result" data-ref-filename="1288__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="1026">1026</th><td>  <i>/* Please note that __accept never can be '\0'.  */</i></td></tr>
+<tr><th id="1027">1027</th><td>  <b>while</b> (<a class="local col6 ref" href="#1286__s" title='__s' data-ref="1286__s" data-ref-filename="1286__s">__s</a>[<a class="local col8 ref" href="#1288__result" title='__result' data-ref="1288__result" data-ref-filename="1288__result">__result</a>] == <a class="local col7 ref" href="#1287__accept" title='__accept' data-ref="1287__accept" data-ref-filename="1287__accept">__accept</a>)</td></tr>
+<tr><th id="1028">1028</th><td>    ++<a class="local col8 ref" href="#1288__result" title='__result' data-ref="1288__result" data-ref-filename="1288__result">__result</a>;</td></tr>
+<tr><th id="1029">1029</th><td>  <b>return</b> <a class="local col8 ref" href="#1288__result" title='__result' data-ref="1288__result" data-ref-filename="1288__result">__result</a>;</td></tr>
+<tr><th id="1030">1030</th><td>}</td></tr>
+<tr><th id="1031">1031</th><td></td></tr>
+<tr><th id="1032">1032</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strspn_c2" title='__strspn_c2' data-ref="__strspn_c2" data-ref-filename="__strspn_c2">__strspn_c2</a> (<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="1289__s" title='__s' data-type='const char *' data-ref="1289__s" data-ref-filename="1289__s">__s</dfn>, <em>int</em> <dfn class="local col0 decl" id="1290__accept1" title='__accept1' data-type='int' data-ref="1290__accept1" data-ref-filename="1290__accept1">__accept1</dfn>,</td></tr>
+<tr><th id="1033">1033</th><td>				    <em>int</em> <dfn class="local col1 decl" id="1291__accept2" title='__accept2' data-type='int' data-ref="1291__accept2" data-ref-filename="1291__accept2">__accept2</dfn>);</td></tr>
+<tr><th id="1034">1034</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="1035">1035</th><td><dfn class="decl def fn" id="__strspn_c2" title='__strspn_c2' data-ref="__strspn_c2" data-ref-filename="__strspn_c2">__strspn_c2</dfn> (<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="1292__s" title='__s' data-type='const char *' data-ref="1292__s" data-ref-filename="1292__s">__s</dfn>, <em>int</em> <dfn class="local col3 decl" id="1293__accept1" title='__accept1' data-type='int' data-ref="1293__accept1" data-ref-filename="1293__accept1">__accept1</dfn>, <em>int</em> <dfn class="local col4 decl" id="1294__accept2" title='__accept2' data-type='int' data-ref="1294__accept2" data-ref-filename="1294__accept2">__accept2</dfn>)</td></tr>
+<tr><th id="1036">1036</th><td>{</td></tr>
+<tr><th id="1037">1037</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col5 decl" id="1295__result" title='__result' data-type='size_t' data-ref="1295__result" data-ref-filename="1295__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="1038">1038</th><td>  <i>/* Please note that __accept1 and __accept2 never can be '\0'.  */</i></td></tr>
+<tr><th id="1039">1039</th><td>  <b>while</b> (<a class="local col2 ref" href="#1292__s" title='__s' data-ref="1292__s" data-ref-filename="1292__s">__s</a>[<a class="local col5 ref" href="#1295__result" title='__result' data-ref="1295__result" data-ref-filename="1295__result">__result</a>] == <a class="local col3 ref" href="#1293__accept1" title='__accept1' data-ref="1293__accept1" data-ref-filename="1293__accept1">__accept1</a> || <a class="local col2 ref" href="#1292__s" title='__s' data-ref="1292__s" data-ref-filename="1292__s">__s</a>[<a class="local col5 ref" href="#1295__result" title='__result' data-ref="1295__result" data-ref-filename="1295__result">__result</a>] == <a class="local col4 ref" href="#1294__accept2" title='__accept2' data-ref="1294__accept2" data-ref-filename="1294__accept2">__accept2</a>)</td></tr>
+<tr><th id="1040">1040</th><td>    ++<a class="local col5 ref" href="#1295__result" title='__result' data-ref="1295__result" data-ref-filename="1295__result">__result</a>;</td></tr>
+<tr><th id="1041">1041</th><td>  <b>return</b> <a class="local col5 ref" href="#1295__result" title='__result' data-ref="1295__result" data-ref-filename="1295__result">__result</a>;</td></tr>
+<tr><th id="1042">1042</th><td>}</td></tr>
+<tr><th id="1043">1043</th><td></td></tr>
+<tr><th id="1044">1044</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <a class="decl fn" href="#__strspn_c3" title='__strspn_c3' data-ref="__strspn_c3" data-ref-filename="__strspn_c3">__strspn_c3</a> (<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="1296__s" title='__s' data-type='const char *' data-ref="1296__s" data-ref-filename="1296__s">__s</dfn>, <em>int</em> <dfn class="local col7 decl" id="1297__accept1" title='__accept1' data-type='int' data-ref="1297__accept1" data-ref-filename="1297__accept1">__accept1</dfn>,</td></tr>
+<tr><th id="1045">1045</th><td>				    <em>int</em> <dfn class="local col8 decl" id="1298__accept2" title='__accept2' data-type='int' data-ref="1298__accept2" data-ref-filename="1298__accept2">__accept2</dfn>, <em>int</em> <dfn class="local col9 decl" id="1299__accept3" title='__accept3' data-type='int' data-ref="1299__accept3" data-ref-filename="1299__accept3">__accept3</dfn>);</td></tr>
+<tr><th id="1046">1046</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span></td></tr>
+<tr><th id="1047">1047</th><td><dfn class="decl def fn" id="__strspn_c3" title='__strspn_c3' data-ref="__strspn_c3" data-ref-filename="__strspn_c3">__strspn_c3</dfn> (<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="1300__s" title='__s' data-type='const char *' data-ref="1300__s" data-ref-filename="1300__s">__s</dfn>, <em>int</em> <dfn class="local col1 decl" id="1301__accept1" title='__accept1' data-type='int' data-ref="1301__accept1" data-ref-filename="1301__accept1">__accept1</dfn>, <em>int</em> <dfn class="local col2 decl" id="1302__accept2" title='__accept2' data-type='int' data-ref="1302__accept2" data-ref-filename="1302__accept2">__accept2</dfn>, <em>int</em> <dfn class="local col3 decl" id="1303__accept3" title='__accept3' data-type='int' data-ref="1303__accept3" data-ref-filename="1303__accept3">__accept3</dfn>)</td></tr>
+<tr><th id="1048">1048</th><td>{</td></tr>
+<tr><th id="1049">1049</th><td>  <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col4 decl" id="1304__result" title='__result' data-type='size_t' data-ref="1304__result" data-ref-filename="1304__result">__result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="1050">1050</th><td>  <i>/* Please note that __accept1 to __accept3 never can be '\0'.  */</i></td></tr>
+<tr><th id="1051">1051</th><td>  <b>while</b> (<a class="local col0 ref" href="#1300__s" title='__s' data-ref="1300__s" data-ref-filename="1300__s">__s</a>[<a class="local col4 ref" href="#1304__result" title='__result' data-ref="1304__result" data-ref-filename="1304__result">__result</a>] == <a class="local col1 ref" href="#1301__accept1" title='__accept1' data-ref="1301__accept1" data-ref-filename="1301__accept1">__accept1</a> || <a class="local col0 ref" href="#1300__s" title='__s' data-ref="1300__s" data-ref-filename="1300__s">__s</a>[<a class="local col4 ref" href="#1304__result" title='__result' data-ref="1304__result" data-ref-filename="1304__result">__result</a>] == <a class="local col2 ref" href="#1302__accept2" title='__accept2' data-ref="1302__accept2" data-ref-filename="1302__accept2">__accept2</a></td></tr>
+<tr><th id="1052">1052</th><td>	 || <a class="local col0 ref" href="#1300__s" title='__s' data-ref="1300__s" data-ref-filename="1300__s">__s</a>[<a class="local col4 ref" href="#1304__result" title='__result' data-ref="1304__result" data-ref-filename="1304__result">__result</a>] == <a class="local col3 ref" href="#1303__accept3" title='__accept3' data-ref="1303__accept3" data-ref-filename="1303__accept3">__accept3</a>)</td></tr>
+<tr><th id="1053">1053</th><td>    ++<a class="local col4 ref" href="#1304__result" title='__result' data-ref="1304__result" data-ref-filename="1304__result">__result</a>;</td></tr>
+<tr><th id="1054">1054</th><td>  <b>return</b> <a class="local col4 ref" href="#1304__result" title='__result' data-ref="1304__result" data-ref-filename="1304__result">__result</a>;</td></tr>
+<tr><th id="1055">1055</th><td>}</td></tr>
+<tr><th id="1056">1056</th><td><u>#<span data-ppcond="984">endif</span></u></td></tr>
+<tr><th id="1057">1057</th><td></td></tr>
+<tr><th id="1058">1058</th><td></td></tr>
+<tr><th id="1059">1059</th><td><i>/* Find the first occurrence in S of any character in ACCEPT.  */</i></td></tr>
+<tr><th id="1060">1060</th><td><u>#<span data-ppcond="1060">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strpbrk">_HAVE_STRING_ARCH_strpbrk</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="1061">1061</th><td><u># <span data-ppcond="1061">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strpbrk">_HAVE_STRING_ARCH_strpbrk</span></u></td></tr>
+<tr><th id="1062">1062</th><td><u>#  <span data-ppcond="1062">if</span> <a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((3) &lt;&lt; 16) + (2))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (3, 2)</u></td></tr>
+<tr><th id="1063">1063</th><td><u>#   define <dfn class="macro" id="_M/strpbrk" data-ref="_M/strpbrk">strpbrk</dfn>(s, accept) \</u></td></tr>
+<tr><th id="1064">1064</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="1065">1065</th><td><u>  ({ char __a0, __a1, __a2;						      \</u></td></tr>
+<tr><th id="1066">1066</th><td><u>     (__builtin_constant_p (accept) &amp;&amp; __string2_1bptr_p (accept)	      \</u></td></tr>
+<tr><th id="1067">1067</th><td><u>      ? ((__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s))		      \</u></td></tr>
+<tr><th id="1068">1068</th><td><u>	 ? __builtin_strpbrk (s, accept)				      \</u></td></tr>
+<tr><th id="1069">1069</th><td><u>	 : ((__a0 = ((const char  *) (accept))[0], __a0 == '\0')	      \</u></td></tr>
+<tr><th id="1070">1070</th><td><u>	    ? ((void) (s), (char *) NULL)				      \</u></td></tr>
+<tr><th id="1071">1071</th><td><u>	    : ((__a1 = ((const char *) (accept))[1], __a1 == '\0')	      \</u></td></tr>
+<tr><th id="1072">1072</th><td><u>	       ? __builtin_strchr (s, __a0)				      \</u></td></tr>
+<tr><th id="1073">1073</th><td><u>	       : ((__a2 = ((const char *) (accept))[2], __a2 == '\0')	      \</u></td></tr>
+<tr><th id="1074">1074</th><td><u>		  ? __strpbrk_c2 (s, __a0, __a1)			      \</u></td></tr>
+<tr><th id="1075">1075</th><td><u>		  : (((const char *) (accept))[3] == '\0'		      \</u></td></tr>
+<tr><th id="1076">1076</th><td><u>		     ? __strpbrk_c3 (s, __a0, __a1, __a2)		      \</u></td></tr>
+<tr><th id="1077">1077</th><td><u>		     : __builtin_strpbrk (s, accept))))))		      \</u></td></tr>
+<tr><th id="1078">1078</th><td><u>      : __builtin_strpbrk (s, accept)); })</u></td></tr>
+<tr><th id="1079">1079</th><td><u>#  <span data-ppcond="1062">else</span></u></td></tr>
+<tr><th id="1080">1080</th><td><u>#   define strpbrk(s, accept) \</u></td></tr>
+<tr><th id="1081">1081</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="1082">1082</th><td><u>  ({ char __a0, __a1, __a2;						      \</u></td></tr>
+<tr><th id="1083">1083</th><td><u>     (__builtin_constant_p (accept) &amp;&amp; __string2_1bptr_p (accept)	      \</u></td></tr>
+<tr><th id="1084">1084</th><td><u>      ? ((__a0 = ((const char  *) (accept))[0], __a0 == '\0')		      \</u></td></tr>
+<tr><th id="1085">1085</th><td><u>	 ? ((void) (s), (char *) NULL)					      \</u></td></tr>
+<tr><th id="1086">1086</th><td><u>	 : ((__a1 = ((const char *) (accept))[1], __a1 == '\0')		      \</u></td></tr>
+<tr><th id="1087">1087</th><td><u>	    ? strchr (s, __a0)						      \</u></td></tr>
+<tr><th id="1088">1088</th><td><u>	    : ((__a2 = ((const char *) (accept))[2], __a2 == '\0')	      \</u></td></tr>
+<tr><th id="1089">1089</th><td><u>	       ? __strpbrk_c2 (s, __a0, __a1)				      \</u></td></tr>
+<tr><th id="1090">1090</th><td><u>	       : (((const char *) (accept))[3] == '\0'			      \</u></td></tr>
+<tr><th id="1091">1091</th><td><u>		  ? __strpbrk_c3 (s, __a0, __a1, __a2)			      \</u></td></tr>
+<tr><th id="1092">1092</th><td><u>		  : strpbrk (s, accept)))))				      \</u></td></tr>
+<tr><th id="1093">1093</th><td><u>      : strpbrk (s, accept)); })</u></td></tr>
+<tr><th id="1094">1094</th><td><u>#  <span data-ppcond="1062">endif</span></u></td></tr>
+<tr><th id="1095">1095</th><td><u># <span data-ppcond="1061">endif</span></u></td></tr>
+<tr><th id="1096">1096</th><td></td></tr>
+<tr><th id="1097">1097</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strpbrk_c2" title='__strpbrk_c2' data-ref="__strpbrk_c2" data-ref-filename="__strpbrk_c2">__strpbrk_c2</a> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="1305__s" title='__s' data-type='const char *' data-ref="1305__s" data-ref-filename="1305__s">__s</dfn>, <em>int</em> <dfn class="local col6 decl" id="1306__accept1" title='__accept1' data-type='int' data-ref="1306__accept1" data-ref-filename="1306__accept1">__accept1</dfn>,</td></tr>
+<tr><th id="1098">1098</th><td>				    <em>int</em> <dfn class="local col7 decl" id="1307__accept2" title='__accept2' data-type='int' data-ref="1307__accept2" data-ref-filename="1307__accept2">__accept2</dfn>);</td></tr>
+<tr><th id="1099">1099</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1100">1100</th><td><dfn class="decl def fn" id="__strpbrk_c2" title='__strpbrk_c2' data-ref="__strpbrk_c2" data-ref-filename="__strpbrk_c2">__strpbrk_c2</dfn> (<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="1308__s" title='__s' data-type='const char *' data-ref="1308__s" data-ref-filename="1308__s">__s</dfn>, <em>int</em> <dfn class="local col9 decl" id="1309__accept1" title='__accept1' data-type='int' data-ref="1309__accept1" data-ref-filename="1309__accept1">__accept1</dfn>, <em>int</em> <dfn class="local col0 decl" id="1310__accept2" title='__accept2' data-type='int' data-ref="1310__accept2" data-ref-filename="1310__accept2">__accept2</dfn>)</td></tr>
+<tr><th id="1101">1101</th><td>{</td></tr>
+<tr><th id="1102">1102</th><td>  <i>/* Please note that __accept1 and __accept2 never can be '\0'.  */</i></td></tr>
+<tr><th id="1103">1103</th><td>  <b>while</b> (*<a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a> != <kbd>'\0'</kbd> &amp;&amp; *<a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a> != <a class="local col9 ref" href="#1309__accept1" title='__accept1' data-ref="1309__accept1" data-ref-filename="1309__accept1">__accept1</a> &amp;&amp; *<a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a> != <a class="local col0 ref" href="#1310__accept2" title='__accept2' data-ref="1310__accept2" data-ref-filename="1310__accept2">__accept2</a>)</td></tr>
+<tr><th id="1104">1104</th><td>    ++<a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a>;</td></tr>
+<tr><th id="1105">1105</th><td>  <b>return</b> *<a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a> == <kbd>'\0'</kbd> ? <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> : (<em>char</em> *) (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col8 ref" href="#1308__s" title='__s' data-ref="1308__s" data-ref-filename="1308__s">__s</a>;</td></tr>
+<tr><th id="1106">1106</th><td>}</td></tr>
+<tr><th id="1107">1107</th><td></td></tr>
+<tr><th id="1108">1108</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strpbrk_c3" title='__strpbrk_c3' data-ref="__strpbrk_c3" data-ref-filename="__strpbrk_c3">__strpbrk_c3</a> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1311__s" title='__s' data-type='const char *' data-ref="1311__s" data-ref-filename="1311__s">__s</dfn>, <em>int</em> <dfn class="local col2 decl" id="1312__accept1" title='__accept1' data-type='int' data-ref="1312__accept1" data-ref-filename="1312__accept1">__accept1</dfn>,</td></tr>
+<tr><th id="1109">1109</th><td>				    <em>int</em> <dfn class="local col3 decl" id="1313__accept2" title='__accept2' data-type='int' data-ref="1313__accept2" data-ref-filename="1313__accept2">__accept2</dfn>, <em>int</em> <dfn class="local col4 decl" id="1314__accept3" title='__accept3' data-type='int' data-ref="1314__accept3" data-ref-filename="1314__accept3">__accept3</dfn>);</td></tr>
+<tr><th id="1110">1110</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1111">1111</th><td><dfn class="decl def fn" id="__strpbrk_c3" title='__strpbrk_c3' data-ref="__strpbrk_c3" data-ref-filename="__strpbrk_c3">__strpbrk_c3</dfn> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="1315__s" title='__s' data-type='const char *' data-ref="1315__s" data-ref-filename="1315__s">__s</dfn>, <em>int</em> <dfn class="local col6 decl" id="1316__accept1" title='__accept1' data-type='int' data-ref="1316__accept1" data-ref-filename="1316__accept1">__accept1</dfn>, <em>int</em> <dfn class="local col7 decl" id="1317__accept2" title='__accept2' data-type='int' data-ref="1317__accept2" data-ref-filename="1317__accept2">__accept2</dfn>, <em>int</em> <dfn class="local col8 decl" id="1318__accept3" title='__accept3' data-type='int' data-ref="1318__accept3" data-ref-filename="1318__accept3">__accept3</dfn>)</td></tr>
+<tr><th id="1112">1112</th><td>{</td></tr>
+<tr><th id="1113">1113</th><td>  <i>/* Please note that __accept1 to __accept3 never can be '\0'.  */</i></td></tr>
+<tr><th id="1114">1114</th><td>  <b>while</b> (*<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a> != <kbd>'\0'</kbd> &amp;&amp; *<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a> != <a class="local col6 ref" href="#1316__accept1" title='__accept1' data-ref="1316__accept1" data-ref-filename="1316__accept1">__accept1</a> &amp;&amp; *<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a> != <a class="local col7 ref" href="#1317__accept2" title='__accept2' data-ref="1317__accept2" data-ref-filename="1317__accept2">__accept2</a></td></tr>
+<tr><th id="1115">1115</th><td>	 &amp;&amp; *<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a> != <a class="local col8 ref" href="#1318__accept3" title='__accept3' data-ref="1318__accept3" data-ref-filename="1318__accept3">__accept3</a>)</td></tr>
+<tr><th id="1116">1116</th><td>    ++<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a>;</td></tr>
+<tr><th id="1117">1117</th><td>  <b>return</b> *<a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a> == <kbd>'\0'</kbd> ? <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> : (<em>char</em> *) (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) <a class="local col5 ref" href="#1315__s" title='__s' data-ref="1315__s" data-ref-filename="1315__s">__s</a>;</td></tr>
+<tr><th id="1118">1118</th><td>}</td></tr>
+<tr><th id="1119">1119</th><td><u>#<span data-ppcond="1060">endif</span></u></td></tr>
+<tr><th id="1120">1120</th><td></td></tr>
+<tr><th id="1121">1121</th><td></td></tr>
+<tr><th id="1122">1122</th><td><i>/* Find the first occurrence of NEEDLE in HAYSTACK.  Newer gcc versions</i></td></tr>
+<tr><th id="1123">1123</th><td><i>   do this itself.  */</i></td></tr>
+<tr><th id="1124">1124</th><td><u>#<span data-ppcond="1124">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strstr">_HAVE_STRING_ARCH_strstr</span> &amp;&amp; !<a class="macro" href="../../include/features.h.html#136" title="((4 &lt;&lt; 16) + 2 &gt;= ((2) &lt;&lt; 16) + (97))" data-ref="_M/__GNUC_PREREQ">__GNUC_PREREQ</a> (2, 97)</u></td></tr>
+<tr><th id="1125">1125</th><td><u># define strstr(haystack, needle) \</u></td></tr>
+<tr><th id="1126">1126</th><td><u>  (__extension__ (__builtin_constant_p (needle) &amp;&amp; __string2_1bptr_p (needle) \</u></td></tr>
+<tr><th id="1127">1127</th><td><u>		  ? (((const char *) (needle))[0] == '\0'		      \</u></td></tr>
+<tr><th id="1128">1128</th><td><u>		     ? (char *) (size_t) (haystack)			      \</u></td></tr>
+<tr><th id="1129">1129</th><td><u>		     : (((const char *) (needle))[1] == '\0'		      \</u></td></tr>
+<tr><th id="1130">1130</th><td><u>			? strchr (haystack,				      \</u></td></tr>
+<tr><th id="1131">1131</th><td><u>				  ((const char *) (needle))[0]) 	      \</u></td></tr>
+<tr><th id="1132">1132</th><td><u>			: strstr (haystack, needle)))			      \</u></td></tr>
+<tr><th id="1133">1133</th><td><u>		  : strstr (haystack, needle)))</u></td></tr>
+<tr><th id="1134">1134</th><td><u>#<span data-ppcond="1124">endif</span></u></td></tr>
+<tr><th id="1135">1135</th><td></td></tr>
+<tr><th id="1136">1136</th><td></td></tr>
+<tr><th id="1137">1137</th><td><u>#<span data-ppcond="1137">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strtok_r">_HAVE_STRING_ARCH_strtok_r</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="1138">1138</th><td><u># <span data-ppcond="1138">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strtok_r">_HAVE_STRING_ARCH_strtok_r</span></u></td></tr>
+<tr><th id="1139">1139</th><td><u>#  define <dfn class="macro" id="_M/__strtok_r" data-ref="_M/__strtok_r">__strtok_r</dfn>(s, sep, nextp) \</u></td></tr>
+<tr><th id="1140">1140</th><td><u>  (__extension__ (__builtin_constant_p (sep) &amp;&amp; __string2_1bptr_p (sep)	      \</u></td></tr>
+<tr><th id="1141">1141</th><td><u>		  &amp;&amp; ((const char *) (sep))[0] != '\0'			      \</u></td></tr>
+<tr><th id="1142">1142</th><td><u>		  &amp;&amp; ((const char *) (sep))[1] == '\0'			      \</u></td></tr>
+<tr><th id="1143">1143</th><td><u>		  ? __strtok_r_1c (s, ((const char *) (sep))[0], nextp)       \</u></td></tr>
+<tr><th id="1144">1144</th><td><u>		  : __strtok_r (s, sep, nextp)))</u></td></tr>
+<tr><th id="1145">1145</th><td><u># <span data-ppcond="1138">endif</span></u></td></tr>
+<tr><th id="1146">1146</th><td></td></tr>
+<tr><th id="1147">1147</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strtok_r_1c" title='__strtok_r_1c' data-ref="__strtok_r_1c" data-ref-filename="__strtok_r_1c">__strtok_r_1c</a> (<em>char</em> *<dfn class="local col9 decl" id="1319__s" title='__s' data-type='char *' data-ref="1319__s" data-ref-filename="1319__s">__s</dfn>, <em>char</em> <dfn class="local col0 decl" id="1320__sep" title='__sep' data-type='char' data-ref="1320__sep" data-ref-filename="1320__sep">__sep</dfn>, <em>char</em> **<dfn class="local col1 decl" id="1321__nextp" title='__nextp' data-type='char **' data-ref="1321__nextp" data-ref-filename="1321__nextp">__nextp</dfn>);</td></tr>
+<tr><th id="1148">1148</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1149">1149</th><td><dfn class="decl def fn" id="__strtok_r_1c" title='__strtok_r_1c' data-ref="__strtok_r_1c" data-ref-filename="__strtok_r_1c">__strtok_r_1c</dfn> (<em>char</em> *<dfn class="local col2 decl" id="1322__s" title='__s' data-type='char *' data-ref="1322__s" data-ref-filename="1322__s">__s</dfn>, <em>char</em> <dfn class="local col3 decl" id="1323__sep" title='__sep' data-type='char' data-ref="1323__sep" data-ref-filename="1323__sep">__sep</dfn>, <em>char</em> **<dfn class="local col4 decl" id="1324__nextp" title='__nextp' data-type='char **' data-ref="1324__nextp" data-ref-filename="1324__nextp">__nextp</dfn>)</td></tr>
+<tr><th id="1150">1150</th><td>{</td></tr>
+<tr><th id="1151">1151</th><td>  <em>char</em> *<dfn class="local col5 decl" id="1325__result" title='__result' data-type='char *' data-ref="1325__result" data-ref-filename="1325__result">__result</dfn>;</td></tr>
+<tr><th id="1152">1152</th><td>  <b>if</b> (<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="1153">1153</th><td>    <a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a> = *<a class="local col4 ref" href="#1324__nextp" title='__nextp' data-ref="1324__nextp" data-ref-filename="1324__nextp">__nextp</a>;</td></tr>
+<tr><th id="1154">1154</th><td>  <b>while</b> (*<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a> == <a class="local col3 ref" href="#1323__sep" title='__sep' data-ref="1323__sep" data-ref-filename="1323__sep">__sep</a>)</td></tr>
+<tr><th id="1155">1155</th><td>    ++<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a>;</td></tr>
+<tr><th id="1156">1156</th><td>  <a class="local col5 ref" href="#1325__result" title='__result' data-ref="1325__result" data-ref-filename="1325__result">__result</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="1157">1157</th><td>  <b>if</b> (*<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="1158">1158</th><td>    {</td></tr>
+<tr><th id="1159">1159</th><td>      <a class="local col5 ref" href="#1325__result" title='__result' data-ref="1325__result" data-ref-filename="1325__result">__result</a> = <a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a>++;</td></tr>
+<tr><th id="1160">1160</th><td>      <b>while</b> (*<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="1161">1161</th><td>	<b>if</b> (*<a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a>++ == <a class="local col3 ref" href="#1323__sep" title='__sep' data-ref="1323__sep" data-ref-filename="1323__sep">__sep</a>)</td></tr>
+<tr><th id="1162">1162</th><td>	  {</td></tr>
+<tr><th id="1163">1163</th><td>	    <a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a>[-<var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="1164">1164</th><td>	    <b>break</b>;</td></tr>
+<tr><th id="1165">1165</th><td>	  }</td></tr>
+<tr><th id="1166">1166</th><td>    }</td></tr>
+<tr><th id="1167">1167</th><td>  *<a class="local col4 ref" href="#1324__nextp" title='__nextp' data-ref="1324__nextp" data-ref-filename="1324__nextp">__nextp</a> = <a class="local col2 ref" href="#1322__s" title='__s' data-ref="1322__s" data-ref-filename="1322__s">__s</a>;</td></tr>
+<tr><th id="1168">1168</th><td>  <b>return</b> <a class="local col5 ref" href="#1325__result" title='__result' data-ref="1325__result" data-ref-filename="1325__result">__result</a>;</td></tr>
+<tr><th id="1169">1169</th><td>}</td></tr>
+<tr><th id="1170">1170</th><td><u># <span data-ppcond="1170">ifdef</span> <a class="macro" href="../../include/features.h.html#246" data-ref="_M/__USE_POSIX">__USE_POSIX</a></u></td></tr>
+<tr><th id="1171">1171</th><td><u>#  define <dfn class="macro" id="_M/strtok_r" data-ref="_M/strtok_r">strtok_r</dfn>(s, sep, nextp) __strtok_r (s, sep, nextp)</u></td></tr>
+<tr><th id="1172">1172</th><td><u># <span data-ppcond="1170">endif</span></u></td></tr>
+<tr><th id="1173">1173</th><td><u>#<span data-ppcond="1137">endif</span></u></td></tr>
+<tr><th id="1174">1174</th><td></td></tr>
+<tr><th id="1175">1175</th><td></td></tr>
+<tr><th id="1176">1176</th><td><u>#<span data-ppcond="1176">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strsep">_HAVE_STRING_ARCH_strsep</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="1177">1177</th><td><u># <span data-ppcond="1177">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strsep">_HAVE_STRING_ARCH_strsep</span></u></td></tr>
+<tr><th id="1178">1178</th><td></td></tr>
+<tr><th id="1179">1179</th><td><b>extern</b> <em>char</em> *<dfn class="decl fn" id="__strsep_g" title='__strsep_g' data-ref="__strsep_g" data-ref-filename="__strsep_g">__strsep_g</dfn> (<em>char</em> **<dfn class="local col6 decl" id="1326__stringp" title='__stringp' data-type='char **' data-ref="1326__stringp" data-ref-filename="1326__stringp">__stringp</dfn>, <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="1327__delim" title='__delim' data-type='const char *' data-ref="1327__delim" data-ref-filename="1327__delim">__delim</dfn>);</td></tr>
+<tr><th id="1180">1180</th><td><u>#  define <dfn class="macro" id="_M/__strsep" data-ref="_M/__strsep">__strsep</dfn>(s, reject) \</u></td></tr>
+<tr><th id="1181">1181</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="1182">1182</th><td><u>  ({ char __r0, __r1, __r2;						      \</u></td></tr>
+<tr><th id="1183">1183</th><td><u>     (__builtin_constant_p (reject) &amp;&amp; __string2_1bptr_p (reject)	      \</u></td></tr>
+<tr><th id="1184">1184</th><td><u>      &amp;&amp; (__r0 = ((const char *) (reject))[0],				      \</u></td></tr>
+<tr><th id="1185">1185</th><td><u>	  ((const char *) (reject))[0] != '\0')				      \</u></td></tr>
+<tr><th id="1186">1186</th><td><u>      ? ((__r1 = ((const char *) (reject))[1],				      \</u></td></tr>
+<tr><th id="1187">1187</th><td><u>	 ((const char *) (reject))[1] == '\0')				      \</u></td></tr>
+<tr><th id="1188">1188</th><td><u>	 ? __strsep_1c (s, __r0)					      \</u></td></tr>
+<tr><th id="1189">1189</th><td><u>	 : ((__r2 = ((const char *) (reject))[2], __r2 == '\0')		      \</u></td></tr>
+<tr><th id="1190">1190</th><td><u>	    ? __strsep_2c (s, __r0, __r1)				      \</u></td></tr>
+<tr><th id="1191">1191</th><td><u>	    : (((const char *) (reject))[3] == '\0'			      \</u></td></tr>
+<tr><th id="1192">1192</th><td><u>	       ? __strsep_3c (s, __r0, __r1, __r2)			      \</u></td></tr>
+<tr><th id="1193">1193</th><td><u>	       : __strsep_g (s, reject))))				      \</u></td></tr>
+<tr><th id="1194">1194</th><td><u>      : __strsep_g (s, reject)); })</u></td></tr>
+<tr><th id="1195">1195</th><td><u># <span data-ppcond="1177">endif</span></u></td></tr>
+<tr><th id="1196">1196</th><td></td></tr>
+<tr><th id="1197">1197</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_1c" title='__strsep_1c' data-ref="__strsep_1c" data-ref-filename="__strsep_1c">__strsep_1c</a> (<em>char</em> **<dfn class="local col8 decl" id="1328__s" title='__s' data-type='char **' data-ref="1328__s" data-ref-filename="1328__s">__s</dfn>, <em>char</em> <dfn class="local col9 decl" id="1329__reject" title='__reject' data-type='char' data-ref="1329__reject" data-ref-filename="1329__reject">__reject</dfn>);</td></tr>
+<tr><th id="1198">1198</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1199">1199</th><td><dfn class="decl def fn" id="__strsep_1c" title='__strsep_1c' data-ref="__strsep_1c" data-ref-filename="__strsep_1c">__strsep_1c</dfn> (<em>char</em> **<dfn class="local col0 decl" id="1330__s" title='__s' data-type='char **' data-ref="1330__s" data-ref-filename="1330__s">__s</dfn>, <em>char</em> <dfn class="local col1 decl" id="1331__reject" title='__reject' data-type='char' data-ref="1331__reject" data-ref-filename="1331__reject">__reject</dfn>)</td></tr>
+<tr><th id="1200">1200</th><td>{</td></tr>
+<tr><th id="1201">1201</th><td>  <em>char</em> *<dfn class="local col2 decl" id="1332__retval" title='__retval' data-type='char *' data-ref="1332__retval" data-ref-filename="1332__retval">__retval</dfn> = *<a class="local col0 ref" href="#1330__s" title='__s' data-ref="1330__s" data-ref-filename="1330__s">__s</a>;</td></tr>
+<tr><th id="1202">1202</th><td>  <b>if</b> (<a class="local col2 ref" href="#1332__retval" title='__retval' data-ref="1332__retval" data-ref-filename="1332__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; (*<a class="local col0 ref" href="#1330__s" title='__s' data-ref="1330__s" data-ref-filename="1330__s">__s</a> = <a class="macro" href="#395" title="(__extension__ (__builtin_constant_p (__reject) &amp;&amp; !__builtin_constant_p (__retval) &amp;&amp; (__reject) == &apos;\0&apos; ? (char *) __rawmemchr (__retval, __reject) : __builtin_strchr (__retval, __reject)))" data-ref="_M/strchr">strchr</a> (<a class="local col2 ref" href="#1332__retval" title='__retval' data-ref="1332__retval" data-ref-filename="1332__retval">__retval</a>, <a class="local col1 ref" href="#1331__reject" title='__reject' data-ref="1331__reject" data-ref-filename="1331__reject">__reject</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="1203">1203</th><td>    *(*<a class="local col0 ref" href="#1330__s" title='__s' data-ref="1330__s" data-ref-filename="1330__s">__s</a>)++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="1204">1204</th><td>  <b>return</b> <a class="local col2 ref" href="#1332__retval" title='__retval' data-ref="1332__retval" data-ref-filename="1332__retval">__retval</a>;</td></tr>
+<tr><th id="1205">1205</th><td>}</td></tr>
+<tr><th id="1206">1206</th><td></td></tr>
+<tr><th id="1207">1207</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_2c" title='__strsep_2c' data-ref="__strsep_2c" data-ref-filename="__strsep_2c">__strsep_2c</a> (<em>char</em> **<dfn class="local col3 decl" id="1333__s" title='__s' data-type='char **' data-ref="1333__s" data-ref-filename="1333__s">__s</dfn>, <em>char</em> <dfn class="local col4 decl" id="1334__reject1" title='__reject1' data-type='char' data-ref="1334__reject1" data-ref-filename="1334__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col5 decl" id="1335__reject2" title='__reject2' data-type='char' data-ref="1335__reject2" data-ref-filename="1335__reject2">__reject2</dfn>);</td></tr>
+<tr><th id="1208">1208</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1209">1209</th><td><dfn class="decl def fn" id="__strsep_2c" title='__strsep_2c' data-ref="__strsep_2c" data-ref-filename="__strsep_2c">__strsep_2c</dfn> (<em>char</em> **<dfn class="local col6 decl" id="1336__s" title='__s' data-type='char **' data-ref="1336__s" data-ref-filename="1336__s">__s</dfn>, <em>char</em> <dfn class="local col7 decl" id="1337__reject1" title='__reject1' data-type='char' data-ref="1337__reject1" data-ref-filename="1337__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col8 decl" id="1338__reject2" title='__reject2' data-type='char' data-ref="1338__reject2" data-ref-filename="1338__reject2">__reject2</dfn>)</td></tr>
+<tr><th id="1210">1210</th><td>{</td></tr>
+<tr><th id="1211">1211</th><td>  <em>char</em> *<dfn class="local col9 decl" id="1339__retval" title='__retval' data-type='char *' data-ref="1339__retval" data-ref-filename="1339__retval">__retval</dfn> = *<a class="local col6 ref" href="#1336__s" title='__s' data-ref="1336__s" data-ref-filename="1336__s">__s</a>;</td></tr>
+<tr><th id="1212">1212</th><td>  <b>if</b> (<a class="local col9 ref" href="#1339__retval" title='__retval' data-ref="1339__retval" data-ref-filename="1339__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="1213">1213</th><td>    {</td></tr>
+<tr><th id="1214">1214</th><td>      <em>char</em> *<dfn class="local col0 decl" id="1340__cp" title='__cp' data-type='char *' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</dfn> = <a class="local col9 ref" href="#1339__retval" title='__retval' data-ref="1339__retval" data-ref-filename="1339__retval">__retval</a>;</td></tr>
+<tr><th id="1215">1215</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="1216">1216</th><td>	{</td></tr>
+<tr><th id="1217">1217</th><td>	  <b>if</b> (*<a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="1218">1218</th><td>	    {</td></tr>
+<tr><th id="1219">1219</th><td>	      <a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="1220">1220</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="1221">1221</th><td>	    }</td></tr>
+<tr><th id="1222">1222</th><td>	  <b>if</b> (*<a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a> == <a class="local col7 ref" href="#1337__reject1" title='__reject1' data-ref="1337__reject1" data-ref-filename="1337__reject1">__reject1</a> || *<a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a> == <a class="local col8 ref" href="#1338__reject2" title='__reject2' data-ref="1338__reject2" data-ref-filename="1338__reject2">__reject2</a>)</td></tr>
+<tr><th id="1223">1223</th><td>	    {</td></tr>
+<tr><th id="1224">1224</th><td>	      *<a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="1225">1225</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="1226">1226</th><td>	    }</td></tr>
+<tr><th id="1227">1227</th><td>	  ++<a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a>;</td></tr>
+<tr><th id="1228">1228</th><td>	}</td></tr>
+<tr><th id="1229">1229</th><td>      *<a class="local col6 ref" href="#1336__s" title='__s' data-ref="1336__s" data-ref-filename="1336__s">__s</a> = <a class="local col0 ref" href="#1340__cp" title='__cp' data-ref="1340__cp" data-ref-filename="1340__cp">__cp</a>;</td></tr>
+<tr><th id="1230">1230</th><td>    }</td></tr>
+<tr><th id="1231">1231</th><td>  <b>return</b> <a class="local col9 ref" href="#1339__retval" title='__retval' data-ref="1339__retval" data-ref-filename="1339__retval">__retval</a>;</td></tr>
+<tr><th id="1232">1232</th><td>}</td></tr>
+<tr><th id="1233">1233</th><td></td></tr>
+<tr><th id="1234">1234</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_3c" title='__strsep_3c' data-ref="__strsep_3c" data-ref-filename="__strsep_3c">__strsep_3c</a> (<em>char</em> **<dfn class="local col1 decl" id="1341__s" title='__s' data-type='char **' data-ref="1341__s" data-ref-filename="1341__s">__s</dfn>, <em>char</em> <dfn class="local col2 decl" id="1342__reject1" title='__reject1' data-type='char' data-ref="1342__reject1" data-ref-filename="1342__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col3 decl" id="1343__reject2" title='__reject2' data-type='char' data-ref="1343__reject2" data-ref-filename="1343__reject2">__reject2</dfn>,</td></tr>
+<tr><th id="1235">1235</th><td>				   <em>char</em> <dfn class="local col4 decl" id="1344__reject3" title='__reject3' data-type='char' data-ref="1344__reject3" data-ref-filename="1344__reject3">__reject3</dfn>);</td></tr>
+<tr><th id="1236">1236</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="1237">1237</th><td><dfn class="decl def fn" id="__strsep_3c" title='__strsep_3c' data-ref="__strsep_3c" data-ref-filename="__strsep_3c">__strsep_3c</dfn> (<em>char</em> **<dfn class="local col5 decl" id="1345__s" title='__s' data-type='char **' data-ref="1345__s" data-ref-filename="1345__s">__s</dfn>, <em>char</em> <dfn class="local col6 decl" id="1346__reject1" title='__reject1' data-type='char' data-ref="1346__reject1" data-ref-filename="1346__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col7 decl" id="1347__reject2" title='__reject2' data-type='char' data-ref="1347__reject2" data-ref-filename="1347__reject2">__reject2</dfn>, <em>char</em> <dfn class="local col8 decl" id="1348__reject3" title='__reject3' data-type='char' data-ref="1348__reject3" data-ref-filename="1348__reject3">__reject3</dfn>)</td></tr>
+<tr><th id="1238">1238</th><td>{</td></tr>
+<tr><th id="1239">1239</th><td>  <em>char</em> *<dfn class="local col9 decl" id="1349__retval" title='__retval' data-type='char *' data-ref="1349__retval" data-ref-filename="1349__retval">__retval</dfn> = *<a class="local col5 ref" href="#1345__s" title='__s' data-ref="1345__s" data-ref-filename="1345__s">__s</a>;</td></tr>
+<tr><th id="1240">1240</th><td>  <b>if</b> (<a class="local col9 ref" href="#1349__retval" title='__retval' data-ref="1349__retval" data-ref-filename="1349__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="1241">1241</th><td>    {</td></tr>
+<tr><th id="1242">1242</th><td>      <em>char</em> *<dfn class="local col0 decl" id="1350__cp" title='__cp' data-type='char *' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</dfn> = <a class="local col9 ref" href="#1349__retval" title='__retval' data-ref="1349__retval" data-ref-filename="1349__retval">__retval</a>;</td></tr>
+<tr><th id="1243">1243</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="1244">1244</th><td>	{</td></tr>
+<tr><th id="1245">1245</th><td>	  <b>if</b> (*<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="1246">1246</th><td>	    {</td></tr>
+<tr><th id="1247">1247</th><td>	      <a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="1248">1248</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="1249">1249</th><td>	    }</td></tr>
+<tr><th id="1250">1250</th><td>	  <b>if</b> (*<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a> == <a class="local col6 ref" href="#1346__reject1" title='__reject1' data-ref="1346__reject1" data-ref-filename="1346__reject1">__reject1</a> || *<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a> == <a class="local col7 ref" href="#1347__reject2" title='__reject2' data-ref="1347__reject2" data-ref-filename="1347__reject2">__reject2</a> || *<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a> == <a class="local col8 ref" href="#1348__reject3" title='__reject3' data-ref="1348__reject3" data-ref-filename="1348__reject3">__reject3</a>)</td></tr>
+<tr><th id="1251">1251</th><td>	    {</td></tr>
+<tr><th id="1252">1252</th><td>	      *<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="1253">1253</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="1254">1254</th><td>	    }</td></tr>
+<tr><th id="1255">1255</th><td>	  ++<a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a>;</td></tr>
+<tr><th id="1256">1256</th><td>	}</td></tr>
+<tr><th id="1257">1257</th><td>      *<a class="local col5 ref" href="#1345__s" title='__s' data-ref="1345__s" data-ref-filename="1345__s">__s</a> = <a class="local col0 ref" href="#1350__cp" title='__cp' data-ref="1350__cp" data-ref-filename="1350__cp">__cp</a>;</td></tr>
+<tr><th id="1258">1258</th><td>    }</td></tr>
+<tr><th id="1259">1259</th><td>  <b>return</b> <a class="local col9 ref" href="#1349__retval" title='__retval' data-ref="1349__retval" data-ref-filename="1349__retval">__retval</a>;</td></tr>
+<tr><th id="1260">1260</th><td>}</td></tr>
+<tr><th id="1261">1261</th><td><u># <span data-ppcond="1261">ifdef</span> <a class="macro" href="../../include/features.h.html#314" data-ref="_M/__USE_MISC">__USE_MISC</a></u></td></tr>
+<tr><th id="1262">1262</th><td><u>#  define <dfn class="macro" id="_M/strsep" data-ref="_M/strsep">strsep</dfn>(s, reject) __strsep (s, reject)</u></td></tr>
+<tr><th id="1263">1263</th><td><u># <span data-ppcond="1261">endif</span></u></td></tr>
+<tr><th id="1264">1264</th><td><u>#<span data-ppcond="1176">endif</span></u></td></tr>
+<tr><th id="1265">1265</th><td></td></tr>
+<tr><th id="1266">1266</th><td><i>/* We need the memory allocation functions for inline strdup().</i></td></tr>
+<tr><th id="1267">1267</th><td><i>   Referring to stdlib.h (even minimally) is not allowed</i></td></tr>
+<tr><th id="1268">1268</th><td><i>   in any of the tight standards compliant modes.  */</i></td></tr>
+<tr><th id="1269">1269</th><td><u>#<span data-ppcond="1269">ifdef</span> <a class="macro" href="../../include/features.h.html#314" data-ref="_M/__USE_MISC">__USE_MISC</a></u></td></tr>
+<tr><th id="1270">1270</th><td></td></tr>
+<tr><th id="1271">1271</th><td><u># <span data-ppcond="1271">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strdup">_HAVE_STRING_ARCH_strdup</span> || !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strndup">_HAVE_STRING_ARCH_strndup</span></u></td></tr>
+<tr><th id="1272">1272</th><td><u>#  define <dfn class="macro" id="_M/__need_malloc_and_calloc" data-ref="_M/__need_malloc_and_calloc">__need_malloc_and_calloc</dfn></u></td></tr>
+<tr><th id="1273">1273</th><td><u>#  include <a href="../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="1274">1274</th><td><u># <span data-ppcond="1271">endif</span></u></td></tr>
+<tr><th id="1275">1275</th><td></td></tr>
+<tr><th id="1276">1276</th><td><u># <span data-ppcond="1276">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strdup">_HAVE_STRING_ARCH_strdup</span></u></td></tr>
+<tr><th id="1277">1277</th><td></td></tr>
+<tr><th id="1278">1278</th><td><b>extern</b> <em>char</em> *<a class="decl fn" href="../../include/string.h.html#__strdup" title='__strdup' data-ref="__strdup" data-ref-filename="__strdup" id="__strdup">__strdup</a> (<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1351__string" title='__string' data-type='const char *' data-ref="1351__string" data-ref-filename="1351__string">__string</dfn>) <a class="macro" href="../../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a> <a class="macro" href="../../misc/sys/cdefs.h.html#211" title="__attribute__ ((__malloc__))" data-ref="_M/__attribute_malloc__">__attribute_malloc__</a>;</td></tr>
+<tr><th id="1279">1279</th><td><u>#  define <dfn class="macro" id="_M/__strdup" data-ref="_M/__strdup">__strdup</dfn>(s) \</u></td></tr>
+<tr><th id="1280">1280</th><td><u>  (__extension__ (__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s)	      \</u></td></tr>
+<tr><th id="1281">1281</th><td><u>		  ? (((const char *) (s))[0] == '\0'			      \</u></td></tr>
+<tr><th id="1282">1282</th><td><u>		     ? (char *) calloc ((size_t) 1, (size_t) 1)		      \</u></td></tr>
+<tr><th id="1283">1283</th><td><u>		     : ({ size_t __len = strlen (s) + 1;		      \</u></td></tr>
+<tr><th id="1284">1284</th><td><u>			  char *__retval = (char *) malloc (__len);	      \</u></td></tr>
+<tr><th id="1285">1285</th><td><u>			  if (__retval != NULL)				      \</u></td></tr>
+<tr><th id="1286">1286</th><td><u>			    __retval = (char *) memcpy (__retval, s, __len);  \</u></td></tr>
+<tr><th id="1287">1287</th><td><u>			  __retval; }))					      \</u></td></tr>
+<tr><th id="1288">1288</th><td><u>		  : __strdup (s)))</u></td></tr>
+<tr><th id="1289">1289</th><td></td></tr>
+<tr><th id="1290">1290</th><td><u>#  <span data-ppcond="1290">if</span> defined <a class="macro" href="../../include/features.h.html#278" data-ref="_M/__USE_XOPEN_EXTENDED">__USE_XOPEN_EXTENDED</a> || defined <a class="macro" href="../../include/features.h.html#284" data-ref="_M/__USE_XOPEN2K8">__USE_XOPEN2K8</a></u></td></tr>
+<tr><th id="1291">1291</th><td><u>#   define <dfn class="macro" id="_M/strdup" data-ref="_M/strdup">strdup</dfn>(s) __strdup (s)</u></td></tr>
+<tr><th id="1292">1292</th><td><u>#  <span data-ppcond="1290">endif</span></u></td></tr>
+<tr><th id="1293">1293</th><td><u># <span data-ppcond="1276">endif</span></u></td></tr>
+<tr><th id="1294">1294</th><td></td></tr>
+<tr><th id="1295">1295</th><td><u># <span data-ppcond="1295">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strndup">_HAVE_STRING_ARCH_strndup</span></u></td></tr>
+<tr><th id="1296">1296</th><td></td></tr>
+<tr><th id="1297">1297</th><td><b>extern</b> <em>char</em> *<a class="decl fn" href="../../include/string.h.html#__strndup" title='__strndup' data-ref="__strndup" data-ref-filename="__strndup" id="__strndup">__strndup</a> (<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="1352__string" title='__string' data-type='const char *' data-ref="1352__string" data-ref-filename="1352__string">__string</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col3 decl" id="1353__n" title='__n' data-type='size_t' data-ref="1353__n" data-ref-filename="1353__n">__n</dfn>)</td></tr>
+<tr><th id="1298">1298</th><td>     <a class="macro" href="../../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a> <a class="macro" href="../../misc/sys/cdefs.h.html#211" title="__attribute__ ((__malloc__))" data-ref="_M/__attribute_malloc__">__attribute_malloc__</a>;</td></tr>
+<tr><th id="1299">1299</th><td><u>#  define <dfn class="macro" id="_M/__strndup" data-ref="_M/__strndup">__strndup</dfn>(s, n) \</u></td></tr>
+<tr><th id="1300">1300</th><td><u>  (__extension__ (__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s)	      \</u></td></tr>
+<tr><th id="1301">1301</th><td><u>		  ? (((const char *) (s))[0] == '\0'			      \</u></td></tr>
+<tr><th id="1302">1302</th><td><u>		     ? (char *) calloc ((size_t) 1, (size_t) 1)		      \</u></td></tr>
+<tr><th id="1303">1303</th><td><u>		     : ({ size_t __len = strlen (s) + 1;		      \</u></td></tr>
+<tr><th id="1304">1304</th><td><u>			  size_t __n = (n);				      \</u></td></tr>
+<tr><th id="1305">1305</th><td><u>			  char *__retval;				      \</u></td></tr>
+<tr><th id="1306">1306</th><td><u>			  if (__n &lt; __len)				      \</u></td></tr>
+<tr><th id="1307">1307</th><td><u>			    __len = __n + 1;				      \</u></td></tr>
+<tr><th id="1308">1308</th><td><u>			  __retval = (char *) malloc (__len);		      \</u></td></tr>
+<tr><th id="1309">1309</th><td><u>			  if (__retval != NULL)				      \</u></td></tr>
+<tr><th id="1310">1310</th><td><u>			    {						      \</u></td></tr>
+<tr><th id="1311">1311</th><td><u>			      __retval[__len - 1] = '\0';		      \</u></td></tr>
+<tr><th id="1312">1312</th><td><u>			      __retval = (char *) memcpy (__retval, s,	      \</u></td></tr>
+<tr><th id="1313">1313</th><td><u>							  __len - 1);	      \</u></td></tr>
+<tr><th id="1314">1314</th><td><u>			    }						      \</u></td></tr>
+<tr><th id="1315">1315</th><td><u>			  __retval; }))					      \</u></td></tr>
+<tr><th id="1316">1316</th><td><u>		  : __strndup (s, n)))</u></td></tr>
+<tr><th id="1317">1317</th><td></td></tr>
+<tr><th id="1318">1318</th><td><u>#  <span data-ppcond="1318">ifdef</span> <a class="macro" href="../../include/features.h.html#284" data-ref="_M/__USE_XOPEN2K8">__USE_XOPEN2K8</a></u></td></tr>
+<tr><th id="1319">1319</th><td><u>#   define <dfn class="macro" id="_M/strndup" data-ref="_M/strndup">strndup</dfn>(s, n) __strndup (s, n)</u></td></tr>
+<tr><th id="1320">1320</th><td><u>#  <span data-ppcond="1318">endif</span></u></td></tr>
+<tr><th id="1321">1321</th><td><u># <span data-ppcond="1295">endif</span></u></td></tr>
+<tr><th id="1322">1322</th><td></td></tr>
+<tr><th id="1323">1323</th><td><u>#<span data-ppcond="1269">endif</span> /* Use misc. or use GNU.  */</u></td></tr>
+<tr><th id="1324">1324</th><td></td></tr>
+<tr><th id="1325">1325</th><td><u>#<span data-ppcond="1325">ifndef</span> <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="1326">1326</th><td><u># undef <a class="macro" href="#45" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a></u></td></tr>
+<tr><th id="1327">1327</th><td><u>#<span data-ppcond="1325">endif</span></u></td></tr>
+<tr><th id="1328">1328</th><td></td></tr>
+<tr><th id="1329">1329</th><td><u>#<span data-ppcond="24">endif</span> /* No string inlines.  */</u></td></tr>
+<tr><th id="1330">1330</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../argp/argp-eexst.c.html'>glibc_src_2.23/argp/argp-eexst.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.23 revision <em>2.23</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
