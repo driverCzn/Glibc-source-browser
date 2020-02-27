@@ -14,7 +14,7 @@ You may **not** have to clone(about 100MB traffic cost & 2.4GB disk usage) this 
 
 ```bash
 $ mkdir ~/glibc
-$ cd $!
+$ cd !$
 $ wget https://raw.githubusercontent.com/driverCzn/Glibc-source-browser/master/build.sh
 $ ./build.sh <version> #make-threads
   # e.g. ./build.sh 2.25 9
