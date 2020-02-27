@@ -1,0 +1,393 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>string2.h source code [glibc_src_2.24/string/bits/string2.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/string/bits/string2.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.24</a>/<a href='..'>string</a>/<a href='./'>bits</a>/<a href='string2.h.html'>string2.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Machine-independant string function optimizations.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1997-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1997.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <a class="macro" href="../string.h.html#23" data-ref="_M/_STRING_H">_STRING_H</a></u></td></tr>
+<tr><th id="21">21</th><td><u># error "Never use &lt;bits/string2.h&gt; directly; include &lt;string.h&gt; instead."</u></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="20">endif</span></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifndef</span> <span class="macro" data-ref="_M/__NO_STRING_INLINES">__NO_STRING_INLINES</span></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/* Unlike the definitions in the header &lt;bits/string.h&gt; the</i></td></tr>
+<tr><th id="27">27</th><td><i>   definitions contained here are not optimized down to assembler</i></td></tr>
+<tr><th id="28">28</th><td><i>   level.  Those optimizations are not always a good idea since this</i></td></tr>
+<tr><th id="29">29</th><td><i>   means the code size increases a lot.  Instead the definitions here</i></td></tr>
+<tr><th id="30">30</th><td><i>   optimize some functions in a way which do not dramatically</i></td></tr>
+<tr><th id="31">31</th><td><i>   increase the code size and which do not use assembler.  The main</i></td></tr>
+<tr><th id="32">32</th><td><i>   trick is to use GCC's `__builtin_constant_p' function.</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>   Every function XXX which has a defined version in</i></td></tr>
+<tr><th id="35">35</th><td><i>   &lt;bits/string.h&gt; must be accompanied by a symbol _HAVE_STRING_ARCH_XXX</i></td></tr>
+<tr><th id="36">36</th><td><i>   to make sure we don't get redefinitions.</i></td></tr>
+<tr><th id="37">37</th><td><i></i></td></tr>
+<tr><th id="38">38</th><td><i>   We must use here macros instead of inline functions since the</i></td></tr>
+<tr><th id="39">39</th><td><i>   trick won't work with the latter.  */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="41">ifndef</span> <span class="macro" data-ref="_M/__STRING_INLINE">__STRING_INLINE</span></u></td></tr>
+<tr><th id="42">42</th><td><u># <span data-ppcond="42">ifdef</span> <span class="macro" data-ref="_M/__cplusplus">__cplusplus</span></u></td></tr>
+<tr><th id="43">43</th><td><u>#  define __STRING_INLINE inline</u></td></tr>
+<tr><th id="44">44</th><td><u># <span data-ppcond="42">else</span></u></td></tr>
+<tr><th id="45">45</th><td><u>#  define <dfn class="macro" id="_M/__STRING_INLINE" data-ref="_M/__STRING_INLINE">__STRING_INLINE</dfn> __extern_inline</u></td></tr>
+<tr><th id="46">46</th><td><u># <span data-ppcond="42">endif</span></u></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="41">endif</span></u></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* Dereferencing a pointer arg to run sizeof on it fails for the void</i></td></tr>
+<tr><th id="50">50</th><td><i>   pointer case, so we use this instead.</i></td></tr>
+<tr><th id="51">51</th><td><i>   Note that __x is evaluated twice. */</i></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/__string2_1bptr_p" data-ref="_M/__string2_1bptr_p">__string2_1bptr_p</dfn>(__x) \</u></td></tr>
+<tr><th id="53">53</th><td><u>  ((size_t)(const void *)((__x) + 1) - (size_t)(const void *)(__x) == 1)</u></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><i>/* Set N bytes of S to C.  */</i></td></tr>
+<tr><th id="56">56</th><td><u>#<span data-ppcond="56">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_memset">_HAVE_STRING_ARCH_memset</span></u></td></tr>
+<tr><th id="57">57</th><td><u># define <dfn class="macro" id="_M/__bzero" data-ref="_M/__bzero">__bzero</dfn>(s, n) __builtin_memset (s, '\0', n)</u></td></tr>
+<tr><th id="58">58</th><td><u>#<span data-ppcond="56">endif</span></u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="61">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strchr">_HAVE_STRING_ARCH_strchr</span></u></td></tr>
+<tr><th id="62">62</th><td><b>extern</b> <em>void</em> *<a class="decl fn" href="../../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr" id="__rawmemchr">__rawmemchr</a> (<em>const</em> <em>void</em> *<dfn class="local col1 decl" id="1261__s" title='__s' data-type='const void *' data-ref="1261__s" data-ref-filename="1261__s">__s</dfn>, <em>int</em> <dfn class="local col2 decl" id="1262__c" title='__c' data-type='int' data-ref="1262__c" data-ref-filename="1262__c">__c</dfn>);</td></tr>
+<tr><th id="63">63</th><td><u>#  define <dfn class="macro" id="_M/strchr" data-ref="_M/strchr">strchr</dfn>(s, c) \</u></td></tr>
+<tr><th id="64">64</th><td><u>  (__extension__ (<a class="ref fn" href="#248" title='__builtin_constant_p' data-ref="__builtin_constant_p" data-ref-filename="__builtin_constant_p">__builtin_constant_p</a> (c) &amp;&amp; !<a class="ref fn" href="#248" title='__builtin_constant_p' data-ref="__builtin_constant_p" data-ref-filename="__builtin_constant_p">__builtin_constant_p</a> (s)	      \</u></td></tr>
+<tr><th id="65">65</th><td><u>		  &amp;&amp; (c) == '\0'					      \</u></td></tr>
+<tr><th id="66">66</th><td><u>		  ? (char *) <a class="ref fn" href="../../include/string.h.html#__rawmemchr" title='__rawmemchr' data-ref="__rawmemchr" data-ref-filename="__rawmemchr">__rawmemchr</a> (s, c)				      \</u></td></tr>
+<tr><th id="67">67</th><td><u>		  : <a class="ref fn" href="#248" title='__builtin_strchr' data-ref="__builtin_strchr" data-ref-filename="__builtin_strchr">__builtin_strchr</a> (s, c)))</u></td></tr>
+<tr><th id="68">68</th><td><u>#<span data-ppcond="61">endif</span></u></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* Copy SRC to DEST, returning pointer to final NUL byte.  */</i></td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="72">ifdef</span> <a class="macro" href="../../include/features.h.html#322" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="73">73</th><td><u># <span data-ppcond="73">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_stpcpy">_HAVE_STRING_ARCH_stpcpy</span></u></td></tr>
+<tr><th id="74">74</th><td><u>#  define <dfn class="macro" id="_M/__stpcpy" data-ref="_M/__stpcpy">__stpcpy</dfn>(dest, src) __builtin_stpcpy (dest, src)</u></td></tr>
+<tr><th id="75">75</th><td><i>/* In glibc we use this function frequently but for namespace reasons</i></td></tr>
+<tr><th id="76">76</th><td><i>   we have to use the name `__stpcpy'.  */</i></td></tr>
+<tr><th id="77">77</th><td><u>#  define <dfn class="macro" id="_M/stpcpy" data-ref="_M/stpcpy">stpcpy</dfn>(dest, src) __stpcpy (dest, src)</u></td></tr>
+<tr><th id="78">78</th><td><u># <span data-ppcond="73">endif</span></u></td></tr>
+<tr><th id="79">79</th><td><u>#<span data-ppcond="72">endif</span></u></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* Copy no more than N characters of SRC to DEST.  */</i></td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="83">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncpy">_HAVE_STRING_ARCH_strncpy</span></u></td></tr>
+<tr><th id="84">84</th><td><u># define <dfn class="macro" id="_M/strncpy" data-ref="_M/strncpy">strncpy</dfn>(dest, src, n) __builtin_strncpy (dest, src, n)</u></td></tr>
+<tr><th id="85">85</th><td><u>#<span data-ppcond="83">endif</span></u></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i>/* Append no more than N characters from SRC onto DEST.  */</i></td></tr>
+<tr><th id="89">89</th><td><u>#<span data-ppcond="89">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncat">_HAVE_STRING_ARCH_strncat</span></u></td></tr>
+<tr><th id="90">90</th><td><u># <span data-ppcond="90">ifdef</span> <span class="macro" data-ref="_M/_USE_STRING_ARCH_strchr">_USE_STRING_ARCH_strchr</span></u></td></tr>
+<tr><th id="91">91</th><td><u>#  define strncat(dest, src, n) \</u></td></tr>
+<tr><th id="92">92</th><td><u>  (__extension__ ({ char *__dest = (dest);				      \</u></td></tr>
+<tr><th id="93">93</th><td><u>		    __builtin_constant_p (src) &amp;&amp; __builtin_constant_p (n)    \</u></td></tr>
+<tr><th id="94">94</th><td><u>		    ? (strlen (src) &lt; ((size_t) (n))			      \</u></td></tr>
+<tr><th id="95">95</th><td><u>		       ? strcat (__dest, src)				      \</u></td></tr>
+<tr><th id="96">96</th><td><u>		       : (*((char *) __mempcpy (strchr (__dest, '\0'),	      \</u></td></tr>
+<tr><th id="97">97</th><td><u>						src, n)) = '\0', __dest))     \</u></td></tr>
+<tr><th id="98">98</th><td><u>		    : strncat (dest, src, n); }))</u></td></tr>
+<tr><th id="99">99</th><td><u># <span data-ppcond="90">else</span></u></td></tr>
+<tr><th id="100">100</th><td><u>#  define <dfn class="macro" id="_M/strncat" data-ref="_M/strncat">strncat</dfn>(dest, src, n) __builtin_strncat (dest, src, n)</u></td></tr>
+<tr><th id="101">101</th><td><u># <span data-ppcond="90">endif</span></u></td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="89">endif</span></u></td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i>/* Compare characters of S1 and S2.  */</i></td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="106">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcmp">_HAVE_STRING_ARCH_strcmp</span></u></td></tr>
+<tr><th id="107">107</th><td><u># define <dfn class="macro" id="_M/strcmp" data-ref="_M/strcmp">strcmp</dfn>(s1, s2) \</u></td></tr>
+<tr><th id="108">108</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="109">109</th><td><u>  ({ size_t __s1_len, __s2_len;						      \</u></td></tr>
+<tr><th id="110">110</th><td><u>     (__builtin_constant_p (s1) &amp;&amp; __builtin_constant_p (s2)		      \</u></td></tr>
+<tr><th id="111">111</th><td><u>      &amp;&amp; (__s1_len = strlen (s1), __s2_len = strlen (s2),		      \</u></td></tr>
+<tr><th id="112">112</th><td><u>	  (!__string2_1bptr_p (s1) || __s1_len &gt;= 4)			      \</u></td></tr>
+<tr><th id="113">113</th><td><u>	  &amp;&amp; (!__string2_1bptr_p (s2) || __s2_len &gt;= 4))		      \</u></td></tr>
+<tr><th id="114">114</th><td><u>      ? __builtin_strcmp (s1, s2)					      \</u></td></tr>
+<tr><th id="115">115</th><td><u>      : (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)		      \</u></td></tr>
+<tr><th id="116">116</th><td><u>	 &amp;&amp; (__s1_len = strlen (s1), __s1_len &lt; 4)			      \</u></td></tr>
+<tr><th id="117">117</th><td><u>	 ? (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="118">118</th><td><u>	    ? __builtin_strcmp (s1, s2)					      \</u></td></tr>
+<tr><th id="119">119</th><td><u>	    : __strcmp_cg (s1, s2, __s1_len))				      \</u></td></tr>
+<tr><th id="120">120</th><td><u>	 : (__builtin_constant_p (s2) &amp;&amp; __string2_1bptr_p (s2)		      \</u></td></tr>
+<tr><th id="121">121</th><td><u>	    &amp;&amp; (__s2_len = strlen (s2), __s2_len &lt; 4)			      \</u></td></tr>
+<tr><th id="122">122</th><td><u>	    ? (__builtin_constant_p (s1) &amp;&amp; __string2_1bptr_p (s1)	      \</u></td></tr>
+<tr><th id="123">123</th><td><u>	       ? __builtin_strcmp (s1, s2)				      \</u></td></tr>
+<tr><th id="124">124</th><td><u>	       : -__strcmp_cg (s2, s1, __s2_len))			      \</u></td></tr>
+<tr><th id="125">125</th><td><u>            : __builtin_strcmp (s1, s2)))); })</u></td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><u># define <dfn class="macro" id="_M/__strcmp_cg" data-ref="_M/__strcmp_cg">__strcmp_cg</dfn>(s1, s2, l1) \</u></td></tr>
+<tr><th id="128">128</th><td><u>  (__extension__ ({ const unsigned char *__s2 =				      \</u></td></tr>
+<tr><th id="129">129</th><td><u>		      (const unsigned char *) (const char *) (s2);	      \</u></td></tr>
+<tr><th id="130">130</th><td><u>		    int __result =					      \</u></td></tr>
+<tr><th id="131">131</th><td><u>		      (((const unsigned char *) (const char *) (s1))[0]	      \</u></td></tr>
+<tr><th id="132">132</th><td><u>		       - __s2[0]);					      \</u></td></tr>
+<tr><th id="133">133</th><td><u>		    if (l1 &gt; 0 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="134">134</th><td><u>		      {							      \</u></td></tr>
+<tr><th id="135">135</th><td><u>			__result = (((const unsigned char *)		      \</u></td></tr>
+<tr><th id="136">136</th><td><u>				     (const char *) (s1))[1] - __s2[1]);      \</u></td></tr>
+<tr><th id="137">137</th><td><u>			if (l1 &gt; 1 &amp;&amp; __result == 0)			      \</u></td></tr>
+<tr><th id="138">138</th><td><u>			  {						      \</u></td></tr>
+<tr><th id="139">139</th><td><u>			    __result = (((const unsigned char *)	      \</u></td></tr>
+<tr><th id="140">140</th><td><u>					 (const char *) (s1))[2] - __s2[2]);  \</u></td></tr>
+<tr><th id="141">141</th><td><u>			    if (l1 &gt; 2 &amp;&amp; __result == 0)		      \</u></td></tr>
+<tr><th id="142">142</th><td><u>			      __result = (((const unsigned char *)	      \</u></td></tr>
+<tr><th id="143">143</th><td><u>					  (const char *)  (s1))[3]	      \</u></td></tr>
+<tr><th id="144">144</th><td><u>					  - __s2[3]);			      \</u></td></tr>
+<tr><th id="145">145</th><td><u>			  }						      \</u></td></tr>
+<tr><th id="146">146</th><td><u>		      }							      \</u></td></tr>
+<tr><th id="147">147</th><td><u>		    __result; }))</u></td></tr>
+<tr><th id="148">148</th><td><u>#<span data-ppcond="106">endif</span></u></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i>/* Compare N characters of S1 and S2.  */</i></td></tr>
+<tr><th id="152">152</th><td><u>#<span data-ppcond="152">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strncmp">_HAVE_STRING_ARCH_strncmp</span></u></td></tr>
+<tr><th id="153">153</th><td><u># define <dfn class="macro" id="_M/strncmp" data-ref="_M/strncmp">strncmp</dfn>(s1, s2, n)						      \</u></td></tr>
+<tr><th id="154">154</th><td><u>  (__extension__ (__builtin_constant_p (n)				      \</u></td></tr>
+<tr><th id="155">155</th><td><u>		  &amp;&amp; ((__builtin_constant_p (s1)			      \</u></td></tr>
+<tr><th id="156">156</th><td><u>		       &amp;&amp; strlen (s1) &lt; ((size_t) (n)))			      \</u></td></tr>
+<tr><th id="157">157</th><td><u>		      || (__builtin_constant_p (s2)			      \</u></td></tr>
+<tr><th id="158">158</th><td><u>			  &amp;&amp; strlen (s2) &lt; ((size_t) (n))))		      \</u></td></tr>
+<tr><th id="159">159</th><td><u>		  ? strcmp (s1, s2) : strncmp (s1, s2, n)))</u></td></tr>
+<tr><th id="160">160</th><td><u>#<span data-ppcond="152">endif</span></u></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td><i>/* Return the length of the initial segment of S which</i></td></tr>
+<tr><th id="164">164</th><td><i>   consists entirely of characters not in REJECT.  */</i></td></tr>
+<tr><th id="165">165</th><td><u>#<span data-ppcond="165">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strcspn">_HAVE_STRING_ARCH_strcspn</span></u></td></tr>
+<tr><th id="166">166</th><td><u># define <dfn class="macro" id="_M/strcspn" data-ref="_M/strcspn">strcspn</dfn>(s, reject) __builtin_strcspn (s, reject)</u></td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="165">endif</span></u></td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><i>/* Return the length of the initial segment of S which</i></td></tr>
+<tr><th id="171">171</th><td><i>   consists entirely of characters in ACCEPT.  */</i></td></tr>
+<tr><th id="172">172</th><td><u>#<span data-ppcond="172">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strspn">_HAVE_STRING_ARCH_strspn</span></u></td></tr>
+<tr><th id="173">173</th><td><u># define <dfn class="macro" id="_M/strspn" data-ref="_M/strspn">strspn</dfn>(s, accept) __builtin_strspn (s, accept)</u></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="172">endif</span></u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/* Find the first occurrence in S of any character in ACCEPT.  */</i></td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="178">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strpbrk">_HAVE_STRING_ARCH_strpbrk</span></u></td></tr>
+<tr><th id="179">179</th><td><u># define <dfn class="macro" id="_M/strpbrk" data-ref="_M/strpbrk">strpbrk</dfn>(s, accept) __builtin_strpbrk (s, accept)</u></td></tr>
+<tr><th id="180">180</th><td><u>#<span data-ppcond="178">endif</span></u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><u>#<span data-ppcond="183">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strtok_r">_HAVE_STRING_ARCH_strtok_r</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="184">184</th><td><u># <span data-ppcond="184">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strtok_r">_HAVE_STRING_ARCH_strtok_r</span></u></td></tr>
+<tr><th id="185">185</th><td><u>#  define <dfn class="macro" id="_M/__strtok_r" data-ref="_M/__strtok_r">__strtok_r</dfn>(s, sep, nextp) \</u></td></tr>
+<tr><th id="186">186</th><td><u>  (__extension__ (__builtin_constant_p (sep) &amp;&amp; __string2_1bptr_p (sep)	      \</u></td></tr>
+<tr><th id="187">187</th><td><u>		  &amp;&amp; ((const char *) (sep))[0] != '\0'			      \</u></td></tr>
+<tr><th id="188">188</th><td><u>		  &amp;&amp; ((const char *) (sep))[1] == '\0'			      \</u></td></tr>
+<tr><th id="189">189</th><td><u>		  ? __strtok_r_1c (s, ((const char *) (sep))[0], nextp)       \</u></td></tr>
+<tr><th id="190">190</th><td><u>		  : __strtok_r (s, sep, nextp)))</u></td></tr>
+<tr><th id="191">191</th><td><u># <span data-ppcond="184">endif</span></u></td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strtok_r_1c" title='__strtok_r_1c' data-ref="__strtok_r_1c" data-ref-filename="__strtok_r_1c">__strtok_r_1c</a> (<em>char</em> *<dfn class="local col3 decl" id="1263__s" title='__s' data-type='char *' data-ref="1263__s" data-ref-filename="1263__s">__s</dfn>, <em>char</em> <dfn class="local col4 decl" id="1264__sep" title='__sep' data-type='char' data-ref="1264__sep" data-ref-filename="1264__sep">__sep</dfn>, <em>char</em> **<dfn class="local col5 decl" id="1265__nextp" title='__nextp' data-type='char **' data-ref="1265__nextp" data-ref-filename="1265__nextp">__nextp</dfn>);</td></tr>
+<tr><th id="194">194</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="195">195</th><td><dfn class="decl def fn" id="__strtok_r_1c" title='__strtok_r_1c' data-ref="__strtok_r_1c" data-ref-filename="__strtok_r_1c">__strtok_r_1c</dfn> (<em>char</em> *<dfn class="local col6 decl" id="1266__s" title='__s' data-type='char *' data-ref="1266__s" data-ref-filename="1266__s">__s</dfn>, <em>char</em> <dfn class="local col7 decl" id="1267__sep" title='__sep' data-type='char' data-ref="1267__sep" data-ref-filename="1267__sep">__sep</dfn>, <em>char</em> **<dfn class="local col8 decl" id="1268__nextp" title='__nextp' data-type='char **' data-ref="1268__nextp" data-ref-filename="1268__nextp">__nextp</dfn>)</td></tr>
+<tr><th id="196">196</th><td>{</td></tr>
+<tr><th id="197">197</th><td>  <em>char</em> *<dfn class="local col9 decl" id="1269__result" title='__result' data-type='char *' data-ref="1269__result" data-ref-filename="1269__result">__result</dfn>;</td></tr>
+<tr><th id="198">198</th><td>  <b>if</b> (<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="199">199</th><td>    <a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a> = *<a class="local col8 ref" href="#1268__nextp" title='__nextp' data-ref="1268__nextp" data-ref-filename="1268__nextp">__nextp</a>;</td></tr>
+<tr><th id="200">200</th><td>  <b>while</b> (*<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a> == <a class="local col7 ref" href="#1267__sep" title='__sep' data-ref="1267__sep" data-ref-filename="1267__sep">__sep</a>)</td></tr>
+<tr><th id="201">201</th><td>    ++<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a>;</td></tr>
+<tr><th id="202">202</th><td>  <a class="local col9 ref" href="#1269__result" title='__result' data-ref="1269__result" data-ref-filename="1269__result">__result</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="203">203</th><td>  <b>if</b> (*<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="204">204</th><td>    {</td></tr>
+<tr><th id="205">205</th><td>      <a class="local col9 ref" href="#1269__result" title='__result' data-ref="1269__result" data-ref-filename="1269__result">__result</a> = <a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a>++;</td></tr>
+<tr><th id="206">206</th><td>      <b>while</b> (*<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a> != <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="207">207</th><td>	<b>if</b> (*<a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a>++ == <a class="local col7 ref" href="#1267__sep" title='__sep' data-ref="1267__sep" data-ref-filename="1267__sep">__sep</a>)</td></tr>
+<tr><th id="208">208</th><td>	  {</td></tr>
+<tr><th id="209">209</th><td>	    <a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a>[-<var>1</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="210">210</th><td>	    <b>break</b>;</td></tr>
+<tr><th id="211">211</th><td>	  }</td></tr>
+<tr><th id="212">212</th><td>    }</td></tr>
+<tr><th id="213">213</th><td>  *<a class="local col8 ref" href="#1268__nextp" title='__nextp' data-ref="1268__nextp" data-ref-filename="1268__nextp">__nextp</a> = <a class="local col6 ref" href="#1266__s" title='__s' data-ref="1266__s" data-ref-filename="1266__s">__s</a>;</td></tr>
+<tr><th id="214">214</th><td>  <b>return</b> <a class="local col9 ref" href="#1269__result" title='__result' data-ref="1269__result" data-ref-filename="1269__result">__result</a>;</td></tr>
+<tr><th id="215">215</th><td>}</td></tr>
+<tr><th id="216">216</th><td><u># <span data-ppcond="216">ifdef</span> <a class="macro" href="../../include/features.h.html#246" data-ref="_M/__USE_POSIX">__USE_POSIX</a></u></td></tr>
+<tr><th id="217">217</th><td><u>#  define <dfn class="macro" id="_M/strtok_r" data-ref="_M/strtok_r">strtok_r</dfn>(s, sep, nextp) __strtok_r (s, sep, nextp)</u></td></tr>
+<tr><th id="218">218</th><td><u># <span data-ppcond="216">endif</span></u></td></tr>
+<tr><th id="219">219</th><td><u>#<span data-ppcond="183">endif</span></u></td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td><u>#<span data-ppcond="222">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strsep">_HAVE_STRING_ARCH_strsep</span> || defined <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="223">223</th><td><u># <span data-ppcond="223">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strsep">_HAVE_STRING_ARCH_strsep</span></u></td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><b>extern</b> <em>char</em> *<dfn class="decl fn" id="__strsep_g" title='__strsep_g' data-ref="__strsep_g" data-ref-filename="__strsep_g">__strsep_g</dfn> (<em>char</em> **<dfn class="local col0 decl" id="1270__stringp" title='__stringp' data-type='char **' data-ref="1270__stringp" data-ref-filename="1270__stringp">__stringp</dfn>, <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1271__delim" title='__delim' data-type='const char *' data-ref="1271__delim" data-ref-filename="1271__delim">__delim</dfn>);</td></tr>
+<tr><th id="226">226</th><td><u>#  define <dfn class="macro" id="_M/__strsep" data-ref="_M/__strsep">__strsep</dfn>(s, reject) \</u></td></tr>
+<tr><th id="227">227</th><td><u>  __extension__								      \</u></td></tr>
+<tr><th id="228">228</th><td><u>  ({ char __r0, __r1, __r2;						      \</u></td></tr>
+<tr><th id="229">229</th><td><u>     (__builtin_constant_p (reject) &amp;&amp; __string2_1bptr_p (reject)	      \</u></td></tr>
+<tr><th id="230">230</th><td><u>      &amp;&amp; (__r0 = ((const char *) (reject))[0],				      \</u></td></tr>
+<tr><th id="231">231</th><td><u>	  ((const char *) (reject))[0] != '\0')				      \</u></td></tr>
+<tr><th id="232">232</th><td><u>      ? ((__r1 = ((const char *) (reject))[1],				      \</u></td></tr>
+<tr><th id="233">233</th><td><u>	 ((const char *) (reject))[1] == '\0')				      \</u></td></tr>
+<tr><th id="234">234</th><td><u>	 ? __strsep_1c (s, __r0)					      \</u></td></tr>
+<tr><th id="235">235</th><td><u>	 : ((__r2 = ((const char *) (reject))[2], __r2 == '\0')		      \</u></td></tr>
+<tr><th id="236">236</th><td><u>	    ? __strsep_2c (s, __r0, __r1)				      \</u></td></tr>
+<tr><th id="237">237</th><td><u>	    : (((const char *) (reject))[3] == '\0'			      \</u></td></tr>
+<tr><th id="238">238</th><td><u>	       ? __strsep_3c (s, __r0, __r1, __r2)			      \</u></td></tr>
+<tr><th id="239">239</th><td><u>	       : __strsep_g (s, reject))))				      \</u></td></tr>
+<tr><th id="240">240</th><td><u>      : __strsep_g (s, reject)); })</u></td></tr>
+<tr><th id="241">241</th><td><u># <span data-ppcond="223">endif</span></u></td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_1c" title='__strsep_1c' data-ref="__strsep_1c" data-ref-filename="__strsep_1c">__strsep_1c</a> (<em>char</em> **<dfn class="local col2 decl" id="1272__s" title='__s' data-type='char **' data-ref="1272__s" data-ref-filename="1272__s">__s</dfn>, <em>char</em> <dfn class="local col3 decl" id="1273__reject" title='__reject' data-type='char' data-ref="1273__reject" data-ref-filename="1273__reject">__reject</dfn>);</td></tr>
+<tr><th id="244">244</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="245">245</th><td><dfn class="decl def fn" id="__strsep_1c" title='__strsep_1c' data-ref="__strsep_1c" data-ref-filename="__strsep_1c">__strsep_1c</dfn> (<em>char</em> **<dfn class="local col4 decl" id="1274__s" title='__s' data-type='char **' data-ref="1274__s" data-ref-filename="1274__s">__s</dfn>, <em>char</em> <dfn class="local col5 decl" id="1275__reject" title='__reject' data-type='char' data-ref="1275__reject" data-ref-filename="1275__reject">__reject</dfn>)</td></tr>
+<tr><th id="246">246</th><td>{</td></tr>
+<tr><th id="247">247</th><td>  <em>char</em> *<dfn class="local col6 decl" id="1276__retval" title='__retval' data-type='char *' data-ref="1276__retval" data-ref-filename="1276__retval">__retval</dfn> = *<a class="local col4 ref" href="#1274__s" title='__s' data-ref="1274__s" data-ref-filename="1274__s">__s</a>;</td></tr>
+<tr><th id="248">248</th><td>  <b>if</b> (<a class="local col6 ref" href="#1276__retval" title='__retval' data-ref="1276__retval" data-ref-filename="1276__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> &amp;&amp; (*<a class="local col4 ref" href="#1274__s" title='__s' data-ref="1274__s" data-ref-filename="1274__s">__s</a> = <a class="macro" href="#63" title="(__extension__ (__builtin_constant_p (__reject) &amp;&amp; !__builtin_constant_p (__retval) &amp;&amp; (__reject) == &apos;\0&apos; ? (char *) __rawmemchr (__retval, __reject) : __builtin_strchr (__retval, __reject)))" data-ref="_M/strchr">strchr</a> (<a class="local col6 ref" href="#1276__retval" title='__retval' data-ref="1276__retval" data-ref-filename="1276__retval">__retval</a>, <a class="local col5 ref" href="#1275__reject" title='__reject' data-ref="1275__reject" data-ref-filename="1275__reject">__reject</a>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="249">249</th><td>    *(*<a class="local col4 ref" href="#1274__s" title='__s' data-ref="1274__s" data-ref-filename="1274__s">__s</a>)++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="250">250</th><td>  <b>return</b> <a class="local col6 ref" href="#1276__retval" title='__retval' data-ref="1276__retval" data-ref-filename="1276__retval">__retval</a>;</td></tr>
+<tr><th id="251">251</th><td>}</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_2c" title='__strsep_2c' data-ref="__strsep_2c" data-ref-filename="__strsep_2c">__strsep_2c</a> (<em>char</em> **<dfn class="local col7 decl" id="1277__s" title='__s' data-type='char **' data-ref="1277__s" data-ref-filename="1277__s">__s</dfn>, <em>char</em> <dfn class="local col8 decl" id="1278__reject1" title='__reject1' data-type='char' data-ref="1278__reject1" data-ref-filename="1278__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col9 decl" id="1279__reject2" title='__reject2' data-type='char' data-ref="1279__reject2" data-ref-filename="1279__reject2">__reject2</dfn>);</td></tr>
+<tr><th id="254">254</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="255">255</th><td><dfn class="decl def fn" id="__strsep_2c" title='__strsep_2c' data-ref="__strsep_2c" data-ref-filename="__strsep_2c">__strsep_2c</dfn> (<em>char</em> **<dfn class="local col0 decl" id="1280__s" title='__s' data-type='char **' data-ref="1280__s" data-ref-filename="1280__s">__s</dfn>, <em>char</em> <dfn class="local col1 decl" id="1281__reject1" title='__reject1' data-type='char' data-ref="1281__reject1" data-ref-filename="1281__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col2 decl" id="1282__reject2" title='__reject2' data-type='char' data-ref="1282__reject2" data-ref-filename="1282__reject2">__reject2</dfn>)</td></tr>
+<tr><th id="256">256</th><td>{</td></tr>
+<tr><th id="257">257</th><td>  <em>char</em> *<dfn class="local col3 decl" id="1283__retval" title='__retval' data-type='char *' data-ref="1283__retval" data-ref-filename="1283__retval">__retval</dfn> = *<a class="local col0 ref" href="#1280__s" title='__s' data-ref="1280__s" data-ref-filename="1280__s">__s</a>;</td></tr>
+<tr><th id="258">258</th><td>  <b>if</b> (<a class="local col3 ref" href="#1283__retval" title='__retval' data-ref="1283__retval" data-ref-filename="1283__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="259">259</th><td>    {</td></tr>
+<tr><th id="260">260</th><td>      <em>char</em> *<dfn class="local col4 decl" id="1284__cp" title='__cp' data-type='char *' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</dfn> = <a class="local col3 ref" href="#1283__retval" title='__retval' data-ref="1283__retval" data-ref-filename="1283__retval">__retval</a>;</td></tr>
+<tr><th id="261">261</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="262">262</th><td>	{</td></tr>
+<tr><th id="263">263</th><td>	  <b>if</b> (*<a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="264">264</th><td>	    {</td></tr>
+<tr><th id="265">265</th><td>	      <a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="266">266</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="267">267</th><td>	    }</td></tr>
+<tr><th id="268">268</th><td>	  <b>if</b> (*<a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a> == <a class="local col1 ref" href="#1281__reject1" title='__reject1' data-ref="1281__reject1" data-ref-filename="1281__reject1">__reject1</a> || *<a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a> == <a class="local col2 ref" href="#1282__reject2" title='__reject2' data-ref="1282__reject2" data-ref-filename="1282__reject2">__reject2</a>)</td></tr>
+<tr><th id="269">269</th><td>	    {</td></tr>
+<tr><th id="270">270</th><td>	      *<a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="271">271</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="272">272</th><td>	    }</td></tr>
+<tr><th id="273">273</th><td>	  ++<a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a>;</td></tr>
+<tr><th id="274">274</th><td>	}</td></tr>
+<tr><th id="275">275</th><td>      *<a class="local col0 ref" href="#1280__s" title='__s' data-ref="1280__s" data-ref-filename="1280__s">__s</a> = <a class="local col4 ref" href="#1284__cp" title='__cp' data-ref="1284__cp" data-ref-filename="1284__cp">__cp</a>;</td></tr>
+<tr><th id="276">276</th><td>    }</td></tr>
+<tr><th id="277">277</th><td>  <b>return</b> <a class="local col3 ref" href="#1283__retval" title='__retval' data-ref="1283__retval" data-ref-filename="1283__retval">__retval</a>;</td></tr>
+<tr><th id="278">278</th><td>}</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *<a class="decl fn" href="#__strsep_3c" title='__strsep_3c' data-ref="__strsep_3c" data-ref-filename="__strsep_3c">__strsep_3c</a> (<em>char</em> **<dfn class="local col5 decl" id="1285__s" title='__s' data-type='char **' data-ref="1285__s" data-ref-filename="1285__s">__s</dfn>, <em>char</em> <dfn class="local col6 decl" id="1286__reject1" title='__reject1' data-type='char' data-ref="1286__reject1" data-ref-filename="1286__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col7 decl" id="1287__reject2" title='__reject2' data-type='char' data-ref="1287__reject2" data-ref-filename="1287__reject2">__reject2</dfn>,</td></tr>
+<tr><th id="281">281</th><td>				   <em>char</em> <dfn class="local col8 decl" id="1288__reject3" title='__reject3' data-type='char' data-ref="1288__reject3" data-ref-filename="1288__reject3">__reject3</dfn>);</td></tr>
+<tr><th id="282">282</th><td><a class="macro" href="#45" title="extern __inline" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a> <em>char</em> *</td></tr>
+<tr><th id="283">283</th><td><dfn class="decl def fn" id="__strsep_3c" title='__strsep_3c' data-ref="__strsep_3c" data-ref-filename="__strsep_3c">__strsep_3c</dfn> (<em>char</em> **<dfn class="local col9 decl" id="1289__s" title='__s' data-type='char **' data-ref="1289__s" data-ref-filename="1289__s">__s</dfn>, <em>char</em> <dfn class="local col0 decl" id="1290__reject1" title='__reject1' data-type='char' data-ref="1290__reject1" data-ref-filename="1290__reject1">__reject1</dfn>, <em>char</em> <dfn class="local col1 decl" id="1291__reject2" title='__reject2' data-type='char' data-ref="1291__reject2" data-ref-filename="1291__reject2">__reject2</dfn>, <em>char</em> <dfn class="local col2 decl" id="1292__reject3" title='__reject3' data-type='char' data-ref="1292__reject3" data-ref-filename="1292__reject3">__reject3</dfn>)</td></tr>
+<tr><th id="284">284</th><td>{</td></tr>
+<tr><th id="285">285</th><td>  <em>char</em> *<dfn class="local col3 decl" id="1293__retval" title='__retval' data-type='char *' data-ref="1293__retval" data-ref-filename="1293__retval">__retval</dfn> = *<a class="local col9 ref" href="#1289__s" title='__s' data-ref="1289__s" data-ref-filename="1289__s">__s</a>;</td></tr>
+<tr><th id="286">286</th><td>  <b>if</b> (<a class="local col3 ref" href="#1293__retval" title='__retval' data-ref="1293__retval" data-ref-filename="1293__retval">__retval</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="287">287</th><td>    {</td></tr>
+<tr><th id="288">288</th><td>      <em>char</em> *<dfn class="local col4 decl" id="1294__cp" title='__cp' data-type='char *' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</dfn> = <a class="local col3 ref" href="#1293__retval" title='__retval' data-ref="1293__retval" data-ref-filename="1293__retval">__retval</a>;</td></tr>
+<tr><th id="289">289</th><td>      <b>while</b> (<var>1</var>)</td></tr>
+<tr><th id="290">290</th><td>	{</td></tr>
+<tr><th id="291">291</th><td>	  <b>if</b> (*<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a> == <kbd>'\0'</kbd>)</td></tr>
+<tr><th id="292">292</th><td>	    {</td></tr>
+<tr><th id="293">293</th><td>	      <a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="294">294</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="295">295</th><td>	    }</td></tr>
+<tr><th id="296">296</th><td>	  <b>if</b> (*<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a> == <a class="local col0 ref" href="#1290__reject1" title='__reject1' data-ref="1290__reject1" data-ref-filename="1290__reject1">__reject1</a> || *<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a> == <a class="local col1 ref" href="#1291__reject2" title='__reject2' data-ref="1291__reject2" data-ref-filename="1291__reject2">__reject2</a> || *<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a> == <a class="local col2 ref" href="#1292__reject3" title='__reject3' data-ref="1292__reject3" data-ref-filename="1292__reject3">__reject3</a>)</td></tr>
+<tr><th id="297">297</th><td>	    {</td></tr>
+<tr><th id="298">298</th><td>	      *<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a>++ = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="299">299</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="300">300</th><td>	    }</td></tr>
+<tr><th id="301">301</th><td>	  ++<a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a>;</td></tr>
+<tr><th id="302">302</th><td>	}</td></tr>
+<tr><th id="303">303</th><td>      *<a class="local col9 ref" href="#1289__s" title='__s' data-ref="1289__s" data-ref-filename="1289__s">__s</a> = <a class="local col4 ref" href="#1294__cp" title='__cp' data-ref="1294__cp" data-ref-filename="1294__cp">__cp</a>;</td></tr>
+<tr><th id="304">304</th><td>    }</td></tr>
+<tr><th id="305">305</th><td>  <b>return</b> <a class="local col3 ref" href="#1293__retval" title='__retval' data-ref="1293__retval" data-ref-filename="1293__retval">__retval</a>;</td></tr>
+<tr><th id="306">306</th><td>}</td></tr>
+<tr><th id="307">307</th><td><u># <span data-ppcond="307">ifdef</span> <a class="macro" href="../../include/features.h.html#314" data-ref="_M/__USE_MISC">__USE_MISC</a></u></td></tr>
+<tr><th id="308">308</th><td><u>#  define <dfn class="macro" id="_M/strsep" data-ref="_M/strsep">strsep</dfn>(s, reject) __strsep (s, reject)</u></td></tr>
+<tr><th id="309">309</th><td><u># <span data-ppcond="307">endif</span></u></td></tr>
+<tr><th id="310">310</th><td><u>#<span data-ppcond="222">endif</span></u></td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td><i>/* We need the memory allocation functions for inline strdup().</i></td></tr>
+<tr><th id="313">313</th><td><i>   Referring to stdlib.h (even minimally) is not allowed</i></td></tr>
+<tr><th id="314">314</th><td><i>   in any of the tight standards compliant modes.  */</i></td></tr>
+<tr><th id="315">315</th><td><u>#<span data-ppcond="315">ifdef</span> <a class="macro" href="../../include/features.h.html#314" data-ref="_M/__USE_MISC">__USE_MISC</a></u></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><u># <span data-ppcond="317">if</span> !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strdup">_HAVE_STRING_ARCH_strdup</span> || !defined <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strndup">_HAVE_STRING_ARCH_strndup</span></u></td></tr>
+<tr><th id="318">318</th><td><u>#  define <dfn class="macro" id="_M/__need_malloc_and_calloc" data-ref="_M/__need_malloc_and_calloc">__need_malloc_and_calloc</dfn></u></td></tr>
+<tr><th id="319">319</th><td><u>#  include <a href="../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="320">320</th><td><u># <span data-ppcond="317">endif</span></u></td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td><u># <span data-ppcond="322">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strdup">_HAVE_STRING_ARCH_strdup</span></u></td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td><b>extern</b> <em>char</em> *<a class="decl fn" href="../../include/string.h.html#__strdup" title='__strdup' data-ref="__strdup" data-ref-filename="__strdup" id="__strdup">__strdup</a> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="1295__string" title='__string' data-type='const char *' data-ref="1295__string" data-ref-filename="1295__string">__string</dfn>) <a class="macro" href="../../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a> <a class="macro" href="../../misc/sys/cdefs.h.html#211" title="__attribute__ ((__malloc__))" data-ref="_M/__attribute_malloc__">__attribute_malloc__</a>;</td></tr>
+<tr><th id="325">325</th><td><u>#  define <dfn class="macro" id="_M/__strdup" data-ref="_M/__strdup">__strdup</dfn>(s) \</u></td></tr>
+<tr><th id="326">326</th><td><u>  (__extension__ (__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s)	      \</u></td></tr>
+<tr><th id="327">327</th><td><u>		  ? (((const char *) (s))[0] == '\0'			      \</u></td></tr>
+<tr><th id="328">328</th><td><u>		     ? (char *) calloc ((size_t) 1, (size_t) 1)		      \</u></td></tr>
+<tr><th id="329">329</th><td><u>		     : ({ size_t __len = strlen (s) + 1;		      \</u></td></tr>
+<tr><th id="330">330</th><td><u>			  char *__retval = (char *) malloc (__len);	      \</u></td></tr>
+<tr><th id="331">331</th><td><u>			  if (__retval != NULL)				      \</u></td></tr>
+<tr><th id="332">332</th><td><u>			    __retval = (char *) memcpy (__retval, s, __len);  \</u></td></tr>
+<tr><th id="333">333</th><td><u>			  __retval; }))					      \</u></td></tr>
+<tr><th id="334">334</th><td><u>		  : __strdup (s)))</u></td></tr>
+<tr><th id="335">335</th><td></td></tr>
+<tr><th id="336">336</th><td><u>#  <span data-ppcond="336">if</span> defined <a class="macro" href="../../include/features.h.html#278" data-ref="_M/__USE_XOPEN_EXTENDED">__USE_XOPEN_EXTENDED</a> || defined <a class="macro" href="../../include/features.h.html#284" data-ref="_M/__USE_XOPEN2K8">__USE_XOPEN2K8</a></u></td></tr>
+<tr><th id="337">337</th><td><u>#   define <dfn class="macro" id="_M/strdup" data-ref="_M/strdup">strdup</dfn>(s) __strdup (s)</u></td></tr>
+<tr><th id="338">338</th><td><u>#  <span data-ppcond="336">endif</span></u></td></tr>
+<tr><th id="339">339</th><td><u># <span data-ppcond="322">endif</span></u></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td><u># <span data-ppcond="341">ifndef</span> <span class="macro" data-ref="_M/_HAVE_STRING_ARCH_strndup">_HAVE_STRING_ARCH_strndup</span></u></td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td><b>extern</b> <em>char</em> *<a class="decl fn" href="../../include/string.h.html#__strndup" title='__strndup' data-ref="__strndup" data-ref-filename="__strndup" id="__strndup">__strndup</a> (<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="1296__string" title='__string' data-type='const char *' data-ref="1296__string" data-ref-filename="1296__string">__string</dfn>, <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="1297__n" title='__n' data-type='size_t' data-ref="1297__n" data-ref-filename="1297__n">__n</dfn>)</td></tr>
+<tr><th id="344">344</th><td>     <a class="macro" href="../../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a> <a class="macro" href="../../misc/sys/cdefs.h.html#211" title="__attribute__ ((__malloc__))" data-ref="_M/__attribute_malloc__">__attribute_malloc__</a>;</td></tr>
+<tr><th id="345">345</th><td><u>#  define <dfn class="macro" id="_M/__strndup" data-ref="_M/__strndup">__strndup</dfn>(s, n) \</u></td></tr>
+<tr><th id="346">346</th><td><u>  (__extension__ (__builtin_constant_p (s) &amp;&amp; __string2_1bptr_p (s)	      \</u></td></tr>
+<tr><th id="347">347</th><td><u>		  ? (((const char *) (s))[0] == '\0'			      \</u></td></tr>
+<tr><th id="348">348</th><td><u>		     ? (char *) calloc ((size_t) 1, (size_t) 1)		      \</u></td></tr>
+<tr><th id="349">349</th><td><u>		     : ({ size_t __len = strlen (s) + 1;		      \</u></td></tr>
+<tr><th id="350">350</th><td><u>			  size_t __n = (n);				      \</u></td></tr>
+<tr><th id="351">351</th><td><u>			  char *__retval;				      \</u></td></tr>
+<tr><th id="352">352</th><td><u>			  if (__n &lt; __len)				      \</u></td></tr>
+<tr><th id="353">353</th><td><u>			    __len = __n + 1;				      \</u></td></tr>
+<tr><th id="354">354</th><td><u>			  __retval = (char *) malloc (__len);		      \</u></td></tr>
+<tr><th id="355">355</th><td><u>			  if (__retval != NULL)				      \</u></td></tr>
+<tr><th id="356">356</th><td><u>			    {						      \</u></td></tr>
+<tr><th id="357">357</th><td><u>			      __retval[__len - 1] = '\0';		      \</u></td></tr>
+<tr><th id="358">358</th><td><u>			      __retval = (char *) memcpy (__retval, s,	      \</u></td></tr>
+<tr><th id="359">359</th><td><u>							  __len - 1);	      \</u></td></tr>
+<tr><th id="360">360</th><td><u>			    }						      \</u></td></tr>
+<tr><th id="361">361</th><td><u>			  __retval; }))					      \</u></td></tr>
+<tr><th id="362">362</th><td><u>		  : __strndup (s, n)))</u></td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td><u>#  <span data-ppcond="364">ifdef</span> <a class="macro" href="../../include/features.h.html#284" data-ref="_M/__USE_XOPEN2K8">__USE_XOPEN2K8</a></u></td></tr>
+<tr><th id="365">365</th><td><u>#   define <dfn class="macro" id="_M/strndup" data-ref="_M/strndup">strndup</dfn>(s, n) __strndup (s, n)</u></td></tr>
+<tr><th id="366">366</th><td><u>#  <span data-ppcond="364">endif</span></u></td></tr>
+<tr><th id="367">367</th><td><u># <span data-ppcond="341">endif</span></u></td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><u>#<span data-ppcond="315">endif</span> /* Use misc. or use GNU.  */</u></td></tr>
+<tr><th id="370">370</th><td></td></tr>
+<tr><th id="371">371</th><td><u>#<span data-ppcond="371">ifndef</span> <span class="macro" data-ref="_M/_FORCE_INLINES">_FORCE_INLINES</span></u></td></tr>
+<tr><th id="372">372</th><td><u># undef <a class="macro" href="#45" data-ref="_M/__STRING_INLINE">__STRING_INLINE</a></u></td></tr>
+<tr><th id="373">373</th><td><u>#<span data-ppcond="371">endif</span></u></td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td><u>#<span data-ppcond="24">endif</span> /* No string inlines.  */</u></td></tr>
+<tr><th id="376">376</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../argp/argp-eexst.c.html'>glibc_src_2.24/argp/argp-eexst.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

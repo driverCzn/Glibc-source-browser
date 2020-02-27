@@ -1,0 +1,541 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>loop.c source code [glibc_src_2.24/iconv/loop.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/iconv/loop.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>iconv</a>/<a href='loop.c.html'>loop.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Conversion loop frame work.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1998-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@cygnus.com&gt;, 1998.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/* This file provides a frame for the reader loop in all conversion modules.</i></td></tr>
+<tr><th id="21">21</th><td><i>   The actual code must (of course) be provided in the actual module source</i></td></tr>
+<tr><th id="22">22</th><td><i>   code but certain actions can be written down generically, with some</i></td></tr>
+<tr><th id="23">23</th><td><i>   customization options which are these:</i></td></tr>
+<tr><th id="24">24</th><td><i></i></td></tr>
+<tr><th id="25">25</th><td><i>     MIN_NEEDED_INPUT	minimal number of input bytes needed for the next</i></td></tr>
+<tr><th id="26">26</th><td><i>			conversion.</i></td></tr>
+<tr><th id="27">27</th><td><i>     MIN_NEEDED_OUTPUT	minimal number of bytes produced by the next round</i></td></tr>
+<tr><th id="28">28</th><td><i>			of conversion.</i></td></tr>
+<tr><th id="29">29</th><td><i></i></td></tr>
+<tr><th id="30">30</th><td><i>     MAX_NEEDED_INPUT	you guess it, this is the maximal number of input</i></td></tr>
+<tr><th id="31">31</th><td><i>			bytes needed.  It defaults to MIN_NEEDED_INPUT</i></td></tr>
+<tr><th id="32">32</th><td><i>     MAX_NEEDED_OUTPUT	likewise for output bytes.</i></td></tr>
+<tr><th id="33">33</th><td><i></i></td></tr>
+<tr><th id="34">34</th><td><i>     LOOPFCT		name of the function created.  If not specified</i></td></tr>
+<tr><th id="35">35</th><td><i>			the name is `loop' but this prevents the use</i></td></tr>
+<tr><th id="36">36</th><td><i>			of multiple functions in the same file.</i></td></tr>
+<tr><th id="37">37</th><td><i></i></td></tr>
+<tr><th id="38">38</th><td><i>     BODY		this is supposed to expand to the body of the loop.</i></td></tr>
+<tr><th id="39">39</th><td><i>			The user must provide this.</i></td></tr>
+<tr><th id="40">40</th><td><i></i></td></tr>
+<tr><th id="41">41</th><td><i>     EXTRA_LOOP_DECLS	extra arguments passed from conversion loop call.</i></td></tr>
+<tr><th id="42">42</th><td><i></i></td></tr>
+<tr><th id="43">43</th><td><i>     INIT_PARAMS	code to define and initialize variables from params.</i></td></tr>
+<tr><th id="44">44</th><td><i>     UPDATE_PARAMS	code to store result in params.</i></td></tr>
+<tr><th id="45">45</th><td><i></i></td></tr>
+<tr><th id="46">46</th><td><i>     ONEBYTE_BODY	body of the specialized conversion function for a</i></td></tr>
+<tr><th id="47">47</th><td><i>			single byte from the current character set to INTERNAL.</i></td></tr>
+<tr><th id="48">48</th><td><i>*/</i></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="51">51</th><td><u>#include <a href="../include/endian.h.html">&lt;endian.h&gt;</a></u></td></tr>
+<tr><th id="52">52</th><td><u>#include <a href="../include/gconv.h.html">&lt;gconv.h&gt;</a></u></td></tr>
+<tr><th id="53">53</th><td><u>#include <a href="../sysdeps/generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="54">54</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="55">55</th><td><u>#include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="56">56</th><td><u>#include <a href="../include/sys/param.h.html">&lt;sys/param.h&gt;</a>		/* For MIN.  */</u></td></tr>
+<tr><th id="57">57</th><td><u>#define <dfn class="macro" id="_M/__need_size_t" data-ref="_M/__need_size_t">__need_size_t</dfn></u></td></tr>
+<tr><th id="58">58</th><td><u>#include &lt;stddef.h&gt;</u></td></tr>
+<tr><th id="59">59</th><td><u>#include <a href="../include/libc-internal.h.html">&lt;libc-internal.h&gt;</a></u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/* We have to provide support for machines which are not able to handled</i></td></tr>
+<tr><th id="62">62</th><td><i>   unaligned memory accesses.  Some of the character encodings have</i></td></tr>
+<tr><th id="63">63</th><td><i>   representations with a fixed width of 2 or 4 bytes.  But if we cannot</i></td></tr>
+<tr><th id="64">64</th><td><i>   access unaligned memory we still have to read byte-wise.  */</i></td></tr>
+<tr><th id="65">65</th><td><u>#undef <span class="macro" data-ref="_M/FCTNAME2">FCTNAME2</span></u></td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="66">if</span> <a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a> || !defined <span class="macro" data-ref="_M/DEFINE_UNALIGNED">DEFINE_UNALIGNED</span></u></td></tr>
+<tr><th id="67">67</th><td><i>/* We can handle unaligned memory access.  */</i></td></tr>
+<tr><th id="68">68</th><td><u># define <dfn class="macro" id="_M/get16" data-ref="_M/get16">get16</dfn>(addr) *((const uint16_t *) (addr))</u></td></tr>
+<tr><th id="69">69</th><td><u># define <dfn class="macro" id="_M/get32" data-ref="_M/get32">get32</dfn>(addr) *((const uint32_t *) (addr))</u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/* We need no special support for writing values either.  */</i></td></tr>
+<tr><th id="72">72</th><td><u># define <dfn class="macro" id="_M/put16" data-ref="_M/put16">put16</dfn>(addr, val) *((uint16_t *) (addr)) = (val)</u></td></tr>
+<tr><th id="73">73</th><td><u># define <dfn class="macro" id="_M/put32" data-ref="_M/put32">put32</dfn>(addr, val) *((uint32_t *) (addr)) = (val)</u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><u># define <dfn class="macro" id="_M/FCTNAME2" data-ref="_M/FCTNAME2">FCTNAME2</dfn>(name) name</u></td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="66">else</span></u></td></tr>
+<tr><th id="77">77</th><td><i>/* Distinguish between big endian and little endian.  */</i></td></tr>
+<tr><th id="78">78</th><td><u># if __BYTE_ORDER == __LITTLE_ENDIAN</u></td></tr>
+<tr><th id="79">79</th><td><u>#  define get16(addr) \</u></td></tr>
+<tr><th id="80">80</th><td><u>     (((const unsigned char *) (addr))[1] &lt;&lt; 8				      \</u></td></tr>
+<tr><th id="81">81</th><td><u>      | ((const unsigned char *) (addr))[0])</u></td></tr>
+<tr><th id="82">82</th><td><u>#  define get32(addr) \</u></td></tr>
+<tr><th id="83">83</th><td><u>     (((((const unsigned char *) (addr))[3] &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="84">84</th><td><u>	| ((const unsigned char *) (addr))[2]) &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="85">85</th><td><u>       | ((const unsigned char *) (addr))[1]) &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="86">86</th><td><u>      | ((const unsigned char *) (addr))[0])</u></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><u>#  define put16(addr, val) \</u></td></tr>
+<tr><th id="89">89</th><td><u>     ({ uint16_t __val = (val);						      \</u></td></tr>
+<tr><th id="90">90</th><td><u>	((unsigned char *) (addr))[0] = __val;				      \</u></td></tr>
+<tr><th id="91">91</th><td><u>	((unsigned char *) (addr))[1] = __val &gt;&gt; 8;			      \</u></td></tr>
+<tr><th id="92">92</th><td><u>	(void) 0; })</u></td></tr>
+<tr><th id="93">93</th><td><u>#  define put32(addr, val) \</u></td></tr>
+<tr><th id="94">94</th><td><u>     ({ uint32_t __val = (val);						      \</u></td></tr>
+<tr><th id="95">95</th><td><u>	((unsigned char *) (addr))[0] = __val;				      \</u></td></tr>
+<tr><th id="96">96</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="97">97</th><td><u>	((unsigned char *) (addr))[1] = __val;				      \</u></td></tr>
+<tr><th id="98">98</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="99">99</th><td><u>	((unsigned char *) (addr))[2] = __val;				      \</u></td></tr>
+<tr><th id="100">100</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="101">101</th><td><u>	((unsigned char *) (addr))[3] = __val;				      \</u></td></tr>
+<tr><th id="102">102</th><td><u>	(void) 0; })</u></td></tr>
+<tr><th id="103">103</th><td><u># else</u></td></tr>
+<tr><th id="104">104</th><td><u>#  define get16(addr) \</u></td></tr>
+<tr><th id="105">105</th><td><u>     (((const unsigned char *) (addr))[0] &lt;&lt; 8				      \</u></td></tr>
+<tr><th id="106">106</th><td><u>      | ((const unsigned char *) (addr))[1])</u></td></tr>
+<tr><th id="107">107</th><td><u>#  define get32(addr) \</u></td></tr>
+<tr><th id="108">108</th><td><u>     (((((const unsigned char *) (addr))[0] &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="109">109</th><td><u>	| ((const unsigned char *) (addr))[1]) &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="110">110</th><td><u>       | ((const unsigned char *) (addr))[2]) &lt;&lt; 8			      \</u></td></tr>
+<tr><th id="111">111</th><td><u>      | ((const unsigned char *) (addr))[3])</u></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><u>#  define put16(addr, val) \</u></td></tr>
+<tr><th id="114">114</th><td><u>     ({ uint16_t __val = (val);						      \</u></td></tr>
+<tr><th id="115">115</th><td><u>	((unsigned char *) (addr))[1] = __val;				      \</u></td></tr>
+<tr><th id="116">116</th><td><u>	((unsigned char *) (addr))[0] = __val &gt;&gt; 8;			      \</u></td></tr>
+<tr><th id="117">117</th><td><u>	(void) 0; })</u></td></tr>
+<tr><th id="118">118</th><td><u>#  define put32(addr, val) \</u></td></tr>
+<tr><th id="119">119</th><td><u>     ({ uint32_t __val = (val);						      \</u></td></tr>
+<tr><th id="120">120</th><td><u>	((unsigned char *) (addr))[3] = __val;				      \</u></td></tr>
+<tr><th id="121">121</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="122">122</th><td><u>	((unsigned char *) (addr))[2] = __val;				      \</u></td></tr>
+<tr><th id="123">123</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="124">124</th><td><u>	((unsigned char *) (addr))[1] = __val;				      \</u></td></tr>
+<tr><th id="125">125</th><td><u>	__val &gt;&gt;= 8;							      \</u></td></tr>
+<tr><th id="126">126</th><td><u>	((unsigned char *) (addr))[0] = __val;				      \</u></td></tr>
+<tr><th id="127">127</th><td><u>	(void) 0; })</u></td></tr>
+<tr><th id="128">128</th><td><u># endif</u></td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><u># define FCTNAME2(name) name##_unaligned</u></td></tr>
+<tr><th id="131">131</th><td><u>#<span data-ppcond="66">endif</span></u></td></tr>
+<tr><th id="132">132</th><td><u>#define <dfn class="macro" id="_M/FCTNAME" data-ref="_M/FCTNAME">FCTNAME</dfn>(name) FCTNAME2(name)</u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><i>/* We need at least one byte for the next round.  */</i></td></tr>
+<tr><th id="136">136</th><td><u>#<span data-ppcond="136">ifndef</span> <a class="macro" href="gconv_simple.c.html#814" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a></u></td></tr>
+<tr><th id="137">137</th><td><u># error "MIN_NEEDED_INPUT definition missing"</u></td></tr>
+<tr><th id="138">138</th><td><u>#<span data-ppcond="136">elif</span> <a class="macro" href="gconv_simple.c.html#814" title="1" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a> &lt; 1</u></td></tr>
+<tr><th id="139">139</th><td><u># error "MIN_NEEDED_INPUT must be &gt;= 1"</u></td></tr>
+<tr><th id="140">140</th><td><u>#<span data-ppcond="136">endif</span></u></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><i>/* Let's see how many bytes we produce.  */</i></td></tr>
+<tr><th id="143">143</th><td><u>#<span data-ppcond="143">ifndef</span> <span class="macro" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</span></u></td></tr>
+<tr><th id="144">144</th><td><u># define <dfn class="macro" id="_M/MAX_NEEDED_INPUT" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</dfn>	MIN_NEEDED_INPUT</u></td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="143">endif</span></u></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><i>/* We produce at least one byte in the next round.  */</i></td></tr>
+<tr><th id="148">148</th><td><u>#<span data-ppcond="148">ifndef</span> <a class="macro" href="gconv_simple.c.html#815" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a></u></td></tr>
+<tr><th id="149">149</th><td><u># error "MIN_NEEDED_OUTPUT definition missing"</u></td></tr>
+<tr><th id="150">150</th><td><u>#<span data-ppcond="148">elif</span> <a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> &lt; 1</u></td></tr>
+<tr><th id="151">151</th><td><u># error "MIN_NEEDED_OUTPUT must be &gt;= 1"</u></td></tr>
+<tr><th id="152">152</th><td><u>#<span data-ppcond="148">endif</span></u></td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><i>/* Let's see how many bytes we produce.  */</i></td></tr>
+<tr><th id="155">155</th><td><u>#<span data-ppcond="155">ifndef</span> <span class="macro" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</span></u></td></tr>
+<tr><th id="156">156</th><td><u># define <dfn class="macro" id="_M/MAX_NEEDED_OUTPUT" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</dfn>	MIN_NEEDED_OUTPUT</u></td></tr>
+<tr><th id="157">157</th><td><u>#<span data-ppcond="155">endif</span></u></td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><i>/* Default name for the function.  */</i></td></tr>
+<tr><th id="160">160</th><td><u>#<span data-ppcond="160">ifndef</span> <a class="macro" href="gconv_simple.c.html#816" data-ref="_M/LOOPFCT">LOOPFCT</a></u></td></tr>
+<tr><th id="161">161</th><td><u># define LOOPFCT		loop</u></td></tr>
+<tr><th id="162">162</th><td><u>#<span data-ppcond="160">endif</span></u></td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><i>/* Make sure we have a loop body.  */</i></td></tr>
+<tr><th id="165">165</th><td><u>#<span data-ppcond="165">ifndef</span> <a class="macro" href="gconv_simple.c.html#817" data-ref="_M/BODY">BODY</a></u></td></tr>
+<tr><th id="166">166</th><td><u># error "Definition of BODY missing for function" LOOPFCT</u></td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="165">endif</span></u></td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><i>/* If no arguments have to passed to the loop function define the macro</i></td></tr>
+<tr><th id="171">171</th><td><i>   as empty.  */</i></td></tr>
+<tr><th id="172">172</th><td><u>#<span data-ppcond="172">ifndef</span> <span class="macro" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</span></u></td></tr>
+<tr><th id="173">173</th><td><u># define <dfn class="macro" id="_M/EXTRA_LOOP_DECLS" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</dfn></u></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="172">endif</span></u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><i>/* Allow using UPDATE_PARAMS in macros where #ifdef UPDATE_PARAMS test</i></td></tr>
+<tr><th id="177">177</th><td><i>   isn't possible.  */</i></td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="178">ifndef</span> <span class="macro" data-ref="_M/UPDATE_PARAMS">UPDATE_PARAMS</span></u></td></tr>
+<tr><th id="179">179</th><td><u># define <dfn class="macro" id="_M/UPDATE_PARAMS" data-ref="_M/UPDATE_PARAMS">UPDATE_PARAMS</dfn> do { } while (0)</u></td></tr>
+<tr><th id="180">180</th><td><u>#<span data-ppcond="178">endif</span></u></td></tr>
+<tr><th id="181">181</th><td><u>#<span data-ppcond="181">ifndef</span> <span class="macro" data-ref="_M/REINIT_PARAMS">REINIT_PARAMS</span></u></td></tr>
+<tr><th id="182">182</th><td><u># define <dfn class="macro" id="_M/REINIT_PARAMS" data-ref="_M/REINIT_PARAMS">REINIT_PARAMS</dfn> do { } while (0)</u></td></tr>
+<tr><th id="183">183</th><td><u>#<span data-ppcond="181">endif</span></u></td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><i>/* To make it easier for the writers of the modules, we define a macro</i></td></tr>
+<tr><th id="187">187</th><td><i>   to test whether we have to ignore errors.  */</i></td></tr>
+<tr><th id="188">188</th><td><u>#define <dfn class="macro" id="_M/ignore_errors_p" data-ref="_M/ignore_errors_p">ignore_errors_p</dfn>() \</u></td></tr>
+<tr><th id="189">189</th><td><u>  (<a class="local col5 ref" href="#215irreversible" title='irreversible' data-ref="215irreversible" data-ref-filename="215irreversible">irreversible</a> != NULL &amp;&amp; (<a class="local col6 ref" href="#216flags" title='flags' data-ref="216flags" data-ref-filename="216flags">flags</a> &amp; <a class="enum" href="gconv.h.html#__GCONV_IGNORE_ERRORS" title='__GCONV_IGNORE_ERRORS' data-ref="__GCONV_IGNORE_ERRORS" data-ref-filename="__GCONV_IGNORE_ERRORS">__GCONV_IGNORE_ERRORS</a>))</u></td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><i>/* Error handling for the FROM_LOOP direction, with ignoring of errors.</i></td></tr>
+<tr><th id="193">193</th><td><i>   Note that we cannot use the do while (0) trick since `break' and</i></td></tr>
+<tr><th id="194">194</th><td><i>   `continue' must reach certain points.  */</i></td></tr>
+<tr><th id="195">195</th><td><u>#define <dfn class="macro" id="_M/STANDARD_FROM_LOOP_ERR_HANDLER" data-ref="_M/STANDARD_FROM_LOOP_ERR_HANDLER">STANDARD_FROM_LOOP_ERR_HANDLER</dfn>(Incr) \</u></td></tr>
+<tr><th id="196">196</th><td><u>  {									      \</u></td></tr>
+<tr><th id="197">197</th><td><u>    <a class="local col7 ref" href="#217result" title='result' data-ref="217result" data-ref-filename="217result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_ILLEGAL_INPUT" title='__GCONV_ILLEGAL_INPUT' data-ref="__GCONV_ILLEGAL_INPUT" data-ref-filename="__GCONV_ILLEGAL_INPUT">__GCONV_ILLEGAL_INPUT</a>;					      \</u></td></tr>
+<tr><th id="198">198</th><td><u>									      \</u></td></tr>
+<tr><th id="199">199</th><td><u>    if (! ignore_errors_p ())						      \</u></td></tr>
+<tr><th id="200">200</th><td><u>      break;								      \</u></td></tr>
+<tr><th id="201">201</th><td><u>									      \</u></td></tr>
+<tr><th id="202">202</th><td><u>    /* We ignore the invalid input byte sequence.  */			      \</u></td></tr>
+<tr><th id="203">203</th><td><u>    <a class="local col8 ref" href="#218inptr" title='inptr' data-ref="218inptr" data-ref-filename="218inptr">inptr</a> += (Incr);							      \</u></td></tr>
+<tr><th id="204">204</th><td><u>    ++*<a class="local col5 ref" href="#215irreversible" title='irreversible' data-ref="215irreversible" data-ref-filename="215irreversible">irreversible</a>;							      \</u></td></tr>
+<tr><th id="205">205</th><td><u>    /* But we keep result == __GCONV_ILLEGAL_INPUT, because of the constraint \</u></td></tr>
+<tr><th id="206">206</th><td><u>       that "iconv -c" must give the same exitcode as "iconv".  */	      \</u></td></tr>
+<tr><th id="207">207</th><td><u>    continue;								      \</u></td></tr>
+<tr><th id="208">208</th><td><u>  }</u></td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td><i>/* Error handling for the TO_LOOP direction, with use of transliteration/</i></td></tr>
+<tr><th id="211">211</th><td><i>   transcription functions and ignoring of errors.  Note that we cannot use</i></td></tr>
+<tr><th id="212">212</th><td><i>   the do while (0) trick since `break' and `continue' must reach certain</i></td></tr>
+<tr><th id="213">213</th><td><i>   points.  */</i></td></tr>
+<tr><th id="214">214</th><td><u>#define <dfn class="macro" id="_M/STANDARD_TO_LOOP_ERR_HANDLER" data-ref="_M/STANDARD_TO_LOOP_ERR_HANDLER">STANDARD_TO_LOOP_ERR_HANDLER</dfn>(Incr) \</u></td></tr>
+<tr><th id="215">215</th><td><u>  {									      \</u></td></tr>
+<tr><th id="216">216</th><td><u>    result = __GCONV_ILLEGAL_INPUT;					      \</u></td></tr>
+<tr><th id="217">217</th><td><u>									      \</u></td></tr>
+<tr><th id="218">218</th><td><u>    if (irreversible == NULL)						      \</u></td></tr>
+<tr><th id="219">219</th><td><u>      /* This means we are in call from __gconv_transliterate.  In this	      \</u></td></tr>
+<tr><th id="220">220</th><td><u>	 case we are not doing any error recovery outself.  */		      \</u></td></tr>
+<tr><th id="221">221</th><td><u>      break;								      \</u></td></tr>
+<tr><th id="222">222</th><td><u>									      \</u></td></tr>
+<tr><th id="223">223</th><td><u>    /* If needed, flush any conversion state, so that __gconv_transliterate   \</u></td></tr>
+<tr><th id="224">224</th><td><u>       starts with current shift state.  */				      \</u></td></tr>
+<tr><th id="225">225</th><td><u>    UPDATE_PARAMS;							      \</u></td></tr>
+<tr><th id="226">226</th><td><u>									      \</u></td></tr>
+<tr><th id="227">227</th><td><u>    /* First try the transliteration methods.  */			      \</u></td></tr>
+<tr><th id="228">228</th><td><u>    if ((step_data-&gt;__flags &amp; __GCONV_TRANSLIT) != 0)			      \</u></td></tr>
+<tr><th id="229">229</th><td><u>      result = __gconv_transliterate					      \</u></td></tr>
+<tr><th id="230">230</th><td><u>	(step, step_data, *inptrp,					      \</u></td></tr>
+<tr><th id="231">231</th><td><u>	 &amp;inptr, inend, &amp;outptr, irreversible);			      \</u></td></tr>
+<tr><th id="232">232</th><td><u>									      \</u></td></tr>
+<tr><th id="233">233</th><td><u>    REINIT_PARAMS;							      \</u></td></tr>
+<tr><th id="234">234</th><td><u>									      \</u></td></tr>
+<tr><th id="235">235</th><td><u>    /* If any of them recognized the input continue with the loop.  */	      \</u></td></tr>
+<tr><th id="236">236</th><td><u>    if (result != __GCONV_ILLEGAL_INPUT)				      \</u></td></tr>
+<tr><th id="237">237</th><td><u>      {									      \</u></td></tr>
+<tr><th id="238">238</th><td><u>	if (__glibc_unlikely (result == __GCONV_FULL_OUTPUT))		      \</u></td></tr>
+<tr><th id="239">239</th><td><u>	  break;							      \</u></td></tr>
+<tr><th id="240">240</th><td><u>									      \</u></td></tr>
+<tr><th id="241">241</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="242">242</th><td><u>      }									      \</u></td></tr>
+<tr><th id="243">243</th><td><u>									      \</u></td></tr>
+<tr><th id="244">244</th><td><u>    /* Next see whether we have to ignore the error.  If not, stop.  */	      \</u></td></tr>
+<tr><th id="245">245</th><td><u>    if (! ignore_errors_p ())						      \</u></td></tr>
+<tr><th id="246">246</th><td><u>      break;								      \</u></td></tr>
+<tr><th id="247">247</th><td><u>									      \</u></td></tr>
+<tr><th id="248">248</th><td><u>    /* When we come here it means we ignore the character.  */		      \</u></td></tr>
+<tr><th id="249">249</th><td><u>    ++*irreversible;							      \</u></td></tr>
+<tr><th id="250">250</th><td><u>    inptr += Incr;							      \</u></td></tr>
+<tr><th id="251">251</th><td><u>    /* But we keep result == __GCONV_ILLEGAL_INPUT, because of the constraint \</u></td></tr>
+<tr><th id="252">252</th><td><u>       that "iconv -c" must give the same exitcode as "iconv".  */	      \</u></td></tr>
+<tr><th id="253">253</th><td><u>    continue;								      \</u></td></tr>
+<tr><th id="254">254</th><td><u>  }</u></td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><i>/* Handling of Unicode 3.1 TAG characters.  Unicode recommends</i></td></tr>
+<tr><th id="258">258</th><td><i>   "If language codes are not relevant to the particular processing</i></td></tr>
+<tr><th id="259">259</th><td><i>    operation, then they should be ignored."  This macro is usually</i></td></tr>
+<tr><th id="260">260</th><td><i>   called right before  STANDARD_TO_LOOP_ERR_HANDLER (Incr).  */</i></td></tr>
+<tr><th id="261">261</th><td><u>#define <dfn class="macro" id="_M/UNICODE_TAG_HANDLER" data-ref="_M/UNICODE_TAG_HANDLER">UNICODE_TAG_HANDLER</dfn>(Character, Incr) \</u></td></tr>
+<tr><th id="262">262</th><td><u>  {									      \</u></td></tr>
+<tr><th id="263">263</th><td><u>    /* TAG characters are those in the range U+E0000..U+E007F.  */	      \</u></td></tr>
+<tr><th id="264">264</th><td><u>    if (((Character) &gt;&gt; 7) == (0xe0000 &gt;&gt; 7))				      \</u></td></tr>
+<tr><th id="265">265</th><td><u>      {									      \</u></td></tr>
+<tr><th id="266">266</th><td><u>	inptr += Incr;							      \</u></td></tr>
+<tr><th id="267">267</th><td><u>	continue;							      \</u></td></tr>
+<tr><th id="268">268</th><td><u>      }									      \</u></td></tr>
+<tr><th id="269">269</th><td><u>  }</u></td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td><i>/* The function returns the status, as defined in gconv.h.  */</i></td></tr>
+<tr><th id="273">273</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="274">274</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="275">275</th><td><a class="macro" href="#132" title="ascii_internal_loop" data-ref="_M/FCTNAME">FCTNAME</a> (<a class="macro" href="gconv_simple.c.html#816" title="ascii_internal_loop" data-ref="_M/LOOPFCT">LOOPFCT</a>) (<b>struct</b> <a class="type" href="gconv.h.html#__gconv_step" title='__gconv_step' data-ref="__gconv_step" data-ref-filename="__gconv_step">__gconv_step</a> *<dfn class="local col9 decl" id="209step" title='step' data-type='struct __gconv_step *' data-ref="209step" data-ref-filename="209step">step</dfn>,</td></tr>
+<tr><th id="276">276</th><td>		   <b>struct</b> <a class="type" href="gconv.h.html#__gconv_step_data" title='__gconv_step_data' data-ref="__gconv_step_data" data-ref-filename="__gconv_step_data">__gconv_step_data</a> *<dfn class="local col0 decl" id="210step_data" title='step_data' data-type='struct __gconv_step_data *' data-ref="210step_data" data-ref-filename="210step_data">step_data</dfn>,</td></tr>
+<tr><th id="277">277</th><td>		   <em>const</em> <em>unsigned</em> <em>char</em> **<dfn class="local col1 decl" id="211inptrp" title='inptrp' data-type='const unsigned char **' data-ref="211inptrp" data-ref-filename="211inptrp">inptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col2 decl" id="212inend" title='inend' data-type='const unsigned char *' data-ref="212inend" data-ref-filename="212inend">inend</dfn>,</td></tr>
+<tr><th id="278">278</th><td>		   <em>unsigned</em> <em>char</em> **<dfn class="local col3 decl" id="213outptrp" title='outptrp' data-type='unsigned char **' data-ref="213outptrp" data-ref-filename="213outptrp">outptrp</dfn>, <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col4 decl" id="214outend" title='outend' data-type='const unsigned char *' data-ref="214outend" data-ref-filename="214outend">outend</dfn>,</td></tr>
+<tr><th id="279">279</th><td>		   <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> *<dfn class="local col5 decl" id="215irreversible" title='irreversible' data-type='size_t *' data-ref="215irreversible" data-ref-filename="215irreversible">irreversible</dfn> <a class="macro" href="#173" title="" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</a>)</td></tr>
+<tr><th id="280">280</th><td>{</td></tr>
+<tr><th id="281">281</th><td><u>#<span data-ppcond="281">ifdef</span> <span class="macro" data-ref="_M/LOOP_NEED_STATE">LOOP_NEED_STATE</span></u></td></tr>
+<tr><th id="282">282</th><td>  mbstate_t *state = step_data-&gt;__statep;</td></tr>
+<tr><th id="283">283</th><td><u>#<span data-ppcond="281">endif</span></u></td></tr>
+<tr><th id="284">284</th><td><u>#<span data-ppcond="284">ifdef</span> <a class="macro" href="gconv_simple.c.html#834" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</a></u></td></tr>
+<tr><th id="285">285</th><td>  <em>int</em> <dfn class="local col6 decl" id="216flags" title='flags' data-type='int' data-ref="216flags" data-ref-filename="216flags">flags</dfn> = <a class="local col0 ref" href="#210step_data" title='step_data' data-ref="210step_data" data-ref-filename="210step_data">step_data</a>-&gt;<a class="ref field" href="gconv.h.html#__gconv_step_data::__flags" title='__gconv_step_data::__flags' data-ref="__gconv_step_data::__flags" data-ref-filename="__gconv_step_data..__flags">__flags</a>;</td></tr>
+<tr><th id="286">286</th><td><u>#<span data-ppcond="284">endif</span></u></td></tr>
+<tr><th id="287">287</th><td><u>#<span data-ppcond="287">ifdef</span> <span class="macro" data-ref="_M/LOOP_NEED_DATA">LOOP_NEED_DATA</span></u></td></tr>
+<tr><th id="288">288</th><td>  <em>void</em> *data = step-&gt;__data;</td></tr>
+<tr><th id="289">289</th><td><u>#<span data-ppcond="287">endif</span></u></td></tr>
+<tr><th id="290">290</th><td>  <em>int</em> <dfn class="local col7 decl" id="217result" title='result' data-type='int' data-ref="217result" data-ref-filename="217result">result</dfn> = <a class="enum" href="gconv.h.html#__GCONV_EMPTY_INPUT" title='__GCONV_EMPTY_INPUT' data-ref="__GCONV_EMPTY_INPUT" data-ref-filename="__GCONV_EMPTY_INPUT">__GCONV_EMPTY_INPUT</a>;</td></tr>
+<tr><th id="291">291</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *<dfn class="local col8 decl" id="218inptr" title='inptr' data-type='const unsigned char *' data-ref="218inptr" data-ref-filename="218inptr">inptr</dfn> = *<a class="local col1 ref" href="#211inptrp" title='inptrp' data-ref="211inptrp" data-ref-filename="211inptrp">inptrp</a>;</td></tr>
+<tr><th id="292">292</th><td>  <em>unsigned</em> <em>char</em> *<dfn class="local col9 decl" id="219outptr" title='outptr' data-type='unsigned char *' data-ref="219outptr" data-ref-filename="219outptr">outptr</dfn> = *<a class="local col3 ref" href="#213outptrp" title='outptrp' data-ref="213outptrp" data-ref-filename="213outptrp">outptrp</a>;</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td><u>#<span data-ppcond="294">ifdef</span> <span class="macro" data-ref="_M/INIT_PARAMS">INIT_PARAMS</span></u></td></tr>
+<tr><th id="295">295</th><td>  INIT_PARAMS;</td></tr>
+<tr><th id="296">296</th><td><u>#<span data-ppcond="294">endif</span></u></td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td>  <b>while</b> (<a class="local col8 ref" href="#218inptr" title='inptr' data-ref="218inptr" data-ref-filename="218inptr">inptr</a> != <a class="local col2 ref" href="#212inend" title='inend' data-ref="212inend" data-ref-filename="212inend">inend</a>)</td></tr>
+<tr><th id="299">299</th><td>    {</td></tr>
+<tr><th id="300">300</th><td>      <i>/* `if' cases for MIN_NEEDED_OUTPUT ==/!= 1 is made to help the</i></td></tr>
+<tr><th id="301">301</th><td><i>	 compiler generating better code.  They will be optimized away</i></td></tr>
+<tr><th id="302">302</th><td><i>	 since MIN_NEEDED_OUTPUT is always a constant.  */</i></td></tr>
+<tr><th id="303">303</th><td>      <b>if</b> (<a class="macro" href="gconv_simple.c.html#814" title="1" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a> &gt; <var>1</var></td></tr>
+<tr><th id="304">304</th><td>	  &amp;&amp; <a class="ref fn" href="gconv_simple.c.html#181" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col8 ref" href="#218inptr" title='inptr' data-ref="218inptr" data-ref-filename="218inptr">inptr</a> + <a class="macro" href="gconv_simple.c.html#814" title="1" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a> &gt; <a class="local col2 ref" href="#212inend" title='inend' data-ref="212inend" data-ref-filename="212inend">inend</a>, <var>0</var>))</td></tr>
+<tr><th id="305">305</th><td>	{</td></tr>
+<tr><th id="306">306</th><td>	  <i>/* We don't have enough input for another complete input</i></td></tr>
+<tr><th id="307">307</th><td><i>	     character.  */</i></td></tr>
+<tr><th id="308">308</th><td>	  <a class="local col7 ref" href="#217result" title='result' data-ref="217result" data-ref-filename="217result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_INCOMPLETE_INPUT" title='__GCONV_INCOMPLETE_INPUT' data-ref="__GCONV_INCOMPLETE_INPUT" data-ref-filename="__GCONV_INCOMPLETE_INPUT">__GCONV_INCOMPLETE_INPUT</a>;</td></tr>
+<tr><th id="309">309</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="310">310</th><td>	}</td></tr>
+<tr><th id="311">311</th><td>      <b>if</b> ((<a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> != <var>1</var></td></tr>
+<tr><th id="312">312</th><td>	   &amp;&amp; <a class="ref fn" href="gconv_simple.c.html#181" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col9 ref" href="#219outptr" title='outptr' data-ref="219outptr" data-ref-filename="219outptr">outptr</a> + <a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> &gt; <a class="local col4 ref" href="#214outend" title='outend' data-ref="214outend" data-ref-filename="214outend">outend</a>, <var>0</var>))</td></tr>
+<tr><th id="313">313</th><td>	  || (<a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> == <var>1</var></td></tr>
+<tr><th id="314">314</th><td>	      &amp;&amp; <a class="ref fn" href="gconv_simple.c.html#181" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="local col9 ref" href="#219outptr" title='outptr' data-ref="219outptr" data-ref-filename="219outptr">outptr</a> &gt;= <a class="local col4 ref" href="#214outend" title='outend' data-ref="214outend" data-ref-filename="214outend">outend</a>, <var>0</var>)))</td></tr>
+<tr><th id="315">315</th><td>	{</td></tr>
+<tr><th id="316">316</th><td>	  <i>/* Overflow in the output buffer.  */</i></td></tr>
+<tr><th id="317">317</th><td>	  <a class="local col7 ref" href="#217result" title='result' data-ref="217result" data-ref-filename="217result">result</a> = <a class="enum" href="gconv.h.html#__GCONV_FULL_OUTPUT" title='__GCONV_FULL_OUTPUT' data-ref="__GCONV_FULL_OUTPUT" data-ref-filename="__GCONV_FULL_OUTPUT">__GCONV_FULL_OUTPUT</a>;</td></tr>
+<tr><th id="318">318</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="319">319</th><td>	}</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>      <i>/* Here comes the body the user provides.  It can stop with</i></td></tr>
+<tr><th id="322">322</th><td><i>	 RESULT set to GCONV_INCOMPLETE_INPUT (if the size of the</i></td></tr>
+<tr><th id="323">323</th><td><i>	 input characters vary in size), GCONV_ILLEGAL_INPUT, or</i></td></tr>
+<tr><th id="324">324</th><td><i>	 GCONV_FULL_OUTPUT (if the output characters vary in size).  */</i></td></tr>
+<tr><th id="325">325</th><td>      <a class="macro" href="gconv_simple.c.html#817" title="{ if (__builtin_expect ((*inptr &gt; &apos;\x7f&apos;), 0)) { { result = __GCONV_ILLEGAL_INPUT; if (! (irreversible != ((void*)0) &amp;&amp; (flags &amp; __GCONV_IGNORE_ERRORS))) break; inptr += (1); ++*irreversible; continue; }; } else { *((uint32_t *) outptr) = *inptr++; outptr += sizeof (uint32_t); } }" data-ref="_M/BODY">BODY</a></td></tr>
+<tr><th id="326">326</th><td>    }</td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>  <i>/* Update the pointers pointed to by the parameters.  */</i></td></tr>
+<tr><th id="329">329</th><td>  *<a class="local col1 ref" href="#211inptrp" title='inptrp' data-ref="211inptrp" data-ref-filename="211inptrp">inptrp</a> = <a class="local col8 ref" href="#218inptr" title='inptr' data-ref="218inptr" data-ref-filename="218inptr">inptr</a>;</td></tr>
+<tr><th id="330">330</th><td>  *<a class="local col3 ref" href="#213outptrp" title='outptrp' data-ref="213outptrp" data-ref-filename="213outptrp">outptrp</a> = <a class="local col9 ref" href="#219outptr" title='outptr' data-ref="219outptr" data-ref-filename="219outptr">outptr</a>;</td></tr>
+<tr><th id="331">331</th><td>  <a class="macro" href="#179" title="do { } while (0)" data-ref="_M/UPDATE_PARAMS">UPDATE_PARAMS</a>;</td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td>  <b>return</b> <a class="local col7 ref" href="#217result" title='result' data-ref="217result" data-ref-filename="217result">result</a>;</td></tr>
+<tr><th id="334">334</th><td>}</td></tr>
+<tr><th id="335">335</th><td></td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td><i>/* Include the file a second time to define the function to handle</i></td></tr>
+<tr><th id="338">338</th><td><i>   unaligned access.  */</i></td></tr>
+<tr><th id="339">339</th><td><u>#<span data-ppcond="339">if</span> !defined <span class="macro" data-ref="_M/DEFINE_UNALIGNED">DEFINE_UNALIGNED</span> &amp;&amp; !<a class="macro" href="../sysdeps/x86/string_private.h.html#20" title="1" data-ref="_M/_STRING_ARCH_unaligned">_STRING_ARCH_unaligned</a> \</u></td></tr>
+<tr><th id="340">340</th><td><u>    &amp;&amp; <a class="macro" href="gconv_simple.c.html#814" title="1" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a> != 1 &amp;&amp; <a class="macro" href="#144" title="1" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</a> % <a class="macro" href="gconv_simple.c.html#814" title="1" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a> == 0 \</u></td></tr>
+<tr><th id="341">341</th><td><u>    &amp;&amp; <a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> != 1 &amp;&amp; <a class="macro" href="#156" title="4" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</a> % <a class="macro" href="gconv_simple.c.html#815" title="4" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a> == 0</u></td></tr>
+<tr><th id="342">342</th><td><u># undef get16</u></td></tr>
+<tr><th id="343">343</th><td><u># undef get32</u></td></tr>
+<tr><th id="344">344</th><td><u># undef put16</u></td></tr>
+<tr><th id="345">345</th><td><u># undef put32</u></td></tr>
+<tr><th id="346">346</th><td><u># undef unaligned</u></td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td><u># define DEFINE_UNALIGNED</u></td></tr>
+<tr><th id="349">349</th><td><u># include "loop.c"</u></td></tr>
+<tr><th id="350">350</th><td><u># undef DEFINE_UNALIGNED</u></td></tr>
+<tr><th id="351">351</th><td><u>#<span data-ppcond="339">else</span></u></td></tr>
+<tr><th id="352">352</th><td><u># <span data-ppcond="352">if</span> <a class="macro" href="#144" title="1" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</a> &gt; 1</u></td></tr>
+<tr><th id="353">353</th><td><u>#  define SINGLE(fct) SINGLE2 (fct)</u></td></tr>
+<tr><th id="354">354</th><td><u>#  define SINGLE2(fct) fct##_single</u></td></tr>
+<tr><th id="355">355</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="356">356</th><td><b>__attribute</b> ((always_inline))</td></tr>
+<tr><th id="357">357</th><td>SINGLE(LOOPFCT) (<b>struct</b> __gconv_step *step,</td></tr>
+<tr><th id="358">358</th><td>		 <b>struct</b> __gconv_step_data *step_data,</td></tr>
+<tr><th id="359">359</th><td>		 <em>const</em> <em>unsigned</em> <em>char</em> **inptrp, <em>const</em> <em>unsigned</em> <em>char</em> *inend,</td></tr>
+<tr><th id="360">360</th><td>		 <em>unsigned</em> <em>char</em> **outptrp, <em>unsigned</em> <em>char</em> *outend,</td></tr>
+<tr><th id="361">361</th><td>		 size_t *irreversible EXTRA_LOOP_DECLS)</td></tr>
+<tr><th id="362">362</th><td>{</td></tr>
+<tr><th id="363">363</th><td>  mbstate_t *state = step_data-&gt;__statep;</td></tr>
+<tr><th id="364">364</th><td><u>#  ifdef LOOP_NEED_FLAGS</u></td></tr>
+<tr><th id="365">365</th><td>  <em>int</em> flags = step_data-&gt;__flags;</td></tr>
+<tr><th id="366">366</th><td><u>#  endif</u></td></tr>
+<tr><th id="367">367</th><td><u>#  ifdef LOOP_NEED_DATA</u></td></tr>
+<tr><th id="368">368</th><td>  <em>void</em> *data = step-&gt;__data;</td></tr>
+<tr><th id="369">369</th><td><u>#  endif</u></td></tr>
+<tr><th id="370">370</th><td>  <em>int</em> result = __GCONV_OK;</td></tr>
+<tr><th id="371">371</th><td>  <em>unsigned</em> <em>char</em> bytebuf[MAX_NEEDED_INPUT];</td></tr>
+<tr><th id="372">372</th><td>  <em>const</em> <em>unsigned</em> <em>char</em> *inptr = *inptrp;</td></tr>
+<tr><th id="373">373</th><td>  <em>unsigned</em> <em>char</em> *outptr = *outptrp;</td></tr>
+<tr><th id="374">374</th><td>  size_t inlen;</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><u>#  ifdef INIT_PARAMS</u></td></tr>
+<tr><th id="377">377</th><td>  INIT_PARAMS;</td></tr>
+<tr><th id="378">378</th><td><u>#  endif</u></td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><u>#  ifdef UNPACK_BYTES</u></td></tr>
+<tr><th id="381">381</th><td>  UNPACK_BYTES</td></tr>
+<tr><th id="382">382</th><td><u>#  else</u></td></tr>
+<tr><th id="383">383</th><td>  <i>/* Add the bytes from the state to the input buffer.  */</i></td></tr>
+<tr><th id="384">384</th><td>  assert ((state-&gt;__count &amp; <var>7</var>) &lt;= <b>sizeof</b> (state-&gt;__value));</td></tr>
+<tr><th id="385">385</th><td>  <b>for</b> (inlen = <var>0</var>; inlen &lt; (size_t) (state-&gt;__count &amp; <var>7</var>); ++inlen)</td></tr>
+<tr><th id="386">386</th><td>    bytebuf[inlen] = state-&gt;__value.__wchb[inlen];</td></tr>
+<tr><th id="387">387</th><td><u>#  endif</u></td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>  <i>/* Are there enough bytes in the input buffer?  */</i></td></tr>
+<tr><th id="390">390</th><td>  <b>if</b> (MIN_NEEDED_INPUT &gt; <var>1</var></td></tr>
+<tr><th id="391">391</th><td>      &amp;&amp; __builtin_expect (inptr + (MIN_NEEDED_INPUT - inlen) &gt; inend, <var>0</var>))</td></tr>
+<tr><th id="392">392</th><td>    {</td></tr>
+<tr><th id="393">393</th><td>      *inptrp = inend;</td></tr>
+<tr><th id="394">394</th><td><u>#  ifdef STORE_REST</u></td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>      <i>/* Building with -O3 GCC emits a `array subscript is above array</i></td></tr>
+<tr><th id="397">397</th><td><i>	 bounds' warning.  GCC BZ #64739 has been opened for this.  */</i></td></tr>
+<tr><th id="398">398</th><td>      DIAG_PUSH_NEEDS_COMMENT;</td></tr>
+<tr><th id="399">399</th><td>      DIAG_IGNORE_NEEDS_COMMENT (<var>4.9</var>, <q>"-Warray-bounds"</q>);</td></tr>
+<tr><th id="400">400</th><td>      <b>while</b> (inptr &lt; inend)</td></tr>
+<tr><th id="401">401</th><td>	bytebuf[inlen++] = *inptr++;</td></tr>
+<tr><th id="402">402</th><td>      DIAG_POP_NEEDS_COMMENT;</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td>      inptr = bytebuf;</td></tr>
+<tr><th id="405">405</th><td>      inptrp = &amp;inptr;</td></tr>
+<tr><th id="406">406</th><td>      inend = &amp;bytebuf[inlen];</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td>      STORE_REST</td></tr>
+<tr><th id="409">409</th><td><u>#  else</u></td></tr>
+<tr><th id="410">410</th><td>      <i>/* We don't have enough input for another complete input</i></td></tr>
+<tr><th id="411">411</th><td><i>	 character.  */</i></td></tr>
+<tr><th id="412">412</th><td>      <b>while</b> (inptr &lt; inend)</td></tr>
+<tr><th id="413">413</th><td>	state-&gt;__value.__wchb[inlen++] = *inptr++;</td></tr>
+<tr><th id="414">414</th><td><u>#  endif</u></td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>      <b>return</b> __GCONV_INCOMPLETE_INPUT;</td></tr>
+<tr><th id="417">417</th><td>    }</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td>  <i>/* Enough space in output buffer.  */</i></td></tr>
+<tr><th id="420">420</th><td>  <b>if</b> ((MIN_NEEDED_OUTPUT != <var>1</var> &amp;&amp; outptr + MIN_NEEDED_OUTPUT &gt; outend)</td></tr>
+<tr><th id="421">421</th><td>      || (MIN_NEEDED_OUTPUT == <var>1</var> &amp;&amp; outptr &gt;= outend))</td></tr>
+<tr><th id="422">422</th><td>    <i>/* Overflow in the output buffer.  */</i></td></tr>
+<tr><th id="423">423</th><td>    <b>return</b> __GCONV_FULL_OUTPUT;</td></tr>
+<tr><th id="424">424</th><td></td></tr>
+<tr><th id="425">425</th><td>  <i>/*  Now add characters from the normal input buffer.  */</i></td></tr>
+<tr><th id="426">426</th><td>  <b>do</b></td></tr>
+<tr><th id="427">427</th><td>    bytebuf[inlen++] = *inptr++;</td></tr>
+<tr><th id="428">428</th><td>  <b>while</b> (inlen &lt; MAX_NEEDED_INPUT &amp;&amp; inptr &lt; inend);</td></tr>
+<tr><th id="429">429</th><td></td></tr>
+<tr><th id="430">430</th><td>  inptr = bytebuf;</td></tr>
+<tr><th id="431">431</th><td>  inend = &amp;bytebuf[inlen];</td></tr>
+<tr><th id="432">432</th><td></td></tr>
+<tr><th id="433">433</th><td>  <b>do</b></td></tr>
+<tr><th id="434">434</th><td>    {</td></tr>
+<tr><th id="435">435</th><td>      BODY</td></tr>
+<tr><th id="436">436</th><td>    }</td></tr>
+<tr><th id="437">437</th><td>  <b>while</b> (<var>0</var>);</td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td>  <i>/* Now we either have produced an output character and consumed all the</i></td></tr>
+<tr><th id="440">440</th><td><i>     bytes from the state and at least one more, or the character is still</i></td></tr>
+<tr><th id="441">441</th><td><i>     incomplete, or we have some other error (like illegal input character,</i></td></tr>
+<tr><th id="442">442</th><td><i>     no space in output buffer).  */</i></td></tr>
+<tr><th id="443">443</th><td>  <b>if</b> (__glibc_likely (inptr != bytebuf))</td></tr>
+<tr><th id="444">444</th><td>    {</td></tr>
+<tr><th id="445">445</th><td>      <i>/* We found a new character.  */</i></td></tr>
+<tr><th id="446">446</th><td>      assert (inptr - bytebuf &gt; (state-&gt;__count &amp; <var>7</var>));</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td>      *inptrp += inptr - bytebuf - (state-&gt;__count &amp; <var>7</var>);</td></tr>
+<tr><th id="449">449</th><td>      *outptrp = outptr;</td></tr>
+<tr><th id="450">450</th><td></td></tr>
+<tr><th id="451">451</th><td>      result = __GCONV_OK;</td></tr>
+<tr><th id="452">452</th><td></td></tr>
+<tr><th id="453">453</th><td>      <i>/* Clear the state buffer.  */</i></td></tr>
+<tr><th id="454">454</th><td><u>#  ifdef CLEAR_STATE</u></td></tr>
+<tr><th id="455">455</th><td>      CLEAR_STATE;</td></tr>
+<tr><th id="456">456</th><td><u>#  else</u></td></tr>
+<tr><th id="457">457</th><td>      state-&gt;__count &amp;= ~<var>7</var>;</td></tr>
+<tr><th id="458">458</th><td><u>#  endif</u></td></tr>
+<tr><th id="459">459</th><td>    }</td></tr>
+<tr><th id="460">460</th><td>  <b>else</b> <b>if</b> (result == __GCONV_INCOMPLETE_INPUT)</td></tr>
+<tr><th id="461">461</th><td>    {</td></tr>
+<tr><th id="462">462</th><td>      <i>/* This can only happen if we have less than MAX_NEEDED_INPUT bytes</i></td></tr>
+<tr><th id="463">463</th><td><i>	 available.  */</i></td></tr>
+<tr><th id="464">464</th><td>      assert (inend != &amp;bytebuf[MAX_NEEDED_INPUT]);</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>      *inptrp += inend - bytebuf - (state-&gt;__count &amp; <var>7</var>);</td></tr>
+<tr><th id="467">467</th><td><u>#  ifdef STORE_REST</u></td></tr>
+<tr><th id="468">468</th><td>      inptrp = &amp;inptr;</td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td>      STORE_REST</td></tr>
+<tr><th id="471">471</th><td><u>#  else</u></td></tr>
+<tr><th id="472">472</th><td>      <i>/* We don't have enough input for another complete input</i></td></tr>
+<tr><th id="473">473</th><td><i>	 character.  */</i></td></tr>
+<tr><th id="474">474</th><td>      assert (inend - inptr &gt; (state-&gt;__count &amp; ~<var>7</var>));</td></tr>
+<tr><th id="475">475</th><td>      assert (inend - inptr &lt;= <b>sizeof</b> (state-&gt;__value));</td></tr>
+<tr><th id="476">476</th><td>      state-&gt;__count = (state-&gt;__count &amp; ~<var>7</var>) | (inend - inptr);</td></tr>
+<tr><th id="477">477</th><td>      inlen = <var>0</var>;</td></tr>
+<tr><th id="478">478</th><td>      <b>while</b> (inptr &lt; inend)</td></tr>
+<tr><th id="479">479</th><td>	state-&gt;__value.__wchb[inlen++] = *inptr++;</td></tr>
+<tr><th id="480">480</th><td><u>#  endif</u></td></tr>
+<tr><th id="481">481</th><td>    }</td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="484">484</th><td>}</td></tr>
+<tr><th id="485">485</th><td><u>#  undef SINGLE</u></td></tr>
+<tr><th id="486">486</th><td><u>#  undef SINGLE2</u></td></tr>
+<tr><th id="487">487</th><td><u># <span data-ppcond="352">endif</span></u></td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td></td></tr>
+<tr><th id="490">490</th><td><u># <span data-ppcond="490">ifdef</span> <span class="macro" data-ref="_M/ONEBYTE_BODY">ONEBYTE_BODY</span></u></td></tr>
+<tr><th id="491">491</th><td><i>/* Define the shortcut function for btowc.  */</i></td></tr>
+<tr><th id="492">492</th><td><em>static</em> wint_t</td></tr>
+<tr><th id="493">493</th><td>gconv_btowc (<b>struct</b> __gconv_step *step, <em>unsigned</em> <em>char</em> c)</td></tr>
+<tr><th id="494">494</th><td>  ONEBYTE_BODY</td></tr>
+<tr><th id="495">495</th><td><u>#  define FROM_ONEBYTE gconv_btowc</u></td></tr>
+<tr><th id="496">496</th><td><u># <span data-ppcond="490">endif</span></u></td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td><u>#<span data-ppcond="339">endif</span></u></td></tr>
+<tr><th id="499">499</th><td></td></tr>
+<tr><th id="500">500</th><td><i>/* We remove the macro definitions so that we can include this file again</i></td></tr>
+<tr><th id="501">501</th><td><i>   for the definition of another function.  */</i></td></tr>
+<tr><th id="502">502</th><td><u>#undef <a class="macro" href="gconv_simple.c.html#814" data-ref="_M/MIN_NEEDED_INPUT">MIN_NEEDED_INPUT</a></u></td></tr>
+<tr><th id="503">503</th><td><u>#undef <a class="macro" href="#144" data-ref="_M/MAX_NEEDED_INPUT">MAX_NEEDED_INPUT</a></u></td></tr>
+<tr><th id="504">504</th><td><u>#undef <a class="macro" href="gconv_simple.c.html#815" data-ref="_M/MIN_NEEDED_OUTPUT">MIN_NEEDED_OUTPUT</a></u></td></tr>
+<tr><th id="505">505</th><td><u>#undef <a class="macro" href="#156" data-ref="_M/MAX_NEEDED_OUTPUT">MAX_NEEDED_OUTPUT</a></u></td></tr>
+<tr><th id="506">506</th><td><u>#undef <a class="macro" href="gconv_simple.c.html#816" data-ref="_M/LOOPFCT">LOOPFCT</a></u></td></tr>
+<tr><th id="507">507</th><td><u>#undef <a class="macro" href="gconv_simple.c.html#817" data-ref="_M/BODY">BODY</a></u></td></tr>
+<tr><th id="508">508</th><td><u>#undef <span class="macro" data-ref="_M/LOOPFCT">LOOPFCT</span></u></td></tr>
+<tr><th id="509">509</th><td><u>#undef <a class="macro" href="#173" data-ref="_M/EXTRA_LOOP_DECLS">EXTRA_LOOP_DECLS</a></u></td></tr>
+<tr><th id="510">510</th><td><u>#undef <span class="macro" data-ref="_M/INIT_PARAMS">INIT_PARAMS</span></u></td></tr>
+<tr><th id="511">511</th><td><u>#undef <a class="macro" href="#179" data-ref="_M/UPDATE_PARAMS">UPDATE_PARAMS</a></u></td></tr>
+<tr><th id="512">512</th><td><u>#undef <a class="macro" href="#182" data-ref="_M/REINIT_PARAMS">REINIT_PARAMS</a></u></td></tr>
+<tr><th id="513">513</th><td><u>#undef <span class="macro" data-ref="_M/ONEBYTE_BODY">ONEBYTE_BODY</span></u></td></tr>
+<tr><th id="514">514</th><td><u>#undef <span class="macro" data-ref="_M/UNPACK_BYTES">UNPACK_BYTES</span></u></td></tr>
+<tr><th id="515">515</th><td><u>#undef <span class="macro" data-ref="_M/CLEAR_STATE">CLEAR_STATE</span></u></td></tr>
+<tr><th id="516">516</th><td><u>#undef <span class="macro" data-ref="_M/LOOP_NEED_STATE">LOOP_NEED_STATE</span></u></td></tr>
+<tr><th id="517">517</th><td><u>#undef <a class="macro" href="gconv_simple.c.html#834" data-ref="_M/LOOP_NEED_FLAGS">LOOP_NEED_FLAGS</a></u></td></tr>
+<tr><th id="518">518</th><td><u>#undef <span class="macro" data-ref="_M/LOOP_NEED_DATA">LOOP_NEED_DATA</span></u></td></tr>
+<tr><th id="519">519</th><td><u>#undef <a class="macro" href="#68" data-ref="_M/get16">get16</a></u></td></tr>
+<tr><th id="520">520</th><td><u>#undef <a class="macro" href="#69" data-ref="_M/get32">get32</a></u></td></tr>
+<tr><th id="521">521</th><td><u>#undef <a class="macro" href="#72" data-ref="_M/put16">put16</a></u></td></tr>
+<tr><th id="522">522</th><td><u>#undef <a class="macro" href="#73" data-ref="_M/put32">put32</a></u></td></tr>
+<tr><th id="523">523</th><td><u>#undef <span class="macro" data-ref="_M/unaligned">unaligned</span></u></td></tr>
+<tr><th id="524">524</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='gconv_simple.c.html'>glibc_src_2.24/iconv/gconv_simple.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

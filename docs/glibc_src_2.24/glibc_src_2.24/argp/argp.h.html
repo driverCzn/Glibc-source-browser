@@ -1,0 +1,578 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>argp.h source code [glibc_src_2.24/argp/argp.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="argp,argp_child,argp_option,argp_state "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/argp/argp.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>argp</a>/<a href='argp.h.html'>argp.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Hierarchial argument parsing, layered over getopt.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1995-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Written by Miles Bader &lt;miles@gnu.ai.mit.edu&gt;.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span> <span class="macro" data-ref="_M/_ARGP_H">_ARGP_H</span></u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/_ARGP_H" data-ref="_M/_ARGP_H">_ARGP_H</dfn></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/getopt.h.html">&lt;getopt.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/limits.h.html">&lt;limits.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#define <dfn class="macro" id="_M/__need_error_t" data-ref="_M/__need_error_t">__need_error_t</dfn></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="31">ifndef</span> <a class="macro" href="../stdlib/errno.h.html#69" data-ref="_M/__error_t_defined">__error_t_defined</a></u></td></tr>
+<tr><th id="32">32</th><td><b>typedef</b> <em>int</em> error_t;</td></tr>
+<tr><th id="33">33</th><td><u># define __error_t_defined</u></td></tr>
+<tr><th id="34">34</th><td><u>#<span data-ppcond="31">endif</span></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><a class="macro" href="../misc/sys/cdefs.h.html#101" title="" data-ref="_M/__BEGIN_DECLS">__BEGIN_DECLS</a></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/* A description of a particular option.  A pointer to an array of</i></td></tr>
+<tr><th id="39">39</th><td><i>   these is passed in the OPTIONS field of an argp structure.  Each option</i></td></tr>
+<tr><th id="40">40</th><td><i>   entry can correspond to one long option and/or one short option; more</i></td></tr>
+<tr><th id="41">41</th><td><i>   names for the same option can be added by following an entry in an option</i></td></tr>
+<tr><th id="42">42</th><td><i>   array with options having the OPTION_ALIAS flag set.  */</i></td></tr>
+<tr><th id="43">43</th><td><b>struct</b> <dfn class="type def" id="argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</dfn></td></tr>
+<tr><th id="44">44</th><td>{</td></tr>
+<tr><th id="45">45</th><td>  <i>/* The long option name.  For more than one name for the same option, you</i></td></tr>
+<tr><th id="46">46</th><td><i>     can use following options with the OPTION_ALIAS flag set.  */</i></td></tr>
+<tr><th id="47">47</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp_option::name" title='argp_option::name' data-ref="argp_option::name" data-ref-filename="argp_option..name">name</dfn>;</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>  <i>/* What key is returned for this option.  If &gt; 0 and printable, then it's</i></td></tr>
+<tr><th id="50">50</th><td><i>     also accepted as a short option.  */</i></td></tr>
+<tr><th id="51">51</th><td>  <em>int</em> <dfn class="decl field" id="argp_option::key" title='argp_option::key' data-ref="argp_option::key" data-ref-filename="argp_option..key">key</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>  <i>/* If non-NULL, this is the name of the argument associated with this</i></td></tr>
+<tr><th id="54">54</th><td><i>     option, which is required unless the OPTION_ARG_OPTIONAL flag is set. */</i></td></tr>
+<tr><th id="55">55</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp_option::arg" title='argp_option::arg' data-ref="argp_option::arg" data-ref-filename="argp_option..arg">arg</dfn>;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>  <i>/* OPTION_ flags.  */</i></td></tr>
+<tr><th id="58">58</th><td>  <em>int</em> <dfn class="decl field" id="argp_option::flags" title='argp_option::flags' data-ref="argp_option::flags" data-ref-filename="argp_option..flags">flags</dfn>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* The doc string for this option.  If both NAME and KEY are 0, This string</i></td></tr>
+<tr><th id="61">61</th><td><i>     will be printed outdented from the normal option column, making it</i></td></tr>
+<tr><th id="62">62</th><td><i>     useful as a group header (it will be the first thing printed in its</i></td></tr>
+<tr><th id="63">63</th><td><i>     group); in this usage, it's conventional to end the string with a `:'.  */</i></td></tr>
+<tr><th id="64">64</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp_option::doc" title='argp_option::doc' data-ref="argp_option::doc" data-ref-filename="argp_option..doc">doc</dfn>;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <i>/* The group this option is in.  In a long help message, options are sorted</i></td></tr>
+<tr><th id="67">67</th><td><i>     alphabetically within each group, and the groups presented in the order</i></td></tr>
+<tr><th id="68">68</th><td><i>     0, 1, 2, ..., n, -m, ..., -2, -1.  Every entry in an options array with</i></td></tr>
+<tr><th id="69">69</th><td><i>     if this field 0 will inherit the group number of the previous entry, or</i></td></tr>
+<tr><th id="70">70</th><td><i>     zero if it's the first one, unless its a group header (NAME and KEY both</i></td></tr>
+<tr><th id="71">71</th><td><i>     0), in which case, the previous entry + 1 is the default.  Automagic</i></td></tr>
+<tr><th id="72">72</th><td><i>     options such as --help are put into group -1.  */</i></td></tr>
+<tr><th id="73">73</th><td>  <em>int</em> <dfn class="decl field" id="argp_option::group" title='argp_option::group' data-ref="argp_option::group" data-ref-filename="argp_option..group">group</dfn>;</td></tr>
+<tr><th id="74">74</th><td>};</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><i>/* The argument associated with this option is optional.  */</i></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/OPTION_ARG_OPTIONAL" data-ref="_M/OPTION_ARG_OPTIONAL">OPTION_ARG_OPTIONAL</dfn>	0x1</u></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><i>/* This option isn't displayed in any help messages.  */</i></td></tr>
+<tr><th id="80">80</th><td><u>#define <dfn class="macro" id="_M/OPTION_HIDDEN" data-ref="_M/OPTION_HIDDEN">OPTION_HIDDEN</dfn>	       	0x2</u></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i>/* This option is an alias for the closest previous non-alias option.  This</i></td></tr>
+<tr><th id="83">83</th><td><i>   means that it will be displayed in the same help entry, and will inherit</i></td></tr>
+<tr><th id="84">84</th><td><i>   fields other than NAME and KEY from the aliased option.  */</i></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/OPTION_ALIAS" data-ref="_M/OPTION_ALIAS">OPTION_ALIAS</dfn>		0x4</u></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><i>/* This option isn't actually an option (and so should be ignored by the</i></td></tr>
+<tr><th id="88">88</th><td><i>   actual option parser), but rather an arbitrary piece of documentation that</i></td></tr>
+<tr><th id="89">89</th><td><i>   should be displayed in much the same manner as the options.  If this flag</i></td></tr>
+<tr><th id="90">90</th><td><i>   is set, then the option NAME field is displayed unmodified (e.g., no `--'</i></td></tr>
+<tr><th id="91">91</th><td><i>   prefix is added) at the left-margin (where a *short* option would normally</i></td></tr>
+<tr><th id="92">92</th><td><i>   be displayed), and the documentation string in the normal place.  For</i></td></tr>
+<tr><th id="93">93</th><td><i>   purposes of sorting, any leading whitespace and punctuation is ignored,</i></td></tr>
+<tr><th id="94">94</th><td><i>   except that if the first non-whitespace character is not `-', this entry</i></td></tr>
+<tr><th id="95">95</th><td><i>   is displayed after all options (and OPTION_DOC entries with a leading `-')</i></td></tr>
+<tr><th id="96">96</th><td><i>   in the same group.  */</i></td></tr>
+<tr><th id="97">97</th><td><u>#define <dfn class="macro" id="_M/OPTION_DOC" data-ref="_M/OPTION_DOC">OPTION_DOC</dfn>		0x8</u></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* This option shouldn't be included in `long' usage messages (but is still</i></td></tr>
+<tr><th id="100">100</th><td><i>   included in help messages).  This is mainly intended for options that are</i></td></tr>
+<tr><th id="101">101</th><td><i>   completely documented in an argp's ARGS_DOC field, in which case including</i></td></tr>
+<tr><th id="102">102</th><td><i>   the option in the generic usage list would be redundant.  For instance,</i></td></tr>
+<tr><th id="103">103</th><td><i>   if ARGS_DOC is "FOO BAR\n-x BLAH", and the `-x' option's purpose is to</i></td></tr>
+<tr><th id="104">104</th><td><i>   distinguish these two cases, -x should probably be marked</i></td></tr>
+<tr><th id="105">105</th><td><i>   OPTION_NO_USAGE.  */</i></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/OPTION_NO_USAGE" data-ref="_M/OPTION_NO_USAGE">OPTION_NO_USAGE</dfn>		0x10</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a>;			<i>/* fwd declare this type */</i></td></tr>
+<tr><th id="109">109</th><td><b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a>;		<i>/* " */</i></td></tr>
+<tr><th id="110">110</th><td><b>struct</b> <a class="type" href="#argp_child" title='argp_child' data-ref="argp_child" data-ref-filename="argp_child">argp_child</a>;		<i>/* " */</i></td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i>/* The type of a pointer to an argp parsing function.  */</i></td></tr>
+<tr><th id="113">113</th><td><b>typedef</b> <a class="typedef" href="../stdlib/errno.h.html#error_t" title='error_t' data-type='int' data-ref="error_t" data-ref-filename="error_t">error_t</a> (*<dfn class="typedef" id="argp_parser_t" title='argp_parser_t' data-type='error_t (*)(int, char *, struct argp_state *)' data-ref="argp_parser_t" data-ref-filename="argp_parser_t">argp_parser_t</dfn>) (<em>int</em> <dfn class="local col7 decl" id="2277__key" title='__key' data-type='int' data-ref="2277__key" data-ref-filename="2277__key">__key</dfn>, <em>char</em> *<dfn class="local col8 decl" id="2278__arg" title='__arg' data-type='char *' data-ref="2278__arg" data-ref-filename="2278__arg">__arg</dfn>,</td></tr>
+<tr><th id="114">114</th><td>				  <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<dfn class="local col9 decl" id="2279__state" title='__state' data-type='struct argp_state *' data-ref="2279__state" data-ref-filename="2279__state">__state</dfn>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* What to return for unrecognized keys.  For special ARGP_KEY_ keys, such</i></td></tr>
+<tr><th id="117">117</th><td><i>   returns will simply be ignored.  For user keys, this error will be turned</i></td></tr>
+<tr><th id="118">118</th><td><i>   into EINVAL (if the call to argp_parse is such that errors are propagated</i></td></tr>
+<tr><th id="119">119</th><td><i>   back to the user instead of exiting); returning EINVAL itself would result</i></td></tr>
+<tr><th id="120">120</th><td><i>   in an immediate stop to parsing in *all* cases.  */</i></td></tr>
+<tr><th id="121">121</th><td><u>#define <dfn class="macro" id="_M/ARGP_ERR_UNKNOWN" data-ref="_M/ARGP_ERR_UNKNOWN">ARGP_ERR_UNKNOWN</dfn>	E2BIG /* Hurd should never need E2BIG.  XXX */</u></td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><i>/* Special values for the KEY argument to an argument parsing function.</i></td></tr>
+<tr><th id="124">124</th><td><i>   ARGP_ERR_UNKNOWN should be returned if they aren't understood.</i></td></tr>
+<tr><th id="125">125</th><td><i></i></td></tr>
+<tr><th id="126">126</th><td><i>   The sequence of keys to a parsing function is either (where each</i></td></tr>
+<tr><th id="127">127</th><td><i>   uppercased word should be prefixed by `ARGP_KEY_' and opt is a user key):</i></td></tr>
+<tr><th id="128">128</th><td><i></i></td></tr>
+<tr><th id="129">129</th><td><i>       INIT opt... NO_ARGS END SUCCESS  -- No non-option arguments at all</i></td></tr>
+<tr><th id="130">130</th><td><i>   or  INIT (opt | ARG)... END SUCCESS  -- All non-option args parsed</i></td></tr>
+<tr><th id="131">131</th><td><i>   or  INIT (opt | ARG)... SUCCESS      -- Some non-option arg unrecognized</i></td></tr>
+<tr><th id="132">132</th><td><i></i></td></tr>
+<tr><th id="133">133</th><td><i>   The third case is where every parser returned ARGP_KEY_UNKNOWN for an</i></td></tr>
+<tr><th id="134">134</th><td><i>   argument, in which case parsing stops at that argument (returning the</i></td></tr>
+<tr><th id="135">135</th><td><i>   unparsed arguments to the caller of argp_parse if requested, or stopping</i></td></tr>
+<tr><th id="136">136</th><td><i>   with an error message if not).</i></td></tr>
+<tr><th id="137">137</th><td><i></i></td></tr>
+<tr><th id="138">138</th><td><i>   If an error occurs (either detected by argp, or because the parsing</i></td></tr>
+<tr><th id="139">139</th><td><i>   function returned an error value), then the parser is called with</i></td></tr>
+<tr><th id="140">140</th><td><i>   ARGP_KEY_ERROR, and no further calls are made.  */</i></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><i>/* This is not an option at all, but rather a command line argument.  If a</i></td></tr>
+<tr><th id="143">143</th><td><i>   parser receiving this key returns success, the fact is recorded, and the</i></td></tr>
+<tr><th id="144">144</th><td><i>   ARGP_KEY_NO_ARGS case won't be used.  HOWEVER, if while processing the</i></td></tr>
+<tr><th id="145">145</th><td><i>   argument, a parser function decrements the NEXT field of the state it's</i></td></tr>
+<tr><th id="146">146</th><td><i>   passed, the option won't be considered processed; this is to allow you to</i></td></tr>
+<tr><th id="147">147</th><td><i>   actually modify the argument (perhaps into an option), and have it</i></td></tr>
+<tr><th id="148">148</th><td><i>   processed again.  */</i></td></tr>
+<tr><th id="149">149</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_ARG" data-ref="_M/ARGP_KEY_ARG">ARGP_KEY_ARG</dfn>		0</u></td></tr>
+<tr><th id="150">150</th><td><i>/* There are remaining arguments not parsed by any parser, which may be found</i></td></tr>
+<tr><th id="151">151</th><td><i>   starting at (STATE-&gt;argv + STATE-&gt;next).  If success is returned, but</i></td></tr>
+<tr><th id="152">152</th><td><i>   STATE-&gt;next left untouched, it's assumed that all arguments were consume,</i></td></tr>
+<tr><th id="153">153</th><td><i>   otherwise, the parser should adjust STATE-&gt;next to reflect any arguments</i></td></tr>
+<tr><th id="154">154</th><td><i>   consumed.  */</i></td></tr>
+<tr><th id="155">155</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_ARGS" data-ref="_M/ARGP_KEY_ARGS">ARGP_KEY_ARGS</dfn>		0x1000006</u></td></tr>
+<tr><th id="156">156</th><td><i>/* There are no more command line arguments at all.  */</i></td></tr>
+<tr><th id="157">157</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_END" data-ref="_M/ARGP_KEY_END">ARGP_KEY_END</dfn>		0x1000001</u></td></tr>
+<tr><th id="158">158</th><td><i>/* Because it's common to want to do some special processing if there aren't</i></td></tr>
+<tr><th id="159">159</th><td><i>   any non-option args, user parsers are called with this key if they didn't</i></td></tr>
+<tr><th id="160">160</th><td><i>   successfully process any non-option arguments.  Called just before</i></td></tr>
+<tr><th id="161">161</th><td><i>   ARGP_KEY_END (where more general validity checks on previously parsed</i></td></tr>
+<tr><th id="162">162</th><td><i>   arguments can take place).  */</i></td></tr>
+<tr><th id="163">163</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_NO_ARGS" data-ref="_M/ARGP_KEY_NO_ARGS">ARGP_KEY_NO_ARGS</dfn>	0x1000002</u></td></tr>
+<tr><th id="164">164</th><td><i>/* Passed in before any parsing is done.  Afterwards, the values of each</i></td></tr>
+<tr><th id="165">165</th><td><i>   element of the CHILD_INPUT field, if any, in the state structure is</i></td></tr>
+<tr><th id="166">166</th><td><i>   copied to each child's state to be the initial value of the INPUT field.  */</i></td></tr>
+<tr><th id="167">167</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_INIT" data-ref="_M/ARGP_KEY_INIT">ARGP_KEY_INIT</dfn>		0x1000003</u></td></tr>
+<tr><th id="168">168</th><td><i>/* Use after all other keys, including SUCCESS &amp; END.  */</i></td></tr>
+<tr><th id="169">169</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_FINI" data-ref="_M/ARGP_KEY_FINI">ARGP_KEY_FINI</dfn>		0x1000007</u></td></tr>
+<tr><th id="170">170</th><td><i>/* Passed in when parsing has successfully been completed (even if there are</i></td></tr>
+<tr><th id="171">171</th><td><i>   still arguments remaining).  */</i></td></tr>
+<tr><th id="172">172</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_SUCCESS" data-ref="_M/ARGP_KEY_SUCCESS">ARGP_KEY_SUCCESS</dfn>	0x1000004</u></td></tr>
+<tr><th id="173">173</th><td><i>/* Passed in if an error occurs.  */</i></td></tr>
+<tr><th id="174">174</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_ERROR" data-ref="_M/ARGP_KEY_ERROR">ARGP_KEY_ERROR</dfn>		0x1000005</u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><i>/* An argp structure contains a set of options declarations, a function to</i></td></tr>
+<tr><th id="177">177</th><td><i>   deal with parsing one, documentation string, a possible vector of child</i></td></tr>
+<tr><th id="178">178</th><td><i>   argp's, and perhaps a function to filter help output.  When actually</i></td></tr>
+<tr><th id="179">179</th><td><i>   parsing options, getopt is called with the union of all the argp</i></td></tr>
+<tr><th id="180">180</th><td><i>   structures chained together through their CHILD pointers, with conflicts</i></td></tr>
+<tr><th id="181">181</th><td><i>   being resolved in favor of the first occurrence in the chain.  */</i></td></tr>
+<tr><th id="182">182</th><td><b>struct</b> <dfn class="type def" id="argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</dfn></td></tr>
+<tr><th id="183">183</th><td>{</td></tr>
+<tr><th id="184">184</th><td>  <i>/* An array of argp_option structures, terminated by an entry with both</i></td></tr>
+<tr><th id="185">185</th><td><i>     NAME and KEY having a value of 0.  */</i></td></tr>
+<tr><th id="186">186</th><td>  <em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="decl field" id="argp::options" title='argp::options' data-ref="argp::options" data-ref-filename="argp..options">options</dfn>;</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td>  <i>/* What to do with an option from this structure.  KEY is the key</i></td></tr>
+<tr><th id="189">189</th><td><i>     associated with the option, and ARG is any associated argument (NULL if</i></td></tr>
+<tr><th id="190">190</th><td><i>     none was supplied).  If KEY isn't understood, ARGP_ERR_UNKNOWN should be</i></td></tr>
+<tr><th id="191">191</th><td><i>     returned.  If a non-zero, non-ARGP_ERR_UNKNOWN value is returned, then</i></td></tr>
+<tr><th id="192">192</th><td><i>     parsing is stopped immediately, and that value is returned from</i></td></tr>
+<tr><th id="193">193</th><td><i>     argp_parse().  For special (non-user-supplied) values of KEY, see the</i></td></tr>
+<tr><th id="194">194</th><td><i>     ARGP_KEY_ definitions below.  */</i></td></tr>
+<tr><th id="195">195</th><td>  <a class="typedef" href="#argp_parser_t" title='argp_parser_t' data-type='error_t (*)(int, char *, struct argp_state *)' data-ref="argp_parser_t" data-ref-filename="argp_parser_t">argp_parser_t</a> <dfn class="decl field" id="argp::parser" title='argp::parser' data-ref="argp::parser" data-ref-filename="argp..parser">parser</dfn>;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>  <i>/* A string describing what other arguments are wanted by this program.  It</i></td></tr>
+<tr><th id="198">198</th><td><i>     is only used by argp_usage to print the `Usage:' message.  If it</i></td></tr>
+<tr><th id="199">199</th><td><i>     contains newlines, the strings separated by them are considered</i></td></tr>
+<tr><th id="200">200</th><td><i>     alternative usage patterns, and printed on separate lines (lines after</i></td></tr>
+<tr><th id="201">201</th><td><i>     the first are prefix by `  or: ' instead of `Usage:').  */</i></td></tr>
+<tr><th id="202">202</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp::args_doc" title='argp::args_doc' data-ref="argp::args_doc" data-ref-filename="argp..args_doc">args_doc</dfn>;</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>  <i>/* If non-NULL, a string containing extra text to be printed before and</i></td></tr>
+<tr><th id="205">205</th><td><i>     after the options in a long help message (separated by a vertical tab</i></td></tr>
+<tr><th id="206">206</th><td><i>     `\v' character).  */</i></td></tr>
+<tr><th id="207">207</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp::doc" title='argp::doc' data-ref="argp::doc" data-ref-filename="argp..doc">doc</dfn>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>  <i>/* A vector of argp_children structures, terminated by a member with a 0</i></td></tr>
+<tr><th id="210">210</th><td><i>     argp field, pointing to child argps should be parsed with this one.  Any</i></td></tr>
+<tr><th id="211">211</th><td><i>     conflicts are resolved in favor of this argp, or early argps in the</i></td></tr>
+<tr><th id="212">212</th><td><i>     CHILDREN list.  This field is useful if you use libraries that supply</i></td></tr>
+<tr><th id="213">213</th><td><i>     their own argp structure, which you want to use in conjunction with your</i></td></tr>
+<tr><th id="214">214</th><td><i>     own.  */</i></td></tr>
+<tr><th id="215">215</th><td>  <em>const</em> <b>struct</b> <a class="type" href="#argp_child" title='argp_child' data-ref="argp_child" data-ref-filename="argp_child">argp_child</a> *<dfn class="decl field" id="argp::children" title='argp::children' data-ref="argp::children" data-ref-filename="argp..children">children</dfn>;</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td>  <i>/* If non-zero, this should be a function to filter the output of help</i></td></tr>
+<tr><th id="218">218</th><td><i>     messages.  KEY is either a key from an option, in which case TEXT is</i></td></tr>
+<tr><th id="219">219</th><td><i>     that option's help text, or a special key from the ARGP_KEY_HELP_</i></td></tr>
+<tr><th id="220">220</th><td><i>     defines, below, describing which other help text TEXT is.  The function</i></td></tr>
+<tr><th id="221">221</th><td><i>     should return either TEXT, if it should be used as-is, a replacement</i></td></tr>
+<tr><th id="222">222</th><td><i>     string, which should be malloced, and will be freed by argp, or NULL,</i></td></tr>
+<tr><th id="223">223</th><td><i>     meaning `print nothing'.  The value for TEXT is *after* any translation</i></td></tr>
+<tr><th id="224">224</th><td><i>     has been done, so if any of the replacement text also needs translation,</i></td></tr>
+<tr><th id="225">225</th><td><i>     that should be done by the filter function.  INPUT is either the input</i></td></tr>
+<tr><th id="226">226</th><td><i>     supplied to argp_parse, or NULL, if argp_help was called directly.  */</i></td></tr>
+<tr><th id="227">227</th><td>  <em>char</em> *(*<dfn class="decl field" id="argp::help_filter" title='argp::help_filter' data-ref="argp::help_filter" data-ref-filename="argp..help_filter">help_filter</dfn>) (<em>int</em> <dfn class="local col0 decl" id="2280__key" title='__key' data-type='int' data-ref="2280__key" data-ref-filename="2280__key">__key</dfn>, <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="2281__text" title='__text' data-type='const char *' data-ref="2281__text" data-ref-filename="2281__text">__text</dfn>, <em>void</em> *<dfn class="local col2 decl" id="2282__input" title='__input' data-type='void *' data-ref="2282__input" data-ref-filename="2282__input">__input</dfn>);</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>  <i>/* If non-zero the strings used in the argp library are translated using</i></td></tr>
+<tr><th id="230">230</th><td><i>     the domain described by this string.  Otherwise the currently installed</i></td></tr>
+<tr><th id="231">231</th><td><i>     default domain is used.  */</i></td></tr>
+<tr><th id="232">232</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp::argp_domain" title='argp::argp_domain' data-ref="argp::argp_domain" data-ref-filename="argp..argp_domain">argp_domain</dfn>;</td></tr>
+<tr><th id="233">233</th><td>};</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td><i>/* Possible KEY arguments to a help filter function.  */</i></td></tr>
+<tr><th id="236">236</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_PRE_DOC" data-ref="_M/ARGP_KEY_HELP_PRE_DOC">ARGP_KEY_HELP_PRE_DOC</dfn>	0x2000001 /* Help text preceeding options. */</u></td></tr>
+<tr><th id="237">237</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_POST_DOC" data-ref="_M/ARGP_KEY_HELP_POST_DOC">ARGP_KEY_HELP_POST_DOC</dfn>	0x2000002 /* Help text following options. */</u></td></tr>
+<tr><th id="238">238</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_HEADER" data-ref="_M/ARGP_KEY_HELP_HEADER">ARGP_KEY_HELP_HEADER</dfn>	0x2000003 /* Option header string. */</u></td></tr>
+<tr><th id="239">239</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_EXTRA" data-ref="_M/ARGP_KEY_HELP_EXTRA">ARGP_KEY_HELP_EXTRA</dfn>	0x2000004 /* After all other documentation;</u></td></tr>
+<tr><th id="240">240</th><td><u>					     TEXT is NULL for this key.  */</u></td></tr>
+<tr><th id="241">241</th><td><i>/* Explanatory note emitted when duplicate option arguments have been</i></td></tr>
+<tr><th id="242">242</th><td><i>   suppressed.  */</i></td></tr>
+<tr><th id="243">243</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_DUP_ARGS_NOTE" data-ref="_M/ARGP_KEY_HELP_DUP_ARGS_NOTE">ARGP_KEY_HELP_DUP_ARGS_NOTE</dfn> 0x2000005</u></td></tr>
+<tr><th id="244">244</th><td><u>#define <dfn class="macro" id="_M/ARGP_KEY_HELP_ARGS_DOC" data-ref="_M/ARGP_KEY_HELP_ARGS_DOC">ARGP_KEY_HELP_ARGS_DOC</dfn>	0x2000006 /* Argument doc string.  */</u></td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td><i>/* When an argp has a non-zero CHILDREN field, it should point to a vector of</i></td></tr>
+<tr><th id="247">247</th><td><i>   argp_child structures, each of which describes a subsidiary argp.  */</i></td></tr>
+<tr><th id="248">248</th><td><b>struct</b> <dfn class="type def" id="argp_child" title='argp_child' data-ref="argp_child" data-ref-filename="argp_child">argp_child</dfn></td></tr>
+<tr><th id="249">249</th><td>{</td></tr>
+<tr><th id="250">250</th><td>  <i>/* The child parser.  */</i></td></tr>
+<tr><th id="251">251</th><td>  <em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<dfn class="decl field" id="argp_child::argp" title='argp_child::argp' data-ref="argp_child::argp" data-ref-filename="argp_child..argp">argp</dfn>;</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>  <i>/* Flags for this child.  */</i></td></tr>
+<tr><th id="254">254</th><td>  <em>int</em> <dfn class="decl field" id="argp_child::flags" title='argp_child::flags' data-ref="argp_child::flags" data-ref-filename="argp_child..flags">flags</dfn>;</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>  <i>/* If non-zero, an optional header to be printed in help output before the</i></td></tr>
+<tr><th id="257">257</th><td><i>     child options.  As a side-effect, a non-zero value forces the child</i></td></tr>
+<tr><th id="258">258</th><td><i>     options to be grouped together; to achieve this effect without actually</i></td></tr>
+<tr><th id="259">259</th><td><i>     printing a header string, use a value of "".  */</i></td></tr>
+<tr><th id="260">260</th><td>  <em>const</em> <em>char</em> *<dfn class="decl field" id="argp_child::header" title='argp_child::header' data-ref="argp_child::header" data-ref-filename="argp_child..header">header</dfn>;</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>  <i>/* Where to group the child options relative to the other (`consolidated')</i></td></tr>
+<tr><th id="263">263</th><td><i>     options in the parent argp; the values are the same as the GROUP field</i></td></tr>
+<tr><th id="264">264</th><td><i>     in argp_option structs, but all child-groupings follow parent options at</i></td></tr>
+<tr><th id="265">265</th><td><i>     a particular group level.  If both this field and HEADER are zero, then</i></td></tr>
+<tr><th id="266">266</th><td><i>     they aren't grouped at all, but rather merged with the parent options</i></td></tr>
+<tr><th id="267">267</th><td><i>     (merging the child's grouping levels with the parents).  */</i></td></tr>
+<tr><th id="268">268</th><td>  <em>int</em> <dfn class="decl field" id="argp_child::group" title='argp_child::group' data-ref="argp_child::group" data-ref-filename="argp_child..group">group</dfn>;</td></tr>
+<tr><th id="269">269</th><td>};</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td><i>/* Parsing state.  This is provided to parsing functions called by argp,</i></td></tr>
+<tr><th id="272">272</th><td><i>   which may examine and, as noted, modify fields.  */</i></td></tr>
+<tr><th id="273">273</th><td><b>struct</b> <dfn class="type def" id="argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</dfn></td></tr>
+<tr><th id="274">274</th><td>{</td></tr>
+<tr><th id="275">275</th><td>  <i>/* The top level ARGP being parsed.  */</i></td></tr>
+<tr><th id="276">276</th><td>  <em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<dfn class="decl field" id="argp_state::root_argp" title='argp_state::root_argp' data-ref="argp_state::root_argp" data-ref-filename="argp_state..root_argp">root_argp</dfn>;</td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td>  <i>/* The argument vector being parsed.  May be modified.  */</i></td></tr>
+<tr><th id="279">279</th><td>  <em>int</em> <dfn class="decl field" id="argp_state::argc" title='argp_state::argc' data-ref="argp_state::argc" data-ref-filename="argp_state..argc">argc</dfn>;</td></tr>
+<tr><th id="280">280</th><td>  <em>char</em> **<dfn class="decl field" id="argp_state::argv" title='argp_state::argv' data-ref="argp_state::argv" data-ref-filename="argp_state..argv">argv</dfn>;</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>  <i>/* The index in ARGV of the next arg that to be parsed.  May be modified. */</i></td></tr>
+<tr><th id="283">283</th><td>  <em>int</em> <dfn class="decl field" id="argp_state::next" title='argp_state::next' data-ref="argp_state::next" data-ref-filename="argp_state..next">next</dfn>;</td></tr>
+<tr><th id="284">284</th><td></td></tr>
+<tr><th id="285">285</th><td>  <i>/* The flags supplied to argp_parse.  May be modified.  */</i></td></tr>
+<tr><th id="286">286</th><td>  <em>unsigned</em> <dfn class="decl field" id="argp_state::flags" title='argp_state::flags' data-ref="argp_state::flags" data-ref-filename="argp_state..flags">flags</dfn>;</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>  <i>/* While calling a parsing function with a key of ARGP_KEY_ARG, this is the</i></td></tr>
+<tr><th id="289">289</th><td><i>     number of the current arg, starting at zero, and incremented after each</i></td></tr>
+<tr><th id="290">290</th><td><i>     such call returns.  At all other times, this is the number of such</i></td></tr>
+<tr><th id="291">291</th><td><i>     arguments that have been processed.  */</i></td></tr>
+<tr><th id="292">292</th><td>  <em>unsigned</em> <dfn class="decl field" id="argp_state::arg_num" title='argp_state::arg_num' data-ref="argp_state::arg_num" data-ref-filename="argp_state..arg_num">arg_num</dfn>;</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td>  <i>/* If non-zero, the index in ARGV of the first argument following a special</i></td></tr>
+<tr><th id="295">295</th><td><i>     `--' argument (which prevents anything following being interpreted as an</i></td></tr>
+<tr><th id="296">296</th><td><i>     option).  Only set once argument parsing has proceeded past this point. */</i></td></tr>
+<tr><th id="297">297</th><td>  <em>int</em> <dfn class="decl field" id="argp_state::quoted" title='argp_state::quoted' data-ref="argp_state::quoted" data-ref-filename="argp_state..quoted">quoted</dfn>;</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>  <i>/* An arbitrary pointer passed in from the user.  */</i></td></tr>
+<tr><th id="300">300</th><td>  <em>void</em> *<dfn class="decl field" id="argp_state::input" title='argp_state::input' data-ref="argp_state::input" data-ref-filename="argp_state..input">input</dfn>;</td></tr>
+<tr><th id="301">301</th><td>  <i>/* Values to pass to child parsers.  This vector will be the same length as</i></td></tr>
+<tr><th id="302">302</th><td><i>     the number of children for the current parser.  */</i></td></tr>
+<tr><th id="303">303</th><td>  <em>void</em> **<dfn class="decl field" id="argp_state::child_inputs" title='argp_state::child_inputs' data-ref="argp_state::child_inputs" data-ref-filename="argp_state..child_inputs">child_inputs</dfn>;</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td>  <i>/* For the parser's use.  Initialized to 0.  */</i></td></tr>
+<tr><th id="306">306</th><td>  <em>void</em> *<dfn class="decl field" id="argp_state::hook" title='argp_state::hook' data-ref="argp_state::hook" data-ref-filename="argp_state..hook">hook</dfn>;</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td>  <i>/* The name used when printing messages.  This is initialized to ARGV[0],</i></td></tr>
+<tr><th id="309">309</th><td><i>     or PROGRAM_INVOCATION_NAME if that is unavailable.  */</i></td></tr>
+<tr><th id="310">310</th><td>  <em>char</em> *<dfn class="decl field" id="argp_state::name" title='argp_state::name' data-ref="argp_state::name" data-ref-filename="argp_state..name">name</dfn>;</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td>  <i>/* Streams used when argp prints something.  */</i></td></tr>
+<tr><th id="313">313</th><td>  <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="decl field" id="argp_state::err_stream" title='argp_state::err_stream' data-ref="argp_state::err_stream" data-ref-filename="argp_state..err_stream">err_stream</dfn>;		<i>/* For errors; initialized to stderr. */</i></td></tr>
+<tr><th id="314">314</th><td>  <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="decl field" id="argp_state::out_stream" title='argp_state::out_stream' data-ref="argp_state::out_stream" data-ref-filename="argp_state..out_stream">out_stream</dfn>;		<i>/* For information; initialized to stdout. */</i></td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>  <em>void</em> *<dfn class="decl field" id="argp_state::pstate" title='argp_state::pstate' data-ref="argp_state::pstate" data-ref-filename="argp_state..pstate">pstate</dfn>;			<i>/* Private, for use by argp.  */</i></td></tr>
+<tr><th id="317">317</th><td>};</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td><i>/* Flags for argp_parse (note that the defaults are those that are</i></td></tr>
+<tr><th id="320">320</th><td><i>   convenient for program command line parsing): */</i></td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td><i>/* Don't ignore the first element of ARGV.  Normally (and always unless</i></td></tr>
+<tr><th id="323">323</th><td><i>   ARGP_NO_ERRS is set) the first element of the argument vector is</i></td></tr>
+<tr><th id="324">324</th><td><i>   skipped for option parsing purposes, as it corresponds to the program name</i></td></tr>
+<tr><th id="325">325</th><td><i>   in a command line.  */</i></td></tr>
+<tr><th id="326">326</th><td><u>#define <dfn class="macro" id="_M/ARGP_PARSE_ARGV0" data-ref="_M/ARGP_PARSE_ARGV0">ARGP_PARSE_ARGV0</dfn>  0x01</u></td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td><i>/* Don't print error messages for unknown options to stderr; unless this flag</i></td></tr>
+<tr><th id="329">329</th><td><i>   is set, ARGP_PARSE_ARGV0 is ignored, as ARGV[0] is used as the program</i></td></tr>
+<tr><th id="330">330</th><td><i>   name in the error messages.  This flag implies ARGP_NO_EXIT (on the</i></td></tr>
+<tr><th id="331">331</th><td><i>   assumption that silent exiting upon errors is bad behaviour).  */</i></td></tr>
+<tr><th id="332">332</th><td><u>#define <dfn class="macro" id="_M/ARGP_NO_ERRS" data-ref="_M/ARGP_NO_ERRS">ARGP_NO_ERRS</dfn>	0x02</u></td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td><i>/* Don't parse any non-option args.  Normally non-option args are parsed by</i></td></tr>
+<tr><th id="335">335</th><td><i>   calling the parse functions with a key of ARGP_KEY_ARG, and the actual arg</i></td></tr>
+<tr><th id="336">336</th><td><i>   as the value.  Since it's impossible to know which parse function wants to</i></td></tr>
+<tr><th id="337">337</th><td><i>   handle it, each one is called in turn, until one returns 0 or an error</i></td></tr>
+<tr><th id="338">338</th><td><i>   other than ARGP_ERR_UNKNOWN; if an argument is handled by no one, the</i></td></tr>
+<tr><th id="339">339</th><td><i>   argp_parse returns prematurely (but with a return value of 0).  If all</i></td></tr>
+<tr><th id="340">340</th><td><i>   args have been parsed without error, all parsing functions are called one</i></td></tr>
+<tr><th id="341">341</th><td><i>   last time with a key of ARGP_KEY_END.  This flag needn't normally be set,</i></td></tr>
+<tr><th id="342">342</th><td><i>   as the normal behavior is to stop parsing as soon as some argument can't</i></td></tr>
+<tr><th id="343">343</th><td><i>   be handled.  */</i></td></tr>
+<tr><th id="344">344</th><td><u>#define <dfn class="macro" id="_M/ARGP_NO_ARGS" data-ref="_M/ARGP_NO_ARGS">ARGP_NO_ARGS</dfn>	0x04</u></td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><i>/* Parse options and arguments in the same order they occur on the command</i></td></tr>
+<tr><th id="347">347</th><td><i>   line -- normally they're rearranged so that all options come first. */</i></td></tr>
+<tr><th id="348">348</th><td><u>#define <dfn class="macro" id="_M/ARGP_IN_ORDER" data-ref="_M/ARGP_IN_ORDER">ARGP_IN_ORDER</dfn>	0x08</u></td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><i>/* Don't provide the standard long option --help, which causes usage and</i></td></tr>
+<tr><th id="351">351</th><td><i>      option help information to be output to stdout, and exit (0) called. */</i></td></tr>
+<tr><th id="352">352</th><td><u>#define <dfn class="macro" id="_M/ARGP_NO_HELP" data-ref="_M/ARGP_NO_HELP">ARGP_NO_HELP</dfn>	0x10</u></td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td><i>/* Don't exit on errors (they may still result in error messages).  */</i></td></tr>
+<tr><th id="355">355</th><td><u>#define <dfn class="macro" id="_M/ARGP_NO_EXIT" data-ref="_M/ARGP_NO_EXIT">ARGP_NO_EXIT</dfn>	0x20</u></td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td><i>/* Use the gnu getopt `long-only' rules for parsing arguments.  */</i></td></tr>
+<tr><th id="358">358</th><td><u>#define <dfn class="macro" id="_M/ARGP_LONG_ONLY" data-ref="_M/ARGP_LONG_ONLY">ARGP_LONG_ONLY</dfn>	0x40</u></td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td><i>/* Turns off any message-printing/exiting options.  */</i></td></tr>
+<tr><th id="361">361</th><td><u>#define <dfn class="macro" id="_M/ARGP_SILENT" data-ref="_M/ARGP_SILENT">ARGP_SILENT</dfn>    (ARGP_NO_EXIT | ARGP_NO_ERRS | ARGP_NO_HELP)</u></td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><i>/* Parse the options strings in ARGC &amp; ARGV according to the options in ARGP.</i></td></tr>
+<tr><th id="364">364</th><td><i>   FLAGS is one of the ARGP_ flags above.  If ARG_INDEX is non-NULL, the</i></td></tr>
+<tr><th id="365">365</th><td><i>   index in ARGV of the first unparsed option is returned in it.  If an</i></td></tr>
+<tr><th id="366">366</th><td><i>   unknown option is present, ARGP_ERR_UNKNOWN is returned; if some parser</i></td></tr>
+<tr><th id="367">367</th><td><i>   routine returned a non-zero value, it is returned; otherwise 0 is</i></td></tr>
+<tr><th id="368">368</th><td><i>   returned.  This function may also call exit unless the ARGP_NO_HELP flag</i></td></tr>
+<tr><th id="369">369</th><td><i>   is set.  INPUT is a pointer to a value to be passed in to the parser.  */</i></td></tr>
+<tr><th id="370">370</th><td><b>extern</b> <a class="typedef" href="../stdlib/errno.h.html#error_t" title='error_t' data-type='int' data-ref="error_t" data-ref-filename="error_t">error_t</a> <dfn class="decl fn" id="argp_parse" title='argp_parse' data-ref="argp_parse" data-ref-filename="argp_parse">argp_parse</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col3 decl" id="2283__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2283__argp" data-ref-filename="2283__argp">__argp</dfn>,</td></tr>
+<tr><th id="371">371</th><td>			   <em>int</em> <dfn class="local col4 decl" id="2284__argc" title='__argc' data-type='int' data-ref="2284__argc" data-ref-filename="2284__argc">__argc</dfn>, <em>char</em> **<b>__restrict</b> <dfn class="local col5 decl" id="2285__argv" title='__argv' data-type='char **restrict' data-ref="2285__argv" data-ref-filename="2285__argv">__argv</dfn>,</td></tr>
+<tr><th id="372">372</th><td>			   <em>unsigned</em> <dfn class="local col6 decl" id="2286__flags" title='__flags' data-type='unsigned int' data-ref="2286__flags" data-ref-filename="2286__flags">__flags</dfn>, <em>int</em> *<b>__restrict</b> <dfn class="local col7 decl" id="2287__arg_index" title='__arg_index' data-type='int *restrict' data-ref="2287__arg_index" data-ref-filename="2287__arg_index">__arg_index</dfn>,</td></tr>
+<tr><th id="373">373</th><td>			   <em>void</em> *<b>__restrict</b> <dfn class="local col8 decl" id="2288__input" title='__input' data-type='void *restrict' data-ref="2288__input" data-ref-filename="2288__input">__input</dfn>);</td></tr>
+<tr><th id="374">374</th><td><b>extern</b> <a class="typedef" href="../stdlib/errno.h.html#error_t" title='error_t' data-type='int' data-ref="error_t" data-ref-filename="error_t">error_t</a> <dfn class="decl fn" id="__argp_parse" title='__argp_parse' data-ref="__argp_parse" data-ref-filename="__argp_parse">__argp_parse</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col9 decl" id="2289__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2289__argp" data-ref-filename="2289__argp">__argp</dfn>,</td></tr>
+<tr><th id="375">375</th><td>			     <em>int</em> <dfn class="local col0 decl" id="2290__argc" title='__argc' data-type='int' data-ref="2290__argc" data-ref-filename="2290__argc">__argc</dfn>, <em>char</em> **<b>__restrict</b> <dfn class="local col1 decl" id="2291__argv" title='__argv' data-type='char **restrict' data-ref="2291__argv" data-ref-filename="2291__argv">__argv</dfn>,</td></tr>
+<tr><th id="376">376</th><td>			     <em>unsigned</em> <dfn class="local col2 decl" id="2292__flags" title='__flags' data-type='unsigned int' data-ref="2292__flags" data-ref-filename="2292__flags">__flags</dfn>, <em>int</em> *<b>__restrict</b> <dfn class="local col3 decl" id="2293__arg_index" title='__arg_index' data-type='int *restrict' data-ref="2293__arg_index" data-ref-filename="2293__arg_index">__arg_index</dfn>,</td></tr>
+<tr><th id="377">377</th><td>			     <em>void</em> *<b>__restrict</b> <dfn class="local col4 decl" id="2294__input" title='__input' data-type='void *restrict' data-ref="2294__input" data-ref-filename="2294__input">__input</dfn>);</td></tr>
+<tr><th id="378">378</th><td></td></tr>
+<tr><th id="379">379</th><td><i>/* Global variables.  */</i></td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td><i>/* If defined or set by the user program to a non-zero value, then a default</i></td></tr>
+<tr><th id="382">382</th><td><i>   option --version is added (unless the ARGP_NO_HELP flag is used), which</i></td></tr>
+<tr><th id="383">383</th><td><i>   will print this string followed by a newline and exit (unless the</i></td></tr>
+<tr><th id="384">384</th><td><i>   ARGP_NO_EXIT flag is used).  Overridden by ARGP_PROGRAM_VERSION_HOOK.  */</i></td></tr>
+<tr><th id="385">385</th><td><b>extern</b> <em>const</em> <em>char</em> *<dfn class="decl" id="argp_program_version" title='argp_program_version' data-ref="argp_program_version" data-ref-filename="argp_program_version">argp_program_version</dfn>;</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td><i>/* If defined or set by the user program to a non-zero value, then a default</i></td></tr>
+<tr><th id="388">388</th><td><i>   option --version is added (unless the ARGP_NO_HELP flag is used), which</i></td></tr>
+<tr><th id="389">389</th><td><i>   calls this function with a stream to print the version to and a pointer to</i></td></tr>
+<tr><th id="390">390</th><td><i>   the current parsing state, and then exits (unless the ARGP_NO_EXIT flag is</i></td></tr>
+<tr><th id="391">391</th><td><i>   used).  This variable takes precedent over ARGP_PROGRAM_VERSION.  */</i></td></tr>
+<tr><th id="392">392</th><td><b>extern</b> <em>void</em> (*<dfn class="decl" id="argp_program_version_hook" title='argp_program_version_hook' data-ref="argp_program_version_hook" data-ref-filename="argp_program_version_hook">argp_program_version_hook</dfn>) (<a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<b>__restrict</b> <dfn class="local col5 decl" id="2295__stream" title='__stream' data-type='FILE *restrict' data-ref="2295__stream" data-ref-filename="2295__stream">__stream</dfn>,</td></tr>
+<tr><th id="393">393</th><td>					  <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b></td></tr>
+<tr><th id="394">394</th><td>					  <dfn class="local col6 decl" id="2296__state" title='__state' data-type='struct argp_state *restrict' data-ref="2296__state" data-ref-filename="2296__state">__state</dfn>);</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td><i>/* If defined or set by the user program, it should point to string that is</i></td></tr>
+<tr><th id="397">397</th><td><i>   the bug-reporting address for the program.  It will be printed by</i></td></tr>
+<tr><th id="398">398</th><td><i>   argp_help if the ARGP_HELP_BUG_ADDR flag is set (as it is by various</i></td></tr>
+<tr><th id="399">399</th><td><i>   standard help messages), embedded in a sentence that says something like</i></td></tr>
+<tr><th id="400">400</th><td><i>   `Report bugs to ADDR.'.  */</i></td></tr>
+<tr><th id="401">401</th><td><b>extern</b> <em>const</em> <em>char</em> *<dfn class="decl" id="argp_program_bug_address" title='argp_program_bug_address' data-ref="argp_program_bug_address" data-ref-filename="argp_program_bug_address">argp_program_bug_address</dfn>;</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td><i>/* The exit status that argp will use when exiting due to a parsing error.</i></td></tr>
+<tr><th id="404">404</th><td><i>   If not defined or set by the user program, this defaults to EX_USAGE from</i></td></tr>
+<tr><th id="405">405</th><td><i>   &lt;sysexits.h&gt;.  */</i></td></tr>
+<tr><th id="406">406</th><td><b>extern</b> <a class="typedef" href="../stdlib/errno.h.html#error_t" title='error_t' data-type='int' data-ref="error_t" data-ref-filename="error_t">error_t</a> <dfn class="decl" id="argp_err_exit_status" title='argp_err_exit_status' data-ref="argp_err_exit_status" data-ref-filename="argp_err_exit_status">argp_err_exit_status</dfn>;</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td><i>/* Flags for argp_help.  */</i></td></tr>
+<tr><th id="409">409</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_USAGE" data-ref="_M/ARGP_HELP_USAGE">ARGP_HELP_USAGE</dfn>		0x01 /* a Usage: message. */</u></td></tr>
+<tr><th id="410">410</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_SHORT_USAGE" data-ref="_M/ARGP_HELP_SHORT_USAGE">ARGP_HELP_SHORT_USAGE</dfn>	0x02 /*  " but don't actually print options. */</u></td></tr>
+<tr><th id="411">411</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_SEE" data-ref="_M/ARGP_HELP_SEE">ARGP_HELP_SEE</dfn>		0x04 /* a `Try ... for more help' message. */</u></td></tr>
+<tr><th id="412">412</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_LONG" data-ref="_M/ARGP_HELP_LONG">ARGP_HELP_LONG</dfn>		0x08 /* a long help message. */</u></td></tr>
+<tr><th id="413">413</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_PRE_DOC" data-ref="_M/ARGP_HELP_PRE_DOC">ARGP_HELP_PRE_DOC</dfn>	0x10 /* doc string preceding long help.  */</u></td></tr>
+<tr><th id="414">414</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_POST_DOC" data-ref="_M/ARGP_HELP_POST_DOC">ARGP_HELP_POST_DOC</dfn>	0x20 /* doc string following long help.  */</u></td></tr>
+<tr><th id="415">415</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_DOC" data-ref="_M/ARGP_HELP_DOC">ARGP_HELP_DOC</dfn>		(ARGP_HELP_PRE_DOC | ARGP_HELP_POST_DOC)</u></td></tr>
+<tr><th id="416">416</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_BUG_ADDR" data-ref="_M/ARGP_HELP_BUG_ADDR">ARGP_HELP_BUG_ADDR</dfn>	0x40 /* bug report address */</u></td></tr>
+<tr><th id="417">417</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_LONG_ONLY" data-ref="_M/ARGP_HELP_LONG_ONLY">ARGP_HELP_LONG_ONLY</dfn>	0x80 /* modify output appropriately to</u></td></tr>
+<tr><th id="418">418</th><td><u>					reflect ARGP_LONG_ONLY mode.  */</u></td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td><i>/* These ARGP_HELP flags are only understood by argp_state_help.  */</i></td></tr>
+<tr><th id="421">421</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_EXIT_ERR" data-ref="_M/ARGP_HELP_EXIT_ERR">ARGP_HELP_EXIT_ERR</dfn>	0x100 /* Call exit(1) instead of returning.  */</u></td></tr>
+<tr><th id="422">422</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_EXIT_OK" data-ref="_M/ARGP_HELP_EXIT_OK">ARGP_HELP_EXIT_OK</dfn>	0x200 /* Call exit(0) instead of returning.  */</u></td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td><i>/* The standard thing to do after a program command line parsing error, if an</i></td></tr>
+<tr><th id="425">425</th><td><i>   error message has already been printed.  */</i></td></tr>
+<tr><th id="426">426</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_STD_ERR" data-ref="_M/ARGP_HELP_STD_ERR">ARGP_HELP_STD_ERR</dfn> \</u></td></tr>
+<tr><th id="427">427</th><td><u>  (ARGP_HELP_SEE | ARGP_HELP_EXIT_ERR)</u></td></tr>
+<tr><th id="428">428</th><td><i>/* The standard thing to do after a program command line parsing error, if no</i></td></tr>
+<tr><th id="429">429</th><td><i>   more specific error message has been printed.  */</i></td></tr>
+<tr><th id="430">430</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_STD_USAGE" data-ref="_M/ARGP_HELP_STD_USAGE">ARGP_HELP_STD_USAGE</dfn> \</u></td></tr>
+<tr><th id="431">431</th><td><u>  (ARGP_HELP_SHORT_USAGE | ARGP_HELP_SEE | ARGP_HELP_EXIT_ERR)</u></td></tr>
+<tr><th id="432">432</th><td><i>/* The standard thing to do in response to a --help option.  */</i></td></tr>
+<tr><th id="433">433</th><td><u>#define <dfn class="macro" id="_M/ARGP_HELP_STD_HELP" data-ref="_M/ARGP_HELP_STD_HELP">ARGP_HELP_STD_HELP</dfn> \</u></td></tr>
+<tr><th id="434">434</th><td><u>  (ARGP_HELP_SHORT_USAGE | ARGP_HELP_LONG | ARGP_HELP_EXIT_OK \</u></td></tr>
+<tr><th id="435">435</th><td><u>   | ARGP_HELP_DOC | ARGP_HELP_BUG_ADDR)</u></td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td><i>/* Output a usage message for ARGP to STREAM.  FLAGS are from the set</i></td></tr>
+<tr><th id="438">438</th><td><i>   ARGP_HELP_*.  */</i></td></tr>
+<tr><th id="439">439</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="argp_help" title='argp_help' data-ref="argp_help" data-ref-filename="argp_help">argp_help</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col7 decl" id="2297__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2297__argp" data-ref-filename="2297__argp">__argp</dfn>,</td></tr>
+<tr><th id="440">440</th><td>		       <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<b>__restrict</b> <dfn class="local col8 decl" id="2298__stream" title='__stream' data-type='FILE *restrict' data-ref="2298__stream" data-ref-filename="2298__stream">__stream</dfn>,</td></tr>
+<tr><th id="441">441</th><td>		       <em>unsigned</em> <dfn class="local col9 decl" id="2299__flags" title='__flags' data-type='unsigned int' data-ref="2299__flags" data-ref-filename="2299__flags">__flags</dfn>, <em>char</em> *<b>__restrict</b> <dfn class="local col0 decl" id="2300__name" title='__name' data-type='char *restrict' data-ref="2300__name" data-ref-filename="2300__name">__name</dfn>);</td></tr>
+<tr><th id="442">442</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__argp_help" title='__argp_help' data-ref="__argp_help" data-ref-filename="__argp_help">__argp_help</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col1 decl" id="2301__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2301__argp" data-ref-filename="2301__argp">__argp</dfn>,</td></tr>
+<tr><th id="443">443</th><td>			 <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<b>__restrict</b> <dfn class="local col2 decl" id="2302__stream" title='__stream' data-type='FILE *restrict' data-ref="2302__stream" data-ref-filename="2302__stream">__stream</dfn>, <em>unsigned</em> <dfn class="local col3 decl" id="2303__flags" title='__flags' data-type='unsigned int' data-ref="2303__flags" data-ref-filename="2303__flags">__flags</dfn>,</td></tr>
+<tr><th id="444">444</th><td>			 <em>char</em> *<dfn class="local col4 decl" id="2304__name" title='__name' data-type='char *' data-ref="2304__name" data-ref-filename="2304__name">__name</dfn>);</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td><i>/* The following routines are intended to be called from within an argp</i></td></tr>
+<tr><th id="447">447</th><td><i>   parsing routine (thus taking an argp_state structure as the first</i></td></tr>
+<tr><th id="448">448</th><td><i>   argument).  They may or may not print an error message and exit, depending</i></td></tr>
+<tr><th id="449">449</th><td><i>   on the flags in STATE -- in any case, the caller should be prepared for</i></td></tr>
+<tr><th id="450">450</th><td><i>   them *not* to exit, and should return an appropiate error after calling</i></td></tr>
+<tr><th id="451">451</th><td><i>   them.  [argp_usage &amp; argp_error should probably be called argp_state_...,</i></td></tr>
+<tr><th id="452">452</th><td><i>   but they're used often enough that they should be short]  */</i></td></tr>
+<tr><th id="453">453</th><td></td></tr>
+<tr><th id="454">454</th><td><i>/* Output, if appropriate, a usage message for STATE to STREAM.  FLAGS are</i></td></tr>
+<tr><th id="455">455</th><td><i>   from the set ARGP_HELP_*.  */</i></td></tr>
+<tr><th id="456">456</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="argp_state_help" title='argp_state_help' data-ref="argp_state_help" data-ref-filename="argp_state_help">argp_state_help</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col5 decl" id="2305__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2305__state" data-ref-filename="2305__state">__state</dfn>,</td></tr>
+<tr><th id="457">457</th><td>			     <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<b>__restrict</b> <dfn class="local col6 decl" id="2306__stream" title='__stream' data-type='FILE *restrict' data-ref="2306__stream" data-ref-filename="2306__stream">__stream</dfn>,</td></tr>
+<tr><th id="458">458</th><td>			     <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="2307__flags" title='__flags' data-type='unsigned int' data-ref="2307__flags" data-ref-filename="2307__flags">__flags</dfn>);</td></tr>
+<tr><th id="459">459</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__argp_state_help" title='__argp_state_help' data-ref="__argp_state_help" data-ref-filename="__argp_state_help">__argp_state_help</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col8 decl" id="2308__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2308__state" data-ref-filename="2308__state">__state</dfn>,</td></tr>
+<tr><th id="460">460</th><td>			       <a class="typedef" href="../libio/stdio.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<b>__restrict</b> <dfn class="local col9 decl" id="2309__stream" title='__stream' data-type='FILE *restrict' data-ref="2309__stream" data-ref-filename="2309__stream">__stream</dfn>,</td></tr>
+<tr><th id="461">461</th><td>			       <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="2310__flags" title='__flags' data-type='unsigned int' data-ref="2310__flags" data-ref-filename="2310__flags">__flags</dfn>);</td></tr>
+<tr><th id="462">462</th><td></td></tr>
+<tr><th id="463">463</th><td><i>/* Possibly output the standard usage message for ARGP to stderr and exit.  */</i></td></tr>
+<tr><th id="464">464</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="argp_usage" title='argp_usage' data-ref="argp_usage" data-ref-filename="argp_usage">argp_usage</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<dfn class="local col1 decl" id="2311__state" title='__state' data-type='const struct argp_state *' data-ref="2311__state" data-ref-filename="2311__state">__state</dfn>);</td></tr>
+<tr><th id="465">465</th><td><b>extern</b> <em>void</em> <a class="decl fn" href="#__argp_usage" title='__argp_usage' data-ref="__argp_usage" data-ref-filename="__argp_usage">__argp_usage</a> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<dfn class="local col2 decl" id="2312__state" title='__state' data-type='const struct argp_state *' data-ref="2312__state" data-ref-filename="2312__state">__state</dfn>);</td></tr>
+<tr><th id="466">466</th><td></td></tr>
+<tr><th id="467">467</th><td><i>/* If appropriate, print the printf string FMT and following args, preceded</i></td></tr>
+<tr><th id="468">468</th><td><i>   by the program name and `:', to stderr, and followed by a `Try ... --help'</i></td></tr>
+<tr><th id="469">469</th><td><i>   message, then exit (1).  */</i></td></tr>
+<tr><th id="470">470</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="argp_error" title='argp_error' data-ref="argp_error" data-ref-filename="argp_error">argp_error</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col3 decl" id="2313__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2313__state" data-ref-filename="2313__state">__state</dfn>,</td></tr>
+<tr><th id="471">471</th><td>			<em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col4 decl" id="2314__fmt" title='__fmt' data-type='const char *restrict' data-ref="2314__fmt" data-ref-filename="2314__fmt">__fmt</dfn>, ...)</td></tr>
+<tr><th id="472">472</th><td>     <b>__attribute__</b> ((__format__ (__printf__, <var>2</var>, <var>3</var>)));</td></tr>
+<tr><th id="473">473</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__argp_error" title='__argp_error' data-ref="__argp_error" data-ref-filename="__argp_error">__argp_error</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col5 decl" id="2315__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2315__state" data-ref-filename="2315__state">__state</dfn>,</td></tr>
+<tr><th id="474">474</th><td>			  <em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col6 decl" id="2316__fmt" title='__fmt' data-type='const char *restrict' data-ref="2316__fmt" data-ref-filename="2316__fmt">__fmt</dfn>, ...)</td></tr>
+<tr><th id="475">475</th><td>     <b>__attribute__</b> ((__format__ (__printf__, <var>2</var>, <var>3</var>)));</td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td><i>/* Similar to the standard gnu error-reporting function error(), but will</i></td></tr>
+<tr><th id="478">478</th><td><i>   respect the ARGP_NO_EXIT and ARGP_NO_ERRS flags in STATE, and will print</i></td></tr>
+<tr><th id="479">479</th><td><i>   to STATE-&gt;err_stream.  This is useful for argument parsing code that is</i></td></tr>
+<tr><th id="480">480</th><td><i>   shared between program startup (when exiting is desired) and runtime</i></td></tr>
+<tr><th id="481">481</th><td><i>   option parsing (when typically an error code is returned instead).  The</i></td></tr>
+<tr><th id="482">482</th><td><i>   difference between this function and argp_error is that the latter is for</i></td></tr>
+<tr><th id="483">483</th><td><i>   *parsing errors*, and the former is for other problems that occur during</i></td></tr>
+<tr><th id="484">484</th><td><i>   parsing but don't reflect a (syntactic) problem with the input.  */</i></td></tr>
+<tr><th id="485">485</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="argp_failure" title='argp_failure' data-ref="argp_failure" data-ref-filename="argp_failure">argp_failure</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col7 decl" id="2317__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2317__state" data-ref-filename="2317__state">__state</dfn>,</td></tr>
+<tr><th id="486">486</th><td>			  <em>int</em> <dfn class="local col8 decl" id="2318__status" title='__status' data-type='int' data-ref="2318__status" data-ref-filename="2318__status">__status</dfn>, <em>int</em> <dfn class="local col9 decl" id="2319__errnum" title='__errnum' data-type='int' data-ref="2319__errnum" data-ref-filename="2319__errnum">__errnum</dfn>,</td></tr>
+<tr><th id="487">487</th><td>			  <em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col0 decl" id="2320__fmt" title='__fmt' data-type='const char *restrict' data-ref="2320__fmt" data-ref-filename="2320__fmt">__fmt</dfn>, ...)</td></tr>
+<tr><th id="488">488</th><td>     <b>__attribute__</b> ((__format__ (__printf__, <var>4</var>, <var>5</var>)));</td></tr>
+<tr><th id="489">489</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__argp_failure" title='__argp_failure' data-ref="__argp_failure" data-ref-filename="__argp_failure">__argp_failure</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col1 decl" id="2321__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2321__state" data-ref-filename="2321__state">__state</dfn>,</td></tr>
+<tr><th id="490">490</th><td>			    <em>int</em> <dfn class="local col2 decl" id="2322__status" title='__status' data-type='int' data-ref="2322__status" data-ref-filename="2322__status">__status</dfn>, <em>int</em> <dfn class="local col3 decl" id="2323__errnum" title='__errnum' data-type='int' data-ref="2323__errnum" data-ref-filename="2323__errnum">__errnum</dfn>,</td></tr>
+<tr><th id="491">491</th><td>			    <em>const</em> <em>char</em> *<b>__restrict</b> <dfn class="local col4 decl" id="2324__fmt" title='__fmt' data-type='const char *restrict' data-ref="2324__fmt" data-ref-filename="2324__fmt">__fmt</dfn>, ...)</td></tr>
+<tr><th id="492">492</th><td>     <b>__attribute__</b> ((__format__ (__printf__, <var>4</var>, <var>5</var>)));</td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td><i>/* Returns true if the option OPT is a valid short option.  */</i></td></tr>
+<tr><th id="495">495</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="_option_is_short" title='_option_is_short' data-ref="_option_is_short" data-ref-filename="_option_is_short">_option_is_short</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col5 decl" id="2325__opt" title='__opt' data-type='const struct argp_option *' data-ref="2325__opt" data-ref-filename="2325__opt">__opt</dfn>) <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="496">496</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="#532" title='__option_is_short' data-ref="__option_is_short" data-ref-filename="__option_is_short">__option_is_short</a> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col6 decl" id="2326__opt" title='__opt' data-type='const struct argp_option *' data-ref="2326__opt" data-ref-filename="2326__opt">__opt</dfn>) <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td><i>/* Returns true if the option OPT is in fact the last (unused) entry in an</i></td></tr>
+<tr><th id="499">499</th><td><i>   options array.  */</i></td></tr>
+<tr><th id="500">500</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="_option_is_end" title='_option_is_end' data-ref="_option_is_end" data-ref-filename="_option_is_end">_option_is_end</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col7 decl" id="2327__opt" title='__opt' data-type='const struct argp_option *' data-ref="2327__opt" data-ref-filename="2327__opt">__opt</dfn>) <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="501">501</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="#544" title='__option_is_end' data-ref="__option_is_end" data-ref-filename="__option_is_end">__option_is_end</a> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col8 decl" id="2328__opt" title='__opt' data-type='const struct argp_option *' data-ref="2328__opt" data-ref-filename="2328__opt">__opt</dfn>) <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="502">502</th><td></td></tr>
+<tr><th id="503">503</th><td><i>/* Return the input field for ARGP in the parser corresponding to STATE; used</i></td></tr>
+<tr><th id="504">504</th><td><i>   by the help routines.  */</i></td></tr>
+<tr><th id="505">505</th><td><b>extern</b> <em>void</em> *<dfn class="decl fn" id="_argp_input" title='_argp_input' data-ref="_argp_input" data-ref-filename="_argp_input">_argp_input</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col9 decl" id="2329__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2329__argp" data-ref-filename="2329__argp">__argp</dfn>,</td></tr>
+<tr><th id="506">506</th><td>			  <em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col0 decl" id="2330__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2330__state" data-ref-filename="2330__state">__state</dfn>)</td></tr>
+<tr><th id="507">507</th><td>     <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="508">508</th><td><b>extern</b> <em>void</em> *<dfn class="decl fn" id="__argp_input" title='__argp_input' data-ref="__argp_input" data-ref-filename="__argp_input">__argp_input</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp" title='argp' data-ref="argp" data-ref-filename="argp">argp</a> *<b>__restrict</b> <dfn class="local col1 decl" id="2331__argp" title='__argp' data-type='const struct argp *restrict' data-ref="2331__argp" data-ref-filename="2331__argp">__argp</dfn>,</td></tr>
+<tr><th id="509">509</th><td>			   <em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<b>__restrict</b> <dfn class="local col2 decl" id="2332__state" title='__state' data-type='const struct argp_state *restrict' data-ref="2332__state" data-ref-filename="2332__state">__state</dfn>)</td></tr>
+<tr><th id="510">510</th><td>     <a class="macro" href="../misc/sys/cdefs.h.html#55" title="__attribute__ ((__nothrow__ ))" data-ref="_M/__THROW">__THROW</a>;</td></tr>
+<tr><th id="511">511</th><td></td></tr>
+<tr><th id="512">512</th><td><u>#<span data-ppcond="512">ifdef</span> <a class="macro" href="../include/features.h.html#384" data-ref="_M/__USE_EXTERN_INLINES">__USE_EXTERN_INLINES</a></u></td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td><u># <span data-ppcond="514">if</span> !<a class="macro" href="../include/libc-symbols.h.html#51" title="1" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="515">515</th><td><u>#  define __argp_usage argp_usage</u></td></tr>
+<tr><th id="516">516</th><td><u>#  define __argp_state_help argp_state_help</u></td></tr>
+<tr><th id="517">517</th><td><u>#  define __option_is_short _option_is_short</u></td></tr>
+<tr><th id="518">518</th><td><u>#  define __option_is_end _option_is_end</u></td></tr>
+<tr><th id="519">519</th><td><u># <span data-ppcond="514">endif</span></u></td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td><u># <span data-ppcond="521">ifndef</span> <span class="macro" data-ref="_M/ARGP_EI">ARGP_EI</span></u></td></tr>
+<tr><th id="522">522</th><td><u>#  define <dfn class="macro" id="_M/ARGP_EI" data-ref="_M/ARGP_EI">ARGP_EI</dfn> __extern_inline</u></td></tr>
+<tr><th id="523">523</th><td><u># <span data-ppcond="521">endif</span></u></td></tr>
+<tr><th id="524">524</th><td></td></tr>
+<tr><th id="525">525</th><td><a class="macro" href="#522" title="extern __inline" data-ref="_M/ARGP_EI">ARGP_EI</a> <em>void</em></td></tr>
+<tr><th id="526">526</th><td><dfn class="decl def fn" id="__argp_usage" title='__argp_usage' data-ref="__argp_usage" data-ref-filename="__argp_usage">__argp_usage</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_state" title='argp_state' data-ref="argp_state" data-ref-filename="argp_state">argp_state</a> *<dfn class="local col3 decl" id="2333__state" title='__state' data-type='const struct argp_state *' data-ref="2333__state" data-ref-filename="2333__state">__state</dfn>)</td></tr>
+<tr><th id="527">527</th><td>{</td></tr>
+<tr><th id="528">528</th><td>  <a class="ref fn" href="#__argp_state_help" title='__argp_state_help' data-ref="__argp_state_help" data-ref-filename="__argp_state_help">__argp_state_help</a> (<a class="local col3 ref" href="#2333__state" title='__state' data-ref="2333__state" data-ref-filename="2333__state">__state</a>, <a class="macro" href="../libio/stdio.h.html#176" title="stderr" data-ref="_M/stderr">stderr</a>, <a class="macro" href="#430" title="(0x02 | 0x04 | 0x100)" data-ref="_M/ARGP_HELP_STD_USAGE">ARGP_HELP_STD_USAGE</a>);</td></tr>
+<tr><th id="529">529</th><td>}</td></tr>
+<tr><th id="530">530</th><td></td></tr>
+<tr><th id="531">531</th><td><a class="macro" href="#522" title="extern __inline" data-ref="_M/ARGP_EI">ARGP_EI</a> <em>int</em></td></tr>
+<tr><th id="532">532</th><td><a class="macro" href="../misc/sys/cdefs.h.html#57" title="__attribute__ ((__nothrow__ )) __option_is_short (const struct argp_option *__opt)" data-ref="_M/__NTH">__NTH</a> (<dfn class="decl def fn" id="__option_is_short" title='__option_is_short' data-ref="__option_is_short" data-ref-filename="__option_is_short">__option_is_short</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col4 decl" id="2334__opt" title='__opt' data-type='const struct argp_option *' data-ref="2334__opt" data-ref-filename="2334__opt">__opt</dfn>))</td></tr>
+<tr><th id="533">533</th><td>{</td></tr>
+<tr><th id="534">534</th><td>  <b>if</b> (<a class="local col4 ref" href="#532" title='__opt' data-ref="2334__opt" data-ref-filename="2334__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::flags" title='argp_option::flags' data-ref="argp_option::flags" data-ref-filename="argp_option..flags">flags</a> &amp; <a class="macro" href="#97" title="0x8" data-ref="_M/OPTION_DOC">OPTION_DOC</a>)</td></tr>
+<tr><th id="535">535</th><td>    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="536">536</th><td>  <b>else</b></td></tr>
+<tr><th id="537">537</th><td>    {</td></tr>
+<tr><th id="538">538</th><td>      <em>int</em> <dfn class="local col5 decl" id="2335__key" title='__key' data-type='int' data-ref="2335__key" data-ref-filename="2335__key">__key</dfn> = <a class="local col4 ref" href="#532" title='__opt' data-ref="2334__opt" data-ref-filename="2334__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::key" title='argp_option::key' data-ref="argp_option::key" data-ref-filename="argp_option..key">key</a>;</td></tr>
+<tr><th id="539">539</th><td>      <b>return</b> <a class="local col5 ref" href="#2335__key" title='__key' data-ref="2335__key" data-ref-filename="2335__key">__key</a> &gt; <var>0</var> &amp;&amp; <a class="local col5 ref" href="#2335__key" title='__key' data-ref="2335__key" data-ref-filename="2335__key">__key</a> &lt;= <span class="macro" title="(127*2 +1)" data-ref="_M/UCHAR_MAX">UCHAR_MAX</span> &amp;&amp; <a class="macro" href="../ctype/ctype.h.html#203" title="((*__ctype_b_loc ())[(int) ((__key))] &amp; (unsigned short int) _ISprint)" data-ref="_M/isprint">isprint</a> (<a class="local col5 ref" href="#2335__key" title='__key' data-ref="2335__key" data-ref-filename="2335__key">__key</a>);</td></tr>
+<tr><th id="540">540</th><td>    }</td></tr>
+<tr><th id="541">541</th><td>}</td></tr>
+<tr><th id="542">542</th><td></td></tr>
+<tr><th id="543">543</th><td><a class="macro" href="#522" title="extern __inline" data-ref="_M/ARGP_EI">ARGP_EI</a> <em>int</em></td></tr>
+<tr><th id="544">544</th><td><a class="macro" href="../misc/sys/cdefs.h.html#57" title="__attribute__ ((__nothrow__ )) __option_is_end (const struct argp_option *__opt)" data-ref="_M/__NTH">__NTH</a> (<dfn class="decl def fn" id="__option_is_end" title='__option_is_end' data-ref="__option_is_end" data-ref-filename="__option_is_end">__option_is_end</dfn> (<em>const</em> <b>struct</b> <a class="type" href="#argp_option" title='argp_option' data-ref="argp_option" data-ref-filename="argp_option">argp_option</a> *<dfn class="local col6 decl" id="2336__opt" title='__opt' data-type='const struct argp_option *' data-ref="2336__opt" data-ref-filename="2336__opt">__opt</dfn>))</td></tr>
+<tr><th id="545">545</th><td>{</td></tr>
+<tr><th id="546">546</th><td>  <b>return</b> !<a class="local col6 ref" href="#544" title='__opt' data-ref="2336__opt" data-ref-filename="2336__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::key" title='argp_option::key' data-ref="argp_option::key" data-ref-filename="argp_option..key">key</a> &amp;&amp; !<a class="local col6 ref" href="#544" title='__opt' data-ref="2336__opt" data-ref-filename="2336__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::name" title='argp_option::name' data-ref="argp_option::name" data-ref-filename="argp_option..name">name</a> &amp;&amp; !<a class="local col6 ref" href="#544" title='__opt' data-ref="2336__opt" data-ref-filename="2336__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::doc" title='argp_option::doc' data-ref="argp_option::doc" data-ref-filename="argp_option..doc">doc</a> &amp;&amp; !<a class="local col6 ref" href="#544" title='__opt' data-ref="2336__opt" data-ref-filename="2336__opt">__opt</a>-&gt;<a class="ref field" href="#argp_option::group" title='argp_option::group' data-ref="argp_option::group" data-ref-filename="argp_option..group">group</a>;</td></tr>
+<tr><th id="547">547</th><td>}</td></tr>
+<tr><th id="548">548</th><td></td></tr>
+<tr><th id="549">549</th><td><u># <span data-ppcond="549">if</span> !<a class="macro" href="../include/libc-symbols.h.html#51" title="1" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="550">550</th><td><u>#  undef __argp_usage</u></td></tr>
+<tr><th id="551">551</th><td><u>#  undef __argp_state_help</u></td></tr>
+<tr><th id="552">552</th><td><u>#  undef __option_is_short</u></td></tr>
+<tr><th id="553">553</th><td><u>#  undef __option_is_end</u></td></tr>
+<tr><th id="554">554</th><td><u># <span data-ppcond="549">endif</span></u></td></tr>
+<tr><th id="555">555</th><td><u>#<span data-ppcond="512">endif</span> /* Use extern inlines.  */</u></td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td><a class="macro" href="../misc/sys/cdefs.h.html#102" title="" data-ref="_M/__END_DECLS">__END_DECLS</a></td></tr>
+<tr><th id="558">558</th><td></td></tr>
+<tr><th id="559">559</th><td><u>#<span data-ppcond="20">endif</span> /* argp.h */</u></td></tr>
+<tr><th id="560">560</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='argp-eexst.c.html'>glibc_src_2.24/argp/argp-eexst.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

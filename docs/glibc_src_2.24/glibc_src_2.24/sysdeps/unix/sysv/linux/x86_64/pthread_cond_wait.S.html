@@ -1,0 +1,573 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_cond_wait.S source code [glibc_src_2.24/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>glibc_src_2.24</a>/<a href='../../../..'>sysdeps</a>/<a href='../../..'>unix</a>/<a href='../..'>sysv</a>/<a href='..'>linux</a>/<a href='./'>x86_64</a>/<a href='pthread_cond_wait.S.html'>pthread_cond_wait.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2002-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2002.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="lowlevellock.h.html">&lt;lowlevellock.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;lowlevelcond.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;tcb-offsets.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include &lt;pthread-pi-defines.h&gt;</u></td></tr>
+<tr><th id="25">25</th><td><u>#include &lt;pthread-errnos.h&gt;</u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../../../include/stap-probe.h.html">&lt;stap-probe.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* int pthread_cond_wait (pthread_cond_t *cond, pthread_mutex_t *mutex)  */</i></td></tr>
+<tr><th id="34">34</th><td>	.globl	__pthread_cond_wait</td></tr>
+<tr><th id="35">35</th><td>	.type	__pthread_cond_wait, @function</td></tr>
+<tr><th id="36">36</th><td>	.align	<var>16</var></td></tr>
+<tr><th id="37">37</th><td>__pthread_cond_wait:</td></tr>
+<tr><th id="38">38</th><td>.LSTARTCODE:</td></tr>
+<tr><th id="39">39</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#40" title=".cfi_startproc" data-ref="_M/cfi_startproc">cfi_startproc</a></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="40">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="41">41</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#56" title=".cfi_personality 0x10 | 0x0B | 0x80, DW.ref.__gcc_personality_v0" data-ref="_M/cfi_personality">cfi_personality</a>(<a class="macro" href="../../../../generic/dwarf2.h.html#582" title="0x10" data-ref="_M/DW_EH_PE_pcrel">DW_EH_PE_pcrel</a> | <a class="macro" href="../../../../generic/dwarf2.h.html#578" title="0x0B" data-ref="_M/DW_EH_PE_sdata4">DW_EH_PE_sdata4</a> | <a class="macro" href="../../../../generic/dwarf2.h.html#588" title="0x80" data-ref="_M/DW_EH_PE_indirect">DW_EH_PE_indirect</a>,</td></tr>
+<tr><th id="42">42</th><td>			DW.ref.__gcc_personality_v0)</td></tr>
+<tr><th id="43">43</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#57" title=".cfi_lsda 0x10 | 0x0B, .LexceptSTART" data-ref="_M/cfi_lsda">cfi_lsda</a>(<a class="macro" href="../../../../generic/dwarf2.h.html#582" title="0x10" data-ref="_M/DW_EH_PE_pcrel">DW_EH_PE_pcrel</a> | <a class="macro" href="../../../../generic/dwarf2.h.html#578" title="0x0B" data-ref="_M/DW_EH_PE_sdata4">DW_EH_PE_sdata4</a>, .LexceptSTART)</td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="40">else</span></u></td></tr>
+<tr><th id="45">45</th><td>	cfi_personality(DW_EH_PE_udata4, __gcc_personality_v0)</td></tr>
+<tr><th id="46">46</th><td>	cfi_lsda(DW_EH_PE_udata4, .LexceptSTART)</td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="40">endif</span></u></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><u>#define <dfn class="macro" id="_M/FRAME_SIZE" data-ref="_M/FRAME_SIZE">FRAME_SIZE</dfn> (32+8)</u></td></tr>
+<tr><th id="50">50</th><td>	leaq	-<a class="macro" href="#49" title="(32+8)" data-ref="_M/FRAME_SIZE">FRAME_SIZE</a>(%rsp), %rsp</td></tr>
+<tr><th id="51">51</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset (32+8)" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a>(<a class="macro" href="#49" title="(32+8)" data-ref="_M/FRAME_SIZE">FRAME_SIZE</a>)</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>	<i>/* Stack frame:</i></td></tr>
+<tr><th id="54">54</th><td><i></i></td></tr>
+<tr><th id="55">55</th><td><i>	   rsp + 32</i></td></tr>
+<tr><th id="56">56</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="57">57</th><td><i>	   rsp + 24 | old wake_seq value       |</i></td></tr>
+<tr><th id="58">58</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="59">59</th><td><i>	   rsp + 16 | mutex pointer            |</i></td></tr>
+<tr><th id="60">60</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="61">61</th><td><i>	   rsp +  8 | condvar pointer          |</i></td></tr>
+<tr><th id="62">62</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="63">63</th><td><i>	   rsp +  4 | old broadcast_seq value  |</i></td></tr>
+<tr><th id="64">64</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="65">65</th><td><i>	   rsp +  0 | old cancellation mode    |</i></td></tr>
+<tr><th id="66">66</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="67">67</th><td><i>	*/</i></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<a class="macro" href="../../../../../include/stap-probe.h.html#69" title="" data-ref="_M/LIBC_PROBE">LIBC_PROBE</a> (cond_wait, <var>2</var>, %rdi, %rsi)</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%rdi)</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>	<i>/* Prepare structure passed to cancellation handler.  */</i></td></tr>
+<tr><th id="74">74</th><td>	movq	%rdi, <var>8</var>(%rsp)</td></tr>
+<tr><th id="75">75</th><td>	movq	%rsi, <var>16</var>(%rsp)</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>	je	<var>15f</var></td></tr>
+<tr><th id="78">78</th><td>	mov	%<a class="macro" href="../../../../x86_64/sysdep.h.html#127" title="rsi" data-ref="_M/RSI_LP">RSI_LP</a>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%rdi)</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>	<i>/* Get internal lock.  */</i></td></tr>
+<tr><th id="81">81</th><td><var>15</var>:	movl	$<var>1</var>, %esi</td></tr>
+<tr><th id="82">82</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="83">83</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="84">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="85">85</th><td>	cmpxchgl %esi, (%rdi)</td></tr>
+<tr><th id="86">86</th><td><u>#<span data-ppcond="84">else</span></u></td></tr>
+<tr><th id="87">87</th><td>	cmpxchgl %esi, cond_lock(%rdi)</td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="84">endif</span></u></td></tr>
+<tr><th id="89">89</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<i>/* Unlock the mutex.  */</i></td></tr>
+<tr><th id="92">92</th><td><var>2</var>:	movq	<var>16</var>(%rsp), %rdi</td></tr>
+<tr><th id="93">93</th><td>	xorl	%esi, %esi</td></tr>
+<tr><th id="94">94</th><td>	callq	__pthread_mutex_unlock_usercnt</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	testl	%eax, %eax</td></tr>
+<tr><th id="97">97</th><td>	jne	<var>12f</var></td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="100">100</th><td>	incq	<span class="macro" title="8" data-ref="_M/total_seq">total_seq</span>(%rdi)</td></tr>
+<tr><th id="101">101</th><td>	incl	<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi)</td></tr>
+<tr><th id="102">102</th><td>	addl	$(<var>1</var> &lt;&lt; <span class="macro" title="1" data-ref="_M/nwaiters_shift">nwaiters_shift</span>), <span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi)</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td>	<i>/* Get and store current wakeup_seq value.  */</i></td></tr>
+<tr><th id="105">105</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="106">106</th><td>	movq	<span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%rdi), %r9</td></tr>
+<tr><th id="107">107</th><td>	movl	<span class="macro" title="44" data-ref="_M/broadcast_seq">broadcast_seq</span>(%rdi), %edx</td></tr>
+<tr><th id="108">108</th><td>	movq	%r9, <var>24</var>(%rsp)</td></tr>
+<tr><th id="109">109</th><td>	movl	%edx, <var>4</var>(%rsp)</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<i>/* Unlock.  */</i></td></tr>
+<tr><th id="112">112</th><td><var>8</var>:	movl	<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi), %edx</td></tr>
+<tr><th id="113">113</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="114">114</th><td><u>#<span data-ppcond="114">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="115">115</th><td>	decl	(%rdi)</td></tr>
+<tr><th id="116">116</th><td><u>#<span data-ppcond="114">else</span></u></td></tr>
+<tr><th id="117">117</th><td>	decl	cond_lock(%rdi)</td></tr>
+<tr><th id="118">118</th><td><u>#<span data-ppcond="114">endif</span></u></td></tr>
+<tr><th id="119">119</th><td>	jne	<var>3f</var></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>.LcleanupSTART:</td></tr>
+<tr><th id="122">122</th><td><var>4</var>:	callq	__pthread_enable_asynccancel</td></tr>
+<tr><th id="123">123</th><td>	movl	%eax, (%rsp)</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	xorq	%r10, %r10</td></tr>
+<tr><th id="126">126</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%rdi)</td></tr>
+<tr><th id="127">127</th><td>	leaq	<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi), %rdi</td></tr>
+<tr><th id="128">128</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#28" title="0" data-ref="_M/FUTEX_WAIT">FUTEX_WAIT</a>, %esi</td></tr>
+<tr><th id="129">129</th><td>	je	<var>60f</var></td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>	mov	<span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi), %<a class="macro" href="../../../../x86_64/sysdep.h.html#129" title="r8" data-ref="_M/R8_LP">R8_LP</a></td></tr>
+<tr><th id="132">132</th><td>	<i>/* Requeue to a non-robust PI mutex if the PI bit is set and</i></td></tr>
+<tr><th id="133">133</th><td><i>	the robust bit is not set.  */</i></td></tr>
+<tr><th id="134">134</th><td>	movl	<span class="macro" title="16" data-ref="_M/MUTEX_KIND">MUTEX_KIND</span>(%r8), %eax</td></tr>
+<tr><th id="135">135</th><td>	andl	$(<span class="macro" title="16" data-ref="_M/ROBUST_BIT">ROBUST_BIT</span>|<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>), %eax</td></tr>
+<tr><th id="136">136</th><td>	cmpl	$<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>, %eax</td></tr>
+<tr><th id="137">137</th><td>	jne	<var>61f</var></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#39" title="11" data-ref="_M/FUTEX_WAIT_REQUEUE_PI">FUTEX_WAIT_REQUEUE_PI</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="140">140</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="141">141</th><td>	syscall</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>	cmpl	$<var>0</var>, %eax</td></tr>
+<tr><th id="144">144</th><td>	sete	%r8b</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><u>#<span data-ppcond="146">ifdef</span> <a class="macro" href="../kernel-features.h.html#107" data-ref="_M/__ASSUME_REQUEUE_PI">__ASSUME_REQUEUE_PI</a></u></td></tr>
+<tr><th id="147">147</th><td>	jmp	<var>62f</var></td></tr>
+<tr><th id="148">148</th><td><u>#<span data-ppcond="146">else</span></u></td></tr>
+<tr><th id="149">149</th><td>	je	<var>62f</var></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>	<i>/* When a futex syscall with FUTEX_WAIT_REQUEUE_PI returns</i></td></tr>
+<tr><th id="152">152</th><td><i>	   successfully, it has already locked the mutex for us and the</i></td></tr>
+<tr><th id="153">153</th><td><i>	   pi_flag (%r8b) is set to denote that fact.  However, if another</i></td></tr>
+<tr><th id="154">154</th><td><i>	   thread changed the futex value before we entered the wait, the</i></td></tr>
+<tr><th id="155">155</th><td><i>	   syscall may return an EAGAIN and the mutex is not locked.  We go</i></td></tr>
+<tr><th id="156">156</th><td><i>	   ahead with a success anyway since later we look at the pi_flag to</i></td></tr>
+<tr><th id="157">157</th><td><i>	   decide if we got the mutex or not.  The sequence numbers then make</i></td></tr>
+<tr><th id="158">158</th><td><i>	   sure that only one of the threads actually wake up.  We retry using</i></td></tr>
+<tr><th id="159">159</th><td><i>	   normal FUTEX_WAIT only if the kernel returned ENOSYS, since normal</i></td></tr>
+<tr><th id="160">160</th><td><i>	   and PI futexes don't mix.</i></td></tr>
+<tr><th id="161">161</th><td><i></i></td></tr>
+<tr><th id="162">162</th><td><i>	   Note that we don't check for EAGAIN specifically; we assume that the</i></td></tr>
+<tr><th id="163">163</th><td><i>	   only other error the futex function could return is EAGAIN since</i></td></tr>
+<tr><th id="164">164</th><td><i>	   anything else would mean an error in our function.  It is too</i></td></tr>
+<tr><th id="165">165</th><td><i>	   expensive to do that check for every call (which is 	quite common in</i></td></tr>
+<tr><th id="166">166</th><td><i>	   case of a large number of threads), so it has been skipped.  */</i></td></tr>
+<tr><th id="167">167</th><td>	cmpl	$-ENOSYS, %eax</td></tr>
+<tr><th id="168">168</th><td>	jne	<var>62f</var></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><u># ifndef __ASSUME_PRIVATE_FUTEX</u></td></tr>
+<tr><th id="171">171</th><td>	movl	$FUTEX_WAIT, %esi</td></tr>
+<tr><th id="172">172</th><td><u># endif</u></td></tr>
+<tr><th id="173">173</th><td><u>#<span data-ppcond="146">endif</span></u></td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td><var>61</var>:</td></tr>
+<tr><th id="176">176</th><td><u>#<span data-ppcond="176">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="177">177</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#28" title="0" data-ref="_M/FUTEX_WAIT">FUTEX_WAIT</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="176">else</span></u></td></tr>
+<tr><th id="179">179</th><td>	orl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="180">180</th><td><u>#<span data-ppcond="176">endif</span></u></td></tr>
+<tr><th id="181">181</th><td><var>60</var>:	xorb	%r8b, %r8b</td></tr>
+<tr><th id="182">182</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="183">183</th><td>	syscall</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><var>62</var>:	movl	(%rsp), %edi</td></tr>
+<tr><th id="186">186</th><td>	callq	__pthread_disable_asynccancel</td></tr>
+<tr><th id="187">187</th><td>.LcleanupEND:</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	<i>/* Lock.  */</i></td></tr>
+<tr><th id="190">190</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="191">191</th><td>	movl	$<var>1</var>, %esi</td></tr>
+<tr><th id="192">192</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="193">193</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="194">194</th><td><u>#<span data-ppcond="194">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="195">195</th><td>	cmpxchgl %esi, (%rdi)</td></tr>
+<tr><th id="196">196</th><td><u>#<span data-ppcond="194">else</span></u></td></tr>
+<tr><th id="197">197</th><td>	cmpxchgl %esi, cond_lock(%rdi)</td></tr>
+<tr><th id="198">198</th><td><u>#<span data-ppcond="194">endif</span></u></td></tr>
+<tr><th id="199">199</th><td>	jnz	<var>5f</var></td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><var>6</var>:	movl	<span class="macro" title="44" data-ref="_M/broadcast_seq">broadcast_seq</span>(%rdi), %edx</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>	movq	<span class="macro" title="24" data-ref="_M/woken_seq">woken_seq</span>(%rdi), %rax</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>	movq	<span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%rdi), %r9</td></tr>
+<tr><th id="206">206</th><td></td></tr>
+<tr><th id="207">207</th><td>	cmpl	<var>4</var>(%rsp), %edx</td></tr>
+<tr><th id="208">208</th><td>	jne	<var>16f</var></td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	cmpq	<var>24</var>(%rsp), %r9</td></tr>
+<tr><th id="211">211</th><td>	jbe	<var>19f</var></td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	cmpq	%rax, %r9</td></tr>
+<tr><th id="214">214</th><td>	jna	<var>19f</var></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	incq	<span class="macro" title="24" data-ref="_M/woken_seq">woken_seq</span>(%rdi)</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	<i>/* Unlock */</i></td></tr>
+<tr><th id="219">219</th><td><var>16</var>:	subl	$(<var>1</var> &lt;&lt; <span class="macro" title="1" data-ref="_M/nwaiters_shift">nwaiters_shift</span>), <span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi)</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>	<i>/* Wake up a thread which wants to destroy the condvar object.  */</i></td></tr>
+<tr><th id="222">222</th><td>	cmpq	$<var>0xffffffffffffffff</var>, <span class="macro" title="8" data-ref="_M/total_seq">total_seq</span>(%rdi)</td></tr>
+<tr><th id="223">223</th><td>	jne	<var>17f</var></td></tr>
+<tr><th id="224">224</th><td>	movl	<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi), %eax</td></tr>
+<tr><th id="225">225</th><td>	andl	$~((<var>1</var> &lt;&lt; <span class="macro" title="1" data-ref="_M/nwaiters_shift">nwaiters_shift</span>) - <var>1</var>), %eax</td></tr>
+<tr><th id="226">226</th><td>	jne	<var>17f</var></td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td>	addq	$<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>, %rdi</td></tr>
+<tr><th id="229">229</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi)</td></tr>
+<tr><th id="230">230</th><td>	movl	$<var>1</var>, %edx</td></tr>
+<tr><th id="231">231</th><td><u>#<span data-ppcond="231">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="232">232</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>, %eax</td></tr>
+<tr><th id="233">233</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="234">234</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="235">235</th><td><u>#<span data-ppcond="231">else</span></u></td></tr>
+<tr><th id="236">236</th><td>	movl	$<var>0</var>, %eax</td></tr>
+<tr><th id="237">237</th><td>	movl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="238">238</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="239">239</th><td>	orl	$FUTEX_WAKE, %esi</td></tr>
+<tr><th id="240">240</th><td><u>#<span data-ppcond="231">endif</span></u></td></tr>
+<tr><th id="241">241</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="242">242</th><td>	syscall</td></tr>
+<tr><th id="243">243</th><td>	subq	$<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>, %rdi</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><var>17</var>:	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="246">246</th><td><u>#<span data-ppcond="246">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="247">247</th><td>	decl	(%rdi)</td></tr>
+<tr><th id="248">248</th><td><u>#<span data-ppcond="246">else</span></u></td></tr>
+<tr><th id="249">249</th><td>	decl	cond_lock(%rdi)</td></tr>
+<tr><th id="250">250</th><td><u>#<span data-ppcond="246">endif</span></u></td></tr>
+<tr><th id="251">251</th><td>	jne	<var>10f</var></td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>	<i>/* If requeue_pi is used the kernel performs the locking of the</i></td></tr>
+<tr><th id="254">254</th><td><i>	   mutex. */</i></td></tr>
+<tr><th id="255">255</th><td><var>11</var>:	movq	<var>16</var>(%rsp), %rdi</td></tr>
+<tr><th id="256">256</th><td>	testb	%r8b, %r8b</td></tr>
+<tr><th id="257">257</th><td>	jnz	<var>18f</var></td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	callq	__pthread_mutex_cond_lock</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td><var>14</var>:	leaq	<a class="macro" href="#49" title="(32+8)" data-ref="_M/FRAME_SIZE">FRAME_SIZE</a>(%rsp), %rsp</td></tr>
+<tr><th id="262">262</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -(32+8)" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a>(-<a class="macro" href="#49" title="(32+8)" data-ref="_M/FRAME_SIZE">FRAME_SIZE</a>)</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	<i>/* We return the result of the mutex_lock operation.  */</i></td></tr>
+<tr><th id="265">265</th><td>	retq</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset (32+8)" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a>(<a class="macro" href="#49" title="(32+8)" data-ref="_M/FRAME_SIZE">FRAME_SIZE</a>)</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><var>18</var>:	callq	__pthread_mutex_cond_lock_adjust</td></tr>
+<tr><th id="270">270</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="271">271</th><td>	jmp	<var>14b</var></td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>	<i>/* We need to go back to futex_wait.  If we're using requeue_pi, then</i></td></tr>
+<tr><th id="274">274</th><td><i>	   release the mutex we had acquired and go back.  */</i></td></tr>
+<tr><th id="275">275</th><td><var>19</var>:	testb	%r8b, %r8b</td></tr>
+<tr><th id="276">276</th><td>	jz	<var>8b</var></td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td>	<i>/* Adjust the mutex values first and then unlock it.  The unlock</i></td></tr>
+<tr><th id="279">279</th><td><i>	   should always succeed or else the kernel did not lock the mutex</i></td></tr>
+<tr><th id="280">280</th><td><i>	   correctly.  */</i></td></tr>
+<tr><th id="281">281</th><td>	movq	<var>16</var>(%rsp), %rdi</td></tr>
+<tr><th id="282">282</th><td>	callq	__pthread_mutex_cond_lock_adjust</td></tr>
+<tr><th id="283">283</th><td>	movq	%rdi, %r8</td></tr>
+<tr><th id="284">284</th><td>	xorl	%esi, %esi</td></tr>
+<tr><th id="285">285</th><td>	callq	__pthread_mutex_unlock_usercnt</td></tr>
+<tr><th id="286">286</th><td>	<i>/* Reload cond_var.  */</i></td></tr>
+<tr><th id="287">287</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="288">288</th><td>	jmp	<var>8b</var></td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>	<i>/* Initial locking failed.  */</i></td></tr>
+<tr><th id="291">291</th><td><var>1</var>:</td></tr>
+<tr><th id="292">292</th><td><u>#<span data-ppcond="292">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="293">293</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="294">294</th><td><u>#<span data-ppcond="292">endif</span></u></td></tr>
+<tr><th id="295">295</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="296">296</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="297">297</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="298">298</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="299">299</th><td>	callq	__lll_lock_wait</td></tr>
+<tr><th id="300">300</th><td>	jmp	<var>2b</var></td></tr>
+<tr><th id="301">301</th><td></td></tr>
+<tr><th id="302">302</th><td>	<i>/* Unlock in loop requires wakeup.  */</i></td></tr>
+<tr><th id="303">303</th><td><var>3</var>:</td></tr>
+<tr><th id="304">304</th><td><u>#<span data-ppcond="304">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="305">305</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="306">306</th><td><u>#<span data-ppcond="304">endif</span></u></td></tr>
+<tr><th id="307">307</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="308">308</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="309">309</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="310">310</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="311">311</th><td>	<i>/* The call preserves %rdx.  */</i></td></tr>
+<tr><th id="312">312</th><td>	callq	__lll_unlock_wake</td></tr>
+<tr><th id="313">313</th><td><u>#<span data-ppcond="313">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="314">314</th><td>	subq	$cond_lock, %rdi</td></tr>
+<tr><th id="315">315</th><td><u>#<span data-ppcond="313">endif</span></u></td></tr>
+<tr><th id="316">316</th><td>	jmp	<var>4b</var></td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td>	<i>/* Locking in loop failed.  */</i></td></tr>
+<tr><th id="319">319</th><td><var>5</var>:</td></tr>
+<tr><th id="320">320</th><td><u>#<span data-ppcond="320">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="321">321</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="322">322</th><td><u>#<span data-ppcond="320">endif</span></u></td></tr>
+<tr><th id="323">323</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="324">324</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="325">325</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="326">326</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="327">327</th><td>	callq	__lll_lock_wait</td></tr>
+<tr><th id="328">328</th><td><u>#<span data-ppcond="328">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="329">329</th><td>	subq	$cond_lock, %rdi</td></tr>
+<tr><th id="330">330</th><td><u>#<span data-ppcond="328">endif</span></u></td></tr>
+<tr><th id="331">331</th><td>	jmp	<var>6b</var></td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td>	<i>/* Unlock after loop requires wakeup.  */</i></td></tr>
+<tr><th id="334">334</th><td><var>10</var>:</td></tr>
+<tr><th id="335">335</th><td><u>#<span data-ppcond="335">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="336">336</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="337">337</th><td><u>#<span data-ppcond="335">endif</span></u></td></tr>
+<tr><th id="338">338</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="339">339</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="340">340</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="341">341</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="342">342</th><td>	callq	__lll_unlock_wake</td></tr>
+<tr><th id="343">343</th><td>	jmp	<var>11b</var></td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td>	<i>/* The initial unlocking of the mutex failed.  */</i></td></tr>
+<tr><th id="346">346</th><td><var>12</var>:	movq	%rax, %r10</td></tr>
+<tr><th id="347">347</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="348">348</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="349">349</th><td><u>#<span data-ppcond="349">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="350">350</th><td>	decl	(%rdi)</td></tr>
+<tr><th id="351">351</th><td><u>#<span data-ppcond="349">else</span></u></td></tr>
+<tr><th id="352">352</th><td>	decl	cond_lock(%rdi)</td></tr>
+<tr><th id="353">353</th><td><u>#<span data-ppcond="349">endif</span></u></td></tr>
+<tr><th id="354">354</th><td>	je	<var>13f</var></td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td><u>#<span data-ppcond="356">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="357">357</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="358">358</th><td><u>#<span data-ppcond="356">endif</span></u></td></tr>
+<tr><th id="359">359</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="360">360</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="361">361</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="362">362</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="363">363</th><td>	callq	__lll_unlock_wake</td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td><var>13</var>:	movq	%r10, %rax</td></tr>
+<tr><th id="366">366</th><td>	jmp	<var>14b</var></td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td>	.size	__pthread_cond_wait, .-__pthread_cond_wait</td></tr>
+<tr><th id="369">369</th><td><a class="macro" href="../../../../../include/shlib-compat.h.html#57" title=".symver __pthread_cond_wait, pthread_cond_wait@@GLIBC_2.3.2" data-ref="_M/versioned_symbol">versioned_symbol</a> (libpthread, __pthread_cond_wait, pthread_cond_wait,</td></tr>
+<tr><th id="370">370</th><td>		  GLIBC_2_3_2)</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>	.align	<var>16</var></td></tr>
+<tr><th id="374">374</th><td>	.type	__condvar_cleanup1, @function</td></tr>
+<tr><th id="375">375</th><td>	.globl	__condvar_cleanup1</td></tr>
+<tr><th id="376">376</th><td>	.hidden	__condvar_cleanup1</td></tr>
+<tr><th id="377">377</th><td>__condvar_cleanup1:</td></tr>
+<tr><th id="378">378</th><td>	<i>/* Stack frame:</i></td></tr>
+<tr><th id="379">379</th><td><i></i></td></tr>
+<tr><th id="380">380</th><td><i>	   rsp + 32</i></td></tr>
+<tr><th id="381">381</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="382">382</th><td><i>	   rsp + 24 | unused                   |</i></td></tr>
+<tr><th id="383">383</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="384">384</th><td><i>	   rsp + 16 | mutex pointer            |</i></td></tr>
+<tr><th id="385">385</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="386">386</th><td><i>	   rsp +  8 | condvar pointer          |</i></td></tr>
+<tr><th id="387">387</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="388">388</th><td><i>	   rsp +  4 | old broadcast_seq value  |</i></td></tr>
+<tr><th id="389">389</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="390">390</th><td><i>	   rsp +  0 | old cancellation mode    |</i></td></tr>
+<tr><th id="391">391</th><td><i>		    +--------------------------+</i></td></tr>
+<tr><th id="392">392</th><td><i>	*/</i></td></tr>
+<tr><th id="393">393</th><td></td></tr>
+<tr><th id="394">394</th><td>	movq	%rax, <var>24</var>(%rsp)</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	<i>/* Get internal lock.  */</i></td></tr>
+<tr><th id="397">397</th><td>	movq	<var>8</var>(%rsp), %rdi</td></tr>
+<tr><th id="398">398</th><td>	movl	$<var>1</var>, %esi</td></tr>
+<tr><th id="399">399</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="400">400</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="401">401</th><td><u>#<span data-ppcond="401">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="402">402</th><td>	cmpxchgl %esi, (%rdi)</td></tr>
+<tr><th id="403">403</th><td><u>#<span data-ppcond="401">else</span></u></td></tr>
+<tr><th id="404">404</th><td>	cmpxchgl %esi, cond_lock(%rdi)</td></tr>
+<tr><th id="405">405</th><td><u>#<span data-ppcond="401">endif</span></u></td></tr>
+<tr><th id="406">406</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td><u>#<span data-ppcond="408">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="409">409</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="410">410</th><td><u>#<span data-ppcond="408">endif</span></u></td></tr>
+<tr><th id="411">411</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="412">412</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="413">413</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="414">414</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="415">415</th><td>	callq	__lll_lock_wait</td></tr>
+<tr><th id="416">416</th><td><u>#<span data-ppcond="416">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="417">417</th><td>	subq	$cond_lock, %rdi</td></tr>
+<tr><th id="418">418</th><td><u>#<span data-ppcond="416">endif</span></u></td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td><var>1</var>:	movl	<span class="macro" title="44" data-ref="_M/broadcast_seq">broadcast_seq</span>(%rdi), %edx</td></tr>
+<tr><th id="421">421</th><td>	cmpl	<var>4</var>(%rsp), %edx</td></tr>
+<tr><th id="422">422</th><td>	jne	<var>3f</var></td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td>	<i>/* We increment the wakeup_seq counter only if it is lower than</i></td></tr>
+<tr><th id="425">425</th><td><i>	   total_seq.  If this is not the case the thread was woken and</i></td></tr>
+<tr><th id="426">426</th><td><i>	   then canceled.  In this case we ignore the signal.  */</i></td></tr>
+<tr><th id="427">427</th><td>	movq	<span class="macro" title="8" data-ref="_M/total_seq">total_seq</span>(%rdi), %rax</td></tr>
+<tr><th id="428">428</th><td>	cmpq	<span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%rdi), %rax</td></tr>
+<tr><th id="429">429</th><td>	jbe	<var>6f</var></td></tr>
+<tr><th id="430">430</th><td>	incq	<span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%rdi)</td></tr>
+<tr><th id="431">431</th><td>	incl	<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi)</td></tr>
+<tr><th id="432">432</th><td><var>6</var>:	incq	<span class="macro" title="24" data-ref="_M/woken_seq">woken_seq</span>(%rdi)</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td><var>3</var>:	subl	$(<var>1</var> &lt;&lt; <span class="macro" title="1" data-ref="_M/nwaiters_shift">nwaiters_shift</span>), <span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi)</td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td>	<i>/* Wake up a thread which wants to destroy the condvar object.  */</i></td></tr>
+<tr><th id="437">437</th><td>	xorl	%ecx, %ecx</td></tr>
+<tr><th id="438">438</th><td>	cmpq	$<var>0xffffffffffffffff</var>, <span class="macro" title="8" data-ref="_M/total_seq">total_seq</span>(%rdi)</td></tr>
+<tr><th id="439">439</th><td>	jne	<var>4f</var></td></tr>
+<tr><th id="440">440</th><td>	movl	<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi), %eax</td></tr>
+<tr><th id="441">441</th><td>	andl	$~((<var>1</var> &lt;&lt; <span class="macro" title="1" data-ref="_M/nwaiters_shift">nwaiters_shift</span>) - <var>1</var>), %eax</td></tr>
+<tr><th id="442">442</th><td>	jne	<var>4f</var></td></tr>
+<tr><th id="443">443</th><td></td></tr>
+<tr><th id="444">444</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%rdi)</td></tr>
+<tr><th id="445">445</th><td>	leaq	<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>(%rdi), %rdi</td></tr>
+<tr><th id="446">446</th><td>	movl	$<var>1</var>, %edx</td></tr>
+<tr><th id="447">447</th><td><u>#<span data-ppcond="447">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="448">448</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>, %eax</td></tr>
+<tr><th id="449">449</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="450">450</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="451">451</th><td><u>#<span data-ppcond="447">else</span></u></td></tr>
+<tr><th id="452">452</th><td>	movl	$<var>0</var>, %eax</td></tr>
+<tr><th id="453">453</th><td>	movl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="454">454</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="455">455</th><td>	orl	$FUTEX_WAKE, %esi</td></tr>
+<tr><th id="456">456</th><td><u>#<span data-ppcond="447">endif</span></u></td></tr>
+<tr><th id="457">457</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="458">458</th><td>	syscall</td></tr>
+<tr><th id="459">459</th><td>	subq	$<span class="macro" title="40" data-ref="_M/cond_nwaiters">cond_nwaiters</span>, %rdi</td></tr>
+<tr><th id="460">460</th><td>	movl	$<var>1</var>, %ecx</td></tr>
+<tr><th id="461">461</th><td></td></tr>
+<tr><th id="462">462</th><td><var>4</var>:	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="463">463</th><td><u>#<span data-ppcond="463">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="464">464</th><td>	decl	(%rdi)</td></tr>
+<tr><th id="465">465</th><td><u>#<span data-ppcond="463">else</span></u></td></tr>
+<tr><th id="466">466</th><td>	decl	cond_lock(%rdi)</td></tr>
+<tr><th id="467">467</th><td><u>#<span data-ppcond="463">endif</span></u></td></tr>
+<tr><th id="468">468</th><td>	je	<var>2f</var></td></tr>
+<tr><th id="469">469</th><td><u>#<span data-ppcond="469">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="470">470</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="471">471</th><td><u>#<span data-ppcond="469">endif</span></u></td></tr>
+<tr><th id="472">472</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="473">473</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="474">474</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="475">475</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="476">476</th><td>	<i>/* The call preserves %rcx.  */</i></td></tr>
+<tr><th id="477">477</th><td>	callq	__lll_unlock_wake</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>	<i>/* Wake up all waiters to make sure no signal gets lost.  */</i></td></tr>
+<tr><th id="480">480</th><td><var>2</var>:	testl	%ecx, %ecx</td></tr>
+<tr><th id="481">481</th><td>	jnz	<var>5f</var></td></tr>
+<tr><th id="482">482</th><td>	addq	$<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>, %rdi</td></tr>
+<tr><th id="483">483</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi)</td></tr>
+<tr><th id="484">484</th><td>	movl	$<var>0x7fffffff</var>, %edx</td></tr>
+<tr><th id="485">485</th><td><u>#<span data-ppcond="485">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="486">486</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>, %eax</td></tr>
+<tr><th id="487">487</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="488">488</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="489">489</th><td><u>#<span data-ppcond="485">else</span></u></td></tr>
+<tr><th id="490">490</th><td>	movl	$<var>0</var>, %eax</td></tr>
+<tr><th id="491">491</th><td>	movl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="492">492</th><td>	cmove	%eax, %esi</td></tr>
+<tr><th id="493">493</th><td>	orl	$FUTEX_WAKE, %esi</td></tr>
+<tr><th id="494">494</th><td><u>#<span data-ppcond="485">endif</span></u></td></tr>
+<tr><th id="495">495</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="496">496</th><td>	syscall</td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td>	<i>/* Lock the mutex only if we don't own it already.  This only happens</i></td></tr>
+<tr><th id="499">499</th><td><i>	   in case of PI mutexes, if we got cancelled after a successful</i></td></tr>
+<tr><th id="500">500</th><td><i>	   return of the futex syscall and before disabling async</i></td></tr>
+<tr><th id="501">501</th><td><i>	   cancellation.  */</i></td></tr>
+<tr><th id="502">502</th><td><var>5</var>:	movq	<var>16</var>(%rsp), %rdi</td></tr>
+<tr><th id="503">503</th><td>	movl	<span class="macro" title="16" data-ref="_M/MUTEX_KIND">MUTEX_KIND</span>(%rdi), %eax</td></tr>
+<tr><th id="504">504</th><td>	andl	$(<span class="macro" title="16" data-ref="_M/ROBUST_BIT">ROBUST_BIT</span>|<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>), %eax</td></tr>
+<tr><th id="505">505</th><td>	cmpl	$<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>, %eax</td></tr>
+<tr><th id="506">506</th><td>	jne	<var>7f</var></td></tr>
+<tr><th id="507">507</th><td></td></tr>
+<tr><th id="508">508</th><td>	movl	(%rdi), %eax</td></tr>
+<tr><th id="509">509</th><td>	andl	$<span class="macro" title="1073741823" data-ref="_M/TID_MASK">TID_MASK</span>, %eax</td></tr>
+<tr><th id="510">510</th><td>	cmpl	%eax, %fs:<span class="macro" title="720" data-ref="_M/TID">TID</span></td></tr>
+<tr><th id="511">511</th><td>	jne	<var>7f</var></td></tr>
+<tr><th id="512">512</th><td>	<i>/* We managed to get the lock.  Fix it up before returning.  */</i></td></tr>
+<tr><th id="513">513</th><td>	callq	__pthread_mutex_cond_lock_adjust</td></tr>
+<tr><th id="514">514</th><td>	jmp	<var>8f</var></td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td></td></tr>
+<tr><th id="517">517</th><td><var>7</var>:	callq	__pthread_mutex_cond_lock</td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td><var>8</var>:	movq	<var>24</var>(%rsp), %rdi</td></tr>
+<tr><th id="520">520</th><td>.LcallUR:</td></tr>
+<tr><th id="521">521</th><td>	call	_Unwind_Resume</td></tr>
+<tr><th id="522">522</th><td>	hlt</td></tr>
+<tr><th id="523">523</th><td>.LENDCODE:</td></tr>
+<tr><th id="524">524</th><td>	<a class="macro" href="../../../../generic/sysdep.h.html#41" title=".cfi_endproc" data-ref="_M/cfi_endproc">cfi_endproc</a></td></tr>
+<tr><th id="525">525</th><td>	.size	__condvar_cleanup1, .-__condvar_cleanup1</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td></td></tr>
+<tr><th id="528">528</th><td>	.section .gcc_except_table,<q>"a"</q>,@progbits</td></tr>
+<tr><th id="529">529</th><td>.LexceptSTART:</td></tr>
+<tr><th id="530">530</th><td>	.byte	<a class="macro" href="../../../../generic/dwarf2.h.html#570" title="0xff" data-ref="_M/DW_EH_PE_omit">DW_EH_PE_omit</a>			# @LPStart format</td></tr>
+<tr><th id="531">531</th><td>	.byte	<a class="macro" href="../../../../generic/dwarf2.h.html#570" title="0xff" data-ref="_M/DW_EH_PE_omit">DW_EH_PE_omit</a>			# @TType format</td></tr>
+<tr><th id="532">532</th><td>	.byte	<a class="macro" href="../../../../generic/dwarf2.h.html#572" title="0x01" data-ref="_M/DW_EH_PE_uleb128">DW_EH_PE_uleb128</a>		# call-site format</td></tr>
+<tr><th id="533">533</th><td>	.uleb128 .Lcstend-.Lcstbegin</td></tr>
+<tr><th id="534">534</th><td>.Lcstbegin:</td></tr>
+<tr><th id="535">535</th><td>	.uleb128 .LcleanupSTART-.LSTARTCODE</td></tr>
+<tr><th id="536">536</th><td>	.uleb128 .LcleanupEND-.LcleanupSTART</td></tr>
+<tr><th id="537">537</th><td>	.uleb128 __condvar_cleanup1-.LSTARTCODE</td></tr>
+<tr><th id="538">538</th><td>	.uleb128 <var>0</var></td></tr>
+<tr><th id="539">539</th><td>	.uleb128 .LcallUR-.LSTARTCODE</td></tr>
+<tr><th id="540">540</th><td>	.uleb128 .LENDCODE-.LcallUR</td></tr>
+<tr><th id="541">541</th><td>	.uleb128 <var>0</var></td></tr>
+<tr><th id="542">542</th><td>	.uleb128 <var>0</var></td></tr>
+<tr><th id="543">543</th><td>.Lcstend:</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td></td></tr>
+<tr><th id="546">546</th><td><u>#<span data-ppcond="546">ifdef</span> <span class="macro" data-ref="_M/SHARED">SHARED</span></u></td></tr>
+<tr><th id="547">547</th><td>	.hidden	DW.ref.__gcc_personality_v0</td></tr>
+<tr><th id="548">548</th><td>	.weak	DW.ref.__gcc_personality_v0</td></tr>
+<tr><th id="549">549</th><td>	.section .gnu.linkonce.d.DW.ref.__gcc_personality_v0,<q>"aw"</q>,@progbits</td></tr>
+<tr><th id="550">550</th><td>	.align	<a class="macro" href="../../../../x86_64/sysdep.h.html#112" title="8" data-ref="_M/LP_SIZE">LP_SIZE</a></td></tr>
+<tr><th id="551">551</th><td>	.type	DW.ref.__gcc_personality_v0, @object</td></tr>
+<tr><th id="552">552</th><td>	.size	DW.ref.__gcc_personality_v0, <a class="macro" href="../../../../x86_64/sysdep.h.html#112" title="8" data-ref="_M/LP_SIZE">LP_SIZE</a></td></tr>
+<tr><th id="553">553</th><td>DW.ref.__gcc_personality_v0:</td></tr>
+<tr><th id="554">554</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#118" title=".quad" data-ref="_M/ASM_ADDR">ASM_ADDR</a> __gcc_personality_v0</td></tr>
+<tr><th id="555">555</th><td><u>#<span data-ppcond="546">endif</span></u></td></tr>
+<tr><th id="556">556</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

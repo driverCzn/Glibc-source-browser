@@ -1,0 +1,483 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>fnmatch.c source code [glibc_src_2.24/posix/fnmatch.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/posix/fnmatch.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>posix</a>/<a href='fnmatch.c.html'>fnmatch.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1991-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#<span data-ppcond="18">if</span> <a class="macro" href="../include/libc-symbols.h.html#67" title="0" data-ref="_M/HAVE_CONFIG_H">HAVE_CONFIG_H</a></u></td></tr>
+<tr><th id="19">19</th><td><u># include &lt;config.h&gt;</u></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="18">endif</span></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><i>/* Enable GNU extensions in fnmatch.h.  */</i></td></tr>
+<tr><th id="23">23</th><td><u>#<span data-ppcond="23">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#54" data-ref="_M/_GNU_SOURCE">_GNU_SOURCE</a></u></td></tr>
+<tr><th id="24">24</th><td><u># define _GNU_SOURCE	1</u></td></tr>
+<tr><th id="25">25</th><td><u>#<span data-ppcond="23">endif</span></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/assert.h.html">&lt;assert.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/fnmatch.h.html">&lt;fnmatch.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#<span data-ppcond="33">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/STDC_HEADERS">STDC_HEADERS</a> || defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="34">34</th><td><u># include <a href="../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#<span data-ppcond="33">endif</span></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#<span data-ppcond="37">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="38">38</th><td><u># include <a href="../include/alloca.h.html">&lt;alloca.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="37">else</span></u></td></tr>
+<tr><th id="40">40</th><td><u># define alloca_account(size., var) alloca (size)</u></td></tr>
+<tr><th id="41">41</th><td><u>#<span data-ppcond="37">endif</span></u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/* For platform which support the ISO C amendement 1 functionality we</i></td></tr>
+<tr><th id="44">44</th><td><i>   support user defined character classes.  */</i></td></tr>
+<tr><th id="45">45</th><td><u>#<span data-ppcond="45">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a> || (defined <a class="macro" href="../include/libc-symbols.h.html#75" data-ref="_M/HAVE_WCTYPE_H">HAVE_WCTYPE_H</a> &amp;&amp; defined <span class="macro" data-ref="_M/HAVE_WCHAR_H">HAVE_WCHAR_H</span>)</u></td></tr>
+<tr><th id="46">46</th><td><i>/* Solaris 2.5 has a bug: &lt;wchar.h&gt; must be included before &lt;wctype.h&gt;.  */</i></td></tr>
+<tr><th id="47">47</th><td><u># include <a href="../include/wchar.h.html">&lt;wchar.h&gt;</a></u></td></tr>
+<tr><th id="48">48</th><td><u># include <a href="../include/wctype.h.html">&lt;wctype.h&gt;</a></u></td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="45">endif</span></u></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><i>/* We need some of the locale data (the collation sequence information)</i></td></tr>
+<tr><th id="52">52</th><td><i>   but there is no interface to get this information in general.  Therefore</i></td></tr>
+<tr><th id="53">53</th><td><i>   we support a correct implementation only in glibc.  */</i></td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="54">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="55">55</th><td><u># include <a href="../locale/localeinfo.h.html">"../locale/localeinfo.h"</a></u></td></tr>
+<tr><th id="56">56</th><td><u># include <a href="../locale/elem-hash.h.html">"../locale/elem-hash.h"</a></u></td></tr>
+<tr><th id="57">57</th><td><u># include <a href="../locale/coll-lookup.h.html">"../locale/coll-lookup.h"</a></u></td></tr>
+<tr><th id="58">58</th><td><u># include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><u># define <dfn class="macro" id="_M/CONCAT" data-ref="_M/CONCAT">CONCAT</dfn>(a,b) __CONCAT(a,b)</u></td></tr>
+<tr><th id="61">61</th><td><u># define <dfn class="macro" id="_M/mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</dfn> <a class="ref fn" href="../include/wchar.h.html#__mbsrtowcs" title='__mbsrtowcs' data-ref="__mbsrtowcs" data-ref-filename="__mbsrtowcs">__mbsrtowcs</a></u></td></tr>
+<tr><th id="62">62</th><td><u># define <dfn class="macro" id="_M/fnmatch" data-ref="_M/fnmatch">fnmatch</dfn> <a class="decl fn" href="#326" title='__fnmatch' data-ref="__fnmatch" data-ref-filename="__fnmatch"><dfn class="decl def fn" id="__fnmatch" title='__fnmatch' data-ref="__fnmatch" data-ref-filename="__fnmatch">__fnmatch</dfn></a></u></td></tr>
+<tr><th id="63">63</th><td><b>extern</b> <em>int</em> <a class="macro" href="#62" title="__fnmatch" data-ref="_M/fnmatch">fnmatch</a> (<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5pattern" title='pattern' data-type='const char *' data-ref="5pattern" data-ref-filename="5pattern">pattern</dfn>, <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="6string" title='string' data-type='const char *' data-ref="6string" data-ref-filename="6string">string</dfn>, <em>int</em> <dfn class="local col7 decl" id="7flags" title='flags' data-type='int' data-ref="7flags" data-ref-filename="7flags">flags</dfn>);</td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="54">endif</span></u></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i>/* We often have to test for FNM_FILE_NAME and FNM_PERIOD being both set.  */</i></td></tr>
+<tr><th id="67">67</th><td><u>#define <dfn class="macro" id="_M/NO_LEADING_PERIOD" data-ref="_M/NO_LEADING_PERIOD">NO_LEADING_PERIOD</dfn>(flags) \</u></td></tr>
+<tr><th id="68">68</th><td><u>  ((flags &amp; (FNM_FILE_NAME | FNM_PERIOD)) == (FNM_FILE_NAME | FNM_PERIOD))</u></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><i>/* Comment out all this code if we are using the GNU C Library, and are not</i></td></tr>
+<tr><th id="71">71</th><td><i>   actually compiling the library itself.  This code is part of the GNU C</i></td></tr>
+<tr><th id="72">72</th><td><i>   Library, but also included in many other GNU distributions.  Compiling</i></td></tr>
+<tr><th id="73">73</th><td><i>   and linking in this code is a waste when using the GNU C library</i></td></tr>
+<tr><th id="74">74</th><td><i>   (especially if it is a shared library).  Rather than having every GNU</i></td></tr>
+<tr><th id="75">75</th><td><i>   program understand `configure --with-gnu-libc' and omit the object files,</i></td></tr>
+<tr><th id="76">76</th><td><i>   it is simpler to just do this in the source for each such file.  */</i></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><u>#<span data-ppcond="78">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a> || !defined <a class="macro" href="../include/features.h.html#355" data-ref="_M/__GNU_LIBRARY__">__GNU_LIBRARY__</a></u></td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><u># <span data-ppcond="81">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#71" data-ref="_M/STDC_HEADERS">STDC_HEADERS</a> || !defined <a class="macro" href="../ctype/ctype.h.html#233" data-ref="_M/isascii">isascii</a></u></td></tr>
+<tr><th id="82">82</th><td><u>#  define <dfn class="macro" id="_M/ISASCII" data-ref="_M/ISASCII">ISASCII</dfn>(c) 1</u></td></tr>
+<tr><th id="83">83</th><td><u># <span data-ppcond="81">else</span></u></td></tr>
+<tr><th id="84">84</th><td><u>#  define ISASCII(c) isascii(c)</u></td></tr>
+<tr><th id="85">85</th><td><u># <span data-ppcond="81">endif</span></u></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><u># <span data-ppcond="87">ifdef</span> <a class="macro" href="../ctype/ctype.h.html#209" data-ref="_M/isblank">isblank</a></u></td></tr>
+<tr><th id="88">88</th><td><u>#  define <dfn class="macro" id="_M/ISBLANK" data-ref="_M/ISBLANK">ISBLANK</dfn>(c) (ISASCII (c) &amp;&amp; isblank (c))</u></td></tr>
+<tr><th id="89">89</th><td><u># <span data-ppcond="87">else</span></u></td></tr>
+<tr><th id="90">90</th><td><u>#  define ISBLANK(c) ((c) == ' ' || (c) == '\t')</u></td></tr>
+<tr><th id="91">91</th><td><u># <span data-ppcond="87">endif</span></u></td></tr>
+<tr><th id="92">92</th><td><u># <span data-ppcond="92">ifdef</span> <a class="macro" href="../ctype/ctype.h.html#202" data-ref="_M/isgraph">isgraph</a></u></td></tr>
+<tr><th id="93">93</th><td><u>#  define <dfn class="macro" id="_M/ISGRAPH" data-ref="_M/ISGRAPH">ISGRAPH</dfn>(c) (ISASCII (c) &amp;&amp; isgraph (c))</u></td></tr>
+<tr><th id="94">94</th><td><u># <span data-ppcond="92">else</span></u></td></tr>
+<tr><th id="95">95</th><td><u>#  define ISGRAPH(c) (ISASCII (c) &amp;&amp; isprint (c) &amp;&amp; !isspace (c))</u></td></tr>
+<tr><th id="96">96</th><td><u># <span data-ppcond="92">endif</span></u></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u># define <dfn class="macro" id="_M/ISPRINT" data-ref="_M/ISPRINT">ISPRINT</dfn>(c) (ISASCII (c) &amp;&amp; isprint (c))</u></td></tr>
+<tr><th id="99">99</th><td><u># define <dfn class="macro" id="_M/ISDIGIT" data-ref="_M/ISDIGIT">ISDIGIT</dfn>(c) (ISASCII (c) &amp;&amp; isdigit (c))</u></td></tr>
+<tr><th id="100">100</th><td><u># define <dfn class="macro" id="_M/ISALNUM" data-ref="_M/ISALNUM">ISALNUM</dfn>(c) (ISASCII (c) &amp;&amp; isalnum (c))</u></td></tr>
+<tr><th id="101">101</th><td><u># define <dfn class="macro" id="_M/ISALPHA" data-ref="_M/ISALPHA">ISALPHA</dfn>(c) (ISASCII (c) &amp;&amp; isalpha (c))</u></td></tr>
+<tr><th id="102">102</th><td><u># define <dfn class="macro" id="_M/ISCNTRL" data-ref="_M/ISCNTRL">ISCNTRL</dfn>(c) (ISASCII (c) &amp;&amp; iscntrl (c))</u></td></tr>
+<tr><th id="103">103</th><td><u># define <dfn class="macro" id="_M/ISLOWER" data-ref="_M/ISLOWER">ISLOWER</dfn>(c) (ISASCII (c) &amp;&amp; islower (c))</u></td></tr>
+<tr><th id="104">104</th><td><u># define <dfn class="macro" id="_M/ISPUNCT" data-ref="_M/ISPUNCT">ISPUNCT</dfn>(c) (ISASCII (c) &amp;&amp; ispunct (c))</u></td></tr>
+<tr><th id="105">105</th><td><u># define <dfn class="macro" id="_M/ISSPACE" data-ref="_M/ISSPACE">ISSPACE</dfn>(c) (ISASCII (c) &amp;&amp; isspace (c))</u></td></tr>
+<tr><th id="106">106</th><td><u># define <dfn class="macro" id="_M/ISUPPER" data-ref="_M/ISUPPER">ISUPPER</dfn>(c) (ISASCII (c) &amp;&amp; isupper (c))</u></td></tr>
+<tr><th id="107">107</th><td><u># define <dfn class="macro" id="_M/ISXDIGIT" data-ref="_M/ISXDIGIT">ISXDIGIT</dfn>(c) (ISASCII (c) &amp;&amp; isxdigit (c))</u></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><u># define <dfn class="macro" id="_M/STREQ" data-ref="_M/STREQ">STREQ</dfn>(s1, s2) ((strcmp (s1, s2) == 0))</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><u># <span data-ppcond="111">if</span> defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a> || (defined <a class="macro" href="../include/libc-symbols.h.html#75" data-ref="_M/HAVE_WCTYPE_H">HAVE_WCTYPE_H</a> &amp;&amp; defined <span class="macro" data-ref="_M/HAVE_WCHAR_H">HAVE_WCHAR_H</span>)</u></td></tr>
+<tr><th id="112">112</th><td><i>/* The GNU C library provides support for user-defined character classes</i></td></tr>
+<tr><th id="113">113</th><td><i>   and the functions from ISO C amendement 1.  */</i></td></tr>
+<tr><th id="114">114</th><td><u>#  <span data-ppcond="114">ifdef</span> <a class="macro" href="bits/posix2_lim.h.html#84" data-ref="_M/CHARCLASS_NAME_MAX">CHARCLASS_NAME_MAX</a></u></td></tr>
+<tr><th id="115">115</th><td><u>#   define <dfn class="macro" id="_M/CHAR_CLASS_MAX_LENGTH" data-ref="_M/CHAR_CLASS_MAX_LENGTH">CHAR_CLASS_MAX_LENGTH</dfn> CHARCLASS_NAME_MAX</u></td></tr>
+<tr><th id="116">116</th><td><u>#  <span data-ppcond="114">else</span></u></td></tr>
+<tr><th id="117">117</th><td><i>/* This shouldn't happen but some implementation might still have this</i></td></tr>
+<tr><th id="118">118</th><td><i>   problem.  Use a reasonable default value.  */</i></td></tr>
+<tr><th id="119">119</th><td><u>#   define CHAR_CLASS_MAX_LENGTH 256</u></td></tr>
+<tr><th id="120">120</th><td><u>#  <span data-ppcond="114">endif</span></u></td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><u>#  <span data-ppcond="122">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="123">123</th><td><u>#   define <dfn class="macro" id="_M/IS_CHAR_CLASS" data-ref="_M/IS_CHAR_CLASS">IS_CHAR_CLASS</dfn>(string) __wctype (string)</u></td></tr>
+<tr><th id="124">124</th><td><u>#  <span data-ppcond="122">else</span></u></td></tr>
+<tr><th id="125">125</th><td><u>#   define IS_CHAR_CLASS(string) wctype (string)</u></td></tr>
+<tr><th id="126">126</th><td><u>#  <span data-ppcond="122">endif</span></u></td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><u>#  <span data-ppcond="128">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="129">129</th><td><u>#   define <dfn class="macro" id="_M/ISWCTYPE" data-ref="_M/ISWCTYPE">ISWCTYPE</dfn>(WC, WT)	__iswctype (WC, WT)</u></td></tr>
+<tr><th id="130">130</th><td><u>#  <span data-ppcond="128">else</span></u></td></tr>
+<tr><th id="131">131</th><td><u>#   define ISWCTYPE(WC, WT)	iswctype (WC, WT)</u></td></tr>
+<tr><th id="132">132</th><td><u>#  <span data-ppcond="128">endif</span></u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><u>#  <span data-ppcond="134">if</span> (<a class="macro" href="../include/libc-symbols.h.html#72" title="1" data-ref="_M/HAVE_MBSTATE_T">HAVE_MBSTATE_T</a> &amp;&amp; <a class="macro" href="../include/libc-symbols.h.html#73" title="1" data-ref="_M/HAVE_MBSRTOWCS">HAVE_MBSRTOWCS</a>) || <a class="macro" href="../include/libc-symbols.h.html#51" title="1" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="135">135</th><td><i>/* In this case we are implementing the multibyte character handling.  */</i></td></tr>
+<tr><th id="136">136</th><td><u>#   define <dfn class="macro" id="_M/HANDLE_MULTIBYTE" data-ref="_M/HANDLE_MULTIBYTE">HANDLE_MULTIBYTE</dfn>	1</u></td></tr>
+<tr><th id="137">137</th><td><u>#  <span data-ppcond="134">endif</span></u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><u># <span data-ppcond="111">else</span></u></td></tr>
+<tr><th id="140">140</th><td><u>#  define CHAR_CLASS_MAX_LENGTH  6 /* Namely, `xdigit'.  */</u></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><u>#  define IS_CHAR_CLASS(string)						      \</u></td></tr>
+<tr><th id="143">143</th><td><u>   (STREQ (string, "alpha") || STREQ (string, "upper")			      \</u></td></tr>
+<tr><th id="144">144</th><td><u>    || STREQ (string, "lower") || STREQ (string, "digit")		      \</u></td></tr>
+<tr><th id="145">145</th><td><u>    || STREQ (string, "alnum") || STREQ (string, "xdigit")		      \</u></td></tr>
+<tr><th id="146">146</th><td><u>    || STREQ (string, "space") || STREQ (string, "print")		      \</u></td></tr>
+<tr><th id="147">147</th><td><u>    || STREQ (string, "punct") || STREQ (string, "graph")		      \</u></td></tr>
+<tr><th id="148">148</th><td><u>    || STREQ (string, "cntrl") || STREQ (string, "blank"))</u></td></tr>
+<tr><th id="149">149</th><td><u># <span data-ppcond="111">endif</span></u></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i>/* Avoid depending on library functions or files</i></td></tr>
+<tr><th id="152">152</th><td><i>   whose names are inconsistent.  */</i></td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><u># <span data-ppcond="154">if</span> !defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a> &amp;&amp; !defined <span class="macro" data-ref="_M/getenv">getenv</span></u></td></tr>
+<tr><th id="155">155</th><td><b>extern</b> <em>char</em> *getenv ();</td></tr>
+<tr><th id="156">156</th><td><u># <span data-ppcond="154">endif</span></u></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><u># <span data-ppcond="158">ifndef</span> <a class="macro" href="../include/errno.h.html#31" data-ref="_M/errno">errno</a></u></td></tr>
+<tr><th id="159">159</th><td><b>extern</b> <em>int</em> errno;</td></tr>
+<tr><th id="160">160</th><td><u># <span data-ppcond="158">endif</span></u></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><i  data-doc="posixly_correct">/* Global variable.  */</i></td></tr>
+<tr><th id="163">163</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="posixly_correct" title='posixly_correct' data-type='int' data-ref="posixly_correct" data-ref-filename="posixly_correct">posixly_correct</dfn>;</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><i>/* This function doesn't exist on most systems.  */</i></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><u># <span data-ppcond="167">if</span> !defined <span class="macro" data-ref="_M/HAVE___STRCHRNUL">HAVE___STRCHRNUL</span> &amp;&amp; !defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="168">168</th><td><em>static</em> <em>char</em> *</td></tr>
+<tr><th id="169">169</th><td>__strchrnul (<em>const</em> <em>char</em> *s, <em>int</em> c)</td></tr>
+<tr><th id="170">170</th><td>{</td></tr>
+<tr><th id="171">171</th><td>  <em>char</em> *result = strchr (s, c);</td></tr>
+<tr><th id="172">172</th><td>  <b>if</b> (result == NULL)</td></tr>
+<tr><th id="173">173</th><td>    result = strchr (s, <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="174">174</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="175">175</th><td>}</td></tr>
+<tr><th id="176">176</th><td><u># <span data-ppcond="167">endif</span></u></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><u># <span data-ppcond="178">if</span> <a class="macro" href="#136" title="1" data-ref="_M/HANDLE_MULTIBYTE">HANDLE_MULTIBYTE</a> &amp;&amp; !defined <span class="macro" data-ref="_M/HAVE___STRCHRNUL">HAVE___STRCHRNUL</span> &amp;&amp; !defined <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="179">179</th><td><em>static</em> wchar_t *</td></tr>
+<tr><th id="180">180</th><td>__wcschrnul (<em>const</em> wchar_t *s, wint_t c)</td></tr>
+<tr><th id="181">181</th><td>{</td></tr>
+<tr><th id="182">182</th><td>  wchar_t *result = wcschr (s, c);</td></tr>
+<tr><th id="183">183</th><td>  <b>if</b> (result == NULL)</td></tr>
+<tr><th id="184">184</th><td>    result = wcschr (s, <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="185">185</th><td>  <b>return</b> result;</td></tr>
+<tr><th id="186">186</th><td>}</td></tr>
+<tr><th id="187">187</th><td><u># <span data-ppcond="178">endif</span></u></td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><u># <span data-ppcond="189">ifndef</span> <a class="macro" href="../include/libc-symbols.h.html#152" data-ref="_M/internal_function">internal_function</a></u></td></tr>
+<tr><th id="190">190</th><td><i>/* Inside GNU libc we mark some function in a special way.  In other</i></td></tr>
+<tr><th id="191">191</th><td><i>   environments simply ignore the marking.  */</i></td></tr>
+<tr><th id="192">192</th><td><u>#  define internal_function</u></td></tr>
+<tr><th id="193">193</th><td><u># <span data-ppcond="189">endif</span></u></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><i>/* Note that this evaluates C many times.  */</i></td></tr>
+<tr><th id="196">196</th><td><u># <span data-ppcond="196">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="197">197</th><td><u>#  define <dfn class="macro" id="_M/FOLD" data-ref="_M/FOLD">FOLD</dfn>(c) ((flags &amp; FNM_CASEFOLD) ? tolower (c) : (c))</u></td></tr>
+<tr><th id="198">198</th><td><u># <span data-ppcond="196">else</span></u></td></tr>
+<tr><th id="199">199</th><td><u>#  define FOLD(c) ((flags &amp; FNM_CASEFOLD) &amp;&amp; ISUPPER (c) ? tolower (c) : (c))</u></td></tr>
+<tr><th id="200">200</th><td><u># <span data-ppcond="196">endif</span></u></td></tr>
+<tr><th id="201">201</th><td><u># define <dfn class="macro" id="_M/CHAR" data-ref="_M/CHAR">CHAR</dfn>	char</u></td></tr>
+<tr><th id="202">202</th><td><u># define <dfn class="macro" id="_M/UCHAR" data-ref="_M/UCHAR">UCHAR</dfn>	unsigned char</u></td></tr>
+<tr><th id="203">203</th><td><u># define <dfn class="macro" id="_M/INT" data-ref="_M/INT">INT</dfn>	int</u></td></tr>
+<tr><th id="204">204</th><td><u># define <dfn class="macro" id="_M/FCT" data-ref="_M/FCT">FCT</dfn>	internal_fnmatch</u></td></tr>
+<tr><th id="205">205</th><td><u># define <dfn class="macro" id="_M/EXT" data-ref="_M/EXT">EXT</dfn>	ext_match</u></td></tr>
+<tr><th id="206">206</th><td><u># define <dfn class="macro" id="_M/END" data-ref="_M/END">END</dfn>	end_pattern</u></td></tr>
+<tr><th id="207">207</th><td><u># define <dfn class="macro" id="_M/STRUCT" data-ref="_M/STRUCT">STRUCT</dfn>	fnmatch_struct</u></td></tr>
+<tr><th id="208">208</th><td><u># define <dfn class="macro" id="_M/L" data-ref="_M/L">L</dfn>(CS)	CS</u></td></tr>
+<tr><th id="209">209</th><td><u># <span data-ppcond="209">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="210">210</th><td><u>#  define <dfn class="macro" id="_M/BTOWC" data-ref="_M/BTOWC">BTOWC</dfn>(C)	__btowc (C)</u></td></tr>
+<tr><th id="211">211</th><td><u># <span data-ppcond="209">else</span></u></td></tr>
+<tr><th id="212">212</th><td><u>#  define BTOWC(C)	btowc (C)</u></td></tr>
+<tr><th id="213">213</th><td><u># <span data-ppcond="209">endif</span></u></td></tr>
+<tr><th id="214">214</th><td><u># define <dfn class="macro" id="_M/STRLEN" data-ref="_M/STRLEN">STRLEN</dfn>(S) strlen (S)</u></td></tr>
+<tr><th id="215">215</th><td><u># define <dfn class="macro" id="_M/STRCAT" data-ref="_M/STRCAT">STRCAT</dfn>(D, S) strcat (D, S)</u></td></tr>
+<tr><th id="216">216</th><td><u># define <dfn class="macro" id="_M/MEMPCPY" data-ref="_M/MEMPCPY">MEMPCPY</dfn>(D, S, N) __mempcpy (D, S, N)</u></td></tr>
+<tr><th id="217">217</th><td><u># define <dfn class="macro" id="_M/MEMCHR" data-ref="_M/MEMCHR">MEMCHR</dfn>(S, C, N) memchr (S, C, N)</u></td></tr>
+<tr><th id="218">218</th><td><u># define <dfn class="macro" id="_M/STRCOLL" data-ref="_M/STRCOLL">STRCOLL</dfn>(S1, S2) strcoll (S1, S2)</u></td></tr>
+<tr><th id="219">219</th><td><u># define <dfn class="macro" id="_M/WIDE_CHAR_VERSION" data-ref="_M/WIDE_CHAR_VERSION">WIDE_CHAR_VERSION</dfn> 0</u></td></tr>
+<tr><th id="220">220</th><td><u># include <a href="../locale/weight.h.html">&lt;locale/weight.h&gt;</a></u></td></tr>
+<tr><th id="221">221</th><td><u># define <dfn class="macro" id="_M/FINDIDX" data-ref="_M/FINDIDX">FINDIDX</dfn> findidx</u></td></tr>
+<tr><th id="222">222</th><td><u># include <a href="fnmatch_loop.c.html">"fnmatch_loop.c"</a></u></td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><u># <span data-ppcond="225">if</span> <a class="macro" href="#136" title="1" data-ref="_M/HANDLE_MULTIBYTE">HANDLE_MULTIBYTE</a></u></td></tr>
+<tr><th id="226">226</th><td><i>/* Note that this evaluates C many times.  */</i></td></tr>
+<tr><th id="227">227</th><td><u>#  <span data-ppcond="227">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="228">228</th><td><u>#   define <dfn class="macro" id="_M/FOLD" data-ref="_M/FOLD">FOLD</dfn>(c) ((flags &amp; FNM_CASEFOLD) ? __towlower (c) : (c))</u></td></tr>
+<tr><th id="229">229</th><td><u>#  <span data-ppcond="227">else</span></u></td></tr>
+<tr><th id="230">230</th><td><u>#   define FOLD(c) ((flags &amp; FNM_CASEFOLD) &amp;&amp; ISUPPER (c) ? towlower (c) : (c))</u></td></tr>
+<tr><th id="231">231</th><td><u>#  <span data-ppcond="227">endif</span></u></td></tr>
+<tr><th id="232">232</th><td><u>#  define <dfn class="macro" id="_M/CHAR" data-ref="_M/CHAR">CHAR</dfn>	wchar_t</u></td></tr>
+<tr><th id="233">233</th><td><u>#  define <dfn class="macro" id="_M/UCHAR" data-ref="_M/UCHAR">UCHAR</dfn>	wint_t</u></td></tr>
+<tr><th id="234">234</th><td><u>#  define <dfn class="macro" id="_M/INT" data-ref="_M/INT">INT</dfn>	wint_t</u></td></tr>
+<tr><th id="235">235</th><td><u>#  define <dfn class="macro" id="_M/FCT" data-ref="_M/FCT">FCT</dfn>	internal_fnwmatch</u></td></tr>
+<tr><th id="236">236</th><td><u>#  define <dfn class="macro" id="_M/EXT" data-ref="_M/EXT">EXT</dfn>	ext_wmatch</u></td></tr>
+<tr><th id="237">237</th><td><u>#  define <dfn class="macro" id="_M/END" data-ref="_M/END">END</dfn>	end_wpattern</u></td></tr>
+<tr><th id="238">238</th><td><u>#  define <dfn class="macro" id="_M/STRUCT" data-ref="_M/STRUCT">STRUCT</dfn> fnwmatch_struct</u></td></tr>
+<tr><th id="239">239</th><td><u>#  define <dfn class="macro" id="_M/L" data-ref="_M/L">L</dfn>(CS)	L##CS</u></td></tr>
+<tr><th id="240">240</th><td><u>#  define <dfn class="macro" id="_M/BTOWC" data-ref="_M/BTOWC">BTOWC</dfn>(C)	(C)</u></td></tr>
+<tr><th id="241">241</th><td><u>#  define <dfn class="macro" id="_M/STRLEN" data-ref="_M/STRLEN">STRLEN</dfn>(S) __wcslen (S)</u></td></tr>
+<tr><th id="242">242</th><td><u>#  define <dfn class="macro" id="_M/STRCAT" data-ref="_M/STRCAT">STRCAT</dfn>(D, S) __wcscat (D, S)</u></td></tr>
+<tr><th id="243">243</th><td><u>#  define <dfn class="macro" id="_M/MEMPCPY" data-ref="_M/MEMPCPY">MEMPCPY</dfn>(D, S, N) __wmempcpy (D, S, N)</u></td></tr>
+<tr><th id="244">244</th><td><u>#  define <dfn class="macro" id="_M/MEMCHR" data-ref="_M/MEMCHR">MEMCHR</dfn>(S, C, N) __wmemchr (S, C, N)</u></td></tr>
+<tr><th id="245">245</th><td><u>#  define <dfn class="macro" id="_M/STRCOLL" data-ref="_M/STRCOLL">STRCOLL</dfn>(S1, S2) wcscoll (S1, S2)</u></td></tr>
+<tr><th id="246">246</th><td><u>#  define <dfn class="macro" id="_M/WIDE_CHAR_VERSION" data-ref="_M/WIDE_CHAR_VERSION">WIDE_CHAR_VERSION</dfn> 1</u></td></tr>
+<tr><th id="247">247</th><td><i>/* Change the name the header defines so it doesn't conflict with</i></td></tr>
+<tr><th id="248">248</th><td><i>   the &lt;locale/weight.h&gt; version included above.  */</i></td></tr>
+<tr><th id="249">249</th><td><u>#  define <dfn class="macro" id="_M/findidx" data-ref="_M/findidx">findidx</dfn> findidxwc</u></td></tr>
+<tr><th id="250">250</th><td><u>#  include <a href="../locale/weightwc.h.html">&lt;locale/weightwc.h&gt;</a></u></td></tr>
+<tr><th id="251">251</th><td><u>#  undef <a class="macro" href="#249" data-ref="_M/findidx">findidx</a></u></td></tr>
+<tr><th id="252">252</th><td><u>#  define <dfn class="macro" id="_M/FINDIDX" data-ref="_M/FINDIDX">FINDIDX</dfn> findidxwc</u></td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td><u>#  undef <a class="macro" href="#123" data-ref="_M/IS_CHAR_CLASS">IS_CHAR_CLASS</a></u></td></tr>
+<tr><th id="255">255</th><td><i  data-doc="is_char_class">/* We have to convert the wide character string in a multibyte string.  But</i></td></tr>
+<tr><th id="256">256</th><td><i  data-doc="is_char_class">   we know that the character class names consist of alphanumeric characters</i></td></tr>
+<tr><th id="257">257</th><td><i  data-doc="is_char_class">   from the portable character set, and since the wide character encoding</i></td></tr>
+<tr><th id="258">258</th><td><i  data-doc="is_char_class">   for a member of the portable character set is the same code point as</i></td></tr>
+<tr><th id="259">259</th><td><i  data-doc="is_char_class">   its single-byte encoding, we can use a simplified method to convert the</i></td></tr>
+<tr><th id="260">260</th><td><i  data-doc="is_char_class">   string to a multibyte character string.  */</i></td></tr>
+<tr><th id="261">261</th><td><em>static</em> <a class="typedef" href="../wctype/wctype.h.html#wctype_t" title='wctype_t' data-type='unsigned long' data-ref="wctype_t" data-ref-filename="wctype_t">wctype_t</a></td></tr>
+<tr><th id="262">262</th><td><dfn class="tu decl def fn" id="is_char_class" title='is_char_class' data-type='wctype_t is_char_class(const wchar_t * wcs)' data-ref="is_char_class" data-ref-filename="is_char_class">is_char_class</dfn> (<em>const</em> <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="local col5 decl" id="155wcs" title='wcs' data-type='const wchar_t *' data-ref="155wcs" data-ref-filename="155wcs">wcs</dfn>)</td></tr>
+<tr><th id="263">263</th><td>{</td></tr>
+<tr><th id="264">264</th><td>  <em>char</em> <dfn class="local col6 decl" id="156s" title='s' data-type='char [2049]' data-ref="156s" data-ref-filename="156s">s</dfn>[<a class="macro" href="#115" title="2048" data-ref="_M/CHAR_CLASS_MAX_LENGTH">CHAR_CLASS_MAX_LENGTH</a> + <var>1</var>];</td></tr>
+<tr><th id="265">265</th><td>  <em>char</em> *<dfn class="local col7 decl" id="157cp" title='cp' data-type='char *' data-ref="157cp" data-ref-filename="157cp">cp</dfn> = <a class="local col6 ref" href="#156s" title='s' data-ref="156s" data-ref-filename="156s">s</a>;</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>  <b>do</b></td></tr>
+<tr><th id="268">268</th><td>    {</td></tr>
+<tr><th id="269">269</th><td>      <i>/* Test for a printable character from the portable character set.  */</i></td></tr>
+<tr><th id="270">270</th><td><u>#  <span data-ppcond="270">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="271">271</th><td>      <b>if</b> (*<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> &lt; <var>0x20</var> || *<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> &gt; <var>0x7e</var></td></tr>
+<tr><th id="272">272</th><td>	  || *<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> == <var>0x24</var> || *<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> == <var>0x40</var> || *<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> == <var>0x60</var>)</td></tr>
+<tr><th id="273">273</th><td>	<b>return</b> (<a class="typedef" href="../wctype/wctype.h.html#wctype_t" title='wctype_t' data-type='unsigned long' data-ref="wctype_t" data-ref-filename="wctype_t">wctype_t</a>) <var>0</var>;</td></tr>
+<tr><th id="274">274</th><td><u>#  <span data-ppcond="270">else</span></u></td></tr>
+<tr><th id="275">275</th><td>      <b>switch</b> (*wcs)</td></tr>
+<tr><th id="276">276</th><td>	{</td></tr>
+<tr><th id="277">277</th><td>	<b>case</b> L<kbd>' '</kbd>: <b>case</b> L<kbd>'!'</kbd>: <b>case</b> L<kbd>'"'</kbd>: <b>case</b> L<kbd>'#'</kbd>: <b>case</b> L<kbd>'%'</kbd>:</td></tr>
+<tr><th id="278">278</th><td>	<b>case</b> L<kbd>'&amp;'</kbd>: <b>case</b> L<kbd>'\''</kbd>: <b>case</b> L<kbd>'('</kbd>: <b>case</b> L<kbd>')'</kbd>: <b>case</b> L<kbd>'*'</kbd>:</td></tr>
+<tr><th id="279">279</th><td>	<b>case</b> L<kbd>'+'</kbd>: <b>case</b> L<kbd>','</kbd>: <b>case</b> L<kbd>'-'</kbd>: <b>case</b> L<kbd>'.'</kbd>: <b>case</b> L<kbd>'/'</kbd>:</td></tr>
+<tr><th id="280">280</th><td>	<b>case</b> L<kbd>'0'</kbd>: <b>case</b> L<kbd>'1'</kbd>: <b>case</b> L<kbd>'2'</kbd>: <b>case</b> L<kbd>'3'</kbd>: <b>case</b> L<kbd>'4'</kbd>:</td></tr>
+<tr><th id="281">281</th><td>	<b>case</b> L<kbd>'5'</kbd>: <b>case</b> L<kbd>'6'</kbd>: <b>case</b> L<kbd>'7'</kbd>: <b>case</b> L<kbd>'8'</kbd>: <b>case</b> L<kbd>'9'</kbd>:</td></tr>
+<tr><th id="282">282</th><td>	<b>case</b> L<kbd>':'</kbd>: <b>case</b> L<kbd>';'</kbd>: <b>case</b> L<kbd>'&lt;'</kbd>: <b>case</b> L<kbd>'='</kbd>: <b>case</b> L<kbd>'&gt;'</kbd>:</td></tr>
+<tr><th id="283">283</th><td>	<b>case</b> L<kbd>'?'</kbd>:</td></tr>
+<tr><th id="284">284</th><td>	<b>case</b> L<kbd>'A'</kbd>: <b>case</b> L<kbd>'B'</kbd>: <b>case</b> L<kbd>'C'</kbd>: <b>case</b> L<kbd>'D'</kbd>: <b>case</b> L<kbd>'E'</kbd>:</td></tr>
+<tr><th id="285">285</th><td>	<b>case</b> L<kbd>'F'</kbd>: <b>case</b> L<kbd>'G'</kbd>: <b>case</b> L<kbd>'H'</kbd>: <b>case</b> L<kbd>'I'</kbd>: <b>case</b> L<kbd>'J'</kbd>:</td></tr>
+<tr><th id="286">286</th><td>	<b>case</b> L<kbd>'K'</kbd>: <b>case</b> L<kbd>'L'</kbd>: <b>case</b> L<kbd>'M'</kbd>: <b>case</b> L<kbd>'N'</kbd>: <b>case</b> L<kbd>'O'</kbd>:</td></tr>
+<tr><th id="287">287</th><td>	<b>case</b> L<kbd>'P'</kbd>: <b>case</b> L<kbd>'Q'</kbd>: <b>case</b> L<kbd>'R'</kbd>: <b>case</b> L<kbd>'S'</kbd>: <b>case</b> L<kbd>'T'</kbd>:</td></tr>
+<tr><th id="288">288</th><td>	<b>case</b> L<kbd>'U'</kbd>: <b>case</b> L<kbd>'V'</kbd>: <b>case</b> L<kbd>'W'</kbd>: <b>case</b> L<kbd>'X'</kbd>: <b>case</b> L<kbd>'Y'</kbd>:</td></tr>
+<tr><th id="289">289</th><td>	<b>case</b> L<kbd>'Z'</kbd>:</td></tr>
+<tr><th id="290">290</th><td>	<b>case</b> L<kbd>'['</kbd>: <b>case</b> L<kbd>'\\'</kbd>: <b>case</b> L<kbd>']'</kbd>: <b>case</b> L<kbd>'^'</kbd>: <b>case</b> L<kbd>'_'</kbd>:</td></tr>
+<tr><th id="291">291</th><td>	<b>case</b> L<kbd>'a'</kbd>: <b>case</b> L<kbd>'b'</kbd>: <b>case</b> L<kbd>'c'</kbd>: <b>case</b> L<kbd>'d'</kbd>: <b>case</b> L<kbd>'e'</kbd>:</td></tr>
+<tr><th id="292">292</th><td>	<b>case</b> L<kbd>'f'</kbd>: <b>case</b> L<kbd>'g'</kbd>: <b>case</b> L<kbd>'h'</kbd>: <b>case</b> L<kbd>'i'</kbd>: <b>case</b> L<kbd>'j'</kbd>:</td></tr>
+<tr><th id="293">293</th><td>	<b>case</b> L<kbd>'k'</kbd>: <b>case</b> L<kbd>'l'</kbd>: <b>case</b> L<kbd>'m'</kbd>: <b>case</b> L<kbd>'n'</kbd>: <b>case</b> L<kbd>'o'</kbd>:</td></tr>
+<tr><th id="294">294</th><td>	<b>case</b> L<kbd>'p'</kbd>: <b>case</b> L<kbd>'q'</kbd>: <b>case</b> L<kbd>'r'</kbd>: <b>case</b> L<kbd>'s'</kbd>: <b>case</b> L<kbd>'t'</kbd>:</td></tr>
+<tr><th id="295">295</th><td>	<b>case</b> L<kbd>'u'</kbd>: <b>case</b> L<kbd>'v'</kbd>: <b>case</b> L<kbd>'w'</kbd>: <b>case</b> L<kbd>'x'</kbd>: <b>case</b> L<kbd>'y'</kbd>:</td></tr>
+<tr><th id="296">296</th><td>	<b>case</b> L<kbd>'z'</kbd>: <b>case</b> L<kbd>'{'</kbd>: <b>case</b> L<kbd>'|'</kbd>: <b>case</b> L<kbd>'}'</kbd>: <b>case</b> L<kbd>'~'</kbd>:</td></tr>
+<tr><th id="297">297</th><td>	  <b>break</b>;</td></tr>
+<tr><th id="298">298</th><td>	<b>default</b>:</td></tr>
+<tr><th id="299">299</th><td>	  <b>return</b> (wctype_t) <var>0</var>;</td></tr>
+<tr><th id="300">300</th><td>	}</td></tr>
+<tr><th id="301">301</th><td><u>#  <span data-ppcond="270">endif</span></u></td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td>      <i>/* Avoid overrunning the buffer.  */</i></td></tr>
+<tr><th id="304">304</th><td>      <b>if</b> (<a class="local col7 ref" href="#157cp" title='cp' data-ref="157cp" data-ref-filename="157cp">cp</a> == <a class="local col6 ref" href="#156s" title='s' data-ref="156s" data-ref-filename="156s">s</a> + <a class="macro" href="#115" title="2048" data-ref="_M/CHAR_CLASS_MAX_LENGTH">CHAR_CLASS_MAX_LENGTH</a>)</td></tr>
+<tr><th id="305">305</th><td>	<b>return</b> (<a class="typedef" href="../wctype/wctype.h.html#wctype_t" title='wctype_t' data-type='unsigned long' data-ref="wctype_t" data-ref-filename="wctype_t">wctype_t</a>) <var>0</var>;</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>      *<a class="local col7 ref" href="#157cp" title='cp' data-ref="157cp" data-ref-filename="157cp">cp</a>++ = (<em>char</em>) *<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a>++;</td></tr>
+<tr><th id="308">308</th><td>    }</td></tr>
+<tr><th id="309">309</th><td>  <b>while</b> (*<a class="local col5 ref" href="#155wcs" title='wcs' data-ref="155wcs" data-ref-filename="155wcs">wcs</a> != L<kbd>'\0'</kbd>);</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>  *<a class="local col7 ref" href="#157cp" title='cp' data-ref="157cp" data-ref-filename="157cp">cp</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td><u>#  <span data-ppcond="313">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="314">314</th><td>  <b>return</b> <a class="ref fn" href="../include/wctype.h.html#__wctype" title='__wctype' data-ref="__wctype" data-ref-filename="__wctype">__wctype</a> (<a class="local col6 ref" href="#156s" title='s' data-ref="156s" data-ref-filename="156s">s</a>);</td></tr>
+<tr><th id="315">315</th><td><u>#  <span data-ppcond="313">else</span></u></td></tr>
+<tr><th id="316">316</th><td>  <b>return</b> wctype (s);</td></tr>
+<tr><th id="317">317</th><td><u>#  <span data-ppcond="313">endif</span></u></td></tr>
+<tr><th id="318">318</th><td>}</td></tr>
+<tr><th id="319">319</th><td><u>#  define <dfn class="macro" id="_M/IS_CHAR_CLASS" data-ref="_M/IS_CHAR_CLASS">IS_CHAR_CLASS</dfn>(string) is_char_class (string)</u></td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td><u>#  include <a href="fnmatch_loop.c.html">"fnmatch_loop.c"</a></u></td></tr>
+<tr><th id="322">322</th><td><u># <span data-ppcond="225">endif</span></u></td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td><em>int</em></td></tr>
+<tr><th id="326">326</th><td><a class="macro" href="#62" title="__fnmatch" data-ref="_M/fnmatch">fnmatch</a> (<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="287pattern" title='pattern' data-type='const char *' data-ref="287pattern" data-ref-filename="287pattern">pattern</dfn>, <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="288string" title='string' data-type='const char *' data-ref="288string" data-ref-filename="288string">string</dfn>, <em>int</em> <dfn class="local col9 decl" id="289flags" title='flags' data-type='int' data-ref="289flags" data-ref-filename="289flags">flags</dfn>)</td></tr>
+<tr><th id="327">327</th><td>{</td></tr>
+<tr><th id="328">328</th><td><u># <span data-ppcond="328">if</span> <a class="macro" href="#136" title="1" data-ref="_M/HANDLE_MULTIBYTE">HANDLE_MULTIBYTE</a></u></td></tr>
+<tr><th id="329">329</th><td>  <b>if</b> (<a class="ref fn" href="fnmatch_loop.c.html#64" title='__builtin_expect' data-ref="__builtin_expect" data-ref-filename="__builtin_expect">__builtin_expect</a> (<a class="macro" href="../include/stdlib.h.html#249" title="(((uint32_t) (((__libc_tsd_LOCALE))-&gt;__locales[0])-&gt;values[((int) (_NL_CTYPE_MB_CUR_MAX) &amp; 0xffff)].word))" data-ref="_M/MB_CUR_MAX">MB_CUR_MAX</a>, <var>1</var>) != <var>1</var>)</td></tr>
+<tr><th id="330">330</th><td>    {</td></tr>
+<tr><th id="331">331</th><td>      <a class="typedef" href="../wcsmbs/wchar.h.html#mbstate_t" title='mbstate_t' data-type='__mbstate_t' data-ref="mbstate_t" data-ref-filename="mbstate_t">mbstate_t</a> <dfn class="local col0 decl" id="290ps" title='ps' data-type='mbstate_t' data-ref="290ps" data-ref-filename="290ps">ps</dfn>;</td></tr>
+<tr><th id="332">332</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col1 decl" id="291n" title='n' data-type='size_t' data-ref="291n" data-ref-filename="291n">n</dfn>;</td></tr>
+<tr><th id="333">333</th><td>      <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="292p" title='p' data-type='const char *' data-ref="292p" data-ref-filename="292p">p</dfn>;</td></tr>
+<tr><th id="334">334</th><td>      <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="local col3 decl" id="293wpattern_malloc" title='wpattern_malloc' data-type='wchar_t *' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="335">335</th><td>      <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="local col4 decl" id="294wpattern" title='wpattern' data-type='wchar_t *' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</dfn>;</td></tr>
+<tr><th id="336">336</th><td>      <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="local col5 decl" id="295wstring_malloc" title='wstring_malloc' data-type='wchar_t *' data-ref="295wstring_malloc" data-ref-filename="295wstring_malloc">wstring_malloc</dfn> = <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>;</td></tr>
+<tr><th id="337">337</th><td>      <span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *<dfn class="local col6 decl" id="296wstring" title='wstring' data-type='wchar_t *' data-ref="296wstring" data-ref-filename="296wstring">wstring</dfn>;</td></tr>
+<tr><th id="338">338</th><td>      <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="local col7 decl" id="297alloca_used" title='alloca_used' data-type='size_t' data-ref="297alloca_used" data-ref-filename="297alloca_used">alloca_used</dfn> = <var>0</var>;</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td>      <i>/* Convert the strings into wide characters.  */</i></td></tr>
+<tr><th id="341">341</th><td>      <a class="ref fn" href="../string/string.h.html#__GI_memset" title='memset' data-ref="__GI_memset" data-ref-filename="__GI_memset">memset</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="342">342</th><td>      <a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a> = <a class="local col7 ref" href="#287pattern" title='pattern' data-ref="287pattern" data-ref-filename="287pattern">pattern</a>;</td></tr>
+<tr><th id="343">343</th><td><u>#<span data-ppcond="343">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="344">344</th><td>      <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="ref fn" href="../include/string.h.html#__strnlen" title='__strnlen' data-ref="__strnlen" data-ref-filename="__strnlen">__strnlen</a> (<a class="local col7 ref" href="#287pattern" title='pattern' data-ref="287pattern" data-ref-filename="287pattern">pattern</a>, <var>1024</var>);</td></tr>
+<tr><th id="345">345</th><td><u>#<span data-ppcond="343">else</span></u></td></tr>
+<tr><th id="346">346</th><td>      n = strlen (pattern);</td></tr>
+<tr><th id="347">347</th><td><u>#<span data-ppcond="343">endif</span></u></td></tr>
+<tr><th id="348">348</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#391" title="__builtin_expect ((n &lt; 1024), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> &lt; <var>1024</var>))</td></tr>
+<tr><th id="349">349</th><td>	{</td></tr>
+<tr><th id="350">350</th><td>	  <a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a> = (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *) <a class="macro" href="../include/alloca.h.html#55" title="({ void *old__ = ({ void *p__; asm volatile (&quot;mov %%&quot; &quot;rsp&quot; &quot;, %0&quot; : &quot;=r&quot; (p__)); p__; }); void *m__ = __builtin_alloca ((n + 1) * sizeof (wchar_t)); alloca_used += ({ ptrdiff_t d__; asm volatile (&quot;sub %%&quot; &quot;rsp&quot; &quot; , %0&quot; : &quot;=r&quot; (d__) : &quot;0&quot; (old__)); d__; }); m__; })" data-ref="_M/alloca_account">alloca_account</a> ((<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>) * <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>),</td></tr>
+<tr><th id="351">351</th><td>						 <a class="local col7 ref" href="#297alloca_used" title='alloca_used' data-ref="297alloca_used" data-ref-filename="297alloca_used">alloca_used</a>);</td></tr>
+<tr><th id="352">352</th><td>	  <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a>, &amp;<a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a>, <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="353">353</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n == (size_t) -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> == (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var>))</td></tr>
+<tr><th id="354">354</th><td>	    <i>/* Something wrong.</i></td></tr>
+<tr><th id="355">355</th><td><i>	       XXX Do we have to set `errno' to something which mbsrtows hasn't</i></td></tr>
+<tr><th id="356">356</th><td><i>	       already done?  */</i></td></tr>
+<tr><th id="357">357</th><td>	    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="358">358</th><td>	  <b>if</b> (<a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a>)</td></tr>
+<tr><th id="359">359</th><td>	    {</td></tr>
+<tr><th id="360">360</th><td>	      <a class="ref fn" href="../string/string.h.html#__GI_memset" title='memset' data-ref="__GI_memset" data-ref-filename="__GI_memset">memset</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="361">361</th><td>	      <b>goto</b> <a class="lbl" href="#298prepare_wpattern" data-ref="298prepare_wpattern" data-ref-filename="298prepare_wpattern">prepare_wpattern</a>;</td></tr>
+<tr><th id="362">362</th><td>	    }</td></tr>
+<tr><th id="363">363</th><td>	}</td></tr>
+<tr><th id="364">364</th><td>      <b>else</b></td></tr>
+<tr><th id="365">365</th><td>	{</td></tr>
+<tr><th id="366">366</th><td>	<dfn class="lbl" id="298prepare_wpattern" data-ref="298prepare_wpattern" data-ref-filename="298prepare_wpattern">prepare_wpattern</dfn>:</td></tr>
+<tr><th id="367">367</th><td>	  <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, &amp;<a class="local col7 ref" href="#287pattern" title='pattern' data-ref="287pattern" data-ref-filename="287pattern">pattern</a>, <var>0</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="368">368</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n == (size_t) -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> == (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var>))</td></tr>
+<tr><th id="369">369</th><td>	    <i>/* Something wrong.</i></td></tr>
+<tr><th id="370">370</th><td><i>	       XXX Do we have to set `errno' to something which mbsrtows hasn't</i></td></tr>
+<tr><th id="371">371</th><td><i>	       already done?  */</i></td></tr>
+<tr><th id="372">372</th><td>	    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="373">373</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n &gt;= (size_t) -1 / sizeof (wchar_t)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> &gt;= (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var> / <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>)))</td></tr>
+<tr><th id="374">374</th><td>	    {</td></tr>
+<tr><th id="375">375</th><td>	      <a class="macro" href="../include/errno.h.html#39" title="(__libc_errno = (12))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>);</td></tr>
+<tr><th id="376">376</th><td>	      <b>return</b> -<var>2</var>;</td></tr>
+<tr><th id="377">377</th><td>	    }</td></tr>
+<tr><th id="378">378</th><td>	  <a class="local col3 ref" href="#293wpattern_malloc" title='wpattern_malloc' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</a> = <a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a></td></tr>
+<tr><th id="379">379</th><td>	    = (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> ((<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>) * <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>));</td></tr>
+<tr><th id="380">380</th><td>	  <a class="macro" href="../assert/assert.h.html#85" title="((((&amp;ps)-&gt;__count == 0)) ? (void) (0) : __assert_fail (&quot;mbsinit (&amp;ps)&quot;, &quot;/home/fp/glibc/glibc_src/posix/fnmatch.c&quot;, 380, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a> (<a class="macro" href="../include/wchar.h.html#217" title="((&amp;ps)-&gt;__count == 0)" data-ref="_M/mbsinit">mbsinit</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="381">381</th><td>	  <b>if</b> (<a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="382">382</th><td>	    <b>return</b> -<var>2</var>;</td></tr>
+<tr><th id="383">383</th><td>	  (<em>void</em>) <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a>, &amp;<a class="local col7 ref" href="#287pattern" title='pattern' data-ref="287pattern" data-ref-filename="287pattern">pattern</a>, <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="384">384</th><td>	}</td></tr>
+<tr><th id="385">385</th><td></td></tr>
+<tr><th id="386">386</th><td>      <a class="macro" href="../assert/assert.h.html#85" title="((((&amp;ps)-&gt;__count == 0)) ? (void) (0) : __assert_fail (&quot;mbsinit (&amp;ps)&quot;, &quot;/home/fp/glibc/glibc_src/posix/fnmatch.c&quot;, 386, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a> (<a class="macro" href="../include/wchar.h.html#217" title="((&amp;ps)-&gt;__count == 0)" data-ref="_M/mbsinit">mbsinit</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="387">387</th><td><u>#<span data-ppcond="387">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="388">388</th><td>      <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="ref fn" href="../include/string.h.html#__strnlen" title='__strnlen' data-ref="__strnlen" data-ref-filename="__strnlen">__strnlen</a> (<a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>, <var>1024</var>);</td></tr>
+<tr><th id="389">389</th><td><u>#<span data-ppcond="387">else</span></u></td></tr>
+<tr><th id="390">390</th><td>      n = strlen (string);</td></tr>
+<tr><th id="391">391</th><td><u>#<span data-ppcond="387">endif</span></u></td></tr>
+<tr><th id="392">392</th><td>      <a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a> = <a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>;</td></tr>
+<tr><th id="393">393</th><td>      <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#391" title="__builtin_expect ((n &lt; 1024), 1)" data-ref="_M/__glibc_likely">__glibc_likely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> &lt; <var>1024</var>))</td></tr>
+<tr><th id="394">394</th><td>	{</td></tr>
+<tr><th id="395">395</th><td>	  <a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a> = (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *) <a class="macro" href="../include/alloca.h.html#55" title="({ void *old__ = ({ void *p__; asm volatile (&quot;mov %%&quot; &quot;rsp&quot; &quot;, %0&quot; : &quot;=r&quot; (p__)); p__; }); void *m__ = __builtin_alloca ((n + 1) * sizeof (wchar_t)); alloca_used += ({ ptrdiff_t d__; asm volatile (&quot;sub %%&quot; &quot;rsp&quot; &quot; , %0&quot; : &quot;=r&quot; (d__) : &quot;0&quot; (old__)); d__; }); m__; })" data-ref="_M/alloca_account">alloca_account</a> ((<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>) * <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>),</td></tr>
+<tr><th id="396">396</th><td>						<a class="local col7 ref" href="#297alloca_used" title='alloca_used' data-ref="297alloca_used" data-ref-filename="297alloca_used">alloca_used</a>);</td></tr>
+<tr><th id="397">397</th><td>	  <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a>, &amp;<a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a>, <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="398">398</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n == (size_t) -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> == (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var>))</td></tr>
+<tr><th id="399">399</th><td>	    {</td></tr>
+<tr><th id="400">400</th><td>	      <i>/* Something wrong.</i></td></tr>
+<tr><th id="401">401</th><td><i>		 XXX Do we have to set `errno' to something which</i></td></tr>
+<tr><th id="402">402</th><td><i>		 mbsrtows hasn't already done?  */</i></td></tr>
+<tr><th id="403">403</th><td>	    <dfn class="lbl" id="299free_return" data-ref="299free_return" data-ref-filename="299free_return">free_return</dfn>:</td></tr>
+<tr><th id="404">404</th><td>	      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col3 ref" href="#293wpattern_malloc" title='wpattern_malloc' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</a>);</td></tr>
+<tr><th id="405">405</th><td>	      <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="406">406</th><td>	    }</td></tr>
+<tr><th id="407">407</th><td>	  <b>if</b> (<a class="local col2 ref" href="#292p" title='p' data-ref="292p" data-ref-filename="292p">p</a>)</td></tr>
+<tr><th id="408">408</th><td>	    {</td></tr>
+<tr><th id="409">409</th><td>	      <a class="ref fn" href="../string/string.h.html#__GI_memset" title='memset' data-ref="__GI_memset" data-ref-filename="__GI_memset">memset</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>, <kbd>'\0'</kbd>, <b>sizeof</b> (<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="410">410</th><td>	      <b>goto</b> <a class="lbl" href="#300prepare_wstring" data-ref="300prepare_wstring" data-ref-filename="300prepare_wstring">prepare_wstring</a>;</td></tr>
+<tr><th id="411">411</th><td>	    }</td></tr>
+<tr><th id="412">412</th><td>	}</td></tr>
+<tr><th id="413">413</th><td>      <b>else</b></td></tr>
+<tr><th id="414">414</th><td>	{</td></tr>
+<tr><th id="415">415</th><td>	<dfn class="lbl" id="300prepare_wstring" data-ref="300prepare_wstring" data-ref-filename="300prepare_wstring">prepare_wstring</dfn>:</td></tr>
+<tr><th id="416">416</th><td>	  <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> = <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, &amp;<a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>, <var>0</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="417">417</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n == (size_t) -1), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> == (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var>))</td></tr>
+<tr><th id="418">418</th><td>	    <i>/* Something wrong.</i></td></tr>
+<tr><th id="419">419</th><td><i>	       XXX Do we have to set `errno' to something which mbsrtows hasn't</i></td></tr>
+<tr><th id="420">420</th><td><i>	       already done?  */</i></td></tr>
+<tr><th id="421">421</th><td>	    <b>goto</b> <a class="lbl" href="#299free_return" data-ref="299free_return" data-ref-filename="299free_return">free_return</a>;</td></tr>
+<tr><th id="422">422</th><td>	  <b>if</b> (<a class="macro" href="../misc/sys/cdefs.h.html#390" title="__builtin_expect ((n &gt;= (size_t) -1 / sizeof (wchar_t)), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> &gt;= (<span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>) -<var>1</var> / <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>)))</td></tr>
+<tr><th id="423">423</th><td>	    {</td></tr>
+<tr><th id="424">424</th><td>	      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col3 ref" href="#293wpattern_malloc" title='wpattern_malloc' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</a>);</td></tr>
+<tr><th id="425">425</th><td>	      <a class="macro" href="../include/errno.h.html#39" title="(__libc_errno = (12))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../include/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>);</td></tr>
+<tr><th id="426">426</th><td>	      <b>return</b> -<var>2</var>;</td></tr>
+<tr><th id="427">427</th><td>	    }</td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td>	  <a class="local col5 ref" href="#295wstring_malloc" title='wstring_malloc' data-ref="295wstring_malloc" data-ref-filename="295wstring_malloc">wstring_malloc</a> = <a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a></td></tr>
+<tr><th id="430">430</th><td>	    = (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span> *) <a class="ref fn" href="../stdlib/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a> ((<a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>) * <b>sizeof</b> (<span class='typedef' title='wchar_t' data-type='int' data-ref="wchar_t" data-ref-filename="wchar_t">wchar_t</span>));</td></tr>
+<tr><th id="431">431</th><td>	  <b>if</b> (<a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a> == <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="432">432</th><td>	    {</td></tr>
+<tr><th id="433">433</th><td>	      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col3 ref" href="#293wpattern_malloc" title='wpattern_malloc' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</a>);</td></tr>
+<tr><th id="434">434</th><td>	      <b>return</b> -<var>2</var>;</td></tr>
+<tr><th id="435">435</th><td>	    }</td></tr>
+<tr><th id="436">436</th><td>	  <a class="macro" href="../assert/assert.h.html#85" title="((((&amp;ps)-&gt;__count == 0)) ? (void) (0) : __assert_fail (&quot;mbsinit (&amp;ps)&quot;, &quot;/home/fp/glibc/glibc_src/posix/fnmatch.c&quot;, 436, __PRETTY_FUNCTION__))" data-ref="_M/assert">assert</a> (<a class="macro" href="../include/wchar.h.html#217" title="((&amp;ps)-&gt;__count == 0)" data-ref="_M/mbsinit">mbsinit</a> (&amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>));</td></tr>
+<tr><th id="437">437</th><td>	  (<em>void</em>) <a class="macro" href="#61" title="__mbsrtowcs" data-ref="_M/mbsrtowcs">mbsrtowcs</a> (<a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a>, &amp;<a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>, <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a> + <var>1</var>, &amp;<a class="local col0 ref" href="#290ps" title='ps' data-ref="290ps" data-ref-filename="290ps">ps</a>);</td></tr>
+<tr><th id="438">438</th><td>	}</td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td>      <em>int</em> <dfn class="local col1 decl" id="301res" title='res' data-type='int' data-ref="301res" data-ref-filename="301res">res</dfn> = <a class="ref fn" href="fnmatch_loop.c.html#41" title='internal_fnwmatch' data-ref="internal_fnwmatch" data-ref-filename="internal_fnwmatch">internal_fnwmatch</a> (<a class="local col4 ref" href="#294wpattern" title='wpattern' data-ref="294wpattern" data-ref-filename="294wpattern">wpattern</a>, <a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a>, <a class="local col6 ref" href="#296wstring" title='wstring' data-ref="296wstring" data-ref-filename="296wstring">wstring</a> + <a class="local col1 ref" href="#291n" title='n' data-ref="291n" data-ref-filename="291n">n</a>,</td></tr>
+<tr><th id="441">441</th><td>				   <a class="local col9 ref" href="#289flags" title='flags' data-ref="289flags" data-ref-filename="289flags">flags</a> &amp; <a class="macro" href="fnmatch.h.html#34" title="(1 &lt;&lt; 2)" data-ref="_M/FNM_PERIOD">FNM_PERIOD</a>, <a class="local col9 ref" href="#289flags" title='flags' data-ref="289flags" data-ref-filename="289flags">flags</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>,</td></tr>
+<tr><th id="442">442</th><td>				   <a class="local col7 ref" href="#297alloca_used" title='alloca_used' data-ref="297alloca_used" data-ref-filename="297alloca_used">alloca_used</a>);</td></tr>
+<tr><th id="443">443</th><td></td></tr>
+<tr><th id="444">444</th><td>      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col5 ref" href="#295wstring_malloc" title='wstring_malloc' data-ref="295wstring_malloc" data-ref-filename="295wstring_malloc">wstring_malloc</a>);</td></tr>
+<tr><th id="445">445</th><td>      <a class="ref fn" href="../stdlib/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a> (<a class="local col3 ref" href="#293wpattern_malloc" title='wpattern_malloc' data-ref="293wpattern_malloc" data-ref-filename="293wpattern_malloc">wpattern_malloc</a>);</td></tr>
+<tr><th id="446">446</th><td></td></tr>
+<tr><th id="447">447</th><td>      <b>return</b> <a class="local col1 ref" href="#301res" title='res' data-ref="301res" data-ref-filename="301res">res</a>;</td></tr>
+<tr><th id="448">448</th><td>    }</td></tr>
+<tr><th id="449">449</th><td><u># <span data-ppcond="328">endif</span>  /* mbstate_t and mbsrtowcs or _LIBC.  */</u></td></tr>
+<tr><th id="450">450</th><td></td></tr>
+<tr><th id="451">451</th><td>  <b>return</b> <a class="ref fn" href="fnmatch_loop.c.html#41" title='internal_fnmatch' data-ref="internal_fnmatch" data-ref-filename="internal_fnmatch">internal_fnmatch</a> (<a class="local col7 ref" href="#287pattern" title='pattern' data-ref="287pattern" data-ref-filename="287pattern">pattern</a>, <a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>, <a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a> + <a class="ref fn" href="../string/string.h.html#__GI_strlen" title='strlen' data-ref="__GI_strlen" data-ref-filename="__GI_strlen">strlen</a> (<a class="local col8 ref" href="#288string" title='string' data-ref="288string" data-ref-filename="288string">string</a>),</td></tr>
+<tr><th id="452">452</th><td>			   <a class="local col9 ref" href="#289flags" title='flags' data-ref="289flags" data-ref-filename="289flags">flags</a> &amp; <a class="macro" href="fnmatch.h.html#34" title="(1 &lt;&lt; 2)" data-ref="_M/FNM_PERIOD">FNM_PERIOD</a>, <a class="local col9 ref" href="#289flags" title='flags' data-ref="289flags" data-ref-filename="289flags">flags</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>, <var>0</var>);</td></tr>
+<tr><th id="453">453</th><td>}</td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td><u># <span data-ppcond="455">ifdef</span> <a class="macro" href="../include/libc-symbols.h.html#51" data-ref="_M/_LIBC">_LIBC</a></u></td></tr>
+<tr><th id="456">456</th><td><u>#  undef <a class="macro" href="#62" data-ref="_M/fnmatch">fnmatch</a></u></td></tr>
+<tr><th id="457">457</th><td><a class="macro" href="../include/shlib-compat.h.html#57" title="__asm__ (&quot;.symver &quot; &quot;__fnmatch&quot; &quot;,&quot; &quot;fnmatch&quot; &quot;@@&quot; &quot;GLIBC_2.2.5&quot;)" data-ref="_M/versioned_symbol">versioned_symbol</a> (libc, __fnmatch, fnmatch, GLIBC_2_2_3);</td></tr>
+<tr><th id="458">458</th><td><u>#  <span data-ppcond="458">if</span> <a class="macro" href="../include/shlib-compat.h.html#41" title="((18 == 18) &amp;&amp; (!(1 - 0) || ((1 - 0) &lt; (1 - 0))))" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a>(libc, GLIBC_2_0, GLIBC_2_2_3)</u></td></tr>
+<tr><th id="459">459</th><td>strong_alias (__fnmatch, __fnmatch_old)</td></tr>
+<tr><th id="460">460</th><td>compat_symbol (libc, __fnmatch_old, fnmatch, GLIBC_2_0);</td></tr>
+<tr><th id="461">461</th><td><u>#  <span data-ppcond="458">endif</span></u></td></tr>
+<tr><th id="462">462</th><td><a class="macro" href="../include/libc-symbols.h.html#471" title="extern __typeof (fnmatch) __EI_fnmatch __asm__(&quot;&quot; &quot;__GI_fnmatch&quot;); extern __typeof (fnmatch) __EI_fnmatch __attribute__((alias (&quot;&quot; &quot;__fnmatch&quot;)));" data-ref="_M/libc_hidden_ver">libc_hidden_ver</a> (__fnmatch, <a class="ref fn" href="fnmatch.h.html#__GI_fnmatch" title='fnmatch' data-ref="__GI_fnmatch" data-ref-filename="__GI_fnmatch">fnmatch</a>)</td></tr>
+<tr><th id="463">463</th><td><u># <span data-ppcond="455">endif</span></u></td></tr>
+<tr><th id="464">464</th><td></td></tr>
+<tr><th id="465">465</th><td><u>#<span data-ppcond="78">endif</span>	/* _LIBC or not __GNU_LIBRARY__.  */</u></td></tr>
+<tr><th id="466">466</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

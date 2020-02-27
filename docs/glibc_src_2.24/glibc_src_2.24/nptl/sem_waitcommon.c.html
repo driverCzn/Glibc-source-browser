@@ -1,0 +1,374 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>sem_waitcommon.c source code [glibc_src_2.24/nptl/sem_waitcommon.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/nptl/sem_waitcommon.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>nptl</a>/<a href='sem_waitcommon.c.html'>sem_waitcommon.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* sem_waitcommon -- wait on a semaphore, shared code.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2003-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i>   Contributed by Paul Mackerras &lt;paulus@au.ibm.com&gt;, 2003.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../sysdeps/unix/sysv/linux/futex-internal.h.html">&lt;futex-internal.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../sysdeps/nptl/internaltypes.h.html">&lt;internaltypes.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../sysdeps/pthread/semaphore.h.html">&lt;semaphore.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/time.h.html">&lt;sys/time.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="pthreadP.h.html">&lt;pthreadP.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/atomic.h.html">&lt;atomic.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* The semaphore provides two main operations: sem_post adds a token to the</i></td></tr>
+<tr><th id="34">34</th><td><i>   semaphore; sem_wait grabs a token from the semaphore, potentially waiting</i></td></tr>
+<tr><th id="35">35</th><td><i>   until there is a token available.  A sem_wait needs to synchronize with</i></td></tr>
+<tr><th id="36">36</th><td><i>   the sem_post that provided the token, so that whatever lead to the sem_post</i></td></tr>
+<tr><th id="37">37</th><td><i>   happens before the code after sem_wait.</i></td></tr>
+<tr><th id="38">38</th><td><i></i></td></tr>
+<tr><th id="39">39</th><td><i>   Conceptually, available tokens can simply be counted; let's call that the</i></td></tr>
+<tr><th id="40">40</th><td><i>   value of the semaphore.  However, we also want to know whether there might</i></td></tr>
+<tr><th id="41">41</th><td><i>   be a sem_wait that is blocked on the value because it was zero (using a</i></td></tr>
+<tr><th id="42">42</th><td><i>   futex with the value being the futex variable); if there is no blocked</i></td></tr>
+<tr><th id="43">43</th><td><i>   sem_wait, sem_post does not need to execute a futex_wake call.  Therefore,</i></td></tr>
+<tr><th id="44">44</th><td><i>   we also need to count the number of potentially blocked sem_wait calls</i></td></tr>
+<tr><th id="45">45</th><td><i>   (which we call nwaiters).</i></td></tr>
+<tr><th id="46">46</th><td><i></i></td></tr>
+<tr><th id="47">47</th><td><i>   What makes this tricky is that POSIX requires that a semaphore can be</i></td></tr>
+<tr><th id="48">48</th><td><i>   destroyed as soon as the last remaining sem_wait has returned, and no</i></td></tr>
+<tr><th id="49">49</th><td><i>   other sem_wait or sem_post calls are executing concurrently.  However, the</i></td></tr>
+<tr><th id="50">50</th><td><i>   sem_post call whose token was consumed by the last sem_wait is considered</i></td></tr>
+<tr><th id="51">51</th><td><i>   to have finished once it provided the token to the sem_wait.</i></td></tr>
+<tr><th id="52">52</th><td><i>   Thus, sem_post must not access the semaphore struct anymore after it has</i></td></tr>
+<tr><th id="53">53</th><td><i>   made a token available; IOW, it needs to be able to atomically provide</i></td></tr>
+<tr><th id="54">54</th><td><i>   a token and check whether any blocked sem_wait calls might exist.</i></td></tr>
+<tr><th id="55">55</th><td><i></i></td></tr>
+<tr><th id="56">56</th><td><i>   This is straightforward to do if the architecture provides 64b atomics</i></td></tr>
+<tr><th id="57">57</th><td><i>   because we can just put both the value and nwaiters into one variable that</i></td></tr>
+<tr><th id="58">58</th><td><i>   we access atomically: This is the data field, the value is in the</i></td></tr>
+<tr><th id="59">59</th><td><i>   least-significant 32 bits, and nwaiters in the other bits.  When sem_post</i></td></tr>
+<tr><th id="60">60</th><td><i>   makes a value available, it can atomically check nwaiters.</i></td></tr>
+<tr><th id="61">61</th><td><i></i></td></tr>
+<tr><th id="62">62</th><td><i>   If we have only 32b atomics available, we cannot put both nwaiters and</i></td></tr>
+<tr><th id="63">63</th><td><i>   value into one 32b value because then we might have too few bits for both</i></td></tr>
+<tr><th id="64">64</th><td><i>   of those counters.  Therefore, we need to use two distinct fields.</i></td></tr>
+<tr><th id="65">65</th><td><i></i></td></tr>
+<tr><th id="66">66</th><td><i>   To allow sem_post to atomically make a token available and check for</i></td></tr>
+<tr><th id="67">67</th><td><i>   blocked sem_wait calls, we use one bit in value to indicate whether</i></td></tr>
+<tr><th id="68">68</th><td><i>   nwaiters is nonzero.  That allows sem_post to use basically the same</i></td></tr>
+<tr><th id="69">69</th><td><i>   algorithm as with 64b atomics, but requires sem_wait to update the bit; it</i></td></tr>
+<tr><th id="70">70</th><td><i>   can't do this atomically with another access to nwaiters, but it can compute</i></td></tr>
+<tr><th id="71">71</th><td><i>   a conservative value for the bit because it's benign if the bit is set</i></td></tr>
+<tr><th id="72">72</th><td><i>   even if nwaiters is zero (all we get is an unnecessary futex wake call by</i></td></tr>
+<tr><th id="73">73</th><td><i>   sem_post).</i></td></tr>
+<tr><th id="74">74</th><td><i>   Specifically, sem_wait will unset the bit speculatively if it believes that</i></td></tr>
+<tr><th id="75">75</th><td><i>   there is no other concurrently executing sem_wait.  If it misspeculated,</i></td></tr>
+<tr><th id="76">76</th><td><i>   it will have to clean up by waking any other sem_wait call (i.e., what</i></td></tr>
+<tr><th id="77">77</th><td><i>   sem_post would do otherwise).  This does not conflict with the destruction</i></td></tr>
+<tr><th id="78">78</th><td><i>   requirement because the semaphore must not be destructed while any sem_wait</i></td></tr>
+<tr><th id="79">79</th><td><i>   is still executing.  */</i></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><u>#<span data-ppcond="81">if</span> !<a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="82">82</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="83">83</th><td>__sem_wait_32_finish (<b>struct</b> new_sem *sem);</td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="81">endif</span></u></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="87">87</th><td><dfn class="decl def fn" id="__sem_wait_cleanup" title='__sem_wait_cleanup' data-ref="__sem_wait_cleanup" data-ref-filename="__sem_wait_cleanup">__sem_wait_cleanup</dfn> (<em>void</em> *<dfn class="local col1 decl" id="1arg" title='arg' data-type='void *' data-ref="1arg" data-ref-filename="1arg">arg</dfn>)</td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td>  <b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#new_sem" title='new_sem' data-ref="new_sem" data-ref-filename="new_sem">new_sem</a> *<dfn class="local col2 decl" id="2sem" title='sem' data-type='struct new_sem *' data-ref="2sem" data-ref-filename="2sem">sem</dfn> = (<b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#new_sem" title='new_sem' data-ref="new_sem" data-ref-filename="new_sem">new_sem</a> *) <a class="local col1 ref" href="#1arg" title='arg' data-ref="1arg" data-ref-filename="1arg">arg</a>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="91">if</span> <a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="92">92</th><td>  <i>/* Stop being registered as a waiter.  See below for MO.  */</i></td></tr>
+<tr><th id="93">93</th><td>  <a class="macro" href="../include/atomic.h.html#598" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_fetch_add ((&amp;sem-&gt;data), (-((uint64_t) 1 &lt;&lt; 32)), 0); })" data-ref="_M/atomic_fetch_add_relaxed">atomic_fetch_add_relaxed</a> (&amp;<a class="local col2 ref" href="#2sem" title='sem' data-ref="2sem" data-ref-filename="2sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>, -((<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#159" title="32" data-ref="_M/SEM_NWAITERS_SHIFT">SEM_NWAITERS_SHIFT</a>));</td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="91">else</span></u></td></tr>
+<tr><th id="95">95</th><td>  __sem_wait_32_finish (sem);</td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="91">endif</span></u></td></tr>
+<tr><th id="97">97</th><td>}</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i>/* Wait until at least one token is available, possibly with a timeout.</i></td></tr>
+<tr><th id="100">100</th><td><i>   This is in a separate function in order to make sure gcc</i></td></tr>
+<tr><th id="101">101</th><td><i>   puts the call site into an exception region, and thus the</i></td></tr>
+<tr><th id="102">102</th><td><i>   cleanups get properly run.  TODO still necessary?  Other futex_wait</i></td></tr>
+<tr><th id="103">103</th><td><i>   users don't seem to need it.  */</i></td></tr>
+<tr><th id="104">104</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="105">105</th><td><b>__attribute__</b> ((noinline))</td></tr>
+<tr><th id="106">106</th><td><dfn class="decl def fn" id="do_futex_wait" title='do_futex_wait' data-ref="do_futex_wait" data-ref-filename="do_futex_wait">do_futex_wait</dfn> (<b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#new_sem" title='new_sem' data-ref="new_sem" data-ref-filename="new_sem">new_sem</a> *<dfn class="local col3 decl" id="3sem" title='sem' data-type='struct new_sem *' data-ref="3sem" data-ref-filename="3sem">sem</dfn>, <em>const</em> <b>struct</b> <a class="type" href="../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col4 decl" id="4abstime" title='abstime' data-type='const struct timespec *' data-ref="4abstime" data-ref-filename="4abstime">abstime</dfn>)</td></tr>
+<tr><th id="107">107</th><td>{</td></tr>
+<tr><th id="108">108</th><td>  <em>int</em> <dfn class="local col5 decl" id="5err" title='err' data-type='int' data-ref="5err" data-ref-filename="5err">err</dfn>;</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><u>#<span data-ppcond="110">if</span> <a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="111">111</th><td>  <a class="local col5 ref" href="#5err" title='err' data-ref="5err" data-ref-filename="5err">err</a> = <a class="ref fn" href="../sysdeps/nptl/futex-internal.h.html#futex_abstimed_wait_cancelable" title='futex_abstimed_wait_cancelable' data-ref="futex_abstimed_wait_cancelable" data-ref-filename="futex_abstimed_wait_cancelable">futex_abstimed_wait_cancelable</a> (</td></tr>
+<tr><th id="112">112</th><td>      (<em>unsigned</em> <em>int</em> *) &amp;<a class="local col3 ref" href="#3sem" title='sem' data-ref="3sem" data-ref-filename="3sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a> + <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#153" title="0" data-ref="_M/SEM_VALUE_OFFSET">SEM_VALUE_OFFSET</a>, <var>0</var>, <a class="local col4 ref" href="#4abstime" title='abstime' data-ref="4abstime" data-ref-filename="4abstime">abstime</a>,</td></tr>
+<tr><th id="113">113</th><td>      <a class="local col3 ref" href="#3sem" title='sem' data-ref="3sem" data-ref-filename="3sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::private" title='new_sem::private' data-ref="new_sem::private" data-ref-filename="new_sem..private">private</a>);</td></tr>
+<tr><th id="114">114</th><td><u>#<span data-ppcond="110">else</span></u></td></tr>
+<tr><th id="115">115</th><td>  err = futex_abstimed_wait_cancelable (&amp;sem-&gt;value, SEM_NWAITERS_MASK,</td></tr>
+<tr><th id="116">116</th><td>					abstime, sem-&gt;private);</td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="110">endif</span></u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>  <b>return</b> <a class="local col5 ref" href="#5err" title='err' data-ref="5err" data-ref-filename="5err">err</a>;</td></tr>
+<tr><th id="120">120</th><td>}</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><i>/* Fast path: Try to grab a token without blocking.  */</i></td></tr>
+<tr><th id="123">123</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="124">124</th><td><dfn class="decl def fn" id="__new_sem_wait_fast" title='__new_sem_wait_fast' data-ref="__new_sem_wait_fast" data-ref-filename="__new_sem_wait_fast">__new_sem_wait_fast</dfn> (<b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#new_sem" title='new_sem' data-ref="new_sem" data-ref-filename="new_sem">new_sem</a> *<dfn class="local col6 decl" id="6sem" title='sem' data-type='struct new_sem *' data-ref="6sem" data-ref-filename="6sem">sem</dfn>, <em>int</em> <dfn class="local col7 decl" id="7definitive_result" title='definitive_result' data-type='int' data-ref="7definitive_result" data-ref-filename="7definitive_result">definitive_result</dfn>)</td></tr>
+<tr><th id="125">125</th><td>{</td></tr>
+<tr><th id="126">126</th><td>  <i>/* We need acquire MO if we actually grab a token, so that this</i></td></tr>
+<tr><th id="127">127</th><td><i>     synchronizes with all token providers (i.e., the RMW operation we read</i></td></tr>
+<tr><th id="128">128</th><td><i>     from or all those before it in modification order; also see sem_post).</i></td></tr>
+<tr><th id="129">129</th><td><i>     We do not need to guarantee any ordering if we observed that there is</i></td></tr>
+<tr><th id="130">130</th><td><i>     no token (POSIX leaves it unspecified whether functions that fail</i></td></tr>
+<tr><th id="131">131</th><td><i>     synchronize memory); thus, relaxed MO is sufficient for the initial load</i></td></tr>
+<tr><th id="132">132</th><td><i>     and the failure path of the CAS.  If the weak CAS fails and we need a</i></td></tr>
+<tr><th id="133">133</th><td><i>     definitive result, retry.  */</i></td></tr>
+<tr><th id="134">134</th><td><u>#<span data-ppcond="134">if</span> <a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="135">135</th><td>  <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="local col8 decl" id="8d" title='d' data-type='uint64_t' data-ref="8d" data-ref-filename="8d">d</dfn> = <a class="macro" href="../include/atomic.h.html#561" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;sem-&gt;data), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col6 ref" href="#6sem" title='sem' data-ref="6sem" data-ref-filename="6sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>);</td></tr>
+<tr><th id="136">136</th><td>  <b>do</b></td></tr>
+<tr><th id="137">137</th><td>    {</td></tr>
+<tr><th id="138">138</th><td>      <b>if</b> ((<a class="local col8 ref" href="#8d" title='d' data-ref="8d" data-ref-filename="8d">d</a> &amp; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#160" title="(~(unsigned int)0)" data-ref="_M/SEM_VALUE_MASK">SEM_VALUE_MASK</a>) == <var>0</var>)</td></tr>
+<tr><th id="139">139</th><td>	<b>break</b>;</td></tr>
+<tr><th id="140">140</th><td>      <b>if</b> (<a class="macro" href="../include/atomic.h.html#582" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_compare_exchange_n ((&amp;sem-&gt;data), (&amp;d), (d - 1), 1, 2, 0); })" data-ref="_M/atomic_compare_exchange_weak_acquire">atomic_compare_exchange_weak_acquire</a> (&amp;<a class="local col6 ref" href="#6sem" title='sem' data-ref="6sem" data-ref-filename="6sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>, &amp;<a class="local col8 ref" href="#8d" title='d' data-ref="8d" data-ref-filename="8d">d</a>, <a class="local col8 ref" href="#8d" title='d' data-ref="8d" data-ref-filename="8d">d</a> - <var>1</var>))</td></tr>
+<tr><th id="141">141</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="142">142</th><td>    }</td></tr>
+<tr><th id="143">143</th><td>  <b>while</b> (<a class="local col7 ref" href="#7definitive_result" title='definitive_result' data-ref="7definitive_result" data-ref-filename="7definitive_result">definitive_result</a>);</td></tr>
+<tr><th id="144">144</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="134">else</span></u></td></tr>
+<tr><th id="146">146</th><td>  <em>unsigned</em> <em>int</em> v = atomic_load_relaxed (&amp;sem-&gt;value);</td></tr>
+<tr><th id="147">147</th><td>  <b>do</b></td></tr>
+<tr><th id="148">148</th><td>    {</td></tr>
+<tr><th id="149">149</th><td>      <b>if</b> ((v &gt;&gt; SEM_VALUE_SHIFT) == <var>0</var>)</td></tr>
+<tr><th id="150">150</th><td>	<b>break</b>;</td></tr>
+<tr><th id="151">151</th><td>      <b>if</b> (atomic_compare_exchange_weak_acquire (&amp;sem-&gt;value,</td></tr>
+<tr><th id="152">152</th><td>	  &amp;v, v - (<var>1</var> &lt;&lt; SEM_VALUE_SHIFT)))</td></tr>
+<tr><th id="153">153</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="154">154</th><td>    }</td></tr>
+<tr><th id="155">155</th><td>  <b>while</b> (definitive_result);</td></tr>
+<tr><th id="156">156</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="157">157</th><td><u>#<span data-ppcond="134">endif</span></u></td></tr>
+<tr><th id="158">158</th><td>}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><i>/* Slow path that blocks.  */</i></td></tr>
+<tr><th id="161">161</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="162">162</th><td><b>__attribute__</b> ((noinline))</td></tr>
+<tr><th id="163">163</th><td><dfn class="decl def fn" id="__new_sem_wait_slow" title='__new_sem_wait_slow' data-ref="__new_sem_wait_slow" data-ref-filename="__new_sem_wait_slow">__new_sem_wait_slow</dfn> (<b>struct</b> <a class="type" href="../sysdeps/nptl/internaltypes.h.html#new_sem" title='new_sem' data-ref="new_sem" data-ref-filename="new_sem">new_sem</a> *<dfn class="local col9 decl" id="9sem" title='sem' data-type='struct new_sem *' data-ref="9sem" data-ref-filename="9sem">sem</dfn>, <em>const</em> <b>struct</b> <a class="type" href="../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col0 decl" id="10abstime" title='abstime' data-type='const struct timespec *' data-ref="10abstime" data-ref-filename="10abstime">abstime</dfn>)</td></tr>
+<tr><th id="164">164</th><td>{</td></tr>
+<tr><th id="165">165</th><td>  <em>int</em> <dfn class="local col1 decl" id="11err" title='err' data-type='int' data-ref="11err" data-ref-filename="11err">err</dfn> = <var>0</var>;</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="167">if</span> <a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="168">168</th><td>  <i>/* Add a waiter.  Relaxed MO is sufficient because we can rely on the</i></td></tr>
+<tr><th id="169">169</th><td><i>     ordering provided by the RMW operations we use.  */</i></td></tr>
+<tr><th id="170">170</th><td>  <a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a> <dfn class="local col2 decl" id="12d" title='d' data-type='uint64_t' data-ref="12d" data-ref-filename="12d">d</dfn> = <a class="macro" href="../include/atomic.h.html#598" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_fetch_add ((&amp;sem-&gt;data), ((uint64_t) 1 &lt;&lt; 32), 0); })" data-ref="_M/atomic_fetch_add_relaxed">atomic_fetch_add_relaxed</a> (&amp;<a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>,</td></tr>
+<tr><th id="171">171</th><td>      (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#159" title="32" data-ref="_M/SEM_NWAITERS_SHIFT">SEM_NWAITERS_SHIFT</a>);</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>  <a class="macro" href="pthreadP.h.html#545" title="{ struct _pthread_cleanup_buffer _buffer; __pthread_cleanup_push (&amp;_buffer, (__sem_wait_cleanup), (sem));" data-ref="_M/pthread_cleanup_push">pthread_cleanup_push</a> (<a class="ref fn" href="#__sem_wait_cleanup" title='__sem_wait_cleanup' data-ref="__sem_wait_cleanup" data-ref-filename="__sem_wait_cleanup">__sem_wait_cleanup</a>, <a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>);</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>  <i>/* Wait for a token to be available.  Retry until we can grab one.  */</i></td></tr>
+<tr><th id="176">176</th><td>  <b>for</b> (;;)</td></tr>
+<tr><th id="177">177</th><td>    {</td></tr>
+<tr><th id="178">178</th><td>      <i>/* If there is no token available, sleep until there is.  */</i></td></tr>
+<tr><th id="179">179</th><td>      <b>if</b> ((<a class="local col2 ref" href="#12d" title='d' data-ref="12d" data-ref-filename="12d">d</a> &amp; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#160" title="(~(unsigned int)0)" data-ref="_M/SEM_VALUE_MASK">SEM_VALUE_MASK</a>) == <var>0</var>)</td></tr>
+<tr><th id="180">180</th><td>	{</td></tr>
+<tr><th id="181">181</th><td>	  <a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a> = <a class="ref fn" href="#do_futex_wait" title='do_futex_wait' data-ref="do_futex_wait" data-ref-filename="do_futex_wait">do_futex_wait</a> (<a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>, <a class="local col0 ref" href="#10abstime" title='abstime' data-ref="10abstime" data-ref-filename="10abstime">abstime</a>);</td></tr>
+<tr><th id="182">182</th><td>	  <i>/* A futex return value of 0 or EAGAIN is due to a real or spurious</i></td></tr>
+<tr><th id="183">183</th><td><i>	     wake-up, or due to a change in the number of tokens.  We retry in</i></td></tr>
+<tr><th id="184">184</th><td><i>	     these cases.</i></td></tr>
+<tr><th id="185">185</th><td><i>	     If we timed out, forward this to the caller.</i></td></tr>
+<tr><th id="186">186</th><td><i>	     EINTR is returned if we are interrupted by a signal; we</i></td></tr>
+<tr><th id="187">187</th><td><i>	     forward this to the caller.  (See futex_wait and related</i></td></tr>
+<tr><th id="188">188</th><td><i>	     documentation.  Before Linux 2.6.22, EINTR was also returned on</i></td></tr>
+<tr><th id="189">189</th><td><i>	     spurious wake-ups; we only support more recent Linux versions,</i></td></tr>
+<tr><th id="190">190</th><td><i>	     so do not need to consider this here.)  */</i></td></tr>
+<tr><th id="191">191</th><td>	  <b>if</b> (<a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a> == <a class="macro" href="../../include/asm-generic/errno.h.html#93" title="110" data-ref="_M/ETIMEDOUT">ETIMEDOUT</a> || <a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a> == <a class="macro" href="../../include/asm-generic/errno-base.h.html#8" title="4" data-ref="_M/EINTR">EINTR</a>)</td></tr>
+<tr><th id="192">192</th><td>	    {</td></tr>
+<tr><th id="193">193</th><td>	      <a class="macro" href="../include/errno.h.html#39" title="(errno = (err))" data-ref="_M/__set_errno">__set_errno</a> (<a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a>);</td></tr>
+<tr><th id="194">194</th><td>	      <a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a> = -<var>1</var>;</td></tr>
+<tr><th id="195">195</th><td>	      <i>/* Stop being registered as a waiter.  */</i></td></tr>
+<tr><th id="196">196</th><td>	      <a class="macro" href="../include/atomic.h.html#598" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_fetch_add ((&amp;sem-&gt;data), (-((uint64_t) 1 &lt;&lt; 32)), 0); })" data-ref="_M/atomic_fetch_add_relaxed">atomic_fetch_add_relaxed</a> (&amp;<a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>,</td></tr>
+<tr><th id="197">197</th><td>		  -((<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#159" title="32" data-ref="_M/SEM_NWAITERS_SHIFT">SEM_NWAITERS_SHIFT</a>));</td></tr>
+<tr><th id="198">198</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="199">199</th><td>	    }</td></tr>
+<tr><th id="200">200</th><td>	  <i>/* Relaxed MO is sufficient; see below.  */</i></td></tr>
+<tr><th id="201">201</th><td>	  <a class="local col2 ref" href="#12d" title='d' data-ref="12d" data-ref-filename="12d">d</a> = <a class="macro" href="../include/atomic.h.html#561" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_load_n ((&amp;sem-&gt;data), 0); })" data-ref="_M/atomic_load_relaxed">atomic_load_relaxed</a> (&amp;<a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>);</td></tr>
+<tr><th id="202">202</th><td>	}</td></tr>
+<tr><th id="203">203</th><td>      <b>else</b></td></tr>
+<tr><th id="204">204</th><td>	{</td></tr>
+<tr><th id="205">205</th><td>	  <i>/* Try to grab both a token and stop being a waiter.  We need</i></td></tr>
+<tr><th id="206">206</th><td><i>	     acquire MO so this synchronizes with all token providers (i.e.,</i></td></tr>
+<tr><th id="207">207</th><td><i>	     the RMW operation we read from or all those before it in</i></td></tr>
+<tr><th id="208">208</th><td><i>	     modification order; also see sem_post).  On the failure path,</i></td></tr>
+<tr><th id="209">209</th><td><i>	     relaxed MO is sufficient because we only eventually need the</i></td></tr>
+<tr><th id="210">210</th><td><i>	     up-to-date value; the futex_wait or the CAS perform the real</i></td></tr>
+<tr><th id="211">211</th><td><i>	     work.  */</i></td></tr>
+<tr><th id="212">212</th><td>	  <b>if</b> (<a class="macro" href="../include/atomic.h.html#582" title="({ if ((sizeof (*(&amp;sem-&gt;data)) != 4) &amp;&amp; (sizeof (*(&amp;sem-&gt;data)) != 8)) __atomic_link_error ();; __atomic_compare_exchange_n ((&amp;sem-&gt;data), (&amp;d), (d - 1 - ((uint64_t) 1 &lt;&lt; 32)), 1, 2, 0); })" data-ref="_M/atomic_compare_exchange_weak_acquire">atomic_compare_exchange_weak_acquire</a> (&amp;<a class="local col9 ref" href="#9sem" title='sem' data-ref="9sem" data-ref-filename="9sem">sem</a>-&gt;<a class="ref field" href="../sysdeps/nptl/internaltypes.h.html#new_sem::data" title='new_sem::data' data-ref="new_sem::data" data-ref-filename="new_sem..data">data</a>,</td></tr>
+<tr><th id="213">213</th><td>	      &amp;<a class="local col2 ref" href="#12d" title='d' data-ref="12d" data-ref-filename="12d">d</a>, <a class="local col2 ref" href="#12d" title='d' data-ref="12d" data-ref-filename="12d">d</a> - <var>1</var> - ((<a class="typedef" href="../sysdeps/generic/stdint.h.html#uint64_t" title='uint64_t' data-type='unsigned long' data-ref="uint64_t" data-ref-filename="uint64_t">uint64_t</a>) <var>1</var> &lt;&lt; <a class="macro" href="../sysdeps/nptl/internaltypes.h.html#159" title="32" data-ref="_M/SEM_NWAITERS_SHIFT">SEM_NWAITERS_SHIFT</a>)))</td></tr>
+<tr><th id="214">214</th><td>	    {</td></tr>
+<tr><th id="215">215</th><td>	      <a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a> = <var>0</var>;</td></tr>
+<tr><th id="216">216</th><td>	      <b>break</b>;</td></tr>
+<tr><th id="217">217</th><td>	    }</td></tr>
+<tr><th id="218">218</th><td>	}</td></tr>
+<tr><th id="219">219</th><td>    }</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>  <a class="macro" href="pthreadP.h.html#552" title="__pthread_cleanup_pop (&amp;_buffer, (0)); }" data-ref="_M/pthread_cleanup_pop">pthread_cleanup_pop</a> (<var>0</var>);</td></tr>
+<tr><th id="222">222</th><td><u>#<span data-ppcond="167">else</span></u></td></tr>
+<tr><th id="223">223</th><td>  <i>/* The main difference to the 64b-atomics implementation is that we need to</i></td></tr>
+<tr><th id="224">224</th><td><i>     access value and nwaiters in separate steps, and that the nwaiters bit</i></td></tr>
+<tr><th id="225">225</th><td><i>     in the value can temporarily not be set even if nwaiters is nonzero.</i></td></tr>
+<tr><th id="226">226</th><td><i>     We work around incorrectly unsetting the nwaiters bit by letting sem_wait</i></td></tr>
+<tr><th id="227">227</th><td><i>     set the bit again and waking the number of waiters that could grab a</i></td></tr>
+<tr><th id="228">228</th><td><i>     token.  There are two additional properties we need to ensure:</i></td></tr>
+<tr><th id="229">229</th><td><i>     (1) We make sure that whenever unsetting the bit, we see the increment of</i></td></tr>
+<tr><th id="230">230</th><td><i>     nwaiters by the other thread that set the bit.  IOW, we will notice if</i></td></tr>
+<tr><th id="231">231</th><td><i>     we make a mistake.</i></td></tr>
+<tr><th id="232">232</th><td><i>     (2) When setting the nwaiters bit, we make sure that we see the unsetting</i></td></tr>
+<tr><th id="233">233</th><td><i>     of the bit by another waiter that happened before us.  This avoids having</i></td></tr>
+<tr><th id="234">234</th><td><i>     to blindly set the bit whenever we need to block on it.  We set/unset</i></td></tr>
+<tr><th id="235">235</th><td><i>     the bit while having incremented nwaiters (i.e., are a registered</i></td></tr>
+<tr><th id="236">236</th><td><i>     waiter), and the problematic case only happens when one waiter indeed</i></td></tr>
+<tr><th id="237">237</th><td><i>     followed another (i.e., nwaiters was never larger than 1); thus, this</i></td></tr>
+<tr><th id="238">238</th><td><i>     works similarly as with a critical section using nwaiters (see the MOs</i></td></tr>
+<tr><th id="239">239</th><td><i>     and related comments below).</i></td></tr>
+<tr><th id="240">240</th><td><i></i></td></tr>
+<tr><th id="241">241</th><td><i>     An alternative approach would be to unset the bit after decrementing</i></td></tr>
+<tr><th id="242">242</th><td><i>     nwaiters; however, that would result in needing Dekker-like</i></td></tr>
+<tr><th id="243">243</th><td><i>     synchronization and thus full memory barriers.  We also would not be able</i></td></tr>
+<tr><th id="244">244</th><td><i>     to prevent misspeculation, so this alternative scheme does not seem</i></td></tr>
+<tr><th id="245">245</th><td><i>     beneficial.  */</i></td></tr>
+<tr><th id="246">246</th><td>  <em>unsigned</em> <em>int</em> v;</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>  <i>/* Add a waiter.  We need acquire MO so this synchronizes with the release</i></td></tr>
+<tr><th id="249">249</th><td><i>     MO we use when decrementing nwaiters below; it ensures that if another</i></td></tr>
+<tr><th id="250">250</th><td><i>     waiter unset the bit before us, we see that and set it again.  Also see</i></td></tr>
+<tr><th id="251">251</th><td><i>     property (2) above.  */</i></td></tr>
+<tr><th id="252">252</th><td>  atomic_fetch_add_acquire (&amp;sem-&gt;nwaiters, <var>1</var>);</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td>  pthread_cleanup_push (__sem_wait_cleanup, sem);</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>  <i>/* Wait for a token to be available.  Retry until we can grab one.  */</i></td></tr>
+<tr><th id="257">257</th><td>  <i>/* We do not need any ordering wrt. to this load's reads-from, so relaxed</i></td></tr>
+<tr><th id="258">258</th><td><i>     MO is sufficient.  The acquire MO above ensures that in the problematic</i></td></tr>
+<tr><th id="259">259</th><td><i>     case, we do see the unsetting of the bit by another waiter.  */</i></td></tr>
+<tr><th id="260">260</th><td>  v = atomic_load_relaxed (&amp;sem-&gt;value);</td></tr>
+<tr><th id="261">261</th><td>  <b>do</b></td></tr>
+<tr><th id="262">262</th><td>    {</td></tr>
+<tr><th id="263">263</th><td>      <b>do</b></td></tr>
+<tr><th id="264">264</th><td>	{</td></tr>
+<tr><th id="265">265</th><td>	  <i>/* We are about to block, so make sure that the nwaiters bit is</i></td></tr>
+<tr><th id="266">266</th><td><i>	     set.  We need release MO on the CAS to ensure that when another</i></td></tr>
+<tr><th id="267">267</th><td><i>	     waiter unsets the nwaiters bit, it will also observe that we</i></td></tr>
+<tr><th id="268">268</th><td><i>	     incremented nwaiters in the meantime (also see the unsetting of</i></td></tr>
+<tr><th id="269">269</th><td><i>	     the bit below).  Relaxed MO on CAS failure is sufficient (see</i></td></tr>
+<tr><th id="270">270</th><td><i>	     above).  */</i></td></tr>
+<tr><th id="271">271</th><td>	  <b>do</b></td></tr>
+<tr><th id="272">272</th><td>	    {</td></tr>
+<tr><th id="273">273</th><td>	      <b>if</b> ((v &amp; SEM_NWAITERS_MASK) != <var>0</var>)</td></tr>
+<tr><th id="274">274</th><td>		<b>break</b>;</td></tr>
+<tr><th id="275">275</th><td>	    }</td></tr>
+<tr><th id="276">276</th><td>	  <b>while</b> (!atomic_compare_exchange_weak_release (&amp;sem-&gt;value,</td></tr>
+<tr><th id="277">277</th><td>	      &amp;v, v | SEM_NWAITERS_MASK));</td></tr>
+<tr><th id="278">278</th><td>	  <i>/* If there is no token, wait.  */</i></td></tr>
+<tr><th id="279">279</th><td>	  <b>if</b> ((v &gt;&gt; SEM_VALUE_SHIFT) == <var>0</var>)</td></tr>
+<tr><th id="280">280</th><td>	    {</td></tr>
+<tr><th id="281">281</th><td>	      <i>/* See __HAVE_64B_ATOMICS variant.  */</i></td></tr>
+<tr><th id="282">282</th><td>	      err = do_futex_wait(sem, abstime);</td></tr>
+<tr><th id="283">283</th><td>	      <b>if</b> (err == ETIMEDOUT || err == EINTR)</td></tr>
+<tr><th id="284">284</th><td>		{</td></tr>
+<tr><th id="285">285</th><td>		  __set_errno (err);</td></tr>
+<tr><th id="286">286</th><td>		  err = -<var>1</var>;</td></tr>
+<tr><th id="287">287</th><td>		  <b>goto</b> error;</td></tr>
+<tr><th id="288">288</th><td>		}</td></tr>
+<tr><th id="289">289</th><td>	      err = <var>0</var>;</td></tr>
+<tr><th id="290">290</th><td>	      <i>/* We blocked, so there might be a token now.  Relaxed MO is</i></td></tr>
+<tr><th id="291">291</th><td><i>		 sufficient (see above).  */</i></td></tr>
+<tr><th id="292">292</th><td>	      v = atomic_load_relaxed (&amp;sem-&gt;value);</td></tr>
+<tr><th id="293">293</th><td>	    }</td></tr>
+<tr><th id="294">294</th><td>	}</td></tr>
+<tr><th id="295">295</th><td>      <i>/* If there is no token, we must not try to grab one.  */</i></td></tr>
+<tr><th id="296">296</th><td>      <b>while</b> ((v &gt;&gt; SEM_VALUE_SHIFT) == <var>0</var>);</td></tr>
+<tr><th id="297">297</th><td>    }</td></tr>
+<tr><th id="298">298</th><td>  <i>/* Try to grab a token.  We need acquire MO so this synchronizes with</i></td></tr>
+<tr><th id="299">299</th><td><i>     all token providers (i.e., the RMW operation we read from or all those</i></td></tr>
+<tr><th id="300">300</th><td><i>     before it in modification order; also see sem_post).  */</i></td></tr>
+<tr><th id="301">301</th><td>  <b>while</b> (!atomic_compare_exchange_weak_acquire (&amp;sem-&gt;value,</td></tr>
+<tr><th id="302">302</th><td>      &amp;v, v - (<var>1</var> &lt;&lt; SEM_VALUE_SHIFT)));</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>error:</td></tr>
+<tr><th id="305">305</th><td>  pthread_cleanup_pop (<var>0</var>);</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>  __sem_wait_32_finish (sem);</td></tr>
+<tr><th id="308">308</th><td><u>#<span data-ppcond="167">endif</span></u></td></tr>
+<tr><th id="309">309</th><td></td></tr>
+<tr><th id="310">310</th><td>  <b>return</b> <a class="local col1 ref" href="#11err" title='err' data-ref="11err" data-ref-filename="11err">err</a>;</td></tr>
+<tr><th id="311">311</th><td>}</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td><i>/* Stop being a registered waiter (non-64b-atomics code only).  */</i></td></tr>
+<tr><th id="314">314</th><td><u>#<span data-ppcond="314">if</span> !<a class="macro" href="../sysdeps/x86_64/atomic-machine.h.html#58" title="1" data-ref="_M/__HAVE_64B_ATOMICS">__HAVE_64B_ATOMICS</a></u></td></tr>
+<tr><th id="315">315</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="316">316</th><td>__sem_wait_32_finish (<b>struct</b> new_sem *sem)</td></tr>
+<tr><th id="317">317</th><td>{</td></tr>
+<tr><th id="318">318</th><td>  <i>/* The nwaiters bit is still set, try to unset it now if this seems</i></td></tr>
+<tr><th id="319">319</th><td><i>     necessary.  We do this before decrementing nwaiters so that the unsetting</i></td></tr>
+<tr><th id="320">320</th><td><i>     is visible to other waiters entering after us.  Relaxed MO is sufficient</i></td></tr>
+<tr><th id="321">321</th><td><i>     because we are just speculating here; a stronger MO would not prevent</i></td></tr>
+<tr><th id="322">322</th><td><i>     misspeculation.  */</i></td></tr>
+<tr><th id="323">323</th><td>  <em>unsigned</em> <em>int</em> wguess = atomic_load_relaxed (&amp;sem-&gt;nwaiters);</td></tr>
+<tr><th id="324">324</th><td>  <b>if</b> (wguess == <var>1</var>)</td></tr>
+<tr><th id="325">325</th><td>    <i>/* We might be the last waiter, so unset.  This needs acquire MO so that</i></td></tr>
+<tr><th id="326">326</th><td><i>       it syncronizes with the release MO when setting the bit above; if we</i></td></tr>
+<tr><th id="327">327</th><td><i>       overwrite someone else that set the bit, we'll read in the following</i></td></tr>
+<tr><th id="328">328</th><td><i>       decrement of nwaiters at least from that release sequence, so we'll</i></td></tr>
+<tr><th id="329">329</th><td><i>       see if the other waiter is still active or if another writer entered</i></td></tr>
+<tr><th id="330">330</th><td><i>       in the meantime (i.e., using the check below).  */</i></td></tr>
+<tr><th id="331">331</th><td>    atomic_fetch_and_acquire (&amp;sem-&gt;value, ~SEM_NWAITERS_MASK);</td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td>  <i>/* Now stop being a waiter, and see whether our guess was correct.</i></td></tr>
+<tr><th id="334">334</th><td><i>     This needs release MO so that it synchronizes with the acquire MO when</i></td></tr>
+<tr><th id="335">335</th><td><i>     a waiter increments nwaiters; this makes sure that newer writers see that</i></td></tr>
+<tr><th id="336">336</th><td><i>     we reset the waiters_present bit.  */</i></td></tr>
+<tr><th id="337">337</th><td>  <em>unsigned</em> <em>int</em> wfinal = atomic_fetch_add_release (&amp;sem-&gt;nwaiters, -<var>1</var>);</td></tr>
+<tr><th id="338">338</th><td>  <b>if</b> (wfinal &gt; <var>1</var> &amp;&amp; wguess == <var>1</var>)</td></tr>
+<tr><th id="339">339</th><td>    {</td></tr>
+<tr><th id="340">340</th><td>      <i>/* We guessed wrong, and so need to clean up after the mistake and</i></td></tr>
+<tr><th id="341">341</th><td><i>         unblock any waiters that could have not been woken.  There is no</i></td></tr>
+<tr><th id="342">342</th><td><i>         additional ordering that we need to set up, so relaxed MO is</i></td></tr>
+<tr><th id="343">343</th><td><i>         sufficient.  */</i></td></tr>
+<tr><th id="344">344</th><td>      <em>unsigned</em> <em>int</em> v = atomic_fetch_or_relaxed (&amp;sem-&gt;value,</td></tr>
+<tr><th id="345">345</th><td>						SEM_NWAITERS_MASK);</td></tr>
+<tr><th id="346">346</th><td>      <i>/* If there are available tokens, then wake as many waiters.  If there</i></td></tr>
+<tr><th id="347">347</th><td><i>         aren't any, then there is no need to wake anyone because there is</i></td></tr>
+<tr><th id="348">348</th><td><i>         none to grab for another waiter.  If tokens become available</i></td></tr>
+<tr><th id="349">349</th><td><i>         subsequently, then the respective sem_post calls will do the wake-up</i></td></tr>
+<tr><th id="350">350</th><td><i>         due to us having set the nwaiters bit again.  */</i></td></tr>
+<tr><th id="351">351</th><td>      v &gt;&gt;= SEM_VALUE_SHIFT;</td></tr>
+<tr><th id="352">352</th><td>      <b>if</b> (v &gt; <var>0</var>)</td></tr>
+<tr><th id="353">353</th><td>	futex_wake (&amp;sem-&gt;value, v, sem-&gt;private);</td></tr>
+<tr><th id="354">354</th><td>    }</td></tr>
+<tr><th id="355">355</th><td>}</td></tr>
+<tr><th id="356">356</th><td><u>#<span data-ppcond="314">endif</span></u></td></tr>
+<tr><th id="357">357</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='sem_timedwait.c.html'>glibc_src_2.24/nptl/sem_timedwait.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

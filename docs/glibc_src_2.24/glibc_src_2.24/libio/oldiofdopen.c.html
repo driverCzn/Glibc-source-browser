@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>oldiofdopen.c source code [glibc_src_2.24/libio/oldiofdopen.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/libio/oldiofdopen.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>libio</a>/<a href='oldiofdopen.c.html'>oldiofdopen.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 1993-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="5">5</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="6">6</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="7">7</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="10">10</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="11">11</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="12">12</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="15">15</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="16">16</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="17">17</th><td><i></i></td></tr>
+<tr><th id="18">18</th><td><i>   As a special exception, if you link the code in this file with</i></td></tr>
+<tr><th id="19">19</th><td><i>   files compiled with a GNU compiler to produce an executable,</i></td></tr>
+<tr><th id="20">20</th><td><i>   that does not cause the resulting executable to be covered by</i></td></tr>
+<tr><th id="21">21</th><td><i>   the GNU Lesser General Public License.  This exception does not</i></td></tr>
+<tr><th id="22">22</th><td><i>   however invalidate any other reasons why the executable file</i></td></tr>
+<tr><th id="23">23</th><td><i>   might be covered by the GNU Lesser General Public License.</i></td></tr>
+<tr><th id="24">24</th><td><i>   This exception applies to code released by its copyright holders</i></td></tr>
+<tr><th id="25">25</th><td><i>   in files containing the exception.  */</i></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#<span data-ppcond="28">if</span> <a class="macro" href="../include/shlib-compat.h.html#41" title="((18 == 18) &amp;&amp; (!(1 - 0) || ((1 - 0) &lt; (1 - 0))))" data-ref="_M/SHLIB_COMPAT">SHLIB_COMPAT</a> (libc, GLIBC_2_0, GLIBC_2_1)</u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#define _IO_USE_OLD_IO_FILE</u></td></tr>
+<tr><th id="31">31</th><td><u>#include &lt;stdlib.h&gt;</u></td></tr>
+<tr><th id="32">32</th><td><u>#include "libioP.h"</u></td></tr>
+<tr><th id="33">33</th><td><u>#include &lt;fcntl.h&gt;</u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><u>#ifndef _IO_fcntl</u></td></tr>
+<tr><th id="36">36</th><td><u># define _IO_fcntl __fcntl</u></td></tr>
+<tr><th id="37">37</th><td><u>#endif</u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>_IO_FILE *</td></tr>
+<tr><th id="40">40</th><td>attribute_compat_text_section</td></tr>
+<tr><th id="41">41</th><td>_IO_old_fdopen (<em>int</em> fd, <em>const</em> <em>char</em> *mode)</td></tr>
+<tr><th id="42">42</th><td>{</td></tr>
+<tr><th id="43">43</th><td>  <em>int</em> read_write;</td></tr>
+<tr><th id="44">44</th><td>  <em>int</em> posix_mode = <var>0</var>;</td></tr>
+<tr><th id="45">45</th><td>  <b>struct</b> locked_FILE</td></tr>
+<tr><th id="46">46</th><td>  {</td></tr>
+<tr><th id="47">47</th><td>    <b>struct</b> _IO_FILE_complete_plus fp;</td></tr>
+<tr><th id="48">48</th><td><u>#ifdef _IO_MTSAFE_IO</u></td></tr>
+<tr><th id="49">49</th><td>    _IO_lock_t lock;</td></tr>
+<tr><th id="50">50</th><td><u>#endif</u></td></tr>
+<tr><th id="51">51</th><td>  } *new_f;</td></tr>
+<tr><th id="52">52</th><td>  <em>int</em> fd_flags;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>  <b>switch</b> (*mode++)</td></tr>
+<tr><th id="55">55</th><td>    {</td></tr>
+<tr><th id="56">56</th><td>    <b>case</b> <kbd>'r'</kbd>:</td></tr>
+<tr><th id="57">57</th><td>      read_write = _IO_NO_WRITES;</td></tr>
+<tr><th id="58">58</th><td>      <b>break</b>;</td></tr>
+<tr><th id="59">59</th><td>    <b>case</b> <kbd>'w'</kbd>:</td></tr>
+<tr><th id="60">60</th><td>      read_write = _IO_NO_READS;</td></tr>
+<tr><th id="61">61</th><td>      <b>break</b>;</td></tr>
+<tr><th id="62">62</th><td>    <b>case</b> <kbd>'a'</kbd>:</td></tr>
+<tr><th id="63">63</th><td>      posix_mode = O_APPEND;</td></tr>
+<tr><th id="64">64</th><td>      read_write = _IO_NO_READS|_IO_IS_APPENDING;</td></tr>
+<tr><th id="65">65</th><td>      <b>break</b>;</td></tr>
+<tr><th id="66">66</th><td>    <b>default</b>:</td></tr>
+<tr><th id="67">67</th><td>      MAYBE_SET_EINVAL;</td></tr>
+<tr><th id="68">68</th><td>      <b>return</b> NULL;</td></tr>
+<tr><th id="69">69</th><td>  }</td></tr>
+<tr><th id="70">70</th><td>  <b>if</b> (mode[<var>0</var>] == <kbd>'+'</kbd> || (mode[<var>0</var>] == <kbd>'b'</kbd> &amp;&amp; mode[<var>1</var>] == <kbd>'+'</kbd>))</td></tr>
+<tr><th id="71">71</th><td>    read_write &amp;= _IO_IS_APPENDING;</td></tr>
+<tr><th id="72">72</th><td><u>#ifdef F_GETFL</u></td></tr>
+<tr><th id="73">73</th><td>  fd_flags = _IO_fcntl (fd, F_GETFL);</td></tr>
+<tr><th id="74">74</th><td><u>#ifndef O_ACCMODE</u></td></tr>
+<tr><th id="75">75</th><td><u>#define O_ACCMODE (O_RDONLY|O_WRONLY|O_RDWR)</u></td></tr>
+<tr><th id="76">76</th><td><u>#endif</u></td></tr>
+<tr><th id="77">77</th><td>  <b>if</b> (fd_flags == -<var>1</var></td></tr>
+<tr><th id="78">78</th><td>      || ((fd_flags &amp; O_ACCMODE) == O_RDONLY &amp;&amp; !(read_write &amp; _IO_NO_WRITES))</td></tr>
+<tr><th id="79">79</th><td>      || ((fd_flags &amp; O_ACCMODE) == O_WRONLY &amp;&amp; !(read_write &amp; _IO_NO_READS)))</td></tr>
+<tr><th id="80">80</th><td>    <b>return</b> NULL;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>  <i>/* The May 93 draft of P1003.4/D14.1 (redesignated as 1003.1b)</i></td></tr>
+<tr><th id="83">83</th><td><i>     [System Application Program Interface (API) Amendment 1:</i></td></tr>
+<tr><th id="84">84</th><td><i>     Realtime Extensions], Rationale B.8.3.3</i></td></tr>
+<tr><th id="85">85</th><td><i>     Open a Stream on a File Descriptor says:</i></td></tr>
+<tr><th id="86">86</th><td><i></i></td></tr>
+<tr><th id="87">87</th><td><i>         Although not explicitly required by POSIX.1, a good</i></td></tr>
+<tr><th id="88">88</th><td><i>         implementation of append ("a") mode would cause the</i></td></tr>
+<tr><th id="89">89</th><td><i>         O_APPEND flag to be set.</i></td></tr>
+<tr><th id="90">90</th><td><i></i></td></tr>
+<tr><th id="91">91</th><td><i>     (Historical implementations [such as Solaris2] do a one-time</i></td></tr>
+<tr><th id="92">92</th><td><i>     seek in fdopen.)</i></td></tr>
+<tr><th id="93">93</th><td><i></i></td></tr>
+<tr><th id="94">94</th><td><i>     However, we do not turn O_APPEND off if the mode is "w" (even</i></td></tr>
+<tr><th id="95">95</th><td><i>     though that would seem consistent) because that would be more</i></td></tr>
+<tr><th id="96">96</th><td><i>     likely to break historical programs.</i></td></tr>
+<tr><th id="97">97</th><td><i>     */</i></td></tr>
+<tr><th id="98">98</th><td>  <b>if</b> ((posix_mode &amp; O_APPEND) &amp;&amp; !(fd_flags &amp; O_APPEND))</td></tr>
+<tr><th id="99">99</th><td>    {</td></tr>
+<tr><th id="100">100</th><td><u>#ifdef F_SETFL</u></td></tr>
+<tr><th id="101">101</th><td>      <b>if</b> (_IO_fcntl (fd, F_SETFL, fd_flags | O_APPEND) == -<var>1</var>)</td></tr>
+<tr><th id="102">102</th><td><u>#endif</u></td></tr>
+<tr><th id="103">103</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="104">104</th><td>    }</td></tr>
+<tr><th id="105">105</th><td><u>#endif</u></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>  new_f = (<b>struct</b> locked_FILE *) malloc (<b>sizeof</b> (<b>struct</b> locked_FILE));</td></tr>
+<tr><th id="108">108</th><td>  <b>if</b> (new_f == NULL)</td></tr>
+<tr><th id="109">109</th><td>    <b>return</b> NULL;</td></tr>
+<tr><th id="110">110</th><td><u>#ifdef _IO_MTSAFE_IO</u></td></tr>
+<tr><th id="111">111</th><td>  new_f-&gt;fp.file._file._lock = &amp;new_f-&gt;lock;</td></tr>
+<tr><th id="112">112</th><td><u>#endif</u></td></tr>
+<tr><th id="113">113</th><td>  _IO_old_init (&amp;new_f-&gt;fp.file._file, <var>0</var>);</td></tr>
+<tr><th id="114">114</th><td>  _IO_JUMPS_FILE_plus (&amp;new_f-&gt;fp) = &amp;_IO_old_file_jumps;</td></tr>
+<tr><th id="115">115</th><td>  _IO_old_file_init_internal ((<b>struct</b> _IO_FILE_plus *) &amp;new_f-&gt;fp);</td></tr>
+<tr><th id="116">116</th><td><u>#if  !_IO_UNIFIED_JUMPTABLES</u></td></tr>
+<tr><th id="117">117</th><td>  new_f-&gt;fp.vtable = NULL;</td></tr>
+<tr><th id="118">118</th><td><u>#endif</u></td></tr>
+<tr><th id="119">119</th><td>  <b>if</b> (_IO_old_file_attach (&amp;new_f-&gt;fp.file._file, fd) == NULL)</td></tr>
+<tr><th id="120">120</th><td>    {</td></tr>
+<tr><th id="121">121</th><td>      _IO_un_link ((<b>struct</b> _IO_FILE_plus *) &amp;new_f-&gt;fp);</td></tr>
+<tr><th id="122">122</th><td>      free (new_f);</td></tr>
+<tr><th id="123">123</th><td>      <b>return</b> NULL;</td></tr>
+<tr><th id="124">124</th><td>    }</td></tr>
+<tr><th id="125">125</th><td>  new_f-&gt;fp.file._file._flags &amp;= ~_IO_DELETE_DONT_CLOSE;</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>  _IO_mask_flags (&amp;new_f-&gt;fp.file._file, read_write,</td></tr>
+<tr><th id="128">128</th><td>		  _IO_NO_READS+_IO_NO_WRITES+_IO_IS_APPENDING);</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>  <b>return</b> (_IO_FILE *) &amp;new_f-&gt;fp;</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>strong_alias (_IO_old_fdopen, __old_fdopen)</td></tr>
+<tr><th id="134">134</th><td>compat_symbol (libc, _IO_old_fdopen, _IO_fdopen, GLIBC_2_0);</td></tr>
+<tr><th id="135">135</th><td>compat_symbol (libc, __old_fdopen, fdopen, GLIBC_2_0);</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><u>#<span data-ppcond="28">endif</span></u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

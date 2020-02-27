@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pthread_cond_signal.S source code [glibc_src_2.24/sysdeps/unix/sysv/linux/x86_64/pthread_cond_signal.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/sysdeps/unix/sysv/linux/x86_64/pthread_cond_signal.S'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>glibc_src_2.24</a>/<a href='../../../..'>sysdeps</a>/<a href='../../..'>unix</a>/<a href='../..'>sysv</a>/<a href='..'>linux</a>/<a href='./'>x86_64</a>/<a href='pthread_cond_signal.S.html'>pthread_cond_signal.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Copyright (C) 2002-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="2">2</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Contributed by Ulrich Drepper &lt;drepper@redhat.com&gt;, 2002.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../../include/shlib-compat.h.html">&lt;shlib-compat.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="lowlevellock.h.html">&lt;lowlevellock.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include &lt;lowlevelcond.h&gt;</u></td></tr>
+<tr><th id="23">23</th><td><u>#include &lt;pthread-pi-defines.h&gt;</u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="kernel-features.h.html">&lt;kernel-features.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include &lt;pthread-errnos.h&gt;</u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../../../include/stap-probe.h.html">&lt;stap-probe.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><a class="macro" href="../../../../x86_64/sysdep.h.html#41" title=".globl __pthread_cond_signal; .type __pthread_cond_signal,@function; .align 1&lt;&lt;4; __pthread_cond_signal: .cfi_startproc;" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__pthread_cond_signal" title='__pthread_cond_signal' data-ref="__pthread_cond_signal" data-ref-filename="__pthread_cond_signal">__pthread_cond_signal</dfn></span>)</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td>	<a class="macro" href="../../../../../include/stap-probe.h.html#69" title="" data-ref="_M/LIBC_PROBE">LIBC_PROBE</a> (cond_signal, <var>1</var>, %rdi)</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>	<i>/* Get internal lock.  */</i></td></tr>
+<tr><th id="36">36</th><td>	<span class='error' title="unknown type name &apos;movq&apos;">movq</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rdi, %r8</td></tr>
+<tr><th id="37">37</th><td>	movl	$<var>1</var>, %esi</td></tr>
+<tr><th id="38">38</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="39">39</th><td>	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="40">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="41">41</th><td>	cmpxchgl %esi, (%rdi)</td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="40">else</span></u></td></tr>
+<tr><th id="43">43</th><td>	cmpxchgl %esi, cond_lock(%rdi)</td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="40">endif</span></u></td></tr>
+<tr><th id="45">45</th><td>	jnz	<var>1f</var></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><var>2</var>:	addq	$<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>, %rdi</td></tr>
+<tr><th id="48">48</th><td>	movq	<span class="macro" title="8" data-ref="_M/total_seq">total_seq</span>(%r8), %rcx</td></tr>
+<tr><th id="49">49</th><td>	cmpq	<span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%r8), %rcx</td></tr>
+<tr><th id="50">50</th><td>	jbe	<var>4f</var></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<i>/* Bump the wakeup number.  */</i></td></tr>
+<tr><th id="53">53</th><td>	addq	$<var>1</var>, <span class="macro" title="16" data-ref="_M/wakeup_seq">wakeup_seq</span>(%r8)</td></tr>
+<tr><th id="54">54</th><td>	addl	$<var>1</var>, (%rdi)</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<i>/* Wake up one thread.  */</i></td></tr>
+<tr><th id="57">57</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%r8)</td></tr>
+<tr><th id="58">58</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#32" title="5" data-ref="_M/FUTEX_WAKE_OP">FUTEX_WAKE_OP</a>, %esi</td></tr>
+<tr><th id="59">59</th><td>	movl	$<var>1</var>, %edx</td></tr>
+<tr><th id="60">60</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="61">61</th><td>	je	<var>8f</var></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>	<i>/* Get the address of the mutex used.  */</i></td></tr>
+<tr><th id="64">64</th><td>	mov     <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>(%r8), %<a class="macro" href="../../../../x86_64/sysdep.h.html#124" title="rcx" data-ref="_M/RCX_LP">RCX_LP</a></td></tr>
+<tr><th id="65">65</th><td>	movl	<span class="macro" title="16" data-ref="_M/MUTEX_KIND">MUTEX_KIND</span>(%rcx), %r11d</td></tr>
+<tr><th id="66">66</th><td>	andl	$(<span class="macro" title="16" data-ref="_M/ROBUST_BIT">ROBUST_BIT</span>|<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>), %r11d</td></tr>
+<tr><th id="67">67</th><td>	cmpl	$<span class="macro" title="32" data-ref="_M/PI_BIT">PI_BIT</span>, %r11d</td></tr>
+<tr><th id="68">68</th><td>	je	<var>9f</var></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><u>#<span data-ppcond="70">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="71">71</th><td>	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#32" title="5" data-ref="_M/FUTEX_WAKE_OP">FUTEX_WAKE_OP</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="70">else</span></u></td></tr>
+<tr><th id="73">73</th><td>	orl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="74">74</th><td><u>#<span data-ppcond="70">endif</span></u></td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><var>8</var>:	movl	$<var>1</var>, %r10d</td></tr>
+<tr><th id="77">77</th><td><u>#<span data-ppcond="77">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="78">78</th><td>	addq	$cond_lock, %r8</td></tr>
+<tr><th id="79">79</th><td><u>#<span data-ppcond="77">endif</span></u></td></tr>
+<tr><th id="80">80</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#33" title="((4 &lt;&lt; 24) | 1)" data-ref="_M/FUTEX_OP_CLEAR_WAKE_IF_GT_ONE">FUTEX_OP_CLEAR_WAKE_IF_GT_ONE</a>, %r9d</td></tr>
+<tr><th id="81">81</th><td>	syscall</td></tr>
+<tr><th id="82">82</th><td><u>#<span data-ppcond="82">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="83">83</th><td>	subq	$cond_lock, %r8</td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="82">endif</span></u></td></tr>
+<tr><th id="85">85</th><td>	<i>/* For any kind of error, we try again with WAKE.</i></td></tr>
+<tr><th id="86">86</th><td><i>	   The general test also covers running on old kernels.  */</i></td></tr>
+<tr><th id="87">87</th><td>	cmpq	$-<var>4095</var>, %rax</td></tr>
+<tr><th id="88">88</th><td>	jae	<var>7f</var></td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="91">91</th><td>	retq</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>	<i>/* Wake up one thread and requeue none in the PI Mutex case.  */</i></td></tr>
+<tr><th id="94">94</th><td><var>9</var>:	movl	$(<a class="macro" href="../lowlevellock-futex.h.html#40" title="12" data-ref="_M/FUTEX_CMP_REQUEUE_PI">FUTEX_CMP_REQUEUE_PI</a>|<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>), %esi</td></tr>
+<tr><th id="95">95</th><td>	movq	%rcx, %r8</td></tr>
+<tr><th id="96">96</th><td>	xorq	%r10, %r10</td></tr>
+<tr><th id="97">97</th><td>	movl	(%rdi), %r9d	<i>// XXX Can this be right?</i></td></tr>
+<tr><th id="98">98</th><td>	syscall</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>	leaq	-<span class="macro" title="4" data-ref="_M/cond_futex">cond_futex</span>(%rdi), %r8</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<i>/* For any kind of error, we try again with WAKE.</i></td></tr>
+<tr><th id="103">103</th><td><i>	   The general test also covers running on old kernels.  */</i></td></tr>
+<tr><th id="104">104</th><td>	cmpq	$-<var>4095</var>, %rax</td></tr>
+<tr><th id="105">105</th><td>	jb	<var>4f</var></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><var>7</var>:</td></tr>
+<tr><th id="108">108</th><td><u>#<span data-ppcond="108">ifdef</span> <a class="macro" href="../kernel-features.h.html#68" data-ref="_M/__ASSUME_PRIVATE_FUTEX">__ASSUME_PRIVATE_FUTEX</a></u></td></tr>
+<tr><th id="109">109</th><td>	andl	$<a class="macro" href="../lowlevellock-futex.h.html#41" title="128" data-ref="_M/FUTEX_PRIVATE_FLAG">FUTEX_PRIVATE_FLAG</a>, %esi</td></tr>
+<tr><th id="110">110</th><td><u>#<span data-ppcond="108">else</span></u></td></tr>
+<tr><th id="111">111</th><td>	andl	%fs:PRIVATE_FUTEX, %esi</td></tr>
+<tr><th id="112">112</th><td><u>#<span data-ppcond="108">endif</span></u></td></tr>
+<tr><th id="113">113</th><td>	orl	$<a class="macro" href="../lowlevellock-futex.h.html#29" title="1" data-ref="_M/FUTEX_WAKE">FUTEX_WAKE</a>, %esi</td></tr>
+<tr><th id="114">114</th><td>	movl	$<a class="macro" href="lowlevellock.h.html#51" title="202" data-ref="_M/SYS_futex">SYS_futex</a>, %eax</td></tr>
+<tr><th id="115">115</th><td>	<i>/* %rdx should be 1 already from $FUTEX_WAKE_OP syscall.</i></td></tr>
+<tr><th id="116">116</th><td><i>	movl	$1, %edx  */</i></td></tr>
+<tr><th id="117">117</th><td>	syscall</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	<i>/* Unlock.  */</i></td></tr>
+<tr><th id="120">120</th><td><var>4</var>:	<a class="macro" href="lowlevellock.h.html#43" title="lock" data-ref="_M/LOCK">LOCK</a></td></tr>
+<tr><th id="121">121</th><td><u>#<span data-ppcond="121">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> == 0</u></td></tr>
+<tr><th id="122">122</th><td>	decl	(%r8)</td></tr>
+<tr><th id="123">123</th><td><u>#<span data-ppcond="121">else</span></u></td></tr>
+<tr><th id="124">124</th><td>	decl	cond_lock(%r8)</td></tr>
+<tr><th id="125">125</th><td><u>#<span data-ppcond="121">endif</span></u></td></tr>
+<tr><th id="126">126</th><td>	jne	<var>5f</var></td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><var>6</var>:	xorl	%eax, %eax</td></tr>
+<tr><th id="129">129</th><td>	retq</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>	<i>/* Initial locking failed.  */</i></td></tr>
+<tr><th id="132">132</th><td><var>1</var>:</td></tr>
+<tr><th id="133">133</th><td><u>#<span data-ppcond="133">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="134">134</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="133">endif</span></u></td></tr>
+<tr><th id="136">136</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="137">137</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="138">138</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="139">139</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="140">140</th><td>	callq	__lll_lock_wait</td></tr>
+<tr><th id="141">141</th><td><u>#<span data-ppcond="141">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="142">142</th><td>	subq	$cond_lock, %rdi</td></tr>
+<tr><th id="143">143</th><td><u>#<span data-ppcond="141">endif</span></u></td></tr>
+<tr><th id="144">144</th><td>	jmp	<var>2b</var></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>	<i>/* Unlock in loop requires wakeup.  */</i></td></tr>
+<tr><th id="147">147</th><td><var>5</var>:</td></tr>
+<tr><th id="148">148</th><td>	movq	%r8, %rdi</td></tr>
+<tr><th id="149">149</th><td><u>#<span data-ppcond="149">if</span> <span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span> != 0</u></td></tr>
+<tr><th id="150">150</th><td>	addq	$cond_lock, %rdi</td></tr>
+<tr><th id="151">151</th><td><u>#<span data-ppcond="149">endif</span></u></td></tr>
+<tr><th id="152">152</th><td>	<a class="macro" href="../../../../x86_64/sysdep.h.html#115" title="cmpq" data-ref="_M/LP_OP">LP_OP</a>(cmp) $-<var>1</var>, <span class="macro" title="32" data-ref="_M/dep_mutex">dep_mutex</span>-<span class="macro" title="0" data-ref="_M/cond_lock">cond_lock</span>(%rdi)</td></tr>
+<tr><th id="153">153</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#49" title="0" data-ref="_M/LLL_PRIVATE">LLL_PRIVATE</a>, %eax</td></tr>
+<tr><th id="154">154</th><td>	movl	$<a class="macro" href="../lowlevellock-futex.h.html#50" title="128" data-ref="_M/LLL_SHARED">LLL_SHARED</a>, %esi</td></tr>
+<tr><th id="155">155</th><td>	cmovne	%eax, %esi</td></tr>
+<tr><th id="156">156</th><td>	callq	__lll_unlock_wake</td></tr>
+<tr><th id="157">157</th><td>	jmp	<var>6b</var></td></tr>
+<tr><th id="158">158</th><td><a class="macro" href="../../../../x86_64/sysdep.h.html#50" title=".cfi_endproc; .size __pthread_cond_signal,.-__pthread_cond_signal;" data-ref="_M/END">END</a>(__pthread_cond_signal)</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><a class="macro" href="../../../../../include/shlib-compat.h.html#57" title=".symver __pthread_cond_signal, pthread_cond_signal@@GLIBC_2.3.2" data-ref="_M/versioned_symbol">versioned_symbol</a> (libpthread, __pthread_cond_signal, pthread_cond_signal,</td></tr>
+<tr><th id="161">161</th><td>		  GLIBC_2_3_2)</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

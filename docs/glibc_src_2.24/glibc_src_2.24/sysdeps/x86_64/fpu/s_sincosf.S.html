@@ -1,0 +1,582 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>s_sincosf.S source code [glibc_src_2.24/sysdeps/x86_64/fpu/s_sincosf.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/sysdeps/x86_64/fpu/s_sincosf.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>glibc_src_2.24</a>/<a href='../..'>sysdeps</a>/<a href='..'>x86_64</a>/<a href='./'>fpu</a>/<a href='s_sincosf.S.html'>s_sincosf.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Optimized sincosf function.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 2012-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/__need_Emath" data-ref="_M/__need_Emath">__need_Emath</dfn></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../unix/sysv/linux/bits/errno.h.html">&lt;bits/errno.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/* Short algorithm description:</i></td></tr>
+<tr><th id="24">24</th><td><i> *</i></td></tr>
+<tr><th id="25">25</th><td><i> *  1) if |x|==0:    sin(x)=x,</i></td></tr>
+<tr><th id="26">26</th><td><i> *                   cos(x)=1.</i></td></tr>
+<tr><th id="27">27</th><td><i> *  2) if |x|&lt;2^-27: sin(x)=x-x*DP_SMALL, raising underflow only when needed,</i></td></tr>
+<tr><th id="28">28</th><td><i> *                   cos(x)=1-|x|.</i></td></tr>
+<tr><th id="29">29</th><td><i> *  3) if |x|&lt;2^-5 : sin(x)=x+x*x^2*DP_SIN2_0+x^5*DP_SIN2_1,</i></td></tr>
+<tr><th id="30">30</th><td><i> *                   cos(x)=1+1*x^2*DP_COS2_0+x^5*DP_COS2_1</i></td></tr>
+<tr><th id="31">31</th><td><i> *  4) if |x|&lt; Pi/4: sin(x)=x+x*x^2*(S0+x^2*(S1+x^2*(S2+x^2*(S3+x^2*S4)))),</i></td></tr>
+<tr><th id="32">32</th><td><i> *                   cos(x)=1+1*x^2*(C0+x^2*(C1+x^2*(C2+x^2*(C3+x^2*C4)))).</i></td></tr>
+<tr><th id="33">33</th><td><i> *  5) if |x| &lt; 9*Pi/4:</i></td></tr>
+<tr><th id="34">34</th><td><i> *      5.1) Range reduction:</i></td></tr>
+<tr><th id="35">35</th><td><i> *          k=trunc(|x|/(Pi/4)), j=(k+1)&amp;0x0e, n=k+1, t=|x|-j*Pi/4.</i></td></tr>
+<tr><th id="36">36</th><td><i> *      5.2) Reconstruction:</i></td></tr>
+<tr><th id="37">37</th><td><i> *          sign_sin = sign(x) * (-1.0)^(( n   &gt;&gt;2)&amp;1)</i></td></tr>
+<tr><th id="38">38</th><td><i> *          sign_cos =           (-1.0)^(((n+2)&gt;&gt;2)&amp;1)</i></td></tr>
+<tr><th id="39">39</th><td><i> *          poly_sin = ((((S4*t^2 + S3)*t^2 + S2)*t^2 + S1)*t^2 + S0)*t^2*t+t</i></td></tr>
+<tr><th id="40">40</th><td><i> *          poly_cos = ((((C4*t^2 + C3)*t^2 + C2)*t^2 + C1)*t^2 + C0)*t^2*s+s</i></td></tr>
+<tr><th id="41">41</th><td><i> *          if(n&amp;2 != 0) {</i></td></tr>
+<tr><th id="42">42</th><td><i> *              using cos(t) and sin(t) polynomials for |t|&lt;Pi/4, results are</i></td></tr>
+<tr><th id="43">43</th><td><i> *              cos(x) = poly_sin * sign_cos</i></td></tr>
+<tr><th id="44">44</th><td><i> *              sin(x) = poly_cos * sign_sin</i></td></tr>
+<tr><th id="45">45</th><td><i> *          } else {</i></td></tr>
+<tr><th id="46">46</th><td><i> *              sin(x) = poly_sin * sign_sin</i></td></tr>
+<tr><th id="47">47</th><td><i> *              cos(x) = poly_cos * sign_cos</i></td></tr>
+<tr><th id="48">48</th><td><i> *          }</i></td></tr>
+<tr><th id="49">49</th><td><i> *  6) if |x| &lt; 2^23, large args:</i></td></tr>
+<tr><th id="50">50</th><td><i> *      6.1) Range reduction:</i></td></tr>
+<tr><th id="51">51</th><td><i> *          k=trunc(|x|/(Pi/4)), j=(k+1)&amp;0xfffffffe, n=k+1, t=|x|-j*Pi/4</i></td></tr>
+<tr><th id="52">52</th><td><i> *      6.2) Reconstruction same as (5.2).</i></td></tr>
+<tr><th id="53">53</th><td><i> *  7) if |x| &gt;= 2^23, very large args:</i></td></tr>
+<tr><th id="54">54</th><td><i> *      7.1) Range reduction:</i></td></tr>
+<tr><th id="55">55</th><td><i> *          k=trunc(|x|/(Pi/4)), j=(k+1)&amp;0xfffffffe, n=k+1, t=|x|-j*Pi/4.</i></td></tr>
+<tr><th id="56">56</th><td><i> *      7.2) Reconstruction same as (5.2).</i></td></tr>
+<tr><th id="57">57</th><td><i> *  8) if x is Inf, return x-x, and set errno=EDOM.</i></td></tr>
+<tr><th id="58">58</th><td><i> *  9) if x is NaN, return x-x.</i></td></tr>
+<tr><th id="59">59</th><td><i> *</i></td></tr>
+<tr><th id="60">60</th><td><i> * Special cases:</i></td></tr>
+<tr><th id="61">61</th><td><i> *  sin/cos(+-0) = +-0/1 not raising inexact/underflow,</i></td></tr>
+<tr><th id="62">62</th><td><i> *  sin/cos(subnormal) raises inexact/underflow,</i></td></tr>
+<tr><th id="63">63</th><td><i> *  sin/cos(min_normalized) raises inexact/underflow,</i></td></tr>
+<tr><th id="64">64</th><td><i> *  sin/cos(normalized) raises inexact,</i></td></tr>
+<tr><th id="65">65</th><td><i> *  sin/cos(Inf) = NaN, raises invalid, sets errno to EDOM,</i></td></tr>
+<tr><th id="66">66</th><td><i> *  sin/cos(NaN) = NaN.</i></td></tr>
+<tr><th id="67">67</th><td><i> */</i></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><u># define <dfn class="macro" id="_M/ARG_SIN_PTR" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</dfn>	%rdi</u></td></tr>
+<tr><th id="70">70</th><td><u># define <dfn class="macro" id="_M/ARG_COS_PTR" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</dfn>	%rsi</u></td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="73">73</th><td><a class="macro" href="../sysdep.h.html#41" title=".globl __sincosf; .type __sincosf,@function; .align 1&lt;&lt;4; __sincosf: .cfi_startproc;" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__sincosf" title='__sincosf' data-ref="__sincosf" data-ref-filename="__sincosf">__sincosf</dfn></span>)</td></tr>
+<tr><th id="74">74</th><td>	<i>/* Input: %xmm0 contains single precision argument x */</i></td></tr>
+<tr><th id="75">75</th><td>	<i>/*        %rdi points to sin result */</i></td></tr>
+<tr><th id="76">76</th><td>	<i>/*        %rsi points to cos result */</i></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	<span class='error' title="unknown type name &apos;movd&apos;">movd</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>xmm0, %eax		<i>/* Bits of x */</i></td></tr>
+<tr><th id="79">79</th><td>	movaps	%xmm0, %xmm7		<i>/* Copy of x */</i></td></tr>
+<tr><th id="80">80</th><td>	cvtss2sd %xmm0, %xmm0		<i>/* DP x */</i></td></tr>
+<tr><th id="81">81</th><td>	movss	<a class="macro" href="../sysdep.h.html#106" title=".LSP_ABS_MASK" data-ref="_M/L">L</a>(SP_ABS_MASK)(%rip), %xmm3</td></tr>
+<tr><th id="82">82</th><td>	movl	%eax, %r8d		<i>/* Copy of x bits */</i></td></tr>
+<tr><th id="83">83</th><td>	andl	$<var>0x7fffffff</var>, %eax	<i>/* |x| */</i></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	cmpl	$<var>0x3f490fdb</var>, %eax	<i>/* |x|&lt;Pi/4 ? */</i></td></tr>
+<tr><th id="86">86</th><td>	jb	<a class="macro" href="../sysdep.h.html#106" title=".Larg_less_pio4" data-ref="_M/L">L</a>(arg_less_pio4)</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<i>/* Here if |x|&gt;=Pi/4 */</i></td></tr>
+<tr><th id="89">89</th><td>	andps	%xmm7, %xmm3		<i>/* SP |x| */</i></td></tr>
+<tr><th id="90">90</th><td>	andpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ABS_MASK" data-ref="_M/L">L</a>(DP_ABS_MASK)(%rip),%xmm0 <i>/* DP |x| */</i></td></tr>
+<tr><th id="91">91</th><td>	movss	<a class="macro" href="../sysdep.h.html#106" title=".LSP_INVPIO4" data-ref="_M/L">L</a>(SP_INVPIO4)(%rip), %xmm2 <i>/* SP 1/(Pi/4) */</i></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>	cmpl	$<var>0x40e231d6</var>, %eax	<i>/* |x|&lt;9*Pi/4 ? */</i></td></tr>
+<tr><th id="94">94</th><td>	jae	<a class="macro" href="../sysdep.h.html#106" title=".Llarge_args" data-ref="_M/L">L</a>(large_args)</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<i>/* Here if Pi/4&lt;=|x|&lt;9*Pi/4 */</i></td></tr>
+<tr><th id="97">97</th><td>	mulss	%xmm3, %xmm2		<i>/* SP |x|/(Pi/4) */</i></td></tr>
+<tr><th id="98">98</th><td>	movl	%r8d, %ecx		<i>/* Load x */</i></td></tr>
+<tr><th id="99">99</th><td>	cvttss2si %xmm2, %eax		<i>/* k, number of Pi/4 in x */</i></td></tr>
+<tr><th id="100">100</th><td>	lea	<a class="macro" href="../sysdep.h.html#106" title=".LPIO4J" data-ref="_M/L">L</a>(PIO4J)(%rip), %r9</td></tr>
+<tr><th id="101">101</th><td>	shrl	$<var>29</var>, %ecx		<i>/* (sign of x) &lt;&lt; 2 */</i></td></tr>
+<tr><th id="102">102</th><td>	addl	$<var>1</var>, %eax		<i>/* k+1 */</i></td></tr>
+<tr><th id="103">103</th><td>	movl	$<var>0x0e</var>, %edx</td></tr>
+<tr><th id="104">104</th><td>	andl	%eax, %edx		<i>/* j = (k+1)&amp;0x0e */</i></td></tr>
+<tr><th id="105">105</th><td>	subsd	(%r9,%rdx,<var>8</var>), %xmm0	<i>/* t = |x| - j * Pi/4 */</i></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lreconstruction" data-ref="_M/L">L</a>(reconstruction):</td></tr>
+<tr><th id="108">108</th><td>	<i>/* Input: %eax=n, %xmm0=t, %ecx=sign(x) */</i></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>	movaps	%xmm0, %xmm4		<i>/* t */</i></td></tr>
+<tr><th id="111">111</th><td>	movhpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES)(%rip), %xmm4 <i>/* 1|t */</i></td></tr>
+<tr><th id="112">112</th><td>	mulsd	%xmm0, %xmm0		<i>/* y=t^2 */</i></td></tr>
+<tr><th id="113">113</th><td>	movl	$<var>2</var>, %edx</td></tr>
+<tr><th id="114">114</th><td>	unpcklpd %xmm0, %xmm0		<i>/* y|y */</i></td></tr>
+<tr><th id="115">115</th><td>	addl	%eax, %edx		<i>/* k+2 */</i></td></tr>
+<tr><th id="116">116</th><td>	movaps	%xmm0, %xmm1		<i>/* y|y */</i></td></tr>
+<tr><th id="117">117</th><td>	mulpd	%xmm0, %xmm0		<i>/* z=t^4|z=t^4 */</i></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	movaps	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC4" data-ref="_M/L">L</a>(DP_SC4)(%rip), %xmm2	<i>/* S4 */</i></td></tr>
+<tr><th id="120">120</th><td>	mulpd	%xmm0, %xmm2		<i>/* z*S4 */</i></td></tr>
+<tr><th id="121">121</th><td>	movaps	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC3" data-ref="_M/L">L</a>(DP_SC3)(%rip), %xmm3	<i>/* S3 */</i></td></tr>
+<tr><th id="122">122</th><td>	mulpd	%xmm0, %xmm3		<i>/* z*S3 */</i></td></tr>
+<tr><th id="123">123</th><td>	xorl	%eax, %ecx		<i>/* (sign_x ^ (k&gt;&gt;2))&lt;&lt;2 */</i></td></tr>
+<tr><th id="124">124</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC2" data-ref="_M/L">L</a>(DP_SC2)(%rip), %xmm2	<i>/* S2+z*S4 */</i></td></tr>
+<tr><th id="125">125</th><td>	mulpd	%xmm0, %xmm2		<i>/* z*(S2+z*S4) */</i></td></tr>
+<tr><th id="126">126</th><td>	shrl	$<var>2</var>, %edx		<i>/* (k+2)&gt;&gt;2 */</i></td></tr>
+<tr><th id="127">127</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC1" data-ref="_M/L">L</a>(DP_SC1)(%rip), %xmm3	<i>/* S1+z*S3 */</i></td></tr>
+<tr><th id="128">128</th><td>	mulpd	%xmm0, %xmm3		<i>/* z*(S1+z*S3) */</i></td></tr>
+<tr><th id="129">129</th><td>	shrl	$<var>2</var>, %ecx		<i>/* sign_x ^ k&gt;&gt;2 */</i></td></tr>
+<tr><th id="130">130</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC0" data-ref="_M/L">L</a>(DP_SC0)(%rip), %xmm2	<i>/* S0+z*(S2+z*S4) */</i></td></tr>
+<tr><th id="131">131</th><td>	andl	$<var>1</var>, %edx		<i>/* sign_cos = ((k+2)&gt;&gt;2)&amp;1 */</i></td></tr>
+<tr><th id="132">132</th><td>	mulpd	%xmm1, %xmm2		<i>/* y*(S0+z*(S2+z*S4)) */</i></td></tr>
+<tr><th id="133">133</th><td>	andl	$<var>1</var>, %ecx		<i>/* sign_sin = sign_x ^ ((k&gt;&gt;2)&amp;1) */</i></td></tr>
+<tr><th id="134">134</th><td>	addpd	%xmm2, %xmm3		<i>/* y*(S0+y*(S1+y*(S2+y*(S3+y*S4)))) */</i></td></tr>
+<tr><th id="135">135</th><td>	lea	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES)(%rip), %r9</td></tr>
+<tr><th id="136">136</th><td>	mulpd	%xmm4, %xmm3		<i>/*t*y*(S0+y*(S1+y*(S2+y*(S3+y*S4))))*/</i></td></tr>
+<tr><th id="137">137</th><td>	testl	$<var>2</var>, %eax		<i>/* n&amp;2 != 0 ? */</i></td></tr>
+<tr><th id="138">138</th><td>	addpd	%xmm4, %xmm3		<i>/*t+t*y*(S0+y*(S1+y*(S2+y*(S3+y*S4))*/</i></td></tr>
+<tr><th id="139">139</th><td>	jnz	<a class="macro" href="../sysdep.h.html#106" title=".Lsin_result_sin_poly" data-ref="_M/L">L</a>(sin_result_sin_poly)</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td><i>/*L(sin_result_cos_poly):*/</i></td></tr>
+<tr><th id="142">142</th><td>	<i>/*</i></td></tr>
+<tr><th id="143">143</th><td><i>	 * Here if</i></td></tr>
+<tr><th id="144">144</th><td><i>	 * cos(x) = poly_sin * sign_cos</i></td></tr>
+<tr><th id="145">145</th><td><i>	 * sin(x) = poly_cos * sign_sin</i></td></tr>
+<tr><th id="146">146</th><td><i>	 */</i></td></tr>
+<tr><th id="147">147</th><td>	movsd	(%r9,%rcx,<var>8</var>), %xmm4	<i>/* 0|sign_sin */</i></td></tr>
+<tr><th id="148">148</th><td>	movhpd	(%r9,%rdx,<var>8</var>), %xmm4	<i>/* sign_cos|sign_sin */</i></td></tr>
+<tr><th id="149">149</th><td>	mulpd	%xmm4, %xmm3		<i>/* result_cos|result_sin */</i></td></tr>
+<tr><th id="150">150</th><td>	cvtpd2ps %xmm3, %xmm0		<i>/* SP results */</i></td></tr>
+<tr><th id="151">151</th><td>	movss	%xmm0, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* store sin(x) from xmm0[0] */</i></td></tr>
+<tr><th id="152">152</th><td>	shufps	$<var>1</var>, %xmm0, %xmm0	<i>/* move cos(x) to xmm0[0] */</i></td></tr>
+<tr><th id="153">153</th><td>	movss	%xmm0, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* store cos(x) */</i></td></tr>
+<tr><th id="154">154</th><td>	ret</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="157">157</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lsin_result_sin_poly" data-ref="_M/L">L</a>(sin_result_sin_poly):</td></tr>
+<tr><th id="158">158</th><td>	<i>/*</i></td></tr>
+<tr><th id="159">159</th><td><i>	 * Here if</i></td></tr>
+<tr><th id="160">160</th><td><i>	 * sin(x) = poly_sin * sign_sin</i></td></tr>
+<tr><th id="161">161</th><td><i>	 * cos(x) = poly_cos * sign_cos</i></td></tr>
+<tr><th id="162">162</th><td><i>	 */</i></td></tr>
+<tr><th id="163">163</th><td>	movsd	(%r9,%rdx,<var>8</var>), %xmm4	<i>/* 0|sign_cos */</i></td></tr>
+<tr><th id="164">164</th><td>	movhpd	(%r9,%rcx,<var>8</var>), %xmm4	<i>/* sign_sin|sign_cos */</i></td></tr>
+<tr><th id="165">165</th><td>	mulpd	%xmm4, %xmm3		<i>/* result_sin|result_cos */</i></td></tr>
+<tr><th id="166">166</th><td>	cvtpd2ps %xmm3, %xmm0		<i>/* SP results */</i></td></tr>
+<tr><th id="167">167</th><td>	movss	%xmm0, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* store cos(x) from xmm0[0] */</i></td></tr>
+<tr><th id="168">168</th><td>	shufps	$<var>1</var>, %xmm0, %xmm0	<i>/* move sin(x) to xmm0[0] */</i></td></tr>
+<tr><th id="169">169</th><td>	movss	%xmm0, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* store sin(x) */</i></td></tr>
+<tr><th id="170">170</th><td>	ret</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="173">173</th><td><a class="macro" href="../sysdep.h.html#106" title=".Llarge_args" data-ref="_M/L">L</a>(large_args):</td></tr>
+<tr><th id="174">174</th><td>	<i>/* Here if |x|&gt;=9*Pi/4 */</i></td></tr>
+<tr><th id="175">175</th><td>	cmpl	$<var>0x7f800000</var>, %eax	<i>/* x is Inf or NaN ? */</i></td></tr>
+<tr><th id="176">176</th><td>	jae	<a class="macro" href="../sysdep.h.html#106" title=".Larg_inf_or_nan" data-ref="_M/L">L</a>(arg_inf_or_nan)</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>	<i>/* Here if finite |x|&gt;=9*Pi/4 */</i></td></tr>
+<tr><th id="179">179</th><td>	cmpl	$<var>0x4b000000</var>, %eax	<i>/* |x|&lt;2^23 ? */</i></td></tr>
+<tr><th id="180">180</th><td>	jae	<a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_args" data-ref="_M/L">L</a>(very_large_args)</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>	<i>/* Here if 9*Pi/4&lt;=|x|&lt;2^23 */</i></td></tr>
+<tr><th id="183">183</th><td>	movsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_INVPIO4" data-ref="_M/L">L</a>(DP_INVPIO4)(%rip), %xmm1 <i>/* 1/(Pi/4) */</i></td></tr>
+<tr><th id="184">184</th><td>	mulsd	%xmm0, %xmm1		<i>/* |x|/(Pi/4) */</i></td></tr>
+<tr><th id="185">185</th><td>	cvttsd2si %xmm1, %eax		<i>/* k=trunc(|x|/(Pi/4)) */</i></td></tr>
+<tr><th id="186">186</th><td>	addl	$<var>1</var>, %eax		<i>/* k+1 */</i></td></tr>
+<tr><th id="187">187</th><td>	movl	%eax, %edx</td></tr>
+<tr><th id="188">188</th><td>	andl	$<var>0xfffffffe</var>, %edx	<i>/* j=(k+1)&amp;0xfffffffe */</i></td></tr>
+<tr><th id="189">189</th><td>	cvtsi2sdl %edx, %xmm4		<i>/* DP j */</i></td></tr>
+<tr><th id="190">190</th><td>	movl	%r8d, %ecx		<i>/* Load x */</i></td></tr>
+<tr><th id="191">191</th><td>	movsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4HI" data-ref="_M/L">L</a>(DP_PIO4HI)(%rip), %xmm2 <i>/* -PIO4HI = high part of -Pi/4 */</i></td></tr>
+<tr><th id="192">192</th><td>	shrl	$<var>29</var>, %ecx		<i>/* (sign of x) &lt;&lt; 2 */</i></td></tr>
+<tr><th id="193">193</th><td>	mulsd	%xmm4, %xmm2		<i>/* -j*PIO4HI */</i></td></tr>
+<tr><th id="194">194</th><td>	movsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4LO" data-ref="_M/L">L</a>(DP_PIO4LO)(%rip), %xmm3 <i>/* -PIO4LO = low part of -Pi/4 */</i></td></tr>
+<tr><th id="195">195</th><td>	addsd	%xmm2, %xmm0		<i>/* |x| - j*PIO4HI */</i></td></tr>
+<tr><th id="196">196</th><td>	mulsd	%xmm3, %xmm4		<i>/* j*PIO4LO */</i></td></tr>
+<tr><th id="197">197</th><td>	addsd	%xmm4, %xmm0		<i>/* t = |x| - j*PIO4HI - j*PIO4LO */</i></td></tr>
+<tr><th id="198">198</th><td>	jmp	<a class="macro" href="../sysdep.h.html#106" title=".Lreconstruction" data-ref="_M/L">L</a>(reconstruction)</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="201">201</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_args" data-ref="_M/L">L</a>(very_large_args):</td></tr>
+<tr><th id="202">202</th><td>	<i>/* Here if finite |x|&gt;=2^23 */</i></td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>	<i>/* bitpos = (ix&gt;&gt;23) - BIAS_32 + 59; */</i></td></tr>
+<tr><th id="205">205</th><td>	shrl	$<var>23</var>, %eax		<i>/* eb = biased exponent of x */</i></td></tr>
+<tr><th id="206">206</th><td>	subl	$<var>68</var>, %eax		<i>/* bitpos=eb-0x7f+59, where 0x7f */</i></td></tr>
+<tr><th id="207">207</th><td>							<i>/*is exponent bias */</i></td></tr>
+<tr><th id="208">208</th><td>	movl	$<var>28</var>, %ecx		<i>/* %cl=28 */</i></td></tr>
+<tr><th id="209">209</th><td>	movl	%eax, %edx		<i>/* bitpos copy */</i></td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td>	<i>/* j = bitpos/28; */</i></td></tr>
+<tr><th id="212">212</th><td>	div	%cl			<i>/* j in register %al=%ax/%cl */</i></td></tr>
+<tr><th id="213">213</th><td>	movapd	%xmm0, %xmm3		<i>/* |x| */</i></td></tr>
+<tr><th id="214">214</th><td>	andl	$<var>0xff</var>, %eax		<i>/* clear unneeded remainder from %ah*/</i></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	imull	$<var>28</var>, %eax, %ecx		<i>/* j*28 */</i></td></tr>
+<tr><th id="217">217</th><td>	lea	<a class="macro" href="../sysdep.h.html#106" title=".L_FPI" data-ref="_M/L">L</a>(_FPI)(%rip), %r9</td></tr>
+<tr><th id="218">218</th><td>	movsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_HI_MASK" data-ref="_M/L">L</a>(DP_HI_MASK)(%rip), %xmm4 <i>/* DP_HI_MASK */</i></td></tr>
+<tr><th id="219">219</th><td>	movapd	%xmm0, %xmm5		<i>/* |x| */</i></td></tr>
+<tr><th id="220">220</th><td>	mulsd	-<var>16</var>(%r9,%rax,<var>8</var>), %xmm3	<i>/* tmp3 = FPI[j-2]*|x| */</i></td></tr>
+<tr><th id="221">221</th><td>	movapd	%xmm0, %xmm1		<i>/* |x| */</i></td></tr>
+<tr><th id="222">222</th><td>	mulsd	-<var>8</var>(%r9,%rax,<var>8</var>), %xmm5	<i>/* tmp2 = FPI[j-1]*|x| */</i></td></tr>
+<tr><th id="223">223</th><td>	mulsd	(%r9,%rax,<var>8</var>), %xmm0	<i>/* tmp0 = FPI[j]*|x| */</i></td></tr>
+<tr><th id="224">224</th><td>	addl	$<var>19</var>, %ecx		<i>/* j*28+19 */</i></td></tr>
+<tr><th id="225">225</th><td>	mulsd	<var>8</var>(%r9,%rax,<var>8</var>), %xmm1	<i>/* tmp1 = FPI[j+1]*|x| */</i></td></tr>
+<tr><th id="226">226</th><td>	cmpl	%ecx, %edx		<i>/* bitpos&gt;=j*28+19 ? */</i></td></tr>
+<tr><th id="227">227</th><td>	jl	<a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_skip1" data-ref="_M/L">L</a>(very_large_skip1)</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>	<i>/* Here if bitpos&gt;=j*28+19 */</i></td></tr>
+<tr><th id="230">230</th><td>	andpd	%xmm3, %xmm4		<i>/* HI(tmp3) */</i></td></tr>
+<tr><th id="231">231</th><td>	subsd	%xmm4, %xmm3		<i>/* tmp3 = tmp3 - HI(tmp3) */</i></td></tr>
+<tr><th id="232">232</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_skip1" data-ref="_M/L">L</a>(very_large_skip1):</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>	movsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_2POW52" data-ref="_M/L">L</a>(DP_2POW52)(%rip), %xmm6</td></tr>
+<tr><th id="235">235</th><td>	movapd	%xmm5, %xmm2		<i>/* tmp2 copy */</i></td></tr>
+<tr><th id="236">236</th><td>	addsd	%xmm3, %xmm5		<i>/* tmp5 = tmp3 + tmp2 */</i></td></tr>
+<tr><th id="237">237</th><td>	movl	$<var>1</var>, %edx</td></tr>
+<tr><th id="238">238</th><td>	addsd	%xmm5, %xmm6		<i>/* tmp6 = tmp5 + 2^52 */</i></td></tr>
+<tr><th id="239">239</th><td>	movsd	<var>8</var>+<a class="macro" href="../sysdep.h.html#106" title=".LDP_2POW52" data-ref="_M/L">L</a>(DP_2POW52)(%rip), %xmm4</td></tr>
+<tr><th id="240">240</th><td>	movd	%xmm6, %eax		<i>/* k = I64_LO(tmp6); */</i></td></tr>
+<tr><th id="241">241</th><td>	addsd	%xmm6, %xmm4		<i>/* tmp4 = tmp6 - 2^52 */</i></td></tr>
+<tr><th id="242">242</th><td>	movl	%r8d, %ecx		<i>/* Load x */</i></td></tr>
+<tr><th id="243">243</th><td>	comisd	%xmm5, %xmm4		<i>/* tmp4 &gt; tmp5 ? */</i></td></tr>
+<tr><th id="244">244</th><td>	jbe	<a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_skip2" data-ref="_M/L">L</a>(very_large_skip2)</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td>	<i>/* Here if tmp4 &gt; tmp5 */</i></td></tr>
+<tr><th id="247">247</th><td>	subl	$<var>1</var>, %eax		<i>/* k-- */</i></td></tr>
+<tr><th id="248">248</th><td>	addsd	<var>8</var>+<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES)(%rip), %xmm4 <i>/* tmp4 -= 1.0 */</i></td></tr>
+<tr><th id="249">249</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lvery_large_skip2" data-ref="_M/L">L</a>(very_large_skip2):</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td>	andl	%eax, %edx		<i>/* k&amp;1 */</i></td></tr>
+<tr><th id="252">252</th><td>	lea	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ZERONE" data-ref="_M/L">L</a>(DP_ZERONE)(%rip), %r9</td></tr>
+<tr><th id="253">253</th><td>	subsd	%xmm4, %xmm3		<i>/* tmp3 -= tmp4 */</i></td></tr>
+<tr><th id="254">254</th><td>	addsd	(%r9,%rdx,<var>8</var>), %xmm3	<i>/* t  = DP_ZERONE[k&amp;1] + tmp3 */</i></td></tr>
+<tr><th id="255">255</th><td>	addsd	%xmm2, %xmm3		<i>/* t += tmp2 */</i></td></tr>
+<tr><th id="256">256</th><td>	shrl	$<var>29</var>, %ecx		<i>/* (sign of x) &lt;&lt; 2 */</i></td></tr>
+<tr><th id="257">257</th><td>	addsd	%xmm3, %xmm0		<i>/* t += tmp0 */</i></td></tr>
+<tr><th id="258">258</th><td>	addl	$<var>1</var>, %eax		<i>/* n=k+1 */</i></td></tr>
+<tr><th id="259">259</th><td>	addsd	%xmm1, %xmm0		<i>/* t += tmp1 */</i></td></tr>
+<tr><th id="260">260</th><td>	mulsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4" data-ref="_M/L">L</a>(DP_PIO4)(%rip), %xmm0	<i>/* t *= PI04 */</i></td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>	jmp	<a class="macro" href="../sysdep.h.html#106" title=".Lreconstruction" data-ref="_M/L">L</a>(reconstruction)	<i>/* end of very_large_args peth */</i></td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="265">265</th><td><a class="macro" href="../sysdep.h.html#106" title=".Larg_less_pio4" data-ref="_M/L">L</a>(arg_less_pio4):</td></tr>
+<tr><th id="266">266</th><td>	<i>/* Here if |x|&lt;Pi/4 */</i></td></tr>
+<tr><th id="267">267</th><td>	cmpl	$<var>0x3d000000</var>, %eax	<i>/* |x|&lt;2^-5 ? */</i></td></tr>
+<tr><th id="268">268</th><td>	jl	<a class="macro" href="../sysdep.h.html#106" title=".Larg_less_2pn5" data-ref="_M/L">L</a>(arg_less_2pn5)</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td>	<i>/* Here if 2^-5&lt;=|x|&lt;Pi/4 */</i></td></tr>
+<tr><th id="271">271</th><td>	movaps	%xmm0, %xmm3		<i>/* DP x */</i></td></tr>
+<tr><th id="272">272</th><td>	movhpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES)(%rip), %xmm3 <i>/* DP 1|x */</i></td></tr>
+<tr><th id="273">273</th><td>	mulsd	%xmm0, %xmm0		<i>/* DP y=x^2 */</i></td></tr>
+<tr><th id="274">274</th><td>	unpcklpd %xmm0, %xmm0		<i>/* DP y|y */</i></td></tr>
+<tr><th id="275">275</th><td>	movaps	%xmm0, %xmm1		<i>/* y|y */</i></td></tr>
+<tr><th id="276">276</th><td>	mulpd	%xmm0, %xmm0		<i>/* z=x^4|z=x^4 */</i></td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td>	movapd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC4" data-ref="_M/L">L</a>(DP_SC4)(%rip), %xmm4	<i>/* S4 */</i></td></tr>
+<tr><th id="279">279</th><td>	mulpd	%xmm0, %xmm4		<i>/* z*S4 */</i></td></tr>
+<tr><th id="280">280</th><td>	movapd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC3" data-ref="_M/L">L</a>(DP_SC3)(%rip), %xmm5	<i>/* S3 */</i></td></tr>
+<tr><th id="281">281</th><td>	mulpd	%xmm0, %xmm5		<i>/* z*S3 */</i></td></tr>
+<tr><th id="282">282</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC2" data-ref="_M/L">L</a>(DP_SC2)(%rip), %xmm4	<i>/* S2+z*S4 */</i></td></tr>
+<tr><th id="283">283</th><td>	mulpd	%xmm0, %xmm4		<i>/* z*(S2+z*S4) */</i></td></tr>
+<tr><th id="284">284</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC1" data-ref="_M/L">L</a>(DP_SC1)(%rip), %xmm5	<i>/* S1+z*S3 */</i></td></tr>
+<tr><th id="285">285</th><td>	mulpd	%xmm0, %xmm5		<i>/* z*(S1+z*S3) */</i></td></tr>
+<tr><th id="286">286</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC0" data-ref="_M/L">L</a>(DP_SC0)(%rip), %xmm4	<i>/* S0+z*(S2+z*S4) */</i></td></tr>
+<tr><th id="287">287</th><td>	mulpd	%xmm1, %xmm4		<i>/* y*(S0+z*(S2+z*S4)) */</i></td></tr>
+<tr><th id="288">288</th><td>	mulpd	%xmm3, %xmm5		<i>/* x*z*(S1+z*S3) */</i></td></tr>
+<tr><th id="289">289</th><td>	mulpd	%xmm3, %xmm4		<i>/* x*y*(S0+z*(S2+z*S4)) */</i></td></tr>
+<tr><th id="290">290</th><td>	addpd	%xmm5, %xmm4		<i>/*x*y*(S0+y*(S1+y*(S2+y*(S3+y*S4))))*/</i></td></tr>
+<tr><th id="291">291</th><td>	addpd	%xmm4, %xmm3		<i>/*x+x*y*(S0+y*(S1+y*(S2+y*(S3+y*S4))*/</i></td></tr>
+<tr><th id="292">292</th><td>	cvtpd2ps %xmm3, %xmm0		<i>/* SP results */</i></td></tr>
+<tr><th id="293">293</th><td>	movss	%xmm0, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* store sin(x) from xmm0[0] */</i></td></tr>
+<tr><th id="294">294</th><td>	shufps	$<var>1</var>, %xmm0, %xmm0	<i>/* move cos(x) to xmm0[0] */</i></td></tr>
+<tr><th id="295">295</th><td>	movss	%xmm0, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* store cos(x) */</i></td></tr>
+<tr><th id="296">296</th><td>	ret</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="299">299</th><td><a class="macro" href="../sysdep.h.html#106" title=".Larg_less_2pn5" data-ref="_M/L">L</a>(arg_less_2pn5):</td></tr>
+<tr><th id="300">300</th><td>	<i>/* Here if |x|&lt;2^-5 */</i></td></tr>
+<tr><th id="301">301</th><td>	cmpl	$<var>0x32000000</var>, %eax	<i>/* |x|&lt;2^-27 ? */</i></td></tr>
+<tr><th id="302">302</th><td>	jl	<a class="macro" href="../sysdep.h.html#106" title=".Larg_less_2pn27" data-ref="_M/L">L</a>(arg_less_2pn27)</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>	<i>/* Here if 2^-27&lt;=|x|&lt;2^-5 */</i></td></tr>
+<tr><th id="305">305</th><td>	movaps	%xmm0, %xmm1		<i>/* DP x */</i></td></tr>
+<tr><th id="306">306</th><td>	movhpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES)(%rip), %xmm1 <i>/* DP 1|x */</i></td></tr>
+<tr><th id="307">307</th><td>	mulsd	%xmm0, %xmm0		<i>/* DP x^2 */</i></td></tr>
+<tr><th id="308">308</th><td>	unpcklpd %xmm0, %xmm0		<i>/* DP x^2|x^2 */</i></td></tr>
+<tr><th id="309">309</th><td></td></tr>
+<tr><th id="310">310</th><td>	movaps	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_1" data-ref="_M/L">L</a>(DP_SINCOS2_1)(%rip), %xmm3 <i>/* DP DP_SIN2_1 */</i></td></tr>
+<tr><th id="311">311</th><td>	mulpd	%xmm0, %xmm3		<i>/* DP x^2*DP_SIN2_1 */</i></td></tr>
+<tr><th id="312">312</th><td>	addpd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_0" data-ref="_M/L">L</a>(DP_SINCOS2_0)(%rip), %xmm3 <i>/* DP DP_SIN2_0+x^2*DP_SIN2_1 */</i></td></tr>
+<tr><th id="313">313</th><td>	mulpd	%xmm0, %xmm3		<i>/* DP x^2*DP_SIN2_0+x^4*DP_SIN2_1 */</i></td></tr>
+<tr><th id="314">314</th><td>	mulpd	%xmm1, %xmm3		<i>/* DP x^3*DP_SIN2_0+x^5*DP_SIN2_1 */</i></td></tr>
+<tr><th id="315">315</th><td>	addpd	%xmm1, %xmm3		<i>/* DP x+x^3*DP_SIN2_0+x^5*DP_SIN2_1 */</i></td></tr>
+<tr><th id="316">316</th><td>	cvtpd2ps %xmm3, %xmm0		<i>/* SP results */</i></td></tr>
+<tr><th id="317">317</th><td>	movss	%xmm0, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* store sin(x) from xmm0[0] */</i></td></tr>
+<tr><th id="318">318</th><td>	shufps	$<var>1</var>, %xmm0, %xmm0	<i>/* move cos(x) to xmm0[0] */</i></td></tr>
+<tr><th id="319">319</th><td>	movss	%xmm0, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* store cos(x) */</i></td></tr>
+<tr><th id="320">320</th><td>	ret</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="323">323</th><td><a class="macro" href="../sysdep.h.html#106" title=".Larg_less_2pn27" data-ref="_M/L">L</a>(arg_less_2pn27):</td></tr>
+<tr><th id="324">324</th><td>	cmpl	$<var>0</var>, %eax		<i>/* x=0 ? */</i></td></tr>
+<tr><th id="325">325</th><td>	je	<a class="macro" href="../sysdep.h.html#106" title=".Larg_zero" data-ref="_M/L">L</a>(arg_zero)		<i>/* in case x=0 return sin(+-0)==+-0 */</i></td></tr>
+<tr><th id="326">326</th><td>	<i>/* Here if |x|&lt;2^-27 */</i></td></tr>
+<tr><th id="327">327</th><td>	<i>/*</i></td></tr>
+<tr><th id="328">328</th><td><i>	 * Special cases here:</i></td></tr>
+<tr><th id="329">329</th><td><i>	 *  sin(subnormal) raises inexact/underflow</i></td></tr>
+<tr><th id="330">330</th><td><i>	 *  sin(min_normalized) raises inexact/underflow</i></td></tr>
+<tr><th id="331">331</th><td><i>	 *  sin(normalized) raises inexact</i></td></tr>
+<tr><th id="332">332</th><td><i>	 *  cos(here)=1-|x| (raising inexact)</i></td></tr>
+<tr><th id="333">333</th><td><i>	 */</i></td></tr>
+<tr><th id="334">334</th><td>	movaps	%xmm0, %xmm3		<i>/* DP x */</i></td></tr>
+<tr><th id="335">335</th><td>	mulsd	<a class="macro" href="../sysdep.h.html#106" title=".LDP_SMALL" data-ref="_M/L">L</a>(DP_SMALL)(%rip), %xmm0<i>/* DP x*DP_SMALL */</i></td></tr>
+<tr><th id="336">336</th><td>	subsd	%xmm0, %xmm3		<i>/* DP sin result is x-x*DP_SMALL */</i></td></tr>
+<tr><th id="337">337</th><td>	andps	<a class="macro" href="../sysdep.h.html#106" title=".LSP_ABS_MASK" data-ref="_M/L">L</a>(SP_ABS_MASK)(%rip), %xmm7<i>/* SP |x| */</i></td></tr>
+<tr><th id="338">338</th><td>	cvtsd2ss %xmm3, %xmm0		<i>/* sin(x) */</i></td></tr>
+<tr><th id="339">339</th><td>	movss	<a class="macro" href="../sysdep.h.html#106" title=".LSP_ONE" data-ref="_M/L">L</a>(SP_ONE)(%rip), %xmm1	<i>/* SP 1.0 */</i></td></tr>
+<tr><th id="340">340</th><td>	movss	%xmm0, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* sin(x) store */</i></td></tr>
+<tr><th id="341">341</th><td>	subss	%xmm7, %xmm1		<i>/* cos(x) */</i></td></tr>
+<tr><th id="342">342</th><td>	movss	%xmm1, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* cos(x) store */</i></td></tr>
+<tr><th id="343">343</th><td>	ret</td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="346">346</th><td><a class="macro" href="../sysdep.h.html#106" title=".Larg_zero" data-ref="_M/L">L</a>(arg_zero):</td></tr>
+<tr><th id="347">347</th><td>	movss	<a class="macro" href="../sysdep.h.html#106" title=".LSP_ONE" data-ref="_M/L">L</a>(SP_ONE)(%rip), %xmm0	<i>/* 1.0 */</i></td></tr>
+<tr><th id="348">348</th><td>	movss	%xmm7, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)	<i>/* sin(+-0)==x */</i></td></tr>
+<tr><th id="349">349</th><td>	movss	%xmm0, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)	<i>/* cos(+-0)==1 */</i></td></tr>
+<tr><th id="350">350</th><td>	ret</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="353">353</th><td><a class="macro" href="../sysdep.h.html#106" title=".Larg_inf_or_nan" data-ref="_M/L">L</a>(arg_inf_or_nan):</td></tr>
+<tr><th id="354">354</th><td>	<i>/* Here if |x| is Inf or NAN */</i></td></tr>
+<tr><th id="355">355</th><td>	jne	<a class="macro" href="../sysdep.h.html#106" title=".Lskip_errno_setting" data-ref="_M/L">L</a>(skip_errno_setting)	<i>/* in case of x is NaN */</i></td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td>	<i>/* Align stack to 16 bytes.  */</i></td></tr>
+<tr><th id="358">358</th><td>	subq	$<var>8</var>, %rsp</td></tr>
+<tr><th id="359">359</th><td>	<a class="macro" href="../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset 8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (<var>8</var>)</td></tr>
+<tr><th id="360">360</th><td>	<i>/* Here if x is Inf. Set errno to EDOM.  */</i></td></tr>
+<tr><th id="361">361</th><td>	call	<a class="macro" href="../sysdep.h.html#96" title="__errno_location@PLT" data-ref="_M/JUMPTARGET">JUMPTARGET</a>(__errno_location)</td></tr>
+<tr><th id="362">362</th><td>	addq	$<var>8</var>, %rsp</td></tr>
+<tr><th id="363">363</th><td>	<a class="macro" href="../../generic/sysdep.h.html#45" title=".cfi_adjust_cfa_offset -8" data-ref="_M/cfi_adjust_cfa_offset">cfi_adjust_cfa_offset</a> (-<var>8</var>)</td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td>	movl	$<a class="macro" href="../../unix/sysv/linux/bits/errno.h.html#63" title="33" data-ref="_M/EDOM">EDOM</a>, (%rax)</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td>	.p2align	<var>4</var></td></tr>
+<tr><th id="368">368</th><td><a class="macro" href="../sysdep.h.html#106" title=".Lskip_errno_setting" data-ref="_M/L">L</a>(skip_errno_setting):</td></tr>
+<tr><th id="369">369</th><td>	<i>/* Here if |x| is Inf or NAN. Continued. */</i></td></tr>
+<tr><th id="370">370</th><td>	subss	%xmm7, %xmm7		<i>/* x-x, result is NaN */</i></td></tr>
+<tr><th id="371">371</th><td>	movss	%xmm7, (<a class="macro" href="#69" title="%rdi" data-ref="_M/ARG_SIN_PTR">ARG_SIN_PTR</a>)</td></tr>
+<tr><th id="372">372</th><td>	movss	%xmm7, (<a class="macro" href="#70" title="%rsi" data-ref="_M/ARG_COS_PTR">ARG_COS_PTR</a>)</td></tr>
+<tr><th id="373">373</th><td>	ret</td></tr>
+<tr><th id="374">374</th><td><a class="macro" href="../sysdep.h.html#50" title=".cfi_endproc; .size __sincosf,.-__sincosf;" data-ref="_M/END">END</a>(__sincosf)</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>section .rodata, <q>"a"</q></td></tr>
+<tr><th id="377">377</th><td>	.p2align <var>3</var></td></tr>
+<tr><th id="378">378</th><td><a class="macro" href="../sysdep.h.html#106" title=".LPIO4J" data-ref="_M/L">L</a>(PIO4J): <i>/* Table of j*Pi/4, for j=0,1,..,10 */</i></td></tr>
+<tr><th id="379">379</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x00000000</var></td></tr>
+<tr><th id="380">380</th><td>	.<em>long</em>	<var>0x54442d18</var>,<var>0x3fe921fb</var></td></tr>
+<tr><th id="381">381</th><td>	.<em>long</em>	<var>0x54442d18</var>,<var>0x3ff921fb</var></td></tr>
+<tr><th id="382">382</th><td>	.<em>long</em>	<var>0x7f3321d2</var>,<var>0x4002d97c</var></td></tr>
+<tr><th id="383">383</th><td>	.<em>long</em>	<var>0x54442d18</var>,<var>0x400921fb</var></td></tr>
+<tr><th id="384">384</th><td>	.<em>long</em>	<var>0x2955385e</var>,<var>0x400f6a7a</var></td></tr>
+<tr><th id="385">385</th><td>	.<em>long</em>	<var>0x7f3321d2</var>,<var>0x4012d97c</var></td></tr>
+<tr><th id="386">386</th><td>	.<em>long</em>	<var>0xe9bba775</var>,<var>0x4015fdbb</var></td></tr>
+<tr><th id="387">387</th><td>	.<em>long</em>	<var>0x54442d18</var>,<var>0x401921fb</var></td></tr>
+<tr><th id="388">388</th><td>	.<em>long</em>	<var>0xbeccb2bb</var>,<var>0x401c463a</var></td></tr>
+<tr><th id="389">389</th><td>	.<em>long</em>	<var>0x2955385e</var>,<var>0x401f6a7a</var></td></tr>
+<tr><th id="390">390</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LPIO4J" data-ref="_M/L">L</a>(PIO4J), @object</td></tr>
+<tr><th id="391">391</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LPIO4J,.-.LPIO4J;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LPIO4J" data-ref="_M/L">L</a>(PIO4J))</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="394">394</th><td><a class="macro" href="../sysdep.h.html#106" title=".L_FPI" data-ref="_M/L">L</a>(_FPI): <i>/* 4/Pi broken into sum of positive DP values */</i></td></tr>
+<tr><th id="395">395</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x00000000</var></td></tr>
+<tr><th id="396">396</th><td>	.<em>long</em>	<var>0x6c000000</var>,<var>0x3ff45f30</var></td></tr>
+<tr><th id="397">397</th><td>	.<em>long</em>	<var>0x2a000000</var>,<var>0x3e3c9c88</var></td></tr>
+<tr><th id="398">398</th><td>	.<em>long</em>	<var>0xa8000000</var>,<var>0x3c54fe13</var></td></tr>
+<tr><th id="399">399</th><td>	.<em>long</em>	<var>0xd0000000</var>,<var>0x3aaf47d4</var></td></tr>
+<tr><th id="400">400</th><td>	.<em>long</em>	<var>0x6c000000</var>,<var>0x38fbb81b</var></td></tr>
+<tr><th id="401">401</th><td>	.<em>long</em>	<var>0xe0000000</var>,<var>0x3714acc9</var></td></tr>
+<tr><th id="402">402</th><td>	.<em>long</em>	<var>0x7c000000</var>,<var>0x3560e410</var></td></tr>
+<tr><th id="403">403</th><td>	.<em>long</em>	<var>0x56000000</var>,<var>0x33bca2c7</var></td></tr>
+<tr><th id="404">404</th><td>	.<em>long</em>	<var>0xac000000</var>,<var>0x31fbd778</var></td></tr>
+<tr><th id="405">405</th><td>	.<em>long</em>	<var>0xe0000000</var>,<var>0x300b7246</var></td></tr>
+<tr><th id="406">406</th><td>	.<em>long</em>	<var>0xe8000000</var>,<var>0x2e5d2126</var></td></tr>
+<tr><th id="407">407</th><td>	.<em>long</em>	<var>0x48000000</var>,<var>0x2c970032</var></td></tr>
+<tr><th id="408">408</th><td>	.<em>long</em>	<var>0xe8000000</var>,<var>0x2ad77504</var></td></tr>
+<tr><th id="409">409</th><td>	.<em>long</em>	<var>0xe0000000</var>,<var>0x290921cf</var></td></tr>
+<tr><th id="410">410</th><td>	.<em>long</em>	<var>0xb0000000</var>,<var>0x274deb1c</var></td></tr>
+<tr><th id="411">411</th><td>	.<em>long</em>	<var>0xe0000000</var>,<var>0x25829a73</var></td></tr>
+<tr><th id="412">412</th><td>	.<em>long</em>	<var>0xbe000000</var>,<var>0x23fd1046</var></td></tr>
+<tr><th id="413">413</th><td>	.<em>long</em>	<var>0x10000000</var>,<var>0x2224baed</var></td></tr>
+<tr><th id="414">414</th><td>	.<em>long</em>	<var>0x8e000000</var>,<var>0x20709d33</var></td></tr>
+<tr><th id="415">415</th><td>	.<em>long</em>	<var>0x80000000</var>,<var>0x1e535a2f</var></td></tr>
+<tr><th id="416">416</th><td>	.<em>long</em>	<var>0x64000000</var>,<var>0x1cef904e</var></td></tr>
+<tr><th id="417">417</th><td>	.<em>long</em>	<var>0x30000000</var>,<var>0x1b0d6398</var></td></tr>
+<tr><th id="418">418</th><td>	.<em>long</em>	<var>0x24000000</var>,<var>0x1964ce7d</var></td></tr>
+<tr><th id="419">419</th><td>	.<em>long</em>	<var>0x16000000</var>,<var>0x17b908bf</var></td></tr>
+<tr><th id="420">420</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".L_FPI" data-ref="_M/L">L</a>(_FPI), @object</td></tr>
+<tr><th id="421">421</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .L_FPI,.-.L_FPI;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".L_FPI" data-ref="_M/L">L</a>(_FPI))</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td><i>/* Coefficients of polynomials for */</i></td></tr>
+<tr><th id="424">424</th><td><i>/* sin(x)~=x+x*x^2*(DP_SIN2_0+x^2*DP_SIN2_1) in low  DP part, */</i></td></tr>
+<tr><th id="425">425</th><td><i>/* cos(x)~=1+1*x^2*(DP_COS2_0+x^2*DP_COS2_1) in high DP part, */</i></td></tr>
+<tr><th id="426">426</th><td><i>/* for |x|&lt;2^-5. */</i></td></tr>
+<tr><th id="427">427</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="428">428</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_0" data-ref="_M/L">L</a>(DP_SINCOS2_0):</td></tr>
+<tr><th id="429">429</th><td>	.<em>long</em>	<var>0x5543d49d</var>,<var>0xbfc55555</var></td></tr>
+<tr><th id="430">430</th><td>	.<em>long</em>	<var>0xff5cc6fd</var>,<var>0xbfdfffff</var></td></tr>
+<tr><th id="431">431</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_0" data-ref="_M/L">L</a>(DP_SINCOS2_0), @object</td></tr>
+<tr><th id="432">432</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SINCOS2_0,.-.LDP_SINCOS2_0;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_0" data-ref="_M/L">L</a>(DP_SINCOS2_0))</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="435">435</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_1" data-ref="_M/L">L</a>(DP_SINCOS2_1):</td></tr>
+<tr><th id="436">436</th><td>	.<em>long</em>	<var>0x75cec8c5</var>,<var>0x3f8110f4</var></td></tr>
+<tr><th id="437">437</th><td>	.<em>long</em>	<var>0xb178dac5</var>,<var>0x3fa55514</var></td></tr>
+<tr><th id="438">438</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_1" data-ref="_M/L">L</a>(DP_SINCOS2_1), @object</td></tr>
+<tr><th id="439">439</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SINCOS2_1,.-.LDP_SINCOS2_1;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SINCOS2_1" data-ref="_M/L">L</a>(DP_SINCOS2_1))</td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td></td></tr>
+<tr><th id="442">442</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="443">443</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_ZERONE" data-ref="_M/L">L</a>(DP_ZERONE):</td></tr>
+<tr><th id="444">444</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x00000000</var>	<i>/* 0.0 */</i></td></tr>
+<tr><th id="445">445</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0xbff00000</var>	<i>/* 1.0 */</i></td></tr>
+<tr><th id="446">446</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_ZERONE" data-ref="_M/L">L</a>(DP_ZERONE), @object</td></tr>
+<tr><th id="447">447</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_ZERONE,.-.LDP_ZERONE;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_ZERONE" data-ref="_M/L">L</a>(DP_ZERONE))</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="450">450</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES):</td></tr>
+<tr><th id="451">451</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x3ff00000</var>	<i>/* +1.0 */</i></td></tr>
+<tr><th id="452">452</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0xbff00000</var>	<i>/* -1.0 */</i></td></tr>
+<tr><th id="453">453</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES), @object</td></tr>
+<tr><th id="454">454</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_ONES,.-.LDP_ONES;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_ONES" data-ref="_M/L">L</a>(DP_ONES))</td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td><i>/* Coefficients of polynomials for */</i></td></tr>
+<tr><th id="457">457</th><td><i>/* sin(t)~=t+t*t^2*(S0+t^2*(S1+t^2*(S2+t^2*(S3+t^2*S4)))) in low  DP part, */</i></td></tr>
+<tr><th id="458">458</th><td><i>/* cos(t)~=1+1*t^2*(C0+t^2*(C1+t^2*(C2+t^2*(C3+t^2*C4)))) in high DP part, */</i></td></tr>
+<tr><th id="459">459</th><td><i>/* for |t|&lt;Pi/4. */</i></td></tr>
+<tr><th id="460">460</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="461">461</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SC4" data-ref="_M/L">L</a>(DP_SC4):</td></tr>
+<tr><th id="462">462</th><td>	.<em>long</em>	<var>0x1674b58a</var>,<var>0xbe5a947e</var></td></tr>
+<tr><th id="463">463</th><td>	.<em>long</em>	<var>0xdd8844d7</var>,<var>0xbe923c97</var></td></tr>
+<tr><th id="464">464</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SC4" data-ref="_M/L">L</a>(DP_SC4), @object</td></tr>
+<tr><th id="465">465</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SC4,.-.LDP_SC4;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC4" data-ref="_M/L">L</a>(DP_SC4))</td></tr>
+<tr><th id="466">466</th><td></td></tr>
+<tr><th id="467">467</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="468">468</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SC3" data-ref="_M/L">L</a>(DP_SC3):</td></tr>
+<tr><th id="469">469</th><td>	.<em>long</em>	<var>0x64e6b5b4</var>,<var>0x3ec71d72</var></td></tr>
+<tr><th id="470">470</th><td>	.<em>long</em>	<var>0x9ac43cc0</var>,<var>0x3efa00eb</var></td></tr>
+<tr><th id="471">471</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SC3" data-ref="_M/L">L</a>(DP_SC3), @object</td></tr>
+<tr><th id="472">472</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SC3,.-.LDP_SC3;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC3" data-ref="_M/L">L</a>(DP_SC3))</td></tr>
+<tr><th id="473">473</th><td></td></tr>
+<tr><th id="474">474</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="475">475</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SC2" data-ref="_M/L">L</a>(DP_SC2):</td></tr>
+<tr><th id="476">476</th><td>	.<em>long</em>	<var>0x8b4bd1f9</var>,<var>0xbf2a019f</var></td></tr>
+<tr><th id="477">477</th><td>	.<em>long</em>	<var>0x348b6874</var>,<var>0xbf56c16b</var></td></tr>
+<tr><th id="478">478</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SC2" data-ref="_M/L">L</a>(DP_SC2), @object</td></tr>
+<tr><th id="479">479</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SC2,.-.LDP_SC2;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC2" data-ref="_M/L">L</a>(DP_SC2))</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="482">482</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SC1" data-ref="_M/L">L</a>(DP_SC1):</td></tr>
+<tr><th id="483">483</th><td>	.<em>long</em>	<var>0x10c2688b</var>,<var>0x3f811111</var></td></tr>
+<tr><th id="484">484</th><td>	.<em>long</em>	<var>0x545c50c7</var>,<var>0x3fa55555</var></td></tr>
+<tr><th id="485">485</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SC1" data-ref="_M/L">L</a>(DP_SC1), @object</td></tr>
+<tr><th id="486">486</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SC1,.-.LDP_SC1;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC1" data-ref="_M/L">L</a>(DP_SC1))</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="489">489</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SC0" data-ref="_M/L">L</a>(DP_SC0):</td></tr>
+<tr><th id="490">490</th><td>	.<em>long</em>	<var>0x55551cd9</var>,<var>0xbfc55555</var></td></tr>
+<tr><th id="491">491</th><td>	.<em>long</em>	<var>0xfffe98ae</var>,<var>0xbfdfffff</var></td></tr>
+<tr><th id="492">492</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SC0" data-ref="_M/L">L</a>(DP_SC0), @object</td></tr>
+<tr><th id="493">493</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SC0,.-.LDP_SC0;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SC0" data-ref="_M/L">L</a>(DP_SC0))</td></tr>
+<tr><th id="494">494</th><td></td></tr>
+<tr><th id="495">495</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="496">496</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_SMALL" data-ref="_M/L">L</a>(DP_SMALL):</td></tr>
+<tr><th id="497">497</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x3cd00000</var>	<i>/* 2^(-50) */</i></td></tr>
+<tr><th id="498">498</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_SMALL" data-ref="_M/L">L</a>(DP_SMALL), @object</td></tr>
+<tr><th id="499">499</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_SMALL,.-.LDP_SMALL;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_SMALL" data-ref="_M/L">L</a>(DP_SMALL))</td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="502">502</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4" data-ref="_M/L">L</a>(DP_PIO4):</td></tr>
+<tr><th id="503">503</th><td>	.<em>long</em>	<var>0x54442d18</var>,<var>0x3fe921fb</var>	<i>/* Pi/4 */</i></td></tr>
+<tr><th id="504">504</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4" data-ref="_M/L">L</a>(DP_PIO4), @object</td></tr>
+<tr><th id="505">505</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_PIO4,.-.LDP_PIO4;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4" data-ref="_M/L">L</a>(DP_PIO4))</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="508">508</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_2POW52" data-ref="_M/L">L</a>(DP_2POW52):</td></tr>
+<tr><th id="509">509</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0x43300000</var>	<i>/* +2^52 */</i></td></tr>
+<tr><th id="510">510</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0xc3300000</var>	<i>/* -2^52 */</i></td></tr>
+<tr><th id="511">511</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_2POW52" data-ref="_M/L">L</a>(DP_2POW52), @object</td></tr>
+<tr><th id="512">512</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_2POW52,.-.LDP_2POW52;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_2POW52" data-ref="_M/L">L</a>(DP_2POW52))</td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="515">515</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_INVPIO4" data-ref="_M/L">L</a>(DP_INVPIO4):</td></tr>
+<tr><th id="516">516</th><td>	.<em>long</em>	<var>0x6dc9c883</var>,<var>0x3ff45f30</var>	<i>/* 4/Pi */</i></td></tr>
+<tr><th id="517">517</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_INVPIO4" data-ref="_M/L">L</a>(DP_INVPIO4), @object</td></tr>
+<tr><th id="518">518</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_INVPIO4,.-.LDP_INVPIO4;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_INVPIO4" data-ref="_M/L">L</a>(DP_INVPIO4))</td></tr>
+<tr><th id="519">519</th><td></td></tr>
+<tr><th id="520">520</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="521">521</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4HI" data-ref="_M/L">L</a>(DP_PIO4HI):</td></tr>
+<tr><th id="522">522</th><td>	.<em>long</em>	<var>0x54000000</var>,<var>0xbfe921fb</var>	<i>/* High part of Pi/4 */</i></td></tr>
+<tr><th id="523">523</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4HI" data-ref="_M/L">L</a>(DP_PIO4HI), @object</td></tr>
+<tr><th id="524">524</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_PIO4HI,.-.LDP_PIO4HI;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4HI" data-ref="_M/L">L</a>(DP_PIO4HI))</td></tr>
+<tr><th id="525">525</th><td></td></tr>
+<tr><th id="526">526</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="527">527</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4LO" data-ref="_M/L">L</a>(DP_PIO4LO):</td></tr>
+<tr><th id="528">528</th><td>	.<em>long</em>	<var>0x11A62633</var>,<var>0xbe010b46</var>	<i>/* Low part of Pi/4 */</i></td></tr>
+<tr><th id="529">529</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4LO" data-ref="_M/L">L</a>(DP_PIO4LO), @object</td></tr>
+<tr><th id="530">530</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_PIO4LO,.-.LDP_PIO4LO;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_PIO4LO" data-ref="_M/L">L</a>(DP_PIO4LO))</td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>2</var></td></tr>
+<tr><th id="533">533</th><td><a class="macro" href="../sysdep.h.html#106" title=".LSP_INVPIO4" data-ref="_M/L">L</a>(SP_INVPIO4):</td></tr>
+<tr><th id="534">534</th><td>	.<em>long</em>	<var>0x3fa2f983</var>		<i>/* 4/Pi */</i></td></tr>
+<tr><th id="535">535</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LSP_INVPIO4" data-ref="_M/L">L</a>(SP_INVPIO4), @object</td></tr>
+<tr><th id="536">536</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LSP_INVPIO4,.-.LSP_INVPIO4;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LSP_INVPIO4" data-ref="_M/L">L</a>(SP_INVPIO4))</td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="539">539</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_ABS_MASK" data-ref="_M/L">L</a>(DP_ABS_MASK): <i>/* Mask for getting DP absolute value */</i></td></tr>
+<tr><th id="540">540</th><td>	.<em>long</em>	<var>0xffffffff</var>,<var>0x7fffffff</var></td></tr>
+<tr><th id="541">541</th><td>	.<em>long</em>	<var>0xffffffff</var>,<var>0x7fffffff</var></td></tr>
+<tr><th id="542">542</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_ABS_MASK" data-ref="_M/L">L</a>(DP_ABS_MASK), @object</td></tr>
+<tr><th id="543">543</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_ABS_MASK,.-.LDP_ABS_MASK;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_ABS_MASK" data-ref="_M/L">L</a>(DP_ABS_MASK))</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>3</var></td></tr>
+<tr><th id="546">546</th><td><a class="macro" href="../sysdep.h.html#106" title=".LDP_HI_MASK" data-ref="_M/L">L</a>(DP_HI_MASK): <i>/* Mask for getting high 21 bits of DP value */</i></td></tr>
+<tr><th id="547">547</th><td>	.<em>long</em>	<var>0x00000000</var>,<var>0xffffffff</var></td></tr>
+<tr><th id="548">548</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LDP_HI_MASK" data-ref="_M/L">L</a>(DP_HI_MASK), @object</td></tr>
+<tr><th id="549">549</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LDP_HI_MASK,.-.LDP_HI_MASK;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LDP_HI_MASK" data-ref="_M/L">L</a>(DP_HI_MASK))</td></tr>
+<tr><th id="550">550</th><td></td></tr>
+<tr><th id="551">551</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>4</var></td></tr>
+<tr><th id="552">552</th><td><a class="macro" href="../sysdep.h.html#106" title=".LSP_ABS_MASK" data-ref="_M/L">L</a>(SP_ABS_MASK): <i>/* Mask for getting SP absolute value */</i></td></tr>
+<tr><th id="553">553</th><td>	.<em>long</em>	<var>0x7fffffff</var>,<var>0x7fffffff</var></td></tr>
+<tr><th id="554">554</th><td>	.<em>long</em>	<var>0x7fffffff</var>,<var>0x7fffffff</var></td></tr>
+<tr><th id="555">555</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LSP_ABS_MASK" data-ref="_M/L">L</a>(SP_ABS_MASK), @object</td></tr>
+<tr><th id="556">556</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LSP_ABS_MASK,.-.LSP_ABS_MASK;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LSP_ABS_MASK" data-ref="_M/L">L</a>(SP_ABS_MASK))</td></tr>
+<tr><th id="557">557</th><td></td></tr>
+<tr><th id="558">558</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>p2align <var>2</var></td></tr>
+<tr><th id="559">559</th><td><a class="macro" href="../sysdep.h.html#106" title=".LSP_ONE" data-ref="_M/L">L</a>(SP_ONE):</td></tr>
+<tr><th id="560">560</th><td>	.<em>long</em>	<var>0x3f800000</var>		<i>/* 1.0 */</i></td></tr>
+<tr><th id="561">561</th><td>	.type <a class="macro" href="../sysdep.h.html#106" title=".LSP_ONE" data-ref="_M/L">L</a>(SP_ONE), @object</td></tr>
+<tr><th id="562">562</th><td>	<a class="macro" href="../sysdep.h.html#37" title=".size .LSP_ONE,.-.LSP_ONE;" data-ref="_M/ASM_SIZE_DIRECTIVE">ASM_SIZE_DIRECTIVE</a>(<a class="macro" href="../sysdep.h.html#106" title=".LSP_ONE" data-ref="_M/L">L</a>(SP_ONE))</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td><a class="macro" href="../../../include/libc-symbols.h.html#139" title=".weak sincosf ; sincosf = __sincosf" data-ref="_M/weak_alias">weak_alias</a>(<span class='error' title="initializer element is not a compile-time constant"><a class="ref" href="#73" title='__sincosf' data-ref="__sincosf" data-ref-filename="__sincosf">__sincosf</a></span>, <span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="sincosf" title='sincosf' data-ref="sincosf" data-ref-filename="sincosf">sincosf</dfn></span>)<span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="565">565</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

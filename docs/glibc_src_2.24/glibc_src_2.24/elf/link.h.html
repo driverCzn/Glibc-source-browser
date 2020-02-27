@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>link.h source code [glibc_src_2.24/elf/link.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="dl_phdr_info,r_debug "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/elf/link.h'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>glibc_src_2.24</a>/<a href='./'>elf</a>/<a href='link.h.html'>link.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Data structure for communication from the run-time dynamic linker for</i></td></tr>
+<tr><th id="2">2</th><td><i>   loaded ELF shared objects.</i></td></tr>
+<tr><th id="3">3</th><td><i>   Copyright (C) 1995-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="4">4</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="5">5</th><td><i></i></td></tr>
+<tr><th id="6">6</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="8">8</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i></i></td></tr>
+<tr><th id="11">11</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="17">17</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="18">18</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="20">ifndef</span>	<span class="macro" data-ref="_M/_LINK_H">_LINK_H</span></u></td></tr>
+<tr><th id="21">21</th><td><u>#define	<dfn class="macro" id="_M/_LINK_H" data-ref="_M/_LINK_H">_LINK_H</dfn>	1</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/features.h.html">&lt;features.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/elf.h.html">&lt;elf.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/dlfcn.h.html">&lt;dlfcn.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/* We use this macro to refer to ELF types independent of the native wordsize.</i></td></tr>
+<tr><th id="29">29</th><td><i>   `ElfW(TYPE)' is used in place of `Elf32_TYPE' or `Elf64_TYPE'.  */</i></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/ElfW" data-ref="_M/ElfW">ElfW</dfn>(type)	_ElfW (Elf, __ELF_NATIVE_CLASS, type)</u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/_ElfW" data-ref="_M/_ElfW">_ElfW</dfn>(e,w,t)	_ElfW_1 (e, w, _##t)</u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/_ElfW_1" data-ref="_M/_ElfW_1">_ElfW_1</dfn>(e,w,t)	e##w##t</u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../bits/elfclass.h.html">&lt;bits/elfclass.h&gt;</a>		/* Defines __ELF_NATIVE_CLASS.  */</u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../sysdeps/x86/bits/link.h.html">&lt;bits/link.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><i>/* Rendezvous structure used by the run-time dynamic linker to communicate</i></td></tr>
+<tr><th id="38">38</th><td><i>   details of shared object loading to the debugger.  If the executable's</i></td></tr>
+<tr><th id="39">39</th><td><i>   dynamic section has a DT_DEBUG element, the run-time linker sets that</i></td></tr>
+<tr><th id="40">40</th><td><i>   element's value to the address where this structure can be found.  */</i></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <dfn class="type def" id="r_debug" title='r_debug' data-ref="r_debug" data-ref-filename="r_debug">r_debug</dfn></td></tr>
+<tr><th id="43">43</th><td>  {</td></tr>
+<tr><th id="44">44</th><td>    <em>int</em> <dfn class="decl field" id="r_debug::r_version" title='r_debug::r_version' data-ref="r_debug::r_version" data-ref-filename="r_debug..r_version">r_version</dfn>;		<i>/* Version number for this protocol.  */</i></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>    <b>struct</b> <a class="macro" href="../include/link.h.html#30" title="link_map_public" data-ref="_M/link_map">link_map</a> *<dfn class="decl field" id="r_debug::r_map" title='r_debug::r_map' data-ref="r_debug::r_map" data-ref-filename="r_debug..r_map">r_map</dfn>;	<i>/* Head of the chain of loaded objects.  */</i></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>    <i>/* This is the address of a function internal to the run-time linker,</i></td></tr>
+<tr><th id="49">49</th><td><i>       that will always be called when the linker begins to map in a</i></td></tr>
+<tr><th id="50">50</th><td><i>       library or unmap it, and again when the mapping change is complete.</i></td></tr>
+<tr><th id="51">51</th><td><i>       The debugger can set a breakpoint at this address if it wants to</i></td></tr>
+<tr><th id="52">52</th><td><i>       notice shared object mapping changes.  */</i></td></tr>
+<tr><th id="53">53</th><td>    <a class="macro" href="#30" title="Elf64_Addr" data-ref="_M/ElfW">ElfW</a>(Addr) <dfn class="decl field" id="r_debug::r_brk" title='r_debug::r_brk' data-ref="r_debug::r_brk" data-ref-filename="r_debug..r_brk">r_brk</dfn>;</td></tr>
+<tr><th id="54">54</th><td>    <b>enum</b></td></tr>
+<tr><th id="55">55</th><td>      {</td></tr>
+<tr><th id="56">56</th><td>	<i>/* This state value describes the mapping change taking place when</i></td></tr>
+<tr><th id="57">57</th><td><i>	   the `r_brk' address is called.  */</i></td></tr>
+<tr><th id="58">58</th><td>	<dfn class="enum" id="r_debug::RT_CONSISTENT" title='r_debug::RT_CONSISTENT' data-ref="r_debug::RT_CONSISTENT" data-ref-filename="r_debug..RT_CONSISTENT">RT_CONSISTENT</dfn>,		<i>/* Mapping change is complete.  */</i></td></tr>
+<tr><th id="59">59</th><td>	<dfn class="enum" id="r_debug::RT_ADD" title='r_debug::RT_ADD' data-ref="r_debug::RT_ADD" data-ref-filename="r_debug..RT_ADD">RT_ADD</dfn>,			<i>/* Beginning to add a new object.  */</i></td></tr>
+<tr><th id="60">60</th><td>	<dfn class="enum" id="r_debug::RT_DELETE" title='r_debug::RT_DELETE' data-ref="r_debug::RT_DELETE" data-ref-filename="r_debug..RT_DELETE">RT_DELETE</dfn>		<i>/* Beginning to remove an object mapping.  */</i></td></tr>
+<tr><th id="61">61</th><td>      } <dfn class="decl field" id="r_debug::r_state" title='r_debug::r_state' data-ref="r_debug::r_state" data-ref-filename="r_debug..r_state">r_state</dfn>;</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>    <a class="macro" href="#30" title="Elf64_Addr" data-ref="_M/ElfW">ElfW</a>(Addr) <dfn class="decl field" id="r_debug::r_ldbase" title='r_debug::r_ldbase' data-ref="r_debug::r_ldbase" data-ref-filename="r_debug..r_ldbase">r_ldbase</dfn>;	<i>/* Base address the linker is loaded at.  */</i></td></tr>
+<tr><th id="64">64</th><td>  };</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i>/* This is the instance of that structure used by the dynamic linker.  */</i></td></tr>
+<tr><th id="67">67</th><td><b>extern</b> <b>struct</b> <a class="type" href="#r_debug" title='r_debug' data-ref="r_debug" data-ref-filename="r_debug">r_debug</a> <dfn class="decl" id="_r_debug" title='_r_debug' data-ref="_r_debug" data-ref-filename="_r_debug">_r_debug</dfn>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><i>/* This symbol refers to the "dynamic structure" in the `.dynamic' section</i></td></tr>
+<tr><th id="70">70</th><td><i>   of whatever module refers to `_DYNAMIC'.  So, to find its own</i></td></tr>
+<tr><th id="71">71</th><td><i>   `struct r_debug', a program could do:</i></td></tr>
+<tr><th id="72">72</th><td><i>     for (dyn = _DYNAMIC; dyn-&gt;d_tag != DT_NULL; ++dyn)</i></td></tr>
+<tr><th id="73">73</th><td><i>       if (dyn-&gt;d_tag == DT_DEBUG)</i></td></tr>
+<tr><th id="74">74</th><td><i>	 r_debug = (struct r_debug *) dyn-&gt;d_un.d_ptr;</i></td></tr>
+<tr><th id="75">75</th><td><i>   */</i></td></tr>
+<tr><th id="76">76</th><td><b>extern</b> <a class="macro" href="#30" title="Elf64_Dyn" data-ref="_M/ElfW">ElfW</a>(Dyn) <dfn class="decl" id="_DYNAMIC" title='_DYNAMIC' data-ref="_DYNAMIC" data-ref-filename="_DYNAMIC">_DYNAMIC</dfn>[];</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><i>/* Structure describing a loaded shared object.  The `l_next' and `l_prev'</i></td></tr>
+<tr><th id="79">79</th><td><i>   members form a chain of all the shared objects loaded at startup.</i></td></tr>
+<tr><th id="80">80</th><td><i></i></td></tr>
+<tr><th id="81">81</th><td><i>   These data structures exist in space used by the run-time dynamic linker;</i></td></tr>
+<tr><th id="82">82</th><td><i>   modifying them may have disastrous results.  */</i></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><b>struct</b> <a class="macro" href="../include/link.h.html#30" title="link_map_public" data-ref="_M/link_map">link_map</a></td></tr>
+<tr><th id="85">85</th><td>  {</td></tr>
+<tr><th id="86">86</th><td>    <i>/* These first few members are part of the protocol with the debugger.</i></td></tr>
+<tr><th id="87">87</th><td><i>       This is the same format used in SVR4.  */</i></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>    <a class="macro" href="#30" title="Elf64_Addr" data-ref="_M/ElfW">ElfW</a>(Addr) <dfn class="decl field" id="link_map_public::l_addr" title='link_map_public::l_addr' data-ref="link_map_public::l_addr" data-ref-filename="link_map_public..l_addr">l_addr</dfn>;		<i>/* Difference between the address in the ELF</i></td></tr>
+<tr><th id="90">90</th><td><i>				   file and the addresses in memory.  */</i></td></tr>
+<tr><th id="91">91</th><td>    <em>char</em> *<dfn class="decl field" id="link_map_public::l_name" title='link_map_public::l_name' data-ref="link_map_public::l_name" data-ref-filename="link_map_public..l_name">l_name</dfn>;		<i>/* Absolute file name object was found in.  */</i></td></tr>
+<tr><th id="92">92</th><td>    <a class="macro" href="#30" title="Elf64_Dyn" data-ref="_M/ElfW">ElfW</a>(Dyn) *<dfn class="decl field" id="link_map_public::l_ld" title='link_map_public::l_ld' data-ref="link_map_public::l_ld" data-ref-filename="link_map_public..l_ld">l_ld</dfn>;		<i>/* Dynamic section of the shared object.  */</i></td></tr>
+<tr><th id="93">93</th><td>    <b>struct</b> <a class="macro" href="../include/link.h.html#30" title="link_map_public" data-ref="_M/link_map">link_map</a> *<dfn class="decl field" id="link_map_public::l_next" title='link_map_public::l_next' data-ref="link_map_public::l_next" data-ref-filename="link_map_public..l_next">l_next</dfn>, *<dfn class="decl field" id="link_map_public::l_prev" title='link_map_public::l_prev' data-ref="link_map_public::l_prev" data-ref-filename="link_map_public..l_prev">l_prev</dfn>; <i>/* Chain of loaded objects.  */</i></td></tr>
+<tr><th id="94">94</th><td>  };</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="96">ifdef</span> <a class="macro" href="../include/features.h.html#322" data-ref="_M/__USE_GNU">__USE_GNU</a></u></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i>/* Version numbers for la_version handshake interface.  */</i></td></tr>
+<tr><th id="99">99</th><td><u>#define <dfn class="macro" id="_M/LAV_CURRENT" data-ref="_M/LAV_CURRENT">LAV_CURRENT</dfn>	1</u></td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><i>/* Activity types signaled through la_activity.  */</i></td></tr>
+<tr><th id="102">102</th><td><b>enum</b></td></tr>
+<tr><th id="103">103</th><td>  {</td></tr>
+<tr><th id="104">104</th><td>    <dfn class="enum" id="LA_ACT_CONSISTENT" title='LA_ACT_CONSISTENT' data-ref="LA_ACT_CONSISTENT" data-ref-filename="LA_ACT_CONSISTENT">LA_ACT_CONSISTENT</dfn>,		<i>/* Link map consistent again.  */</i></td></tr>
+<tr><th id="105">105</th><td>    <dfn class="enum" id="LA_ACT_ADD" title='LA_ACT_ADD' data-ref="LA_ACT_ADD" data-ref-filename="LA_ACT_ADD">LA_ACT_ADD</dfn>,			<i>/* New object will be added.  */</i></td></tr>
+<tr><th id="106">106</th><td>    <dfn class="enum" id="LA_ACT_DELETE" title='LA_ACT_DELETE' data-ref="LA_ACT_DELETE" data-ref-filename="LA_ACT_DELETE">LA_ACT_DELETE</dfn>		<i>/* Objects will be removed.  */</i></td></tr>
+<tr><th id="107">107</th><td>  };</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* Values representing origin of name for dynamic loading.  */</i></td></tr>
+<tr><th id="110">110</th><td><b>enum</b></td></tr>
+<tr><th id="111">111</th><td>  {</td></tr>
+<tr><th id="112">112</th><td>    <dfn class="enum" id="LA_SER_ORIG" title='LA_SER_ORIG' data-ref="LA_SER_ORIG" data-ref-filename="LA_SER_ORIG">LA_SER_ORIG</dfn> = <var>0x01</var>,		<i>/* Original name.  */</i></td></tr>
+<tr><th id="113">113</th><td>    <dfn class="enum" id="LA_SER_LIBPATH" title='LA_SER_LIBPATH' data-ref="LA_SER_LIBPATH" data-ref-filename="LA_SER_LIBPATH">LA_SER_LIBPATH</dfn> = <var>0x02</var>,	<i>/* Directory from LD_LIBRARY_PATH.  */</i></td></tr>
+<tr><th id="114">114</th><td>    <dfn class="enum" id="LA_SER_RUNPATH" title='LA_SER_RUNPATH' data-ref="LA_SER_RUNPATH" data-ref-filename="LA_SER_RUNPATH">LA_SER_RUNPATH</dfn> = <var>0x04</var>,	<i>/* Directory from RPATH/RUNPATH.  */</i></td></tr>
+<tr><th id="115">115</th><td>    <dfn class="enum" id="LA_SER_CONFIG" title='LA_SER_CONFIG' data-ref="LA_SER_CONFIG" data-ref-filename="LA_SER_CONFIG">LA_SER_CONFIG</dfn> = <var>0x08</var>,	<i>/* Found through ldconfig.  */</i></td></tr>
+<tr><th id="116">116</th><td>    <dfn class="enum" id="LA_SER_DEFAULT" title='LA_SER_DEFAULT' data-ref="LA_SER_DEFAULT" data-ref-filename="LA_SER_DEFAULT">LA_SER_DEFAULT</dfn> = <var>0x40</var>,	<i>/* Default directory.  */</i></td></tr>
+<tr><th id="117">117</th><td>    <dfn class="enum" id="LA_SER_SECURE" title='LA_SER_SECURE' data-ref="LA_SER_SECURE" data-ref-filename="LA_SER_SECURE">LA_SER_SECURE</dfn> = <var>0x80</var>	<i>/* Unused.  */</i></td></tr>
+<tr><th id="118">118</th><td>  };</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i>/* Values for la_objopen return value.  */</i></td></tr>
+<tr><th id="121">121</th><td><b>enum</b></td></tr>
+<tr><th id="122">122</th><td>  {</td></tr>
+<tr><th id="123">123</th><td>    <dfn class="enum" id="LA_FLG_BINDTO" title='LA_FLG_BINDTO' data-ref="LA_FLG_BINDTO" data-ref-filename="LA_FLG_BINDTO">LA_FLG_BINDTO</dfn> = <var>0x01</var>,	<i>/* Audit symbols bound to this object.  */</i></td></tr>
+<tr><th id="124">124</th><td>    <dfn class="enum" id="LA_FLG_BINDFROM" title='LA_FLG_BINDFROM' data-ref="LA_FLG_BINDFROM" data-ref-filename="LA_FLG_BINDFROM">LA_FLG_BINDFROM</dfn> = <var>0x02</var>	<i>/* Audit symbols bound from this object.  */</i></td></tr>
+<tr><th id="125">125</th><td>  };</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><i>/* Values for la_symbind flags parameter.  */</i></td></tr>
+<tr><th id="128">128</th><td><b>enum</b></td></tr>
+<tr><th id="129">129</th><td>  {</td></tr>
+<tr><th id="130">130</th><td>    <dfn class="enum" id="LA_SYMB_NOPLTENTER" title='LA_SYMB_NOPLTENTER' data-ref="LA_SYMB_NOPLTENTER" data-ref-filename="LA_SYMB_NOPLTENTER">LA_SYMB_NOPLTENTER</dfn> = <var>0x01</var>,	<i>/* la_pltenter will not be called.  */</i></td></tr>
+<tr><th id="131">131</th><td>    <dfn class="enum" id="LA_SYMB_NOPLTEXIT" title='LA_SYMB_NOPLTEXIT' data-ref="LA_SYMB_NOPLTEXIT" data-ref-filename="LA_SYMB_NOPLTEXIT">LA_SYMB_NOPLTEXIT</dfn> = <var>0x02</var>,	<i>/* la_pltexit will not be called.  */</i></td></tr>
+<tr><th id="132">132</th><td>    <dfn class="enum" id="LA_SYMB_STRUCTCALL" title='LA_SYMB_STRUCTCALL' data-ref="LA_SYMB_STRUCTCALL" data-ref-filename="LA_SYMB_STRUCTCALL">LA_SYMB_STRUCTCALL</dfn> = <var>0x04</var>,	<i>/* Return value is a structure.  */</i></td></tr>
+<tr><th id="133">133</th><td>    <dfn class="enum" id="LA_SYMB_DLSYM" title='LA_SYMB_DLSYM' data-ref="LA_SYMB_DLSYM" data-ref-filename="LA_SYMB_DLSYM">LA_SYMB_DLSYM</dfn> = <var>0x08</var>,	<i>/* Binding due to dlsym call.  */</i></td></tr>
+<tr><th id="134">134</th><td>    <dfn class="enum" id="LA_SYMB_ALTVALUE" title='LA_SYMB_ALTVALUE' data-ref="LA_SYMB_ALTVALUE" data-ref-filename="LA_SYMB_ALTVALUE">LA_SYMB_ALTVALUE</dfn> = <var>0x10</var>	<i>/* Value has been changed by a previous</i></td></tr>
+<tr><th id="135">135</th><td><i>				   la_symbind call.  */</i></td></tr>
+<tr><th id="136">136</th><td>  };</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><b>struct</b> <dfn class="type def" id="dl_phdr_info" title='dl_phdr_info' data-ref="dl_phdr_info" data-ref-filename="dl_phdr_info">dl_phdr_info</dfn></td></tr>
+<tr><th id="139">139</th><td>  {</td></tr>
+<tr><th id="140">140</th><td>    <a class="macro" href="#30" title="Elf64_Addr" data-ref="_M/ElfW">ElfW</a>(Addr) <dfn class="decl field" id="dl_phdr_info::dlpi_addr" title='dl_phdr_info::dlpi_addr' data-ref="dl_phdr_info::dlpi_addr" data-ref-filename="dl_phdr_info..dlpi_addr">dlpi_addr</dfn>;</td></tr>
+<tr><th id="141">141</th><td>    <em>const</em> <em>char</em> *<dfn class="decl field" id="dl_phdr_info::dlpi_name" title='dl_phdr_info::dlpi_name' data-ref="dl_phdr_info::dlpi_name" data-ref-filename="dl_phdr_info..dlpi_name">dlpi_name</dfn>;</td></tr>
+<tr><th id="142">142</th><td>    <em>const</em> <a class="macro" href="#30" title="Elf64_Phdr" data-ref="_M/ElfW">ElfW</a>(Phdr) *<dfn class="decl field" id="dl_phdr_info::dlpi_phdr" title='dl_phdr_info::dlpi_phdr' data-ref="dl_phdr_info::dlpi_phdr" data-ref-filename="dl_phdr_info..dlpi_phdr">dlpi_phdr</dfn>;</td></tr>
+<tr><th id="143">143</th><td>    <a class="macro" href="#30" title="Elf64_Half" data-ref="_M/ElfW">ElfW</a>(Half) <dfn class="decl field" id="dl_phdr_info::dlpi_phnum" title='dl_phdr_info::dlpi_phnum' data-ref="dl_phdr_info::dlpi_phnum" data-ref-filename="dl_phdr_info..dlpi_phnum">dlpi_phnum</dfn>;</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>    <i>/* Note: Following members were introduced after the first</i></td></tr>
+<tr><th id="146">146</th><td><i>       version of this structure was available.  Check the SIZE</i></td></tr>
+<tr><th id="147">147</th><td><i>       argument passed to the dl_iterate_phdr callback to determine</i></td></tr>
+<tr><th id="148">148</th><td><i>       whether or not each later member is available.  */</i></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>    <i>/* Incremented when a new object may have been added.  */</i></td></tr>
+<tr><th id="151">151</th><td>    <b>__extension__</b> <em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> <dfn class="decl field" id="dl_phdr_info::dlpi_adds" title='dl_phdr_info::dlpi_adds' data-ref="dl_phdr_info::dlpi_adds" data-ref-filename="dl_phdr_info..dlpi_adds">dlpi_adds</dfn>;</td></tr>
+<tr><th id="152">152</th><td>    <i>/* Incremented when an object may have been removed.  */</i></td></tr>
+<tr><th id="153">153</th><td>    <b>__extension__</b> <em>unsigned</em> <em>long</em> <em>long</em> <em>int</em> <dfn class="decl field" id="dl_phdr_info::dlpi_subs" title='dl_phdr_info::dlpi_subs' data-ref="dl_phdr_info::dlpi_subs" data-ref-filename="dl_phdr_info..dlpi_subs">dlpi_subs</dfn>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>    <i>/* If there is a PT_TLS segment, its module ID as used in</i></td></tr>
+<tr><th id="156">156</th><td><i>       TLS relocations, else zero.  */</i></td></tr>
+<tr><th id="157">157</th><td>    <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span> <dfn class="decl field" id="dl_phdr_info::dlpi_tls_modid" title='dl_phdr_info::dlpi_tls_modid' data-ref="dl_phdr_info::dlpi_tls_modid" data-ref-filename="dl_phdr_info..dlpi_tls_modid">dlpi_tls_modid</dfn>;</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>    <i>/* The address of the calling thread's instance of this module's</i></td></tr>
+<tr><th id="160">160</th><td><i>       PT_TLS segment, if it has one and it has been allocated</i></td></tr>
+<tr><th id="161">161</th><td><i>       in the calling thread, otherwise a null pointer.  */</i></td></tr>
+<tr><th id="162">162</th><td>    <em>void</em> *<dfn class="decl field" id="dl_phdr_info::dlpi_tls_data" title='dl_phdr_info::dlpi_tls_data' data-ref="dl_phdr_info::dlpi_tls_data" data-ref-filename="dl_phdr_info..dlpi_tls_data">dlpi_tls_data</dfn>;</td></tr>
+<tr><th id="163">163</th><td>  };</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><a class="macro" href="../misc/sys/cdefs.h.html#101" title="" data-ref="_M/__BEGIN_DECLS">__BEGIN_DECLS</a></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="dl_iterate_phdr" title='dl_iterate_phdr' data-ref="dl_iterate_phdr" data-ref-filename="dl_iterate_phdr">dl_iterate_phdr</dfn> (<em>int</em> (*<dfn class="local col2 decl" id="52__callback" title='__callback' data-type='int (*)(struct dl_phdr_info *, size_t, void *)' data-ref="52__callback" data-ref-filename="52__callback">__callback</dfn>) (<b>struct</b> <a class="type" href="#dl_phdr_info" title='dl_phdr_info' data-ref="dl_phdr_info" data-ref-filename="dl_phdr_info">dl_phdr_info</a> *,</td></tr>
+<tr><th id="168">168</th><td>					       <span class='typedef' title='size_t' data-type='unsigned long' data-ref="size_t" data-ref-filename="size_t">size_t</span>, <em>void</em> *),</td></tr>
+<tr><th id="169">169</th><td>			    <em>void</em> *<dfn class="local col3 decl" id="53__data" title='__data' data-type='void *' data-ref="53__data" data-ref-filename="53__data">__data</dfn>);</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><i>/* Prototypes for the ld.so auditing interfaces.  These are not</i></td></tr>
+<tr><th id="173">173</th><td><i>   defined anywhere in ld.so but instead have to be provided by the</i></td></tr>
+<tr><th id="174">174</th><td><i>   auditing DSO.  */</i></td></tr>
+<tr><th id="175">175</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="la_version" title='la_version' data-ref="la_version" data-ref-filename="la_version">la_version</dfn> (<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="54__version" title='__version' data-type='unsigned int' data-ref="54__version" data-ref-filename="54__version">__version</dfn>);</td></tr>
+<tr><th id="176">176</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="la_activity" title='la_activity' data-ref="la_activity" data-ref-filename="la_activity">la_activity</dfn> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col5 decl" id="55__cookie" title='__cookie' data-type='uintptr_t *' data-ref="55__cookie" data-ref-filename="55__cookie">__cookie</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="56__flag" title='__flag' data-type='unsigned int' data-ref="56__flag" data-ref-filename="56__flag">__flag</dfn>);</td></tr>
+<tr><th id="177">177</th><td><b>extern</b> <em>char</em> *<dfn class="decl fn" id="la_objsearch" title='la_objsearch' data-ref="la_objsearch" data-ref-filename="la_objsearch">la_objsearch</dfn> (<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="57__name" title='__name' data-type='const char *' data-ref="57__name" data-ref-filename="57__name">__name</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col8 decl" id="58__cookie" title='__cookie' data-type='uintptr_t *' data-ref="58__cookie" data-ref-filename="58__cookie">__cookie</dfn>,</td></tr>
+<tr><th id="178">178</th><td>			   <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="59__flag" title='__flag' data-type='unsigned int' data-ref="59__flag" data-ref-filename="59__flag">__flag</dfn>);</td></tr>
+<tr><th id="179">179</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <a class="macro" href="../include/link.h.html#31" title="la_objopen_wrongproto" data-ref="_M/la_objopen">la_objopen</a> (<b>struct</b> <a class="macro" href="../include/link.h.html#30" title="link_map_public" data-ref="_M/link_map">link_map</a> *<dfn class="local col0 decl" id="60__map" title='__map' data-type='struct link_map_public *' data-ref="60__map" data-ref-filename="60__map">__map</dfn>, <a class="typedef" href="../dlfcn/dlfcn.h.html#Lmid_t" title='Lmid_t' data-type='long' data-ref="Lmid_t" data-ref-filename="Lmid_t">Lmid_t</a> <dfn class="local col1 decl" id="61__lmid" title='__lmid' data-type='Lmid_t' data-ref="61__lmid" data-ref-filename="61__lmid">__lmid</dfn>,</td></tr>
+<tr><th id="180">180</th><td>				<a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col2 decl" id="62__cookie" title='__cookie' data-type='uintptr_t *' data-ref="62__cookie" data-ref-filename="62__cookie">__cookie</dfn>);</td></tr>
+<tr><th id="181">181</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="la_preinit" title='la_preinit' data-ref="la_preinit" data-ref-filename="la_preinit">la_preinit</dfn> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col3 decl" id="63__cookie" title='__cookie' data-type='uintptr_t *' data-ref="63__cookie" data-ref-filename="63__cookie">__cookie</dfn>);</td></tr>
+<tr><th id="182">182</th><td><b>extern</b> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="decl fn" id="la_symbind32" title='la_symbind32' data-ref="la_symbind32" data-ref-filename="la_symbind32">la_symbind32</dfn> (<a class="typedef" href="elf.h.html#Elf32_Sym" title='Elf32_Sym' data-type='struct Elf32_Sym' data-ref="Elf32_Sym" data-ref-filename="Elf32_Sym">Elf32_Sym</a> *<dfn class="local col4 decl" id="64__sym" title='__sym' data-type='Elf32_Sym *' data-ref="64__sym" data-ref-filename="64__sym">__sym</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="65__ndx" title='__ndx' data-type='unsigned int' data-ref="65__ndx" data-ref-filename="65__ndx">__ndx</dfn>,</td></tr>
+<tr><th id="183">183</th><td>			       <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col6 decl" id="66__refcook" title='__refcook' data-type='uintptr_t *' data-ref="66__refcook" data-ref-filename="66__refcook">__refcook</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col7 decl" id="67__defcook" title='__defcook' data-type='uintptr_t *' data-ref="67__defcook" data-ref-filename="67__defcook">__defcook</dfn>,</td></tr>
+<tr><th id="184">184</th><td>			       <em>unsigned</em> <em>int</em> *<dfn class="local col8 decl" id="68__flags" title='__flags' data-type='unsigned int *' data-ref="68__flags" data-ref-filename="68__flags">__flags</dfn>, <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="69__symname" title='__symname' data-type='const char *' data-ref="69__symname" data-ref-filename="69__symname">__symname</dfn>);</td></tr>
+<tr><th id="185">185</th><td><b>extern</b> <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> <dfn class="decl fn" id="la_symbind64" title='la_symbind64' data-ref="la_symbind64" data-ref-filename="la_symbind64">la_symbind64</dfn> (<a class="typedef" href="elf.h.html#Elf64_Sym" title='Elf64_Sym' data-type='struct Elf64_Sym' data-ref="Elf64_Sym" data-ref-filename="Elf64_Sym">Elf64_Sym</a> *<dfn class="local col0 decl" id="70__sym" title='__sym' data-type='Elf64_Sym *' data-ref="70__sym" data-ref-filename="70__sym">__sym</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="71__ndx" title='__ndx' data-type='unsigned int' data-ref="71__ndx" data-ref-filename="71__ndx">__ndx</dfn>,</td></tr>
+<tr><th id="186">186</th><td>			       <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col2 decl" id="72__refcook" title='__refcook' data-type='uintptr_t *' data-ref="72__refcook" data-ref-filename="72__refcook">__refcook</dfn>, <a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col3 decl" id="73__defcook" title='__defcook' data-type='uintptr_t *' data-ref="73__defcook" data-ref-filename="73__defcook">__defcook</dfn>,</td></tr>
+<tr><th id="187">187</th><td>			       <em>unsigned</em> <em>int</em> *<dfn class="local col4 decl" id="74__flags" title='__flags' data-type='unsigned int *' data-ref="74__flags" data-ref-filename="74__flags">__flags</dfn>, <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="75__symname" title='__symname' data-type='const char *' data-ref="75__symname" data-ref-filename="75__symname">__symname</dfn>);</td></tr>
+<tr><th id="188">188</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="la_objclose" title='la_objclose' data-ref="la_objclose" data-ref-filename="la_objclose">la_objclose</dfn> (<a class="typedef" href="../sysdeps/generic/stdint.h.html#uintptr_t" title='uintptr_t' data-type='unsigned long' data-ref="uintptr_t" data-ref-filename="uintptr_t">uintptr_t</a> *<dfn class="local col6 decl" id="76__cookie" title='__cookie' data-type='uintptr_t *' data-ref="76__cookie" data-ref-filename="76__cookie">__cookie</dfn>);</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><a class="macro" href="../misc/sys/cdefs.h.html#102" title="" data-ref="_M/__END_DECLS">__END_DECLS</a></td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><u>#<span data-ppcond="96">endif</span></u></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><u>#<span data-ppcond="20">endif</span> /* link.h */</u></td></tr>
+<tr><th id="195">195</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../assert/assert.c.html'>glibc_src_2.24/assert/assert.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

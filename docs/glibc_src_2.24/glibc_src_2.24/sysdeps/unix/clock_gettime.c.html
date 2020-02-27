@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>clock_gettime.c source code [glibc_src_2.24/sysdeps/unix/clock_gettime.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc_src_2.24/sysdeps/unix/clock_gettime.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc_src_2.24</a>/<a href='..'>sysdeps</a>/<a href='./'>unix</a>/<a href='clock_gettime.c.html'>clock_gettime.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* clock_gettime -- Get the current time from a POSIX clockid_t.  Unix version.</i></td></tr>
+<tr><th id="2">2</th><td><i>   Copyright (C) 1999-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="3">3</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="6">6</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="7">7</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="8">8</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="9">9</th><td><i></i></td></tr>
+<tr><th id="10">10</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="11">11</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="12">12</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="13">13</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="14">14</th><td><i></i></td></tr>
+<tr><th id="15">15</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="16">16</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="17">17</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.  */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/errno.h.html">&lt;errno.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../generic/stdint.h.html">&lt;stdint.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/time.h.html">&lt;time.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/sys/time.h.html">&lt;sys/time.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/libc-internal.h.html">&lt;libc-internal.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="sysv/linux/ldsodefs.h.html">&lt;ldsodefs.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="27">if</span> <a class="macro" href="../x86_64/hp-timing.h.html#23" title="(1)" data-ref="_M/HP_TIMING_AVAIL">HP_TIMING_AVAIL</a></u></td></tr>
+<tr><th id="28">28</th><td><i>/* Clock frequency of the processor.  We make it a 64-bit variable</i></td></tr>
+<tr><th id="29">29</th><td><i>   because some jokers are already playing with processors with more</i></td></tr>
+<tr><th id="30">30</th><td><i>   than 4GHz.  */</i></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <a class="typedef" href="../x86_64/hp-timing.h.html#hp_timing_t" title='hp_timing_t' data-type='unsigned long long' data-ref="hp_timing_t" data-ref-filename="hp_timing_t">hp_timing_t</a> <dfn class="decl def" id="freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</dfn>;</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* This function is defined in the thread library.  */</i></td></tr>
+<tr><th id="35">35</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__pthread_clock_gettime" title='__pthread_clock_gettime' data-ref="__pthread_clock_gettime" data-ref-filename="__pthread_clock_gettime">__pthread_clock_gettime</dfn> (<a class="typedef" href="../../time/time.h.html#clockid_t" title='clockid_t' data-type='__clockid_t' data-ref="clockid_t" data-ref-filename="clockid_t">clockid_t</a> <dfn class="local col1 decl" id="1clock_id" title='clock_id' data-type='clockid_t' data-ref="1clock_id" data-ref-filename="1clock_id">clock_id</dfn>, <a class="typedef" href="../x86_64/hp-timing.h.html#hp_timing_t" title='hp_timing_t' data-type='unsigned long long' data-ref="hp_timing_t" data-ref-filename="hp_timing_t">hp_timing_t</a> <dfn class="local col2 decl" id="2freq" title='freq' data-type='hp_timing_t' data-ref="2freq" data-ref-filename="2freq">freq</dfn>,</td></tr>
+<tr><th id="36">36</th><td>				    <b>struct</b> <a class="type" href="../../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col3 decl" id="3tp" title='tp' data-type='struct timespec *' data-ref="3tp" data-ref-filename="3tp">tp</dfn>)</td></tr>
+<tr><th id="37">37</th><td>     <b>__attribute__</b> ((__weak__));</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="40">40</th><td><dfn class="decl def fn" id="hp_timing_gettime" title='hp_timing_gettime' data-ref="hp_timing_gettime" data-ref-filename="hp_timing_gettime">hp_timing_gettime</dfn> (<a class="typedef" href="../../time/time.h.html#clockid_t" title='clockid_t' data-type='__clockid_t' data-ref="clockid_t" data-ref-filename="clockid_t">clockid_t</a> <dfn class="local col4 decl" id="4clock_id" title='clock_id' data-type='clockid_t' data-ref="4clock_id" data-ref-filename="4clock_id">clock_id</dfn>, <b>struct</b> <a class="type" href="../../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col5 decl" id="5tp" title='tp' data-type='struct timespec *' data-ref="5tp" data-ref-filename="5tp">tp</dfn>)</td></tr>
+<tr><th id="41">41</th><td>{</td></tr>
+<tr><th id="42">42</th><td>  <a class="typedef" href="../x86_64/hp-timing.h.html#hp_timing_t" title='hp_timing_t' data-type='unsigned long long' data-ref="hp_timing_t" data-ref-filename="hp_timing_t">hp_timing_t</a> <dfn class="local col6 decl" id="6tsc" title='tsc' data-type='hp_timing_t' data-ref="6tsc" data-ref-filename="6tsc">tsc</dfn>;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>  <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#390" title="__builtin_expect ((freq == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a> == <var>0</var>))</td></tr>
+<tr><th id="45">45</th><td>    {</td></tr>
+<tr><th id="46">46</th><td>      <i>/* This can only happen if we haven't initialized the `freq'</i></td></tr>
+<tr><th id="47">47</th><td><i>	 variable yet.  Do this now. We don't have to protect this</i></td></tr>
+<tr><th id="48">48</th><td><i>	 code against multiple execution since all of them should</i></td></tr>
+<tr><th id="49">49</th><td><i>	 lead to the same result.  */</i></td></tr>
+<tr><th id="50">50</th><td>      <a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a> = <a class="ref fn" href="../../include/libc-internal.h.html#__get_clockfreq" title='__get_clockfreq' data-ref="__get_clockfreq" data-ref-filename="__get_clockfreq">__get_clockfreq</a> ();</td></tr>
+<tr><th id="51">51</th><td>      <b>if</b> (<a class="macro" href="../../misc/sys/cdefs.h.html#390" title="__builtin_expect ((freq == 0), 0)" data-ref="_M/__glibc_unlikely">__glibc_unlikely</a> (<a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a> == <var>0</var>))</td></tr>
+<tr><th id="52">52</th><td>	<i>/* Something went wrong.  */</i></td></tr>
+<tr><th id="53">53</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="54">54</th><td>    }</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>  <b>if</b> (<a class="local col4 ref" href="#4clock_id" title='clock_id' data-ref="4clock_id" data-ref-filename="4clock_id">clock_id</a> != <a class="macro" href="sysv/linux/bits/time.h.html#65" title="2" data-ref="_M/CLOCK_PROCESS_CPUTIME_ID">CLOCK_PROCESS_CPUTIME_ID</a></td></tr>
+<tr><th id="57">57</th><td>      &amp;&amp; <a class="ref fn" href="#__pthread_clock_gettime" title='__pthread_clock_gettime' data-ref="__pthread_clock_gettime" data-ref-filename="__pthread_clock_gettime">__pthread_clock_gettime</a> != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>)</td></tr>
+<tr><th id="58">58</th><td>    <b>return</b> <a class="ref fn" href="#__pthread_clock_gettime" title='__pthread_clock_gettime' data-ref="__pthread_clock_gettime" data-ref-filename="__pthread_clock_gettime">__pthread_clock_gettime</a> (<a class="local col4 ref" href="#4clock_id" title='clock_id' data-ref="4clock_id" data-ref-filename="4clock_id">clock_id</a>, <a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a>, <a class="local col5 ref" href="#5tp" title='tp' data-ref="5tp" data-ref-filename="5tp">tp</a>);</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>/* Get the current counter.  */</i></td></tr>
+<tr><th id="61">61</th><td>  <a class="macro" href="../x86_64/hp-timing.h.html#33" title="({ unsigned int _hi, _lo; asm volatile (&quot;rdtsc&quot; : &quot;=a&quot; (_lo), &quot;=d&quot; (_hi)); (tsc) = ((unsigned long long int) _hi &lt;&lt; 32) | _lo; })" data-ref="_M/HP_TIMING_NOW">HP_TIMING_NOW</a> (<a class="local col6 ref" href="#6tsc" title='tsc' data-ref="6tsc" data-ref-filename="6tsc">tsc</a>);</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>  <i>/* Compute the offset since the start time of the process.  */</i></td></tr>
+<tr><th id="64">64</th><td>  <a class="local col6 ref" href="#6tsc" title='tsc' data-ref="6tsc" data-ref-filename="6tsc">tsc</a> -= <a class="macro" href="../generic/ldsodefs.h.html#273" title="_dl_cpuclock_offset" data-ref="_M/GL">GL</a>(dl_cpuclock_offset);</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>  <i>/* Compute the seconds.  */</i></td></tr>
+<tr><th id="67">67</th><td>  <a class="local col5 ref" href="#5tp" title='tp' data-ref="5tp" data-ref-filename="5tp">tp</a>-&gt;<a class="ref field" href="../../time/time.h.html#timespec::tv_sec" title='timespec::tv_sec' data-ref="timespec::tv_sec" data-ref-filename="timespec..tv_sec">tv_sec</a> = <a class="local col6 ref" href="#6tsc" title='tsc' data-ref="6tsc" data-ref-filename="6tsc">tsc</a> / <a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>  <i>/* And the nanoseconds.  This computation should be stable until</i></td></tr>
+<tr><th id="70">70</th><td><i>     we get machines with about 16GHz frequency.  */</i></td></tr>
+<tr><th id="71">71</th><td>  <a class="local col5 ref" href="#5tp" title='tp' data-ref="5tp" data-ref-filename="5tp">tp</a>-&gt;<a class="ref field" href="../../time/time.h.html#timespec::tv_nsec" title='timespec::tv_nsec' data-ref="timespec::tv_nsec" data-ref-filename="timespec..tv_nsec">tv_nsec</a> = ((<a class="local col6 ref" href="#6tsc" title='tsc' data-ref="6tsc" data-ref-filename="6tsc">tsc</a> % <a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a>) * <a class="macro" href="../generic/stdint.h.html#296" title="1000000000UL" data-ref="_M/UINT64_C">UINT64_C</a> (<var>1000000000</var>)) / <a class="ref" href="#freq" title='freq' data-ref="freq" data-ref-filename="freq">freq</a>;</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="74">74</th><td>}</td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="27">endif</span></u></td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="79">79</th><td><dfn class="decl def fn" id="realtime_gettime" title='realtime_gettime' data-ref="realtime_gettime" data-ref-filename="realtime_gettime">realtime_gettime</dfn> (<b>struct</b> <a class="type" href="../../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col7 decl" id="7tp" title='tp' data-type='struct timespec *' data-ref="7tp" data-ref-filename="7tp">tp</dfn>)</td></tr>
+<tr><th id="80">80</th><td>{</td></tr>
+<tr><th id="81">81</th><td>  <b>struct</b> <a class="type" href="sysv/linux/bits/time.h.html#timeval" title='timeval' data-ref="timeval" data-ref-filename="timeval">timeval</a> <dfn class="local col8 decl" id="8tv" title='tv' data-type='struct timeval' data-ref="8tv" data-ref-filename="8tv">tv</dfn>;</td></tr>
+<tr><th id="82">82</th><td>  <em>int</em> <dfn class="local col9 decl" id="9retval" title='retval' data-type='int' data-ref="9retval" data-ref-filename="9retval">retval</dfn> = <a class="ref fn" href="../../time/sys/time.h.html#gettimeofday" title='gettimeofday' data-ref="gettimeofday" data-ref-filename="gettimeofday">gettimeofday</a> (&amp;<a class="local col8 ref" href="#8tv" title='tv' data-ref="8tv" data-ref-filename="8tv">tv</a>, <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span>);</td></tr>
+<tr><th id="83">83</th><td>  <b>if</b> (<a class="local col9 ref" href="#9retval" title='retval' data-ref="9retval" data-ref-filename="9retval">retval</a> == <var>0</var>)</td></tr>
+<tr><th id="84">84</th><td>    <i>/* Convert into `timespec'.  */</i></td></tr>
+<tr><th id="85">85</th><td>    <a class="macro" href="../../time/sys/time.h.html#41" title="{ (tp)-&gt;tv_sec = (&amp;tv)-&gt;tv_sec; (tp)-&gt;tv_nsec = (&amp;tv)-&gt;tv_usec * 1000; }" data-ref="_M/TIMEVAL_TO_TIMESPEC">TIMEVAL_TO_TIMESPEC</a> (&amp;<a class="local col8 ref" href="#8tv" title='tv' data-ref="8tv" data-ref-filename="8tv">tv</a>, <a class="local col7 ref" href="#7tp" title='tp' data-ref="7tp" data-ref-filename="7tp">tp</a>);</td></tr>
+<tr><th id="86">86</th><td>  <b>return</b> <a class="local col9 ref" href="#9retval" title='retval' data-ref="9retval" data-ref-filename="9retval">retval</a>;</td></tr>
+<tr><th id="87">87</th><td>}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><i>/* Get current value of CLOCK and store it in TP.  */</i></td></tr>
+<tr><th id="91">91</th><td><em>int</em></td></tr>
+<tr><th id="92">92</th><td><dfn class="decl def fn" id="__clock_gettime" title='__clock_gettime' data-ref="__clock_gettime" data-ref-filename="__clock_gettime">__clock_gettime</dfn> (<a class="typedef" href="../../time/time.h.html#clockid_t" title='clockid_t' data-type='__clockid_t' data-ref="clockid_t" data-ref-filename="clockid_t">clockid_t</a> <dfn class="local col0 decl" id="10clock_id" title='clock_id' data-type='clockid_t' data-ref="10clock_id" data-ref-filename="10clock_id">clock_id</dfn>, <b>struct</b> <a class="type" href="../../time/time.h.html#timespec" title='timespec' data-ref="timespec" data-ref-filename="timespec">timespec</a> *<dfn class="local col1 decl" id="11tp" title='tp' data-type='struct timespec *' data-ref="11tp" data-ref-filename="11tp">tp</dfn>)</td></tr>
+<tr><th id="93">93</th><td>{</td></tr>
+<tr><th id="94">94</th><td>  <em>int</em> <dfn class="local col2 decl" id="12retval" title='retval' data-type='int' data-ref="12retval" data-ref-filename="12retval">retval</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>  <b>switch</b> (<a class="local col0 ref" href="#10clock_id" title='clock_id' data-ref="10clock_id" data-ref-filename="10clock_id">clock_id</a>)</td></tr>
+<tr><th id="97">97</th><td>    {</td></tr>
+<tr><th id="98">98</th><td><u>#<span data-ppcond="98">ifdef</span> <a class="macro" href="sysv/linux/clock_gettime.c.html#31" data-ref="_M/SYSDEP_GETTIME">SYSDEP_GETTIME</a></u></td></tr>
+<tr><th id="99">99</th><td>      <a class="macro" href="sysv/linux/clock_gettime.c.html#31" title="; case 0: case 1: retval = ({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg2 = (long int) (tp); long int __arg1 = (long int) (clock_id); register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (228) , &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); break" data-ref="_M/SYSDEP_GETTIME">SYSDEP_GETTIME</a>;</td></tr>
+<tr><th id="100">100</th><td><u>#<span data-ppcond="98">endif</span></u></td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="102">ifndef</span> <a class="macro" href="sysv/linux/clock_gettime.c.html#39" data-ref="_M/HANDLED_REALTIME">HANDLED_REALTIME</a></u></td></tr>
+<tr><th id="103">103</th><td>    <b>case</b> CLOCK_REALTIME:</td></tr>
+<tr><th id="104">104</th><td>      {</td></tr>
+<tr><th id="105">105</th><td>	<b>struct</b> timeval tv;</td></tr>
+<tr><th id="106">106</th><td>	retval = gettimeofday (&amp;tv, NULL);</td></tr>
+<tr><th id="107">107</th><td>	<b>if</b> (retval == <var>0</var>)</td></tr>
+<tr><th id="108">108</th><td>	  TIMEVAL_TO_TIMESPEC (&amp;tv, tp);</td></tr>
+<tr><th id="109">109</th><td>      }</td></tr>
+<tr><th id="110">110</th><td>      <b>break</b>;</td></tr>
+<tr><th id="111">111</th><td><u>#<span data-ppcond="102">endif</span></u></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>    <b>default</b>:</td></tr>
+<tr><th id="114">114</th><td><u>#<span data-ppcond="114">ifdef</span> <a class="macro" href="sysv/linux/clock_gettime.c.html#42" data-ref="_M/SYSDEP_GETTIME_CPU">SYSDEP_GETTIME_CPU</a></u></td></tr>
+<tr><th id="115">115</th><td>      <a class="macro" href="sysv/linux/clock_gettime.c.html#42" title="retval = ({ unsigned long int resultvar = ({ unsigned long int resultvar; long int __arg2 = (long int) (tp); long int __arg1 = (long int) (clock_id); register long int _a2 asm (&quot;rsi&quot;) = __arg2; register long int _a1 asm (&quot;rdi&quot;) = __arg1; asm volatile ( &quot;syscall\n\t&quot; : &quot;=a&quot; (resultvar) : &quot;0&quot; (228) , &quot;r&quot; (_a1), &quot;r&quot; (_a2) : &quot;memory&quot;, &quot;cc&quot;, &quot;r11&quot;, &quot;cx&quot;); (long int) resultvar; }); if (__builtin_expect ((((unsigned long int) (long int) (resultvar) &gt;= -4095L)), 0)) { (__libc_errno = ((-(resultvar)))); resultvar = (unsigned long int) -1; } (long int) resultvar; }); break" data-ref="_M/SYSDEP_GETTIME_CPU">SYSDEP_GETTIME_CPU</a> (<a class="local col0 ref" href="#10clock_id" title='clock_id' data-ref="10clock_id" data-ref-filename="10clock_id">clock_id</a>, <a class="local col1 ref" href="#11tp" title='tp' data-ref="11tp" data-ref-filename="11tp">tp</a>);</td></tr>
+<tr><th id="116">116</th><td><u>#<span data-ppcond="114">endif</span></u></td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="117">if</span> <a class="macro" href="../x86_64/hp-timing.h.html#23" title="(1)" data-ref="_M/HP_TIMING_AVAIL">HP_TIMING_AVAIL</a></u></td></tr>
+<tr><th id="118">118</th><td>      <b>if</b> ((<a class="local col0 ref" href="#10clock_id" title='clock_id' data-ref="10clock_id" data-ref-filename="10clock_id">clock_id</a> &amp; ((<var>1</var> &lt;&lt; <a class="macro" href="../../include/time.h.html#114" title="3" data-ref="_M/CLOCK_IDFIELD_SIZE">CLOCK_IDFIELD_SIZE</a>) - <var>1</var>))</td></tr>
+<tr><th id="119">119</th><td>	  == <a class="macro" href="sysv/linux/bits/time.h.html#67" title="3" data-ref="_M/CLOCK_THREAD_CPUTIME_ID">CLOCK_THREAD_CPUTIME_ID</a>)</td></tr>
+<tr><th id="120">120</th><td>	<a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a> = <a class="ref fn" href="#hp_timing_gettime" title='hp_timing_gettime' data-ref="hp_timing_gettime" data-ref-filename="hp_timing_gettime">hp_timing_gettime</a> (<a class="local col0 ref" href="#10clock_id" title='clock_id' data-ref="10clock_id" data-ref-filename="10clock_id">clock_id</a>, <a class="local col1 ref" href="#11tp" title='tp' data-ref="11tp" data-ref-filename="11tp">tp</a>);</td></tr>
+<tr><th id="121">121</th><td>      <b>else</b></td></tr>
+<tr><th id="122">122</th><td><u>#<span data-ppcond="117">endif</span></u></td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../../include/errno.h.html#39" title="(__libc_errno = (22))" data-ref="_M/__set_errno">__set_errno</a> (<a class="macro" href="../../../include/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>);</td></tr>
+<tr><th id="124">124</th><td>      <b>break</b>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><u>#<span data-ppcond="126">if</span> <a class="macro" href="../x86_64/hp-timing.h.html#23" title="(1)" data-ref="_M/HP_TIMING_AVAIL">HP_TIMING_AVAIL</a> &amp;&amp; !defined <a class="macro" href="sysv/linux/clock_gettime.c.html#40" data-ref="_M/HANDLED_CPUTIME">HANDLED_CPUTIME</a></u></td></tr>
+<tr><th id="127">127</th><td>    <b>case</b> CLOCK_PROCESS_CPUTIME_ID:</td></tr>
+<tr><th id="128">128</th><td>      retval = hp_timing_gettime (clock_id, tp);</td></tr>
+<tr><th id="129">129</th><td>      <b>break</b>;</td></tr>
+<tr><th id="130">130</th><td><u>#<span data-ppcond="126">endif</span></u></td></tr>
+<tr><th id="131">131</th><td>    }</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>  <b>return</b> <a class="local col2 ref" href="#12retval" title='retval' data-ref="12retval" data-ref-filename="12retval">retval</a>;</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td><a class="macro" href="../../include/libc-symbols.h.html#109" title="extern __typeof (__clock_gettime) clock_gettime __attribute__ ((weak, alias (&quot;__clock_gettime&quot;)));" data-ref="_M/weak_alias">weak_alias</a> (<a class="ref fn" href="#__clock_gettime" title='__clock_gettime' data-ref="__clock_gettime" data-ref-filename="__clock_gettime">__clock_gettime</a>, <dfn class="decl def fn" id="clock_gettime" title='clock_gettime' data-ref="clock_gettime" data-ref-filename="clock_gettime">clock_gettime</dfn>)</td></tr>
+<tr><th id="136">136</th><td><a class="macro" href="../../include/libc-symbols.h.html#463" title="" data-ref="_M/libc_hidden_def">libc_hidden_def</a> (__clock_gettime)</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='sysv/linux/clock_gettime.c.html'>glibc_src_2.24/sysdeps/unix/sysv/linux/clock_gettime.c</a><br/>Generated on <em>2020-Feb-27</em> from project glibc_src_2.24 revision <em>2.24</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,36 @@
+<dec f='glibc_src_2.24/sysdeps/nptl/futex-internal.h' l='122' type='int futex_wait(unsigned int * futex_word, unsigned int expected, int private)'/>
+<use f='glibc_src_2.24/sysdeps/nptl/futex-internal.h' l='135' u='c' c='futex_wait_simple'/>
+<use f='glibc_src_2.24/sysdeps/nptl/futex-internal.h' l='135' u='c' c='futex_wait_simple'/>
+<def f='glibc_src_2.24/sysdeps/unix/sysv/linux/futex-internal.h' l='58' ll='79' type='int futex_wait(unsigned int * futex_word, unsigned int expected, int private)'/>
+<doc f='glibc_src_2.24/sysdeps/unix/sysv/linux/futex-internal.h' l='57'>/* See sysdeps/nptl/futex-internal.h for details.  */</doc>
+<doc f='glibc_src_2.24/sysdeps/nptl/futex-internal.h' l='90'>/* Atomically wrt other futex operations on the same futex, this blocks iff
+   the value *FUTEX_WORD matches the expected value.  This is
+   semantically equivalent to:
+     l = &lt;get lock associated with futex&gt; (FUTEX_WORD);
+     wait_flag = &lt;get wait_flag associated with futex&gt; (FUTEX_WORD);
+     lock (l);
+     val = atomic_load_relaxed (FUTEX_WORD);
+     if (val != expected) { unlock (l); return EAGAIN; }
+     atomic_store_relaxed (wait_flag, true);
+     unlock (l);
+     // Now block; can time out in futex_time_wait (see below)
+     while (atomic_load_relaxed(wait_flag) &amp;&amp; !&lt;spurious wake-up&gt;);
+
+   Note that no guarantee of a happens-before relation between a woken
+   futex_wait and a futex_wake is documented; however, this does not matter
+   in practice because we have to consider spurious wake-ups (see below),
+   and thus would not be able to reliably reason about which futex_wake woke
+   us.
+
+   Returns 0 if woken by a futex operation or spuriously.  (Note that due to
+   the POSIX requirements mentioned above, we need to conservatively assume
+   that unrelated futex_wake operations could wake this futex; it is easiest
+   to just be prepared for spurious wake-ups.)
+   Returns EAGAIN if the futex word did not match the expected value.
+   Returns EINTR if waiting was interrupted by a signal.
+
+   Note that some previous code in glibc assumed the underlying futex
+   operation (e.g., syscall) to start with or include the equivalent of a
+   seq_cst fence; this allows one to avoid an explicit seq_cst fence before
+   a futex_wait call when synchronizing similar to Dekker synchronization.
+   However, we make no such guarantee here.  */</doc>
